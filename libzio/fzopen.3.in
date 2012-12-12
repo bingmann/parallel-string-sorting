@@ -1,0 +1,351 @@
+'\" t -*- coding: UTF-8 -*-
+.\"
+.\" Copyright 2004 Werner Fink, 2004 SuSE LINUX AG, Germany.
+.\" Copyright 2006 Werner Fink, 2006 SuSE Products GmbH, Germany.
+.\" Copyright 2008 Werner Fink, 2008 SuSE Products GmbH, Germany.
+.\" Copyright 2009 Werner Fink, 2009 SuSE Products GmbH, Germany.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.TH fzopen 3 "Apr 20, 2006" "Version @@VERSION@@" " Linux Programmer's Manual"
+.UC 3
+.OS SuSE Linux
+.SH NAME
+fzopen \- stream open functions on compressed files
+.br
+fdzopen \- stream open functions on compressed files
+.SH SYNOPSIS
+.\"
+.B #include <zio.h>
+.sp
+.BI "FILE *fzopen (const char *" path ", const char *" mode );
+.br
+.BI "FILE *fdzopen (int " fildes ", const char *" mode ", const char *" what );
+.SH DESCRIPTION
+The
+.B fzopen
+function opens the compressed file whose name is the string to by
+.I path
+and associates a stream with it.
+The
+.B fdopen
+function associates a stream for the existing files descriptor
+.I fildes
+for a compressed file.
+.PP
+The argument
+.I mode
+points to a string beginning with one of the following sequences
+(Additional characters may  follow these sequences.):
+.TP
+.B r
+Open compressed text file for reading.  The stream is positioned
+at the beginning of the file.
+.TP
+.B w
+Truncate file to zero length or create compressed text file for writing.
+The stream is positioned at the beginning of the file.
+.TP
+.BR w1 - 9
+Just like above but provides also the compression level.
+.PP
+The argument
+.I what
+of the function
+.B fdzopen
+specifies the underlying compression method which should be used:
+.TP
+.BR g , z
+The file descriptor points to a gziped file.
+.TP
+.BR b
+The file descriptor points to a bzip2ed file.
+.TP
+.BR l
+The file descriptor points to a lzma2ed file.
+.TP
+.BR Z
+The file descriptor points to a file in LZW format.
+.PP
+Note that
+.B fzopen
+and
+.B fdzopen
+can only open a compressed text file for reading
+.B or
+writing, but
+.IR both ,
+which means that the
+.B +
+is not possible.  Nor can any compressed text file open for appending,
+which makes
+.B a
+not usable with
+.BR fzopen .
+.\"
+.SH NOTE
+The program using libzio with
+.B -lzio
+at linking time should also be linked with
+the appropriate library for accessing compressed
+text files.  This is the libz with
+.B -lz
+for accessing gziped text files and/or with
+.B -lbz2
+for accessing bzip2ed text files.
+.PP
+For writing gzip/bzip2 files,
+.B fzopen
+only supports the suffixes
+.IR .z " and ".gz
+for gzipped files and
+.I .bz2
+for bzip2ed files. All supported formats can be found in
+the following table:
+.IP
+.TS H
+allbox;
+c  l l l l l
+rb l l l l l.
+	fread	fwrite	fseek	suffix	library
+gzip	yes	yes	yes	.gz	-lz
+bzip2	yes	yes	yes	.bz2	-lbz2
+LZW	yes	no	yes	.Z	 builtin
+lzma	yes	yes(no)	yes	.lzma	-llzma (-llzmadec)
+xz	yes	yes	yes	.xz	-llzma
+.TE
+.PP
+.PP
+On reading first the appropriate suffixes are checked
+if not provided. If no file is found the magic
+byte sequence at the beginning of the file is checked
+to detect a gzip or bzip2 file.
+.PP
+.\"
+.SH CONFIGURATION
+With the help of
+.BR autoconf (1)
+or
+.BR autoreconf (1)
+and a few lines in the common file
+.B configure.in
+or
+.B configure.ac
+found in many source packages a programmer or maintainer
+can extend the automatic configuration to find the
+appropriate libraries together with the libzio:
+.PP
+.IP
+.nf
+AC_CHECK_HEADER(zio.h, [
+  AC_CHECK_LIB(zio, fzopen, [
+    AC_CHECK_LIB(zio, fdzopen, [LIBS="$LIBS -lzio"; am_cv_libzio=yes])
+  ])
+])
+if test "$am_cv_libzio" = yes; then
+  am_cv_libzio=with
+  AC_DEFINE(HAVE_ZIO, 1, [Define if you have libzio for opening compressed files.])
+  AC_CHECK_HEADER(zlib.h, [
+    for lib in z gz; do
+      AC_CHECK_LIB($lib, gzopen, [
+        LIBS="$LIBS -l$lib"
+        am_cv_libzio="$am_cv_libzio lib$lib"
+        break
+      ])
+    done
+  ])
+  AC_CHECK_HEADER(bzlib.h, [
+    for lib in bz2 bzip2; do
+      AC_CHECK_LIB($lib, BZ2_bzopen, [
+        LIBS="$LIBS -l$lib"
+        am_cv_libzio="$am_cv_libzio lib$lib"
+        break
+      ])
+    done
+  ])
+  AC_CHECK_HEADER(lzmadec.h, [
+    for lib in lzma lzmadec; do
+      AC_CHECK_LIB($lib, lzmadec_open, [
+        LIBS="$LIBS -l$lib"
+        am_cv_libzio="$am_cv_libzio lib$lib"
+        break
+      ])
+    done
+  ])
+  AC_CHECK_HEADER(lzma.h, [
+    for lib in lzma; do
+      AC_CHECK_LIB($lib, lzma_easy_encoder, [
+        LIBS="$LIBS -l$lib"
+        am_cv_libzio="$am_cv_libzio lib$lib"
+        break
+      ])
+    done
+  ])
+  AC_MSG_NOTICE([libzio is used [$]am_cv_libzio])
+fi
+.fi
+.PP
+combined with two lines in the common file
+.B config.h.in
+like
+.PP
+.RS 1c
+.nf
+/* Define to 1 if you have libzio for opening compressed files */
+#undef HAVE_ZIO
+.fi
+.RE
+.PP
+(automatically added by
+.BR autoreconf (1))
+it is easy to use the
+.BR cpp (1)
+macro
+.I HAVE_ZIO
+for the usage of
+.B fzopen
+instead of
+.BR fopen (3).
+.PP
+.\"
+.SH RETURN VALUES
+Upon  successful  completion
+.B fzopen
+return a
+.B FILE
+pointer. Otherwise,
+.B NULL
+is returned and the global variable errno is set to
+indicate the error.
+.\"
+.SH ERRORS
+.TP
+.B EINVAL
+The
+.I mode
+provided to
+.B fzopen
+was invalid.
+.TP
+.B ENOSYS
+The program using
+.B fzopen
+is not linked with the appropriate library
+.RB ( -lz
+for gziped files and
+.B -lbz2
+for bzip2ed files.)
+.TP
+.B ENOTSUP
+The program using
+.B fzopen
+has specified a wrong mode for a
+.B .bz2
+files
+or has opened a
+.B .Z
+file for writing.
+.TP
+.B ENOMEM
+The call of the library functions of the
+.B libz
+or
+.B libbz2
+fails due failed memory allocation.
+.TP
+.B ESPIPE
+This happens if
+.BR fseek (3)
+is used in the case of seesking files is not
+supported.
+.\"
+.SH WARNINGS
+The functions
+.BR fileno (3)
+or
+.BR freopen (3)
+may not be applied on streams opened by
+.BR fzopen .
+An further explanation will be found in section
+.BR BUGS .
+.\"
+.SH BUGS
+.B Fzopen
+can not seek within
+.I bzip2
+files due to the fact that the
+.B libbz2
+does not provide a function like
+.I libz
+does with
+.BR gzseek .
+.B .Z
+compressed file will be opened by
+.B fzopen
+and
+.B fzdopen
+only for reading.  Also a seek
+is not possible for
+.B .Z
+files.
+.B .lzma
+compressed file will be opened by
+.B fzopen
+and
+.B fzdopen
+only for reading as the liblzmadec only
+supports reading.
+As the
+.B fzopen
+and
+.B fdzopen
+are custom-made streams created with the help of
+.BR fopencookie (3)
+function of the
+.B glibc
+or
+.BR funopen (3)
+known from BSD Systems
+it is not possible to use the file descriptor with e.g.
+.BR fileno (3)
+in combination with system calls like
+.BR read (2)
+as this will evade the underlying read/write
+functions of the e.g.
+.BR libz .
+.SH FILES
+.\"
+.BR /usr/include/zio.h
+.SH SEE ALSO
+.BR fopen (3),
+.br
+.BR fopencookie (3)
+.br
+.BR funopen (3)
+.br
+.BR gzip (1),
+.br
+.BR bzip2 (1),
+.br
+.BR lzma (1),
+.br
+.BR xz (1),
+.br
+.BR /usr/include/zlib.h ,
+.br
+.BR /usr/include/bzlib.h .
+.br
+.BR /usr/include/lzma.h .
+.br
+.BR /usr/include/lzmadec.h .
+.SH COPYRIGHT
+2004 Werner Fink,
+2004 SuSE LINUX AG Nuernberg, Germany.
+.br
+2006,2008,2009 Werner Fink,
+2006,2008,2009 SuSE Products GmbH, Germany.
+.SH AUTHOR
+Werner Fink <werner@suse.de>

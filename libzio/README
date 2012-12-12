@@ -1,0 +1,50 @@
+   Wrapper for reading or writing gzip/bzip2 files
+   ===============================================
+
+This small lib provides with the help of the fopencookie(3)
+interface of the glibc together with the zlib and libbzip2
+an simple interface for reading or writing gzip/bzip2 files
+with streams. Beside handling gzip files and bzip2 files,
+the libzio provides support for reading ``.Z'' compressed
+files. By using the GNUC compiler weak facility one or both
+libraries, zlib or libbzip2, can be skipped at linkage time.
+
+To use this e.g. an
+
+  #include <zio.h>
+
+and
+
+  FILE * file = fzopen("myfile.gz", "r");
+
+or
+
+  int fd = open("myfile.gz", O_RDONLY);
+  FILE * file = fdzopen(fd, "r", "g");
+
+together with linking the resulting program with -lzio _and_
+`-lz'.  For bzip2 files clearly the libbz2 with `-lbz2' has
+to used at linkage time.
+
+The zlib and/or libbzip2 librares are required because the
+libzio is not linked with `-lz' nor with `-lbz2'.  If the
+appropriate library functions of libz or libbz2 are not found
+the fzopen(3) function returns NULL and the errno is set to
+the value ENOSYS for not implemented.
+
+As the libbzip2 does not provide a function for seeking in
+a bzip2 file, any call of fseek(3) on the open stream will
+fail and set the errno to ESPIPE.
+
+For writing gzip/bzip2 files, fzopen(3) only supports the
+suffixes ``.z'' and ``.gz'' for gzipped files and ``.bz2''
+for bzip2ed files.
+
+On reading first the appropriate suffixes are checked if not
+provided. If no file is found the magic byte sequence at the
+beginning of the file is checked to detect which type of
+compressing is used for the file.
+
+Happy (un)compressing,
+
+     Werner Fink

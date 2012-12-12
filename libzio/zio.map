@@ -1,0 +1,7 @@
+{
+global:
+  fzopen;
+  fdzopen;
+local:
+  *;
+};
