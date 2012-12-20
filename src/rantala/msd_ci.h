@@ -53,7 +53,7 @@ msd_ci(unsigned char** strings, size_t n, size_t depth)
         oracle[i] = strings[i][depth];
     for (size_t i=0; i < n; ++i)
         ++bucketsize[oracle[i]];
-    static ssize_t bucketindex[256];
+    static size_t bucketindex[256];
     bucketindex[0] = bucketsize[0];
     BucketsizeType last_bucket_size = bucketsize[0];
     for (unsigned i=1; i < 256; ++i) {
@@ -106,7 +106,7 @@ msd_ci_adaptive(unsigned char** strings, size_t n, size_t depth)
         calloc(0x10000, sizeof(size_t));
     for (size_t i=0; i < n; ++i)
         ++bucketsize[oracle[i]];
-    static ssize_t bucketindex[0x10000];
+    static size_t bucketindex[0x10000];
     bucketindex[0] = bucketsize[0];
     size_t last_bucket_size = bucketsize[0];
     for (unsigned i=1; i < 0x10000; ++i) {
