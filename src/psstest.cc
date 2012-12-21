@@ -41,6 +41,7 @@
 #include <boost/static_assert.hpp>
 #include <boost/array.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/type_traits/integral_constant.hpp>
 
 #include "zio.h"
 
@@ -83,6 +84,7 @@ std::vector<size_t> g_stringoffsets;
 #include "rantala/losertree.h"
 #include "rantala/mergesort_losertree.h"
 //#include "rantala/mergesort_lcp.h"
+#include "rantala/funnelsort.h"
 #undef debug
 
 void Contest::run_contest(const char* path)
