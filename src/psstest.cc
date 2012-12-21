@@ -53,9 +53,13 @@ std::vector<size_t> g_stringoffsets;
 #include "tools/input.h"
 #include "tools/checker.h"
 
+#include "sequential/inssort.h"
+#include "sequential/mkqs.h"
+#include "sequential/burstsortA.h"
+#include "sequential/burstsortL.h"
+
 #include "rantala/get_char.h"
 #include "rantala/insertion_sort.h"
-#include "rantala/mkqs.h"
 #include "rantala/msd_ce.h"
 #include "rantala/msd_ci.h"
 

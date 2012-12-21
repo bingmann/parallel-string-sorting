@@ -22,7 +22,7 @@
    Updated with std::swap and std::min by Timo Bingmann in 2012.
 */
 
-namespace rantala {
+namespace bs_mkqs {
 
 typedef unsigned char* string;
 
@@ -115,7 +115,7 @@ static void insertsort(string *a, int n, int d)
 static void ssort2(string a[], int n, int depth)
 {
     int d, r, partval;
-    string *pa, *pb, *pc, *pd, *pl, *pm, *pn, t;
+    string *pa, *pb, *pc, *pd, *pl, *pm, *pn;
     if (n < 10) {
         insertsort(a, n, depth);
         return;
@@ -129,7 +129,7 @@ static void ssort2(string a[], int n, int depth)
         pm = med3func(pm-d, pm, pm+d,   depth);
         pn = med3func(pn-2*d, pn-d, pn, depth);
     }
-    pm = med3(pl, pm, pn);
+    pm = med3func(pl, pm, pn, depth);
     std::swap(*a, *pm);
     partval = ptr2char(a);
     pa = pb = a + 1;
@@ -166,9 +166,9 @@ void mkqsort_bs(unsigned char **strings, size_t n)
     return multikey2(strings, n);
 }
 
-CONTESTANT_REGISTER_UCARRAY(mkqsort_bs, "rantala/mkqs original mkqs")
+CONTESTANT_REGISTER_UCARRAY(mkqsort_bs, "bs_mkqs Original Multikey-Quicksort")
 
 #undef i2c
 #undef ptr2char
 
-} // namespace rantala
+} // namespace bs_mkqs
