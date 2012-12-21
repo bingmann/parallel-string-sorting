@@ -57,6 +57,8 @@ std::vector<size_t> g_stringoffsets;
 #include "sequential/mkqs.h"
 #include "sequential/burstsortA.h"
 #include "sequential/burstsortL.h"
+#include "sequential/cradix.h"
+#include "sequential/cradix-rantala.h"
 
 #include "rantala/get_char.h"
 #include "rantala/insertion_sort.h"
