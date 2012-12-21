@@ -26,9 +26,10 @@
 #include <string.h>
 #include <errno.h>
 
+#include <string>
+#include <bitset>
 #include <vector>
 #include <map>
-#include <string>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -36,6 +37,9 @@
 
 #include <omp.h>
 #include <getopt.h>
+
+#include <boost/static_assert.hpp>
+#include <boost/array.hpp>
 
 #include "zio.h"
 
@@ -64,6 +68,13 @@ std::vector<size_t> g_stringoffsets;
 #include "rantala/insertion_sort.h"
 #include "rantala/msd_ce.h"
 #include "rantala/msd_ci.h"
+#include "rantala/vector_malloc.h"
+#include "rantala/vector_realloc.h"
+#include "rantala/vector_block.h"
+#include "rantala/vector_bagwell.h"
+#include "rantala/vector_brodnik.h"
+#include "rantala/burstsort.h"
+#include "rantala/burstsort2.h"
 
 void Contest::run_contest(const char* path)
 {
