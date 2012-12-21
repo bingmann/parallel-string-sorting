@@ -43,4 +43,9 @@ insertion_sort(unsigned char** strings, int n, size_t depth)
 	}
 }
 
+void insertion_sort(unsigned char** strings, size_t n)
+{ insertion_sort(strings, n, 0); }
+
+//CONTESTANT_REGISTER_UCARRAY(insertion_sort, "rantala/insertion_sort")
+
 } // namespace rantala

@@ -58,7 +58,9 @@
  *     http://dx.doi.org/10.2197/ipsjdc.4.69
  */
 
-namespace rantala {
+namespace rantala_mergesort_lcp {
+
+using namespace rantala;
 
 // Handle very long strings. I guess in most cases we could choose smaller type
 // to save some memory.
@@ -1796,4 +1798,4 @@ mergesort_lcp_2way_unstable_parallel(unsigned char** strings, size_t n)
 //ROUTINE_REGISTER_MULTICORE(mergesort_lcp_2way_unstable_parallel,
 //		"rantala/mergesort Parallel unstable LCP with 2way merger")
 
-} // namespace rantala
+} // namespace rantala_mergesort_lcp

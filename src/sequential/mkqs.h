@@ -172,3 +172,9 @@ CONTESTANT_REGISTER_UCARRAY(mkqsort_bs, "bs_mkqs Original Multikey-Quicksort")
 #undef ptr2char
 
 } // namespace bs_mkqs
+
+// global procedure for base sorting
+void mkqsort(unsigned char **strings, size_t n, int depth)
+{
+    return bs_mkqs::ssort2(strings, n, depth);
+}
