@@ -40,12 +40,14 @@
 
 #include <boost/static_assert.hpp>
 #include <boost/array.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include "zio.h"
 
 // *** Global Input Data Structures ***
 
 size_t          gopt_inputsizelimit = 0;
+const char*     gopt_algorithm = NULL;
 
 const char*     g_stringdata = NULL;
 size_t          g_stringdatasize = 0;
@@ -64,6 +66,7 @@ std::vector<size_t> g_stringoffsets;
 #include "sequential/cradix.h"
 #include "sequential/cradix-rantala.h"
 
+#include "rantala/debug.h"
 #include "rantala/get_char.h"
 #include "rantala/insertion_sort.h"
 #include "rantala/msd_ce.h"
@@ -75,6 +78,12 @@ std::vector<size_t> g_stringoffsets;
 #include "rantala/vector_brodnik.h"
 #include "rantala/burstsort.h"
 #include "rantala/burstsort2.h"
+#include "rantala/mergesort.h"
+#include "rantala/mergesort_unstable.h"
+#include "rantala/losertree.h"
+#include "rantala/mergesort_losertree.h"
+//#include "rantala/mergesort_lcp.h"
+#undef debug
 
 void Contest::run_contest(const char* path)
 {
@@ -84,6 +93,12 @@ void Contest::run_contest(const char* path)
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
+        if (gopt_algorithm)
+        {
+            if ((*c)->m_funcname.find(gopt_algorithm) == std::string::npos)
+                continue;
+        }
+
         (*c)->run();
     }
 }
@@ -125,13 +140,14 @@ int main(int argc, char* argv[])
     static const struct option longopts[] = {
         { "help",    no_argument,        0, 'h' },
         { "size",    required_argument,  0, 's' },
+        { "algo",    required_argument,  0, 'a' },
         { 0,0,0,0 },
     };
 
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:a:", longopts, &index);
 
         if (argi < 0) break;
 
@@ -139,6 +155,11 @@ int main(int argc, char* argv[])
         {
         case 'h':
             print_usage(argv[0]);
+            break;
+
+        case 'a':
+            gopt_algorithm = optarg;
+            std::cerr << "Selecting algorithms containing " << optarg << std::endl;
             break;
 
         case 's':

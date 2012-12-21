@@ -31,15 +31,6 @@ namespace rantala_burstsort2 {
 
 using namespace rantala;
 
-#if defined(NDEBUG) || 1
-#define debug_indent
-#define debug() if (1) {} else std::cerr
-#else
-static std::string __debug_indent_str;
-#define debug_indent struct DI{std::string&i;DI(std::string&_i):i(_i){i+="    ";}~DI(){i=i.substr(0,i.size()-4);}}__d(__debug_indent_str);
-#define debug() std::cerr << __debug_indent_str
-#endif
-
 template <typename CharT, typename BucketT>
 struct TrieNode
 {
@@ -486,8 +477,6 @@ CONTESTANT_REGISTER_UCARRAY(burstsort2_sampling_superalphabet_bagwell,
 CONTESTANT_REGISTER_UCARRAY(burstsort2_sampling_superalphabet_vector_block,
 		"rantala/burstsort2 sampling superalphabet with vector_block bucket type")
 
-#undef debug
-#undef debug_indent
 #undef SmallSort
 
 } // namespace rantala_burstsort2
