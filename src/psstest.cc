@@ -48,6 +48,10 @@
 
 #include "zio.h"
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 // *** Global Input Data Structures ***
 
 size_t          gopt_inputsizelimit = 0;
@@ -135,7 +139,12 @@ void Contestant_UCArray::run()
     // save permutation check evaluation result
     PermutationCheck pc(stringptr);
 
-    std::cout << "Running " << m_funcname << " - " << m_description << "\n";
+    std::cerr << "Running " << m_funcname << " - " << m_description << "\n";
+
+#ifdef DMALLOC
+    unsigned long dm_mark = dmalloc_mark();
+    unsigned long dm_memuse1 = dmalloc_memory_allocated();
+#endif
 
     double ts1, ts2;
 
@@ -143,10 +152,24 @@ void Contestant_UCArray::run()
     m_func(stringptr.data(), stringptr.size());
     ts2 = omp_get_wtime();
 
-    (std::cout << ts2-ts1 << " checking ").flush();
+#ifdef DMALLOC
+    unsigned long dm_memuse2 = dmalloc_memory_allocated();
+
+    if (dmalloc_count_changed(dm_mark, 1, 0) != 0)
+    {
+        std::cerr << "MEMORY LEAKED: " << (dmalloc_count_changed(dm_mark, 1, 0)  / 1024) << "kb\n";
+    }
+#endif
+
+#ifdef DMALLOC
+    unsigned int dm_memuse = (dm_memuse2 - dm_memuse1) / 1024;
+    std::cerr << " with " << dm_memuse << " KiB";
+#endif
+
+    (std::cerr << ts2-ts1 << " checking ").flush();
 
     if (check_sorted_order(stringptr, pc))
-        std::cout << "ok" << std::endl;
+        std::cerr << "ok" << std::endl;
 }
 
 void print_usage(const char* prog)
