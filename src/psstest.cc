@@ -104,7 +104,7 @@ std::vector<size_t> g_stringoffsets;
 #include "rantala/mergesort_unstable.h"
 #include "rantala/tools/losertree.h"
 #include "rantala/mergesort_losertree.h"
-#include "rantala/mergesort_lcp.h"
+//#include "rantala/mergesort_lcp.h"
 #include "rantala/funnelsort.h"
 #undef debug
 
@@ -118,7 +118,7 @@ void Contest::run_contest(const char* path)
     {
         if (gopt_algorithm)
         {
-            if ((*c)->m_funcname.find(gopt_algorithm) == std::string::npos)
+            if (strstr((*c)->m_funcname, gopt_algorithm) == NULL)
                 continue;
         }
 
@@ -174,7 +174,7 @@ void Contestant_UCArray::run()
 
 void print_usage(const char* prog)
 {
-    std::cerr << "Usage: " << prog << " [-s <input size limit>] filename" << std::endl;
+    std::cerr << "Usage: " << prog << " [-s <input size limit>] [-a <algorithm match>] filename" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -219,10 +219,17 @@ int main(int argc, char* argv[])
         }
     }
 
+    if (optind == argc) { // no input data parameter given
+        print_usage(argv[0]);
+    }
+
     while (optind < argc)
     {
         getContestSingleton()->run_contest(argv[optind++]);
     }
+
+    if (g_stringdata)
+        free((void*)g_stringdata);
 
     return 0;
 }

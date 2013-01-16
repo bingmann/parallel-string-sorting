@@ -47,10 +47,11 @@ Contest* getContestSingleton()
 class Contestant
 {
 public:
-    std::string         m_funcname, m_description;
+    const char*         m_funcname;
+    const char*         m_description;
 
-    Contestant(const std::string& funcname,
-               const std::string& description)
+    Contestant(const char* funcname,
+               const char* description)
         : m_funcname(funcname),
           m_description(description)
     {
@@ -68,8 +69,8 @@ public:
     func_type           m_func;
 
     Contestant_UCArray(func_type func,
-                       const std::string& funcname,
-                       const std::string& description)
+                       const char* funcname,
+                       const char* description)
         : Contestant(funcname,description),
           m_func(func)
     {
