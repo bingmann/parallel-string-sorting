@@ -376,12 +376,12 @@ void multikey_simd_parallel2(unsigned char** strings, size_t n)
 
 void multikey_simd_parallel4(unsigned char** strings, size_t n)
 { multikey_simd_parallel<uint32_t>(strings, n, 0); }
-/*
-ROUTINE_REGISTER_MULTICORE(multikey_simd_parallel1,
-		"parallel multikey_simd with 1byte alphabet")
-ROUTINE_REGISTER_MULTICORE(multikey_simd_parallel2,
-		"parallel multikey_simd with 2byte alphabet")
-ROUTINE_REGISTER_MULTICORE(multikey_simd_parallel4,
-		"parallel multikey_simd with 4byte alphabet")
-*/
+
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(multikey_simd_parallel1,
+                                     "rantala/multikey_simd_parallel with 1byte alphabet")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(multikey_simd_parallel2,
+                                     "rantala/multikey_simd_parallel with 2byte alphabet")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(multikey_simd_parallel4,
+                                     "rantala/multikey_simd_parallel with 4byte alphabet")
+
 } // namespace rantala

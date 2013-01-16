@@ -22,6 +22,8 @@
 
 #include <vector>
 
+extern int pss_num_threads;
+
 class Contestant;
 
 class Contest
@@ -79,3 +81,20 @@ public:
 #define CONTESTANT_REGISTER_UCARRAY(func, desc)                         \
     static const class Contestant* _Contestant_##func##_register =      \
         new Contestant_UCArray(func,#func,desc);
+
+class Contestant_UCArray_Parallel : public Contestant_UCArray
+{
+public:
+    Contestant_UCArray_Parallel(func_type func,
+                                const char* funcname,
+                                const char* description)
+        : Contestant_UCArray(func,funcname,description)
+    {
+    }
+
+    virtual void run(); // implemented in main.cc
+};
+
+#define CONTESTANT_REGISTER_UCARRAY_PARALLEL(func, desc)                \
+    static const class Contestant* _Contestant_##func##_register =      \
+        new Contestant_UCArray_Parallel(func,#func,desc);

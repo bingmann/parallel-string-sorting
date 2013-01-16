@@ -109,6 +109,8 @@ std::vector<size_t> g_stringoffsets;
 #include "rantala/funnelsort.h"
 #undef debug
 
+int pss_num_threads = 0;
+
 Contest* getContestSingleton()
 {
     static Contest* c = NULL;
@@ -167,9 +169,7 @@ void Contestant_UCArray::run()
     {
         std::cerr << "MEMORY LEAKED: " << (dmalloc_count_changed(dm_mark, 1, 0)  / 1024) << "kb\n";
     }
-#endif
 
-#ifdef DMALLOC
     unsigned int dm_memuse = (dm_memuse2 - dm_memuse1) / 1024;
     std::cerr << " with " << dm_memuse << " KiB";
 #endif
@@ -178,6 +178,18 @@ void Contestant_UCArray::run()
 
     if (check_sorted_order(stringptr, pc))
         std::cerr << "ok" << std::endl;
+}
+
+void Contestant_UCArray_Parallel::run()
+{
+    for (int p = 1; p <= omp_get_num_procs(); ++p)
+    {
+        pss_num_threads = p;
+        std::cerr << "threads=" << p << " ";
+        omp_set_num_threads(p);
+
+        Contestant_UCArray::run();
+    }
 }
 
 void print_usage(const char* prog)

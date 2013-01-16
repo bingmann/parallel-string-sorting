@@ -332,8 +332,8 @@ mergesort_lcp_2way_parallel(unsigned char** strings, size_t n)
 	free(lcp_output);
 	free(tmp);
 }
-//ROUTINE_REGISTER_MULTICORE(mergesort_lcp_2way_parallel,
-//		"rantala/mergesort Parallel LCP with 2way merger")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_lcp_2way_parallel,
+                                     "rantala/mergesort_parallel LCP with 2way merger")
 
 /*******************************************************************************
  *
@@ -811,7 +811,7 @@ mergesort_lcp_3way(unsigned char** strings, size_t n)
 	free(lcp_tmp);
 	free(input_tmp);
 }
-//CONTESTANT_REGISTER_UCARRAY(mergesort_lcp_3way, "rantala/mergesort LCP with 3way merger")
+//broken: CONTESTANT_REGISTER_UCARRAY(mergesort_lcp_3way, "rantala/mergesort LCP with 3way merger")
 
 template <bool OutputLCP>
 MergeResult
@@ -935,8 +935,8 @@ mergesort_lcp_3way_parallel(unsigned char** strings, size_t n)
 	free(lcp_tmp);
 	free(input_tmp);
 }
-//ROUTINE_REGISTER_MULTICORE(mergesort_lcp_3way_parallel,
-//		"rantala/mergesort Parallel LCP with 3way merger")
+//broken: CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_lcp_3way_parallel,
+//                                     "rantala/mergesort_parallel LCP with 3way merger")
 
 /*******************************************************************************
  *
@@ -1520,14 +1520,13 @@ void mergesort_cache2_lcp_2way_parallel(unsigned char** strings, size_t n)
 void mergesort_cache4_lcp_2way_parallel(unsigned char** strings, size_t n)
 { mergesort_cache_lcp_2way_parallel<uint32_t>(strings, n); }
 
-/*
-ROUTINE_REGISTER_MULTICORE(mergesort_cache1_lcp_2way_parallel,
-		"rantala/mergesort Parallel LCP with 2way merger and 1byte cache")
-ROUTINE_REGISTER_MULTICORE(mergesort_cache2_lcp_2way_parallel,
-		"rantala/mergesort Parallel LCP with 2way merger and 2byte cache")
-ROUTINE_REGISTER_MULTICORE(mergesort_cache4_lcp_2way_parallel,
-		"rantala/mergesort Parallel LCP with 2way merger and 4byte cache")
-*/
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_cache1_lcp_2way_parallel,
+                                     "rantala/mergesort_parallel LCP with 2way merger and 1byte cache")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_cache2_lcp_2way_parallel,
+                                     "rantala/mergesort_parallel LCP with 2way merger and 2byte cache")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_cache4_lcp_2way_parallel,
+                                     "rantala/mergesort_parallel LCP with 2way merger and 4byte cache")
+
 /*******************************************************************************
  *
  * mergesort_lcp_2way_unstable
@@ -1795,7 +1794,8 @@ mergesort_lcp_2way_unstable_parallel(unsigned char** strings, size_t n)
 	free(lcp_output);
 	free(tmp);
 }
-//ROUTINE_REGISTER_MULTICORE(mergesort_lcp_2way_unstable_parallel,
-//		"rantala/mergesort Parallel unstable LCP with 2way merger")
+
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_lcp_2way_unstable_parallel,
+                                     "rantala/mergesort_parallel unstable LCP with 2way merger")
 
 } // namespace rantala_mergesort_lcp

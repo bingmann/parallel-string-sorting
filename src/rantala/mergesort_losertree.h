@@ -162,16 +162,16 @@ void mergesort_losertree_1024way_parallel(unsigned char** strings, size_t n)
 	mergesort_losertree_parallel<1024>(strings, n, tmp);
 	free(tmp);
 }
-/*
-ROUTINE_REGISTER_MULTICORE(mergesort_losertree_64way_parallel,
-		"Parallel 64way loser tree based mergesort")
-ROUTINE_REGISTER_MULTICORE(mergesort_losertree_128way_parallel,
-		"Parallel 128way loser tree based mergesort")
-ROUTINE_REGISTER_MULTICORE(mergesort_losertree_256way_parallel,
-		"Parallel 256way loser tree based mergesort")
-ROUTINE_REGISTER_MULTICORE(mergesort_losertree_512way_parallel,
-		"Parallel 512way loser tree based mergesort")
-ROUTINE_REGISTER_MULTICORE(mergesort_losertree_1024way_parallel,
-		"Parallel 1024way loser tree based mergesort")
-*/
+
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_losertree_64way_parallel,
+		"rantala/mergesort parallel 64way loser tree based")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_losertree_128way_parallel,
+		"rantala/mergesort parallel 128way loser tree based")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_losertree_256way_parallel,
+		"rantala/mergesort parallel 256way loser tree based")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_losertree_512way_parallel,
+		"rantala/mergesort parallel 512way loser tree based")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(mergesort_losertree_1024way_parallel,
+		"rantala/mergesort parallel 1024way loser tree based")
+
 } // namespace rantala

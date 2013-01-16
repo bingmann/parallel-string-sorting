@@ -7,6 +7,7 @@ add_executable(psstest
   sequential/nilsson-adaptive.cc
   sequential/nilsson-forward8.cc
   sequential/nilsson-forward16.cc
+  parallel/akiba-parallel_string_radix_sort.cc
 )
 target_link_libraries(psstest zio)
 
