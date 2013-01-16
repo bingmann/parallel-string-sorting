@@ -38,5 +38,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 # build libzio for transparent decompression
 add_subdirectory(libzio)
 
+# build liblfds for lock-free data structures
+add_subdirectory(liblfds)
+
 # descend into source
 add_subdirectory(src)
