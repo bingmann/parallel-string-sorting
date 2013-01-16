@@ -20,6 +20,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#include <vector>
+
 class Contestant;
 
 class Contest
@@ -37,12 +39,7 @@ public:
     void run_contest(const char* path); // implemented in main.cc
 };
 
-Contest* getContestSingleton()
-{
-    static Contest* c = NULL;
-    if (!c) c = new Contest;
-    return c;
-}
+extern Contest* getContestSingleton();
 
 class Contestant
 {

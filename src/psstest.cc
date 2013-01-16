@@ -68,6 +68,7 @@ std::vector<size_t> g_stringoffsets;
 #include "tools/checker.h"
 
 #include "sequential/inssort.h"
+#include "sequential/mbm-radix.h"
 #include "sequential/mkqs.h"
 #include "sequential/burstsortA.h"
 #include "sequential/burstsortL.h"
@@ -107,6 +108,13 @@ std::vector<size_t> g_stringoffsets;
 //#include "rantala/mergesort_lcp.h"
 #include "rantala/funnelsort.h"
 #undef debug
+
+Contest* getContestSingleton()
+{
+    static Contest* c = NULL;
+    if (!c) c = new Contest;
+    return c;
+}
 
 void Contest::run_contest(const char* path)
 {
