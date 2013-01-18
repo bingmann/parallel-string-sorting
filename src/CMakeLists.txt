@@ -1,9 +1,11 @@
 # Simple CMake file
 
 include_directories("${PROJECT_SOURCE_DIR}/libzio/")
+include_directories("${PROJECT_SOURCE_DIR}/liblfds/inc")
 
 add_executable(psstest
   psstest.cc
+  rantala/funnelsort.cc
   sequential/nilsson-adaptive.cc
   sequential/nilsson-forward8.cc
   sequential/nilsson-forward16.cc

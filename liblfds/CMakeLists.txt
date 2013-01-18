@@ -1,6 +1,6 @@
 # CMake targets for liblfds
 
-include_directories(${PROJECT_SOURCE_DIR}/liblfds/inc ${PROJECT_SOURCE_DIR}/liblfds/src)
+include_directories("${PROJECT_SOURCE_DIR}/liblfds/inc" "${PROJECT_SOURCE_DIR}/liblfds/src")
 
 # Define sources
 set(LIBLFDS_SOURCES

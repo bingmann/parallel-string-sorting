@@ -77,7 +77,29 @@
  *     }
  */
 
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
+
+#include <boost/static_assert.hpp>
+#include <boost/array.hpp>
+#include <boost/type_traits/integral_constant.hpp>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+#include "tools/insertion_sort.h"
+
+#include "../tools/contest.h"
+
 namespace rantala {
+
+static inline int
+cmp(const unsigned char* a, const unsigned char* b)
+{
+	assert(a != 0);	assert(b != 0);
+	return strcmp(reinterpret_cast<const char*>(a),
+	              reinterpret_cast<const char*>(b));
+}
 
 struct Stream { unsigned char** restrict stream; size_t n; };
 
