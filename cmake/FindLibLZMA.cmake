@@ -58,7 +58,7 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibLZMA  REQUIRED_VARS  LIBLZMA_INCLUDE_DIR
                                                           LIBLZMA_HAS_AUTO_DECODER
                                                           LIBLZMA_HAS_EASY_ENCODER
                                                           LIBLZMA_HAS_LZMA_PRESET
-                                           VERSION_VAR    LIBLZMA_VERSION_STRING
+                                                          LIBLZMA_VERSION_STRING
                                  )
 
 IF (LIBLZMA_FOUND)

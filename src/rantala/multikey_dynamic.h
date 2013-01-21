@@ -33,6 +33,13 @@ copy(const std::vector<unsigned char*>& bucket, unsigned char** dst)
 	std::copy(bucket.begin(), bucket.end(), dst);
 }
 
+template <typename CharT>
+static inline unsigned
+get_bucket(CharT c, CharT pivot)
+{
+        return ((c > pivot) << 1) | (c == pivot);
+}
+
 template <typename BucketT>
 static inline void
 clear_bucket(BucketT& bucket)

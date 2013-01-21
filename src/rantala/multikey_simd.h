@@ -245,13 +245,6 @@ calculate_bucketsizes_sse(
 /******************************************************************************/
 
 template <typename CharT>
-static inline unsigned
-get_bucket(CharT c, CharT pivot)
-{
-        return ((c > pivot) << 1) | (c == pivot);
-}
-
-template <typename CharT>
 static void
 multikey_simd(unsigned char** strings, size_t N, size_t depth)
 {

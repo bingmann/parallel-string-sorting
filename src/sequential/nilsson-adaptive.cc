@@ -392,10 +392,10 @@ void arssort(string strings[], size_t scnt)
    return;
 }
 
-void adaptive_msd_nilsson(unsigned char **strings, size_t n)
+void nilsson_adaptive_msd(unsigned char **strings, size_t n)
 {
     return arssort((char_t**)strings, n);
 }
 
-CONTESTANT_REGISTER_UCARRAY(adaptive_msd_nilsson,
+CONTESTANT_REGISTER_UCARRAY(nilsson_adaptive_msd,
                             "Adaptive MSD Radix Sort by Stefan Nilsson")

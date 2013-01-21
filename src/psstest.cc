@@ -58,6 +58,8 @@ extern "C" {
 #include <dmalloc.h>
 #endif
 
+#include "tools/statsfile.h"
+
 // *** Global Input Data Structures ***
 
 size_t          gopt_inputsizelimit = 0;
@@ -66,6 +68,11 @@ const char*     gopt_algorithm = NULL;
 const char*     g_stringdata = NULL;
 size_t          g_stringdatasize = 0;
 std::vector<size_t> g_stringoffsets;
+
+static StatsCache g_statscache;
+
+// file name of statistics output
+static const char* statsfile = "pss-runs1.txt";
 
 // *** Tools and Algorithms
 
@@ -80,6 +87,7 @@ std::vector<size_t> g_stringoffsets;
 #include "sequential/burstsortL.h"
 #include "sequential/cradix.h"
 #include "sequential/cradix-rantala.h"
+#include "sequential/bingmann-radix_sort.h"
 
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"
@@ -115,6 +123,7 @@ std::vector<size_t> g_stringoffsets;
 
 #undef debug
 
+
 int pss_num_threads = 0;
 
 Contest* getContestSingleton()
@@ -146,6 +155,7 @@ void Contestant_UCArray::run()
 {
     // create unsigned char* array from offsets
     std::vector<unsigned char*> stringptr;
+    stringptr.reserve( g_stringoffsets.size() );
 
     for (size_t i = 0; i < g_stringoffsets.size(); ++i)
     {
@@ -155,7 +165,11 @@ void Contestant_UCArray::run()
     // save permutation check evaluation result
     PermutationCheck pc(stringptr);
 
-    std::cerr << "Running " << m_funcname << " - " << m_description << "\n";
+    //std::cerr << "Running " << m_funcname << " - " << m_description << "\n";
+
+    g_statscache >> "algo" << m_funcname
+                 >> "char_count" << g_stringdatasize
+                 >> "string_count" << stringptr.size();
 
 #ifdef DMALLOC
     unsigned long dm_mark = dmalloc_mark();
@@ -180,10 +194,20 @@ void Contestant_UCArray::run()
     std::cerr << " with " << dm_memuse << " KiB";
 #endif
 
-    (std::cerr << ts2-ts1 << " checking ").flush();
+    g_statscache >> "time" << (ts2-ts1);
+    (std::cerr << m_funcname << "\t" << ts2-ts1 << "\tchecking ").flush();
 
-    if (check_sorted_order(stringptr, pc))
+    if (check_sorted_order(stringptr, pc)) {
         std::cerr << "ok" << std::endl;
+        g_statscache >> "status" << "ok";
+    }
+    else {
+        g_statscache >> "status" << "failed";
+    }
+
+    // print timing data out to results file
+    //StatsWriter(statsfile).append_statsmap(g_statscache);
+    g_statscache.clear();
 }
 
 void Contestant_UCArray_Parallel::run()
@@ -193,6 +217,7 @@ void Contestant_UCArray_Parallel::run()
         pss_num_threads = p;
         std::cerr << "threads=" << p << " ";
         omp_set_num_threads(p);
+        g_statscache >> "threads" << p;
 
         Contestant_UCArray::run();
     }

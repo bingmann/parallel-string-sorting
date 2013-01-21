@@ -80,6 +80,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <iostream>
 
 #include <boost/static_assert.hpp>
 #include <boost/array.hpp>
