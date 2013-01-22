@@ -239,7 +239,7 @@ static void msd_CI2(string* strings, size_t n, size_t depth)
     BucketsizeType bktsize[256] = {0};
     for (size_t i=0; i < n; ++i)
         ++bktsize[ strings[i][depth] ];
-    static size_t bktindex[256];
+    size_t bktindex[256];
     bktindex[0] = bktsize[0];
     BucketsizeType last_bkt_size = bktsize[0];
     for (unsigned i=1; i < 256; ++i) {
@@ -348,16 +348,10 @@ msd_CI4(string* strings, size_t n, size_t depth)
     for (size_t i=0, j; i < n-last_bkt_size; )
     {
         string perm = strings[i];
-        if (bkt[ perm[depth] ] == i)
-        {
-            i += bktsize[ perm[depth] ];
-            continue;
-        }
         while ( (j = --bkt[ perm[depth] ]) > i )
         {
             std::swap(perm, strings[j]);
         }
-        assert(j == i);
         strings[i] = perm;
         i += bktsize[ perm[depth] ];
     }
@@ -411,7 +405,7 @@ msd_CE_nr(string* strings, size_t n)
 
     std::stack< RadixStep, std::vector<RadixStep> > radixstack;
     radixstack.push( RadixStep(strings,n,0) );
-    
+
     while ( radixstack.size() )
     {
         RadixStep& rs = radixstack.top();
@@ -422,7 +416,7 @@ msd_CE_nr(string* strings, size_t n)
 
             if (rs.bkt[rs.idx] == rs.bkt[rs.idx+1])
                 ;
-            else if (rs.bkt[rs.idx] + 32 > rs.bkt[rs.idx+1])
+            else if (rs.bkt[rs.idx+1] < rs.bkt[rs.idx] + 32)
             {
                 insertion_sort(rs.str + rs.bkt[ rs.idx ],
                                rs.bkt[ rs.idx+1 ] - rs.bkt[ rs.idx ],
@@ -496,7 +490,7 @@ msd_CI_nr(string* strings, size_t n)
                 i += bktsize[ perm[depth] ];
             }
             // update bkt boundary of last (unpermuted) bucket
-            bkt[last_bkt_num] = n-last_bkt_size; 
+            bkt[last_bkt_num] = n-last_bkt_size;
 
             str = strings;
             idx = 0;        // will increment to 1 on first process
@@ -505,7 +499,7 @@ msd_CI_nr(string* strings, size_t n)
 
     std::stack< RadixStep, std::vector<RadixStep> > radixstack;
     radixstack.push( RadixStep(strings,n,0) );
-    
+
     while ( radixstack.size() )
     {
         RadixStep& rs = radixstack.top();
@@ -516,7 +510,7 @@ msd_CI_nr(string* strings, size_t n)
 
             if (rs.bkt[rs.idx] == rs.bkt[rs.idx+1])
                 ;
-            else if (rs.bkt[rs.idx] + 32 > rs.bkt[rs.idx+1])
+            else if (rs.bkt[rs.idx+1] < rs.bkt[rs.idx] + 32)
             {
                 insertion_sort(rs.str + rs.bkt[ rs.idx ],
                                rs.bkt[ rs.idx+1 ] - rs.bkt[ rs.idx ],
@@ -539,5 +533,81 @@ msd_CI_nr(string* strings, size_t n)
 
 void bingmann_msd_CI_nr(string* strings, size_t n) { return msd_CI_nr(strings,n); }
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI_nr, "bingmann/msd_CI_nr (CI non-recursive)")
+
+static void
+msd_CI_nr2(string* strings, size_t n)
+{
+    if (n < 32)
+        return insertion_sort(strings,n,0);
+
+    struct RadixStep
+    {
+        string* str;
+        size_t idx;
+        size_t bktsize[256];
+
+        RadixStep(string* strings, size_t n, size_t depth)
+        {
+            // count character occurances
+            memset(bktsize,0,sizeof(bktsize));
+            for (size_t i=0; i < n; ++i)
+                ++bktsize[ strings[i][depth] ];
+
+            // inclusive prefix sum
+            size_t bkt[256];
+            bkt[0] = bktsize[0];
+            size_t last_bkt_size = bktsize[0];
+            for (unsigned i=1; i < 256; ++i) {
+                bkt[i] = bkt[i-1] + bktsize[i];
+                if (bktsize[i]) last_bkt_size = bktsize[i];
+            }
+
+            // premute in-place
+            for (size_t i=0, j; i < n-last_bkt_size; )
+            {
+                string perm = strings[i];
+                while ( (j = --bkt[ perm[depth] ]) > i )
+                {
+                    std::swap(perm, strings[j]);
+                }
+                strings[i] = perm;
+                i += bktsize[ perm[depth] ];
+            }
+
+            str = strings + bktsize[0];
+            idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
+        }
+    };
+
+    std::stack< RadixStep, std::vector<RadixStep> > radixstack;
+    radixstack.push( RadixStep(strings,n,0) );
+
+    while ( radixstack.size() )
+    {
+        while ( radixstack.top().idx < 255 )
+        {
+            RadixStep& rs = radixstack.top();
+            ++rs.idx; // process the bucket rs.idx
+
+            if (rs.bktsize[rs.idx] == 0)
+                ;
+            else if (rs.bktsize[rs.idx] < 32)
+            {
+                insertion_sort(rs.str, rs.bktsize[rs.idx], radixstack.size());
+                rs.str += rs.bktsize[ rs.idx ];
+            }
+            else
+            {
+                rs.str += rs.bktsize[ rs.idx ];
+                radixstack.push( RadixStep(rs.str - rs.bktsize[ rs.idx ], rs.bktsize[rs.idx], radixstack.size()) );
+                // cannot add here, because rs may have invalidated
+            }
+        }
+        radixstack.pop();
+    }
+}
+
+void bingmann_msd_CI_nr2(string* strings, size_t n) { return msd_CI_nr2(strings,n); }
+CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI_nr2, "bingmann/msd_CI_nr2 (CI non-recursive)")
 
 } // namespace bingmann_radix_sort
