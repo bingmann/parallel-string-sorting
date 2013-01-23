@@ -38,7 +38,6 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
-#include <atomic>
 
 #include <omp.h>
 #include <getopt.h>
@@ -47,10 +46,6 @@
 #include <boost/array.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/type_traits/integral_constant.hpp>
-
-extern "C" {
-#include <liblfds611.h>
-}
 
 #include "zio.h"
 
@@ -76,6 +71,7 @@ static const char* statsfile = "pss-runs1.txt";
 
 // *** Tools and Algorithms
 
+#include "tools/debug.h"
 #include "tools/contest.h"
 #include "tools/input.h"
 #include "tools/checker.h"
@@ -122,7 +118,6 @@ static const char* statsfile = "pss-runs1.txt";
 //#include "rantala/mergesort_lcp.h"
 
 #undef debug
-
 
 int pss_num_threads = 0;
 

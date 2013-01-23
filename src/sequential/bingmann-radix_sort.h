@@ -441,6 +441,76 @@ void bingmann_msd_CE_nr(string* strings, size_t n) { return msd_CE_nr(strings,n)
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CE_nr, "bingmann/msd_CE_nr (CE non-recursive)")
 
 static void
+msd_CE_nr2(string* strings, size_t n)
+{
+    if (n < 32)
+        return insertion_sort(strings,n,0);
+
+    struct RadixStep
+    {
+        string* str;
+        size_t bktsize[256];
+        size_t idx;
+
+        RadixStep(string* strings, size_t n, size_t depth)
+        {
+            // count character occurances
+            memset(bktsize, 0, sizeof(bktsize));
+            for (size_t i=0; i < n; ++i)
+                ++bktsize[ strings[i][depth] ];
+
+            // prefix sum
+            size_t bkt[256];
+            bkt[0] = 0;
+            for (size_t i=1; i < 256; ++i)
+                bkt[i] = bkt[i-1] + bktsize[i-1];
+
+            // distribute out-of-place
+            string* sorted = (string*)malloc(n * sizeof(string));
+
+            for (size_t i=0; i < n; ++i)
+                sorted[ bkt[strings[i][depth]]++ ] = strings[i];
+
+            memcpy(strings, sorted, n * sizeof(string));
+            free(sorted);
+
+            str = strings + bktsize[0];
+            idx = 0; // will increment to 1 on first process
+        }
+    };
+
+    std::stack< RadixStep, std::vector<RadixStep> > radixstack;
+    radixstack.push( RadixStep(strings,n,0) );
+
+    while ( radixstack.size() )
+    {
+        while ( radixstack.top().idx < 255 )
+        {
+            RadixStep& rs = radixstack.top();
+            ++rs.idx; // process the bucket rs.idx
+
+            if (rs.bktsize[rs.idx] == 0)
+                ;
+            else if (rs.bktsize[rs.idx] < 32)
+            {
+                insertion_sort(rs.str, rs.bktsize[rs.idx], radixstack.size());
+                rs.str += rs.bktsize[ rs.idx ];
+            }
+            else
+            {
+                rs.str += rs.bktsize[rs.idx];
+                radixstack.push( RadixStep(rs.str - rs.bktsize[rs.idx], rs.bktsize[rs.idx], radixstack.size()) );
+                // cannot add here, because rs may have invalidated
+            }
+        }
+        radixstack.pop();
+    }
+}
+
+void bingmann_msd_CE_nr2(string* strings, size_t n) { return msd_CE_nr2(strings,n); }
+CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CE_nr2, "bingmann/msd_CE_nr2 (CE non-recursive)")
+
+static void
 msd_CI_nr(string* strings, size_t n)
 {
     if (n < 32)
@@ -598,8 +668,8 @@ msd_CI_nr2(string* strings, size_t n)
             }
             else
             {
-                rs.str += rs.bktsize[ rs.idx ];
-                radixstack.push( RadixStep(rs.str - rs.bktsize[ rs.idx ], rs.bktsize[rs.idx], radixstack.size()) );
+                rs.str += rs.bktsize[rs.idx];
+                radixstack.push( RadixStep(rs.str - rs.bktsize[rs.idx], rs.bktsize[rs.idx], radixstack.size()) );
                 // cannot add here, because rs may have invalidated
             }
         }
