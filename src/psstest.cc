@@ -131,7 +131,8 @@ Contest* getContestSingleton()
 void Contest::run_contest(const char* path)
 {
     // read input datafile
-    readfile_lines(path);
+    if (!input::load(path))
+        return;
 
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
@@ -251,7 +252,7 @@ int main(int argc, char* argv[])
             break;
 
         case 's':
-            if (!parse_filesize(optarg, gopt_inputsizelimit)) {
+            if (!input::parse_filesize(optarg, gopt_inputsizelimit)) {
                 std::cerr << "Invalid size parameter: " << optarg << std::endl;
                 exit(EXIT_FAILURE);                
             }

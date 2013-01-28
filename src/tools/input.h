@@ -4,7 +4,7 @@
  * Tools to read input files as null-terminated strings.
  *
  ******************************************************************************
- * Copyright (C) 2012 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -19,6 +19,8 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
+
+namespace input {
 
 /// Read a compressed file containing newline terminated strings
 bool readfile_lines(const std::string& path)
@@ -128,6 +130,63 @@ bool readfile_lines(const std::string& path)
     return true;
 }
 
+/// Generate artificial random input with given base letter set.
+bool generate_random(const std::string& letters)
+{
+    if (!gopt_inputsizelimit) {
+        std::cerr << "Random input size must be specified via '-s <size>'\n";
+        return false;
+    }
+
+    size_t size = gopt_inputsizelimit;
+
+    // free previous data file
+    if (g_stringdata) free( (char*)g_stringdata );
+
+    // allocate one continuous area of memory
+    std::cerr << "Allocating " << size << " bytes in RAM, generating random data.\n";
+    char* stringdata = (char*)malloc(size);
+
+    g_stringdata = stringdata;
+    g_stringdatasize = size;
+
+    if (!stringdata) {
+        std::cerr << "\n" << strerror(errno) << "\n";
+        return false;
+    }
+
+    g_stringoffsets.clear();
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        if ((i % 16) == 0) // start of string
+            g_stringoffsets.push_back(i);
+
+        if ((i % 16) == 15) // end of string
+            stringdata[i] = 0;
+        else
+            stringdata[i] = letters[ rand() % letters.size() ];
+    }
+
+    // force terminatation of last string
+    stringdata[ size-1 ] = 0;
+
+    return true;
+}
+
+/// Run through a list of artificial inputs and maybe generate one.
+bool load_artifical(const std::string& path)
+{
+    if (path == "random") {
+        return generate_random("0123456789");
+    }
+    else if (path == "random10") {
+        return generate_random("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+    }
+    else
+        return false;
+}
+
 /// Parse a string like "343KB" or "44g" into the corresponding size in bytes
 bool parse_filesize(const char* str, size_t& outsize)
 {
@@ -151,3 +210,16 @@ bool parse_filesize(const char* str, size_t& outsize)
 
     return true;
 }
+
+/// Load an input set into memory
+bool load(const std::string& path)
+{
+    if (load_artifical(path)) {
+        return true;
+    }
+    else {
+        return readfile_lines(path);
+    }
+}
+
+} // namespace input
