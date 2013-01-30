@@ -1,7 +1,7 @@
 /******************************************************************************
- * src/parallel/bingmann-parallel_radix_sort1.h
+ * src/parallel/bingmann-parallel_radix_sort2.h
  *
- * Parallel radix sort with work-balancing, variant 1.
+ * Parallel radix sort with work-balancing, variant 2.
  *
  * The set of strings is sorted using a 8-bit radix sort algorithm. Recursive
  * sorts are processed in parallel using a lock-free job queue and OpenMP
@@ -37,21 +37,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <omp.h>
-
 #include <iostream>
 #include <vector>
-#include <atomic>
 
 #include "../tools/debug.h"
 #include "../tools/contest.h"
+#include "../tools/stringtools.h"
 #include "../tools/jobqueue.h"
 
-namespace bingmann_parallel_radix_sort1 {
+namespace bingmann_parallel_radix_sort2 {
 
+using namespace stringtools;
 using namespace jobqueue;
 
 static const bool debug_jobs = false;
+
 static const bool use_work_stealing = true;
 
 typedef unsigned char* string;
@@ -196,10 +196,13 @@ void EnqueueSmall(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 }
 
 // ****************************************************************************
-// *** RadixStepCE out-of-place parallel radix sort with separate Jobs
+// *** RadixStepCE out-of-place 8- or 16-bit parallel radix sort with Jobs
 
+template <typename KeyType>
 struct RadixStepCE
 {
+    typedef KeyType key_type;
+    
     string*             strings;
     size_t              n;
     size_t              depth;
@@ -208,6 +211,8 @@ struct RadixStepCE
     size_t              psize;
     std::atomic<unsigned int> pwork;
     size_t*             bkt;
+
+    static const size_t numbkts = key_traits<key_type>::radix;
 
     string*             sorted;
 
@@ -221,12 +226,13 @@ struct RadixStepCE
     void copyback_finished(JobQueue& jobqueue);
 };
 
+template <typename key_type>
 struct CountJob : public Job
 {
-    RadixStepCE*        step;
-    unsigned int        p;
+    RadixStepCE<key_type>*      step;
+    unsigned int                p;
 
-    CountJob(RadixStepCE* _step, unsigned int _p)
+    CountJob(RadixStepCE<key_type>* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
     virtual void run(JobQueue& jobqueue)
@@ -236,12 +242,13 @@ struct CountJob : public Job
     }
 };
 
+template <typename key_type>
 struct DistributeJob : public Job
 {
-    RadixStepCE*        step;
-    unsigned int        p;
+    RadixStepCE<key_type>*      step;
+    unsigned int                p;
 
-    DistributeJob(RadixStepCE* _step, unsigned int _p)
+    DistributeJob(RadixStepCE<key_type>* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
     virtual void run(JobQueue& jobqueue)
@@ -251,12 +258,13 @@ struct DistributeJob : public Job
     }
 };
 
+template <typename key_type>
 struct CopybackJob : public Job
 {
-    RadixStepCE*        step;
-    unsigned int        p;
+    RadixStepCE<key_type>*      step;
+    unsigned int                p;
 
-    CopybackJob(RadixStepCE* _step, unsigned int _p)
+    CopybackJob(RadixStepCE<key_type>* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
     virtual void run(JobQueue& jobqueue)
@@ -266,42 +274,45 @@ struct CopybackJob : public Job
     }
 };
 
-void RadixStepCE::count(unsigned int p, JobQueue& jobqueue)
+template <typename key_type>
+void RadixStepCE<key_type>::count(unsigned int p, JobQueue& jobqueue)
 {
     string* strB = strings + p * psize;
     string* strE = strings + std::min((p+1) * psize, n);
+    if (strE < strB) strE = strB;
 
     // TODO: check if processor-local stack + copy is faster
 #if 1
-    size_t* mybkt = bkt + p * 256;
+    size_t* mybkt = bkt + p * numbkts;
 
-    memset(mybkt, 0, 256 * sizeof(size_t));
+    memset(mybkt, 0, numbkts * sizeof(size_t));
     for (string* str = strB; str != strE; ++str)
-        ++mybkt[ (*str)[depth] ];
+        ++mybkt[ get_char<key_type>(*str, depth) ];
 #else
-    size_t mybkt[256] = { 0 };
+    size_t mybkt[numbkts] = { 0 };
 
     for (string* str = strB; str != strE; ++str)
-        ++mybkt[ (*str)[depth] ];
+        ++mybkt[ get_char<key_type>(*str, depth) ];
 
-    memcpy(bkt + p * 256, mybkt, sizeof(mybkt));
+    memcpy(bkt + p * numbkts, mybkt, sizeof(mybkt));
 #endif
 
     if (--pwork == 0)
         count_finished(jobqueue);
 }
 
-void RadixStepCE::count_finished(JobQueue& jobqueue)
+template <typename key_type>
+void RadixStepCE<key_type>::count_finished(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Finishing CountJob " << this << " with prefixsum");
 
     // inclusive prefix sum over bkt
     size_t sum = 0;
-    for (unsigned int i = 0; i < 256; ++i)
+    for (unsigned int i = 0; i < numbkts; ++i)
     {
         for (unsigned int p = 0; p < parts; ++p)
         {
-            bkt[p * 256 + i] = (sum += bkt[p * 256 + i]);
+            bkt[p * numbkts + i] = (sum += bkt[p * numbkts + i]);
         }
     }
     assert(sum == n);
@@ -313,26 +324,28 @@ void RadixStepCE::count_finished(JobQueue& jobqueue)
     pwork = parts;
 
     for (unsigned int p = 0; p < parts; ++p)
-        jobqueue.enqueue( new DistributeJob(this, p) );
+        jobqueue.enqueue( new DistributeJob<key_type>(this, p) );
 }
 
-void RadixStepCE::distribute(unsigned int p, JobQueue& jobqueue)
+template <typename key_type>
+void RadixStepCE<key_type>::distribute(unsigned int p, JobQueue& jobqueue)
 {
     string* strB = strings + p * psize;
     string* strE = strings + std::min((p+1) * psize, n);
+    if (strE < strB) strE = strB;
 
     // TODO: check if processor-local stack + copy is faster
 #if 1
-    size_t* mybkt = bkt + p * 256;
+    size_t* mybkt = bkt + p * numbkts;
 
     for (string* str = strB; str != strE; ++str)
-        sorted[ --mybkt[(*str)[depth]] ] = *str;
+        sorted[ --mybkt[ get_char<key_type>(*str, depth) ] ] = *str;
 #else
-    size_t mybkt[256];
-    memcpy(mybkt, bkt + p * 256, sizeof(mybkt));
+    size_t mybkt[numbkts];
+    memcpy(mybkt, bkt + p * numbkts, sizeof(mybkt));
 
     for (string* str = strB; str != strE; ++str)
-        sorted[ --mybkt[(*str)[depth]] ] = *str;
+        sorted[ --mybkt[ get_char<key_type>(*str, depth) ] ] = *str;
 
     if (p == 0) // these are needed for recursion into bkts
         memcpy(bkt, mybkt, sizeof(mybkt));
@@ -342,7 +355,8 @@ void RadixStepCE::distribute(unsigned int p, JobQueue& jobqueue)
         distribute_finished(jobqueue);
 }
 
-void RadixStepCE::distribute_finished(JobQueue& jobqueue)
+template <typename key_type>
+void RadixStepCE<key_type>::distribute_finished(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Finishing DistributeJob " << this << " with copy to original");
 
@@ -350,13 +364,15 @@ void RadixStepCE::distribute_finished(JobQueue& jobqueue)
     pwork = parts;
 
     for (unsigned int p = 0; p < parts; ++p)
-        jobqueue.enqueue( new CopybackJob(this, p) );
+        jobqueue.enqueue( new CopybackJob<key_type>(this, p) );
 }
 
-void RadixStepCE::copyback(unsigned int p, JobQueue& jobqueue)
+template <typename key_type>
+void RadixStepCE<key_type>::copyback(unsigned int p, JobQueue& jobqueue)
 {
     size_t strB = p * psize;
     size_t strE = std::min((p+1) * psize, n);
+    if (strE < strB) strE = strB;
 
     memcpy(strings + strB, sorted + strB, (strE - strB) * sizeof(string));
 
@@ -364,19 +380,42 @@ void RadixStepCE::copyback(unsigned int p, JobQueue& jobqueue)
         copyback_finished(jobqueue);
 }
 
-void RadixStepCE::copyback_finished(JobQueue& jobqueue)
+template <>
+void RadixStepCE<uint8_t>::copyback_finished(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Finishing CopybackJob " << this << " with copy to original");
 
     free(sorted);
 
     // first p's bkt pointers are boundaries between bkts, just add sentinel:
-    bkt[256] = n;
+    bkt[numbkts] = n;
 
-    for (unsigned int i = 1; i < 256; ++i)
+    for (unsigned int i = 1; i < numbkts; ++i)
     {
         if (bkt[i] == bkt[i+1]) continue;
-        Enqueue(jobqueue, strings + bkt[i], bkt[i+1] - bkt[i], depth+1);
+        Enqueue(jobqueue, strings + bkt[i], bkt[i+1] - bkt[i], depth + key_traits<key_type>::add_depth);
+    }
+
+    delete [] bkt;
+    delete this;
+}
+
+template <>
+void RadixStepCE<uint16_t>::copyback_finished(JobQueue& jobqueue)
+{
+    DBG(debug_jobs, "Finishing CopybackJob " << this << " with copy to original");
+
+    free(sorted);
+
+    // first p's bkt pointers are boundaries between bkts, just add sentinel:
+    bkt[numbkts] = n;
+
+    for (unsigned int i = 0x0101; i < numbkts; ++i)
+    {
+        if ((i & 0xFF) == 0) ++i; // skip over finished buckets 0x??00
+            
+        if (bkt[i] == bkt[i+1]) continue;
+        Enqueue(jobqueue, strings + bkt[i], bkt[i+1] - bkt[i], depth + key_traits<key_type>::add_depth);
     }
 
     delete [] bkt;
@@ -391,7 +430,10 @@ void EnqueueBig(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
     if (parts == 0) parts = 1;
     size_t psize = (n + parts-1) / parts;
 
-    RadixStepCE* step = new RadixStepCE;
+    typedef uint16_t key_type;
+    typedef RadixStepCE<key_type> RadixStep_type;
+
+    RadixStep_type* step = new RadixStep_type;
     step->strings = strings;
     step->n = n;
     step->depth = depth;
@@ -399,10 +441,10 @@ void EnqueueBig(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
     step->parts = parts;
     step->psize = psize;
     step->pwork = parts;
-    step->bkt = new size_t[256 * parts + 1];
+    step->bkt = new size_t[RadixStep_type::numbkts * parts + 1];
 
     for (unsigned int p = 0; p < parts; ++p)
-        jobqueue.enqueue( new CountJob(step, p) );
+        jobqueue.enqueue( new CountJob<key_type>(step, p) );
 }
 
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
@@ -414,17 +456,17 @@ void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
         return EnqueueSmall(jobqueue, strings, n, depth);
 }
 
-void bingmann_parallel_radix_sort1(string* strings, size_t n)
+void bingmann_parallel_radix_sort2(string* strings, size_t n)
 {
     totalsize = n;
 
     JobQueue jobqueue;
-    Enqueue(jobqueue, strings,n,0);
+    Enqueue(jobqueue, strings, n, 0);
     jobqueue.loop();
 }
 
-//CONTESTANT_REGISTER_UCARRAY(bingmann_parallel_radix_sort1, "bingmann/parallel_radix_sort1")
+//CONTESTANT_REGISTER_UCARRAY(bingmann_parallel_radix_sort2, "bingmann/parallel_radix_sort2")
 
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(bingmann_parallel_radix_sort1, "bingmann/parallel_radix_sort1")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(bingmann_parallel_radix_sort2, "bingmann/parallel_radix_sort2")
 
-} // namespace bingmann_parallel_radix_sort1
+} // namespace bingmann_parallel_radix_sort2

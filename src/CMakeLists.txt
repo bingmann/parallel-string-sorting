@@ -11,6 +11,7 @@ add_executable(psstest
   sequential/nilsson-forward16.cc
   parallel/akiba-parallel_string_radix_sort.cc
   parallel/bingmann-parallel_radix_sort1.cc
+  parallel/bingmann-parallel_radix_sort2.cc
 )
 target_link_libraries(psstest zio)
 target_link_libraries(psstest lfds)
