@@ -75,6 +75,7 @@ static const char* statsfile = "pss-runs1.txt";
 #include "tools/contest.h"
 #include "tools/input.h"
 #include "tools/checker.h"
+#include "tools/stringtools.h"
 
 #include "sequential/inssort.h"
 #include "sequential/mbm-radix.h"

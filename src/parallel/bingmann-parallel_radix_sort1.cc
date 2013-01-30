@@ -43,112 +43,18 @@
 #include <vector>
 #include <atomic>
 
-extern "C" {
-#include <liblfds611.h>
-}
-
 #include "../tools/debug.h"
 #include "../tools/contest.h"
+#include "../tools/jobqueue.h"
 
 namespace bingmann_parallel_radix_sort1 {
 
-static const bool debug_jobs = false;
-static const bool debug_queue = false;
+using namespace jobqueue;
 
+static const bool debug_jobs = false;
 static const bool use_work_stealing = true;
 
 typedef unsigned char* string;
-
-// ****************************************************************************
-// *** Job and JobQueue system with lock-free queue and OpenMP threads
-
-class Job
-{
-public:
-    virtual ~Job() {};
-
-    /// virtual function that is called by the JobQueue
-    virtual void run(class JobQueue& jobqueue) = 0;
-};
-
-class JobQueue
-{
-private:
-
-    /// lock-free data structure containing void*s to Job objects.
-    struct lfds611_queue_state*  m_queue;
-
-    /// number of threads idle
-    std::atomic<int>            m_idle_count;
-    
-public:
-
-    JobQueue()
-    {
-        lfds611_queue_new(&m_queue, 2 * omp_get_num_threads());
-        m_idle_count = 0;
-    }
-
-    ~JobQueue()
-    {
-        lfds611_queue_delete(m_queue, NULL, NULL);
-    }
-
-    bool has_idle() const
-    {
-        return (m_idle_count != 0);
-    }
-
-    void enqueue(class Job* job)
-    {
-        if (!lfds611_queue_enqueue(m_queue, job))
-        {
-            if (!lfds611_queue_guaranteed_enqueue(m_queue, job))
-            {
-                DBG(1, "Error with queue_guaranteed_enqueue!");
-                abort();
-            }
-        }
-    }
-    
-    void loop()
-    {
-#pragma omp parallel
-        {
-            void* job_data;
-            lfds611_queue_use(m_queue);
-
-            while(1)
-            {
-                if (lfds611_queue_dequeue(m_queue, &job_data))
-                {
-                RUNJOB:
-                    Job* j = reinterpret_cast<Job*>(job_data);
-                    j->run(*this);
-                    delete j;
-                }
-                else
-                {
-                    DBG(debug_queue, "Queue is empty");
-                    ++m_idle_count;
-
-                    while (m_idle_count != omp_get_num_threads())
-                    {
-                        DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
-                        if (lfds611_queue_dequeue(m_queue, &job_data))
-                        {
-                            --m_idle_count;
-                            goto RUNJOB;
-                        }
-                    }
-
-                    assert(m_idle_count == omp_get_num_threads());
-                    break;
-                }
-            }
-        } // end omp parallel
-    }
-};
 
 /// Prototype called to schedule deeper sorts
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth);

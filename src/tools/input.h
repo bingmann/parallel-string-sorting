@@ -178,10 +178,16 @@ bool generate_random(const std::string& letters)
 bool load_artifical(const std::string& path)
 {
     if (path == "random") {
-        return generate_random("0123456789");
+        return generate_random("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
     }
     else if (path == "random10") {
-        return generate_random("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+        return generate_random("0123456789");
+    }
+    else if (path == "random255")
+    {
+        std::string letters(255,0);
+        for (int i = 0; i < 255; ++i) letters[i] = (char)(i+1);
+        return generate_random(letters);
     }
     else
         return false;
