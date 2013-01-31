@@ -421,11 +421,11 @@ void Sort(StringType (&strings)[kNumElems]) {
 
 }  // namespace parallel_string_radix_sort
 
-void akiba_parallel_msd_radix_sort(unsigned char **strings, size_t count)
+void akiba_parallel_radix_sort(unsigned char **strings, size_t count)
 {
     parallel_string_radix_sort::Sort<const unsigned char *>(
         (const unsigned char **)strings, count);
 }
 
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(akiba_parallel_msd_radix_sort,
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(akiba_parallel_radix_sort,
                                      "Parallel MSD radix sort by Takuya Akiba")

@@ -85,6 +85,7 @@ static const char* statsfile = "pss-runs1.txt";
 #include "sequential/cradix.h"
 #include "sequential/cradix-rantala.h"
 #include "sequential/bingmann-radix_sort.h"
+#include "sequential/bingmann-sample_sort.h"
 
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"

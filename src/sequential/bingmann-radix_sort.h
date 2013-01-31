@@ -365,8 +365,58 @@ msd_CI4(string* strings, size_t n, size_t depth)
     }
 }
 
-void bingmann_msd_CI4(string* strings, size_t n) { msd_CI4(strings, n, 0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI4, "bingmann/msd_CI4 (CI3 without swap operations)")
+static void
+msd_CI5(string* strings, size_t n, size_t depth)
+{
+    if (n < 32)
+        return insertion_sort(strings, n, depth);
+
+    // cache characters
+    uint8_t* charcache = new uint8_t[n];
+    for (size_t i=0; i < n; ++i)
+        charcache[i] = strings[i][depth];
+
+    // count character occurances
+    size_t bktsize[256] = { 0 };
+    for (size_t i=0; i < n; ++i)
+        ++bktsize[ charcache[i] ];
+
+    // inclusive prefix sum
+    size_t bkt[256];
+    bkt[0] = bktsize[0];
+    size_t last_bkt_size = bktsize[0];
+    for (unsigned i=1; i < 256; ++i) {
+        bkt[i] = bkt[i-1] + bktsize[i];
+        if (bktsize[i]) last_bkt_size = bktsize[i];
+    }
+
+    // premute in-place
+    for (size_t i=0, j; i < n-last_bkt_size; )
+    {
+        string perm = strings[i];
+        uint8_t permch = charcache[i];
+        while ( (j = --bkt[ permch ]) > i )
+        {
+            std::swap(perm, strings[j]);
+            std::swap(permch, charcache[j]);
+        }
+        strings[i] = perm;
+        i += bktsize[ permch ];
+    }
+
+    delete charcache;
+
+    // recursion
+    size_t bsum = bktsize[0];
+    for (size_t i=1; i < 256; ++i) {
+        if (bktsize[i] == 0) continue;
+        msd_CI5(strings+bsum, bktsize[i], depth+1);
+        bsum += bktsize[i];
+    }
+}
+
+void bingmann_msd_CI5(string* strings, size_t n) { msd_CI5(strings, n, 0); }
+CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI5, "bingmann/msd_CI5 (CI4 with charcache)")
 
 static void
 msd_CE_nr(string* strings, size_t n)

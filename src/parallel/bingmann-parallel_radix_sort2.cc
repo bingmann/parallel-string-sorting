@@ -3,10 +3,10 @@
  *
  * Parallel radix sort with work-balancing, variant 2.
  *
- * The set of strings is sorted using a 8-bit radix sort algorithm. Recursive
- * sorts are processed in parallel using a lock-free job queue and OpenMP
- * threads. Two radix sort implementations are used: sequential in-place and
- * parallelized out-of-place.
+ * The set of strings is sorted using a 8- or 16-bit radix sort
+ * algorithm. Recursive sorts are processed in parallel using a lock-free job
+ * queue and OpenMP threads. Two radix sort implementations are used:
+ * sequential in-place and parallelized out-of-place.
  *
  * The sequential radix sort is implemented using an explicit recursion stack,
  * which enables threads to "free up" work from the top of the stack when other
@@ -15,7 +15,9 @@
  *
  * To parallelize sorting of large buckets an out-of-place variant is
  * implemented using a sequence of three Jobs: count, distribute and
- * copyback. All threads work on a job-specific context called RadixStepCE.
+ * copyback. All threads work on a job-specific context called RadixStepCE,
+ * which encapsules all variables of a 16-bit radix sort (templatized with
+ * key_type).
  *
  ******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
