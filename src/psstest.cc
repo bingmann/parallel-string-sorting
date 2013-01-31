@@ -169,6 +169,8 @@ void Contestant_UCArray::run()
                  >> "char_count" << g_stringdatasize
                  >> "string_count" << stringptr.size();
 
+    (std::cerr << m_funcname << "\t").flush();
+
 #ifdef DMALLOC
     unsigned long dm_mark = dmalloc_mark();
     unsigned long dm_memuse1 = dmalloc_memory_allocated();
@@ -193,7 +195,7 @@ void Contestant_UCArray::run()
 #endif
 
     g_statscache >> "time" << (ts2-ts1);
-    (std::cerr << m_funcname << "\t" << ts2-ts1 << "\tchecking ").flush();
+    (std::cerr << ts2-ts1 << "\tchecking ").flush();
 
     if (check_sorted_order(stringptr, pc)) {
         std::cerr << "ok" << std::endl;
