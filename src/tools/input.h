@@ -130,6 +130,23 @@ bool readfile_lines(const std::string& path)
     return true;
 }
 
+/// Simple linear congruential random generator
+class LCGRandom
+{
+private:
+    size_t      xn;
+
+public:
+
+    inline LCGRandom(size_t seed) : xn(seed) { }
+
+    inline size_t operator()()
+    {
+        xn = 0x27BB2EE687B0B0FDLLU * xn + 0xB504F32DLU;
+        return xn;
+    }
+};
+
 /// Generate artificial random input with given base letter set.
 bool generate_random(const std::string& letters)
 {
@@ -156,16 +173,20 @@ bool generate_random(const std::string& letters)
     }
 
     g_stringoffsets.clear();
+    LCGRandom rng(239423494);
+    size_t slen = 0;
 
     for (size_t i = 0; i < size; ++i)
     {
-        if ((i % 16) == 0) // start of string
+        if (i == slen) { // start of string
             g_stringoffsets.push_back(i);
+            slen += (rng() % 3) + 16;
+        }
 
-        if ((i % 16) == 15) // end of string
+        if (i+1 == slen) // end of string
             stringdata[i] = 0;
         else
-            stringdata[i] = letters[ rand() % letters.size() ];
+            stringdata[i] = letters[ rng() % letters.size() ];
     }
 
     // force terminatation of last string
