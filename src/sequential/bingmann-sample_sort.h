@@ -65,19 +65,6 @@ inline unsigned int find_bkt(const key_type& key, const key_type* splitter, size
     return b;
 }
 
-/// Simple linear congruential random generator
-class LCGRandom
-{
-private:
-    size_t      xn;
-public:
-    inline LCGRandom(size_t seed) : xn(seed) { }
-    inline size_t operator()() {
-        xn = 0x27BB2EE687B0B0FDLLU * xn + 0xB504F32DLU;
-        return xn;
-    }
-};
-
 /// Variant 1 of string sample-sort: use binary search on splitters, no caching.
 void sample_sort1(string* strings, size_t n, size_t depth)
 {

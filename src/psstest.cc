@@ -72,6 +72,7 @@ static const char* statsfile = "pss-runs1.txt";
 // *** Tools and Algorithms
 
 #include "tools/debug.h"
+#include "tools/lcgrandom.h"
 #include "tools/contest.h"
 #include "tools/input.h"
 #include "tools/checker.h"
