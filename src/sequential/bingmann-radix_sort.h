@@ -365,6 +365,9 @@ msd_CI4(string* strings, size_t n, size_t depth)
     }
 }
 
+void bingmann_msd_CI4(string* strings, size_t n) { msd_CI4(strings, n, 0); }
+CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI4, "bingmann/msd_CI4 (CI3 with swap cache)")
+
 static void
 msd_CI5(string* strings, size_t n, size_t depth)
 {
@@ -419,7 +422,7 @@ void bingmann_msd_CI5(string* strings, size_t n) { msd_CI5(strings, n, 0); }
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI5, "bingmann/msd_CI5 (CI4 with charcache)")
 
 static void
-msd_CE_nr(string* strings, size_t n)
+bingmann_msd_CE_nr(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
@@ -487,11 +490,10 @@ msd_CE_nr(string* strings, size_t n)
     }
 }
 
-void bingmann_msd_CE_nr(string* strings, size_t n) { return msd_CE_nr(strings,n); }
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CE_nr, "bingmann/msd_CE_nr (CE non-recursive)")
 
 static void
-msd_CE_nr2(string* strings, size_t n)
+bingmann_msd_CE_nr2(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
@@ -557,11 +559,10 @@ msd_CE_nr2(string* strings, size_t n)
     }
 }
 
-void bingmann_msd_CE_nr2(string* strings, size_t n) { return msd_CE_nr2(strings,n); }
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CE_nr2, "bingmann/msd_CE_nr2 (CE non-recursive)")
 
 static void
-msd_CI_nr(string* strings, size_t n)
+bingmann_msd_CI_nr(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
@@ -651,11 +652,10 @@ msd_CI_nr(string* strings, size_t n)
     }
 }
 
-void bingmann_msd_CI_nr(string* strings, size_t n) { return msd_CI_nr(strings,n); }
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI_nr, "bingmann/msd_CI_nr (CI non-recursive)")
 
 static void
-msd_CI_nr2(string* strings, size_t n)
+bingmann_msd_CI_nr2(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
@@ -727,7 +727,92 @@ msd_CI_nr2(string* strings, size_t n)
     }
 }
 
-void bingmann_msd_CI_nr2(string* strings, size_t n) { return msd_CI_nr2(strings,n); }
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI_nr2, "bingmann/msd_CI_nr2 (CI non-recursive)")
+
+static void
+bingmann_msd_CI_nr3(string* strings, size_t n)
+{
+    if (n < 32)
+        return insertion_sort(strings,n,0);
+
+    struct RadixStep
+    {
+        string* str;
+        size_t idx;
+        size_t bktsize[256];
+
+        RadixStep(string* strings, size_t n, size_t depth, uint8_t* charcache)
+        {
+            // cache characters
+            for (size_t i=0; i < n; ++i)
+                charcache[i] = strings[i][depth];
+
+            // count character occurances
+            memset(bktsize,0,sizeof(bktsize));
+            for (size_t i=0; i < n; ++i)
+                ++bktsize[ charcache[i] ];
+
+            // inclusive prefix sum
+            size_t bkt[256];
+            bkt[0] = bktsize[0];
+            size_t last_bkt_size = bktsize[0];
+            for (unsigned i=1; i < 256; ++i) {
+                bkt[i] = bkt[i-1] + bktsize[i];
+                if (bktsize[i]) last_bkt_size = bktsize[i];
+            }
+
+            // premute in-place
+            for (size_t i=0, j; i < n-last_bkt_size; )
+            {
+                string perm = strings[i];
+                uint8_t permch = charcache[i];
+                while ( (j = --bkt[ permch ]) > i )
+                {
+                    std::swap(perm, strings[j]);
+                    std::swap(permch, charcache[j]);
+                }
+                strings[i] = perm;
+                i += bktsize[ permch ];
+            }
+
+            str = strings + bktsize[0];
+            idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
+        }
+    };
+
+    uint8_t* charcache = new uint8_t[n];
+
+    std::stack< RadixStep, std::vector<RadixStep> > radixstack;
+    radixstack.push( RadixStep(strings,n,0,charcache) );
+
+    while ( radixstack.size() )
+    {
+        while ( radixstack.top().idx < 255 )
+        {
+            RadixStep& rs = radixstack.top();
+            ++rs.idx; // process the bucket rs.idx
+
+            if (rs.bktsize[rs.idx] == 0)
+                ;
+            else if (rs.bktsize[rs.idx] < 32)
+            {
+                insertion_sort(rs.str, rs.bktsize[rs.idx], radixstack.size());
+                rs.str += rs.bktsize[ rs.idx ];
+            }
+            else
+            {
+                rs.str += rs.bktsize[rs.idx];
+                radixstack.push( RadixStep(rs.str - rs.bktsize[rs.idx], rs.bktsize[rs.idx],
+                                           radixstack.size(), charcache) );
+                // cannot add here, because rs may have invalidated
+            }
+        }
+        radixstack.pop();
+    }
+
+    delete charcache;
+}
+
+CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI_nr3, "bingmann/msd_CI_nr3 (CI non-recursive, charcache)")
 
 } // namespace bingmann_radix_sort
