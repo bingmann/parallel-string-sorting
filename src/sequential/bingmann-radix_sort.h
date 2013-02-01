@@ -407,7 +407,7 @@ msd_CI5(string* strings, size_t n, size_t depth)
         i += bktsize[ permch ];
     }
 
-    delete charcache;
+    delete [] charcache;
 
     // recursion
     size_t bsum = bktsize[0];
@@ -810,7 +810,7 @@ bingmann_msd_CI_nr3(string* strings, size_t n)
         radixstack.pop();
     }
 
-    delete charcache;
+    delete [] charcache;
 }
 
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI_nr3, "bingmann/msd_CI_nr3 (CI non-recursive, charcache)")

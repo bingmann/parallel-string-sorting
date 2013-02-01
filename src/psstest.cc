@@ -136,6 +136,8 @@ void Contest::run_contest(const char* path)
     if (!input::load(path))
         return;
 
+    std::cerr << "Sorting " << g_stringoffsets.size() << " strings composed of " << g_stringdatasize << " bytes." << std::endl;
+
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
@@ -163,13 +165,13 @@ void Contestant_UCArray::run()
     // save permutation check evaluation result
     PermutationCheck pc(stringptr);
 
-    //std::cerr << "Running " << m_funcname << " - " << m_description << "\n";
+    std::cerr << "Running " << m_funcname << " - " << m_description << "\n";
 
     g_statscache >> "algo" << m_funcname
                  >> "char_count" << g_stringdatasize
                  >> "string_count" << stringptr.size();
 
-    (std::cerr << m_funcname << "\t").flush();
+    //(std::cerr << m_funcname << "\t").flush();
 
 #ifdef DMALLOC
     unsigned long dm_mark = dmalloc_mark();
@@ -212,7 +214,7 @@ void Contestant_UCArray::run()
 
 void Contestant_UCArray_Parallel::run()
 {
-    for (int p = 1; p <= omp_get_num_procs(); ++p)
+    for (int p = 1; p <= omp_get_num_procs(); p *= 2)
     {
         pss_num_threads = p;
         std::cerr << "threads=" << p << " ";
