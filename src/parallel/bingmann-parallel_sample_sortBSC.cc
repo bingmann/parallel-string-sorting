@@ -1,7 +1,8 @@
 /******************************************************************************
- * src/parallel/bingmann-parallel_sample_sort1.h
+ * src/parallel/bingmann-parallel_sample_sortBSC.h
  *
- * Parallel Super Scalar String Sample-Sort with work-balancing, variant 1.
+ * Parallel Super Scalar String Sample-Sort with work-balancing, variant 2:
+ * with bktcache in local processor's memory.
  *
  ******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
@@ -43,7 +44,7 @@ extern void EnqueueSmall(JobQueue& jobqueue, string* strings, size_t n, size_t d
 
 }
 
-namespace bingmann_parallel_sample_sort1 {
+namespace bingmann_parallel_sample_sortBSC {
 
 using namespace stringtools;
 using namespace jobqueue;
@@ -54,19 +55,19 @@ static const bool debug_splitter = false;
 static const bool debug_bucketsize = false;
 static const bool debug_recursion = false;
 
-static const bool use_work_stealing = true;
+static const size_t MAXPROCS = 64;
 
 /// Prototype called to schedule deeper sorts
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth);
 
 // ****************************************************************************
-// *** SampleSortStepBS out-of-place parallel sample sort with separate Jobs
+// *** SampleSortStep out-of-place parallel sample sort with separate Jobs
 
 typedef uint64_t key_type;
 
-struct SampleSortStepBS
+struct SampleSortStep
 {
-#if 1
+#if 0
     static const size_t leaves = 2*16;       // TODO: calculate to match L2 cache
 #else
     static const size_t l2cache = 256*1024;
@@ -96,6 +97,8 @@ struct SampleSortStepBS
 
     string*             sorted;
 
+    uint16_t*           bktcache[MAXPROCS];
+
     void sample(JobQueue& jobqueue);
 
     void count(unsigned int p, JobQueue& jobqueue);
@@ -110,9 +113,9 @@ struct SampleSortStepBS
 
 struct SampleJob : public Job
 {
-    SampleSortStepBS*   step;
+    SampleSortStep*   step;
 
-    SampleJob(SampleSortStepBS* _step)
+    SampleJob(SampleSortStep* _step)
         : step(_step) { }
 
     virtual void run(JobQueue& jobqueue)
@@ -124,10 +127,10 @@ struct SampleJob : public Job
 
 struct CountJob : public Job
 {
-    SampleSortStepBS*   step;
+    SampleSortStep*   step;
     unsigned int        p;
 
-    CountJob(SampleSortStepBS* _step, unsigned int _p)
+    CountJob(SampleSortStep* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
     virtual void run(JobQueue& jobqueue)
@@ -139,10 +142,10 @@ struct CountJob : public Job
 
 struct DistributeJob : public Job
 {
-    SampleSortStepBS*   step;
+    SampleSortStep*   step;
     unsigned int        p;
 
-    DistributeJob(SampleSortStepBS* _step, unsigned int _p)
+    DistributeJob(SampleSortStep* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
     virtual void run(JobQueue& jobqueue)
@@ -154,10 +157,10 @@ struct DistributeJob : public Job
 
 struct CopybackJob : public Job
 {
-    SampleSortStepBS*        step;
+    SampleSortStep*        step;
     unsigned int        p;
 
-    CopybackJob(SampleSortStepBS* _step, unsigned int _p)
+    CopybackJob(SampleSortStep* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
     virtual void run(JobQueue& jobqueue)
@@ -188,12 +191,12 @@ inline unsigned int find_bkt(const key_type& key, const key_type* splitter, size
     return b;
 }
 
-void SampleSortStepBS::sample(JobQueue& jobqueue)
+void SampleSortStep::sample(JobQueue& jobqueue)
 {
     const size_t oversample_factor = 4;
     size_t samplesize = oversample_factor * leaves;
 
-    key_type* samples = new key_type[ samplesize ];
+    key_type samples[ samplesize ];
 
     LCGRandom rng(9384234);
 
@@ -232,24 +235,27 @@ void SampleSortStepBS::sample(JobQueue& jobqueue)
         jobqueue.enqueue( new CountJob(this, p) );
 }
 
-void SampleSortStepBS::count(unsigned int p, JobQueue& jobqueue)
+void SampleSortStep::count(unsigned int p, JobQueue& jobqueue)
 {
     string* strB = strings + p * psize;
     string* strE = strings + std::min((p+1) * psize, n);
     if (strE < strB) strE = strB;
+    size_t strN = strE-strB;
 
     // TODO: check if processor-local stack + copy is faster
 #if 1
     size_t* mybkt = bkt + p * bktnum;
+    uint16_t* mybktcache = bktcache[p] = new uint16_t[strN];
 
     memset(mybkt, 0, bktnum * sizeof(size_t));
-    for (string* str = strB; str != strE; ++str)
+    for (size_t i = 0; i < strN; ++i)
     {
         // binary search in splitter with equal check
-        key_type key = get_char<key_type>(*str, depth);
+        key_type key = get_char<key_type>(strB[i], depth);
 
         unsigned int b = find_bkt(key, splitter, leaves);
         assert(b < bktnum);
+        mybktcache[ i ] = b;
         ++mybkt[ b ];
     }
 #else
@@ -265,7 +271,7 @@ void SampleSortStepBS::count(unsigned int p, JobQueue& jobqueue)
         count_finished(jobqueue);
 }
 
-void SampleSortStepBS::count_finished(JobQueue& jobqueue)
+void SampleSortStep::count_finished(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Finishing CountJob " << this << " with prefixsum");
 
@@ -290,25 +296,27 @@ void SampleSortStepBS::count_finished(JobQueue& jobqueue)
         jobqueue.enqueue( new DistributeJob(this, p) );
 }
 
-void SampleSortStepBS::distribute(unsigned int p, JobQueue& jobqueue)
+void SampleSortStep::distribute(unsigned int p, JobQueue& jobqueue)
 {
     string* strB = strings + p * psize;
     string* strE = strings + std::min((p+1) * psize, n);
     if (strE < strB) strE = strB;
+    size_t strN = strE-strB;
 
     // TODO: check if processor-local stack + copy is faster
 #if 1
     size_t* mybkt = bkt + p * bktnum;
+    uint16_t* mybktcache = bktcache[p];
 
-    for (string* str = strB; str != strE; ++str)
+    for (size_t i = 0; i < strN; ++i)
     {
         // binary search in splitter with equal check
-        key_type key = get_char<key_type>(*str, depth);
-
-        unsigned int b = find_bkt(key, splitter, leaves);
+        unsigned int b = mybktcache[i];
         assert(b < bktnum);
-        sorted[ --mybkt[b] ] = *str;
+        sorted[ --mybkt[b] ] = strB[i];
     }
+
+    delete bktcache[p];
 #else
     size_t mybkt[bktnum];
     memcpy(mybkt, bkt + p * bktnum, sizeof(mybkt));
@@ -324,7 +332,7 @@ void SampleSortStepBS::distribute(unsigned int p, JobQueue& jobqueue)
         distribute_finished(jobqueue);
 }
 
-void SampleSortStepBS::distribute_finished(JobQueue& jobqueue)
+void SampleSortStep::distribute_finished(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Finishing DistributeJob " << this << " with copy to original");
 
@@ -335,7 +343,7 @@ void SampleSortStepBS::distribute_finished(JobQueue& jobqueue)
         jobqueue.enqueue( new CopybackJob(this, p) );
 }
 
-void SampleSortStepBS::copyback(unsigned int p, JobQueue& jobqueue)
+void SampleSortStep::copyback(unsigned int p, JobQueue& jobqueue)
 {
     size_t strB = p * psize;
     size_t strE = std::min((p+1) * psize, n);
@@ -347,7 +355,7 @@ void SampleSortStepBS::copyback(unsigned int p, JobQueue& jobqueue)
         copyback_finished(jobqueue);
 }
 
-void SampleSortStepBS::copyback_finished(JobQueue& jobqueue)
+void SampleSortStep::copyback_finished(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Finishing CopybackJob " << this << " with copy to original");
 
@@ -399,7 +407,7 @@ void EnqueueBig(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
     unsigned int parts = omp_get_max_threads();
     size_t psize = (n + parts-1) / parts;
 
-    SampleSortStepBS* step = new SampleSortStepBS;
+    SampleSortStep* step = new SampleSortStep;
     step->strings = strings;
     step->n = n;
     step->depth = depth;
@@ -420,13 +428,14 @@ void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
         return bingmann_parallel_radix_sort3::EnqueueSmall(jobqueue, strings, n, depth);
 }
 
-void bingmann_parallel_sample_sort1(string* strings, size_t n)
+void bingmann_parallel_sample_sortBSC(string* strings, size_t n)
 {
     JobQueue jobqueue;
     Enqueue(jobqueue, strings,n,0);
     jobqueue.loop();
 }
 
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(bingmann_parallel_sample_sort1, "bingmann/parallel_sample_sort1")
+CONTESTANT_REGISTER_UCARRAY_PARALLEL(bingmann_parallel_sample_sortBSC,
+                                     "bingmann/parallel_sample_sortBSC: binary search, bktcache")
 
-} // namespace bingmann_parallel_sample_sort1
+} // namespace bingmann_parallel_sample_sortBSC

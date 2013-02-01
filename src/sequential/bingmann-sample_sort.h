@@ -66,7 +66,7 @@ inline unsigned int find_bkt(const key_type& key, const key_type* splitter, size
 }
 
 /// Variant 1 of string sample-sort: use binary search on splitters, no caching.
-void sample_sort1(string* strings, size_t n, size_t depth)
+void sample_sortBS(string* strings, size_t n, size_t depth)
 {
 #if 0
     static const size_t leaves = 32;
@@ -202,7 +202,7 @@ void sample_sort1(string* strings, size_t n, size_t depth)
         if (bktsize[i] > 1)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
-            sample_sort1(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
+            sample_sortBS(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
         bsum += bktsize[i];
         ++i;
@@ -215,7 +215,7 @@ void sample_sort1(string* strings, size_t n, size_t depth)
             }
             else {
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sort1(strings+bsum, bktsize[i], depth + sizeof(key_type));
+                sample_sortBS(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i];
@@ -223,19 +223,19 @@ void sample_sort1(string* strings, size_t n, size_t depth)
     if (bktsize[bktnum-1] > 0)
     {
         DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sort1(strings+bsum, bktsize[bktnum-1], depth);
+        sample_sortBS(strings+bsum, bktsize[bktnum-1], depth);
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
 }
 
-void bingmann_sample_sort1(string* strings, size_t n) { return sample_sort1(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sort1, "bingmann/sample_sort1 (binary search, no cache)")
+void bingmann_sample_sortBS(string* strings, size_t n) { return sample_sortBS(strings,n,0); }
+CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBS, "bingmann/sample_sortBS (binary search, no cache)")
 
 // ------------------------------------------------------------------------------------------------------------------------
 
 /// Variant 2 of string sample-sort: use binary search on splitters, with index caching.
-void sample_sort2(string* strings, size_t n, size_t depth)
+void sample_sortBSC(string* strings, size_t n, size_t depth)
 {
 #if 0
     static const size_t leaves = 32;
@@ -366,7 +366,7 @@ void sample_sort2(string* strings, size_t n, size_t depth)
         if (bktsize[i] > 1)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
-            sample_sort2(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
+            sample_sortBSC(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
         bsum += bktsize[i];
         ++i;
@@ -379,7 +379,7 @@ void sample_sort2(string* strings, size_t n, size_t depth)
             }
             else {
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sort2(strings+bsum, bktsize[i], depth + sizeof(key_type));
+                sample_sortBSC(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i];
@@ -387,14 +387,14 @@ void sample_sort2(string* strings, size_t n, size_t depth)
     if (bktsize[bktnum-1] > 0)
     {
         DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sort2(strings+bsum, bktsize[bktnum-1], depth);
+        sample_sortBSC(strings+bsum, bktsize[bktnum-1], depth);
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
 }
 
-void bingmann_sample_sort2(string* strings, size_t n) { return sample_sort2(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sort2, "bingmann/sample_sort2 (binary search, bkt cache)")
+void bingmann_sample_sortBSC(string* strings, size_t n) { return sample_sortBSC(strings,n,0); }
+CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBSC, "bingmann/sample_sortBSC (binary search, bkt cache)")
 
 // ------------------------------------------------------------------------------------------------------------------------
 
@@ -459,7 +459,7 @@ inline unsigned int find_bkt_splittertree(const key_type& key, const key_type* s
 }
 
 /// Variant 3 of string sample-sort: use super-scalar binary search on splitters, without index caching.
-void sample_sort3(string* strings, size_t n, size_t depth)
+void sample_sortBT(string* strings, size_t n, size_t depth)
 {
 #if 0
     static const size_t numsplitters = 31;
@@ -635,7 +635,7 @@ void sample_sort3(string* strings, size_t n, size_t depth)
         if (bktsize[i] > 1)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
-            sample_sort3(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
+            sample_sortBT(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
         bsum += bktsize[i];
         ++i;
@@ -648,7 +648,7 @@ void sample_sort3(string* strings, size_t n, size_t depth)
             }
             else {
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sort3(strings+bsum, bktsize[i], depth + sizeof(key_type));
+                sample_sortBT(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i];
@@ -656,19 +656,19 @@ void sample_sort3(string* strings, size_t n, size_t depth)
     if (bktsize[bktnum-1] > 0)
     {
         DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sort3(strings+bsum, bktsize[bktnum-1], depth);
+        sample_sortBT(strings+bsum, bktsize[bktnum-1], depth);
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
 }
 
-void bingmann_sample_sort3(string* strings, size_t n) { return sample_sort3(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sort3, "bingmann/sample_sort3 (binary tree, no cache)")
+void bingmann_sample_sortBT(string* strings, size_t n) { return sample_sortBT(strings,n,0); }
+CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBT, "bingmann/sample_sortBT (binary tree, no cache)")
 
 // ------------------------------------------------------------------------------------------------------------------------
 
 /// Variant 4 of string sample-sort: use super-scalar binary search on splitters, without index caching.
-void sample_sort4(string* strings, size_t n, size_t depth)
+void sample_sortBTC(string* strings, size_t n, size_t depth)
 {
 #if 0
     static const size_t numsplitters = 31;
@@ -841,7 +841,7 @@ void sample_sort4(string* strings, size_t n, size_t depth)
         if (bktsize[i] > 1)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
-            sample_sort4(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
+            sample_sortBTC(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
         bsum += bktsize[i];
         ++i;
@@ -854,7 +854,7 @@ void sample_sort4(string* strings, size_t n, size_t depth)
             }
             else {
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sort4(strings+bsum, bktsize[i], depth + sizeof(key_type));
+                sample_sortBTC(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i];
@@ -862,13 +862,13 @@ void sample_sort4(string* strings, size_t n, size_t depth)
     if (bktsize[bktnum-1] > 0)
     {
         DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sort4(strings+bsum, bktsize[bktnum-1], depth);
+        sample_sortBTC(strings+bsum, bktsize[bktnum-1], depth);
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
 }
 
-void bingmann_sample_sort4(string* strings, size_t n) { return sample_sort4(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sort4, "bingmann/sample_sort4 (binary tree, bkt cache)")
+void bingmann_sample_sortBTC(string* strings, size_t n) { return sample_sortBTC(strings,n,0); }
+CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBTC, "bingmann/sample_sortBTC (binary tree, bkt cache)")
 
 } // namespace bingmann_sample_sort

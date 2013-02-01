@@ -13,7 +13,10 @@ add_executable(psstest
   parallel/bingmann-parallel_radix_sort1.cc
   parallel/bingmann-parallel_radix_sort2.cc
   parallel/bingmann-parallel_radix_sort3.cc
-  parallel/bingmann-parallel_sample_sort1.cc
+  parallel/bingmann-parallel_sample_sortBS.cc
+  parallel/bingmann-parallel_sample_sortBSC.cc
+  parallel/bingmann-parallel_sample_sortBT.cc
+  parallel/bingmann-parallel_sample_sortBTC.cc
 )
 target_link_libraries(psstest zio)
 target_link_libraries(psstest lfds)
