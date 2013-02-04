@@ -58,7 +58,15 @@ public:
     }
 
     virtual void run() = 0; // depends on individual sorter's interface
+
+    inline bool operator< (const Contestant &b) const {
+        return (strcmp(m_funcname, b.m_funcname) < 0);
+    }
 };
+
+static inline bool sort_contestants(const Contestant *a, const Contestant *b) {
+    return (*a < *b);
+}
 
 class Contestant_UCArray : public Contestant
 {

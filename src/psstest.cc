@@ -60,7 +60,7 @@
 // *** Global Input Data Structures ***
 
 size_t          gopt_inputsizelimit = 0;
-const char*     gopt_algorithm = NULL;
+std::vector<const char*> gopt_algorithm;
 
 const char*     g_stringdata = NULL;
 size_t          g_stringdatasize = 0;
@@ -142,16 +142,23 @@ void Contest::run_contest(const char* path)
 
     std::cerr << "Sorting " << g_stringoffsets.size() << " strings composed of " << g_stringdatasize << " bytes." << std::endl;
 
+    std::sort(m_list.begin(), m_list.end(), sort_contestants);
+
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (gopt_algorithm)
-        {
-            if (strstr((*c)->m_funcname, gopt_algorithm) == NULL)
-                continue;
+        if (!gopt_algorithm.size()) {
+            (*c)->run();
         }
-
-        (*c)->run();
+        else {
+            // iterate over gopt_algorithm list as a filter
+            for (size_t ai = 0; ai < gopt_algorithm.size(); ++ai) {
+                if (strstr((*c)->m_funcname, gopt_algorithm[ai]) != NULL) {
+                    (*c)->run();
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -257,7 +264,7 @@ int main(int argc, char* argv[])
             break;
 
         case 'a':
-            gopt_algorithm = optarg;
+            gopt_algorithm.push_back(optarg);
             std::cerr << "Selecting algorithms containing " << optarg << std::endl;
             break;
 

@@ -567,8 +567,7 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*numsplitters+1;
 
-    size_t bktsize[bktnum];
-    memset(bktsize, 0, sizeof(bktsize));
+    size_t bktsize[bktnum] = { 0 };
 
     for (size_t si = 0; si < n; ++si)
     {
@@ -779,8 +778,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*numsplitters+1;
 
-    size_t bktsize[bktnum];
-    memset(bktsize, 0, sizeof(bktsize));
+    size_t bktsize[bktnum] = { 0 };
 
     for (size_t si = 0; si < n; ++si)
     {
