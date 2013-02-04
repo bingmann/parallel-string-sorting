@@ -473,7 +473,7 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
     static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
     //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
 
-    static const size_t numsplitters = pow(2, floor(log(numsplitters2)/log(2))) - 1;
+    static const size_t numsplitters = (1 << logfloor_<numsplitters2>::value) - 1;
 #endif
 
     if (depth != 0 && n < 1024*1024)
@@ -567,7 +567,8 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*numsplitters+1;
 
-    size_t bktsize[2*numsplitters+1] = { 0 };
+    size_t bktsize[bktnum];
+    memset(bktsize, 0, sizeof(bktsize));
 
     for (size_t si = 0; si < n; ++si)
     {
@@ -682,7 +683,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
     //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
 
-    static const size_t numsplitters = pow(2, floor(log(numsplitters2)/log(2))) - 1;
+    static const size_t numsplitters = (1 << logfloor_<numsplitters2>::value) - 1;
 #endif
 
     if (depth != 0 && n < 1024*1024)
@@ -778,7 +779,8 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*numsplitters+1;
 
-    size_t bktsize[2*numsplitters+1] = { 0 };
+    size_t bktsize[bktnum];
+    memset(bktsize, 0, sizeof(bktsize));
 
     for (size_t si = 0; si < n; ++si)
     {

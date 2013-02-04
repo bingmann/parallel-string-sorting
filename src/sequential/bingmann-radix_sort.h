@@ -421,40 +421,42 @@ msd_CI5(string* strings, size_t n, size_t depth)
 void bingmann_msd_CI5(string* strings, size_t n) { msd_CI5(strings, n, 0); }
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI5, "bingmann/msd_CI5 (CI4 with charcache)")
 
+struct RadixStep_CE_nr
+{
+    string* str;
+    size_t bkt[256+1];
+    size_t idx;
+
+    RadixStep_CE_nr(string* strings, size_t n, size_t depth)
+    {
+        memset(bkt, 0, sizeof(bkt));
+
+        for (size_t i=0; i < n; ++i)
+            ++bkt[ strings[i][depth] ];
+
+        string* sorted = (string*)malloc(n * sizeof(string));
+
+        for (unsigned i=1; i <= 256; ++i)
+            bkt[i] += bkt[i-1];
+
+        for (size_t i=0; i < n; ++i)
+            sorted[ --bkt[strings[i][depth]] ] = strings[i];
+
+        memcpy(strings, sorted, n * sizeof(string));
+        free(sorted);
+
+        str = strings;
+        idx = 0;        // will increment to 1 on first process
+    }
+};
+
 static void
 bingmann_msd_CE_nr(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
 
-    struct RadixStep
-    {
-        string* str;
-        size_t bkt[256+1];
-        size_t idx;
-
-        RadixStep(string* strings, size_t n, size_t depth)
-        {
-            memset(bkt, 0, sizeof(bkt));
-
-            for (size_t i=0; i < n; ++i)
-                ++bkt[ strings[i][depth] ];
-
-            string* sorted = (string*)malloc(n * sizeof(string));
-
-            for (unsigned i=1; i <= 256; ++i)
-                bkt[i] += bkt[i-1];
-
-            for (size_t i=0; i < n; ++i)
-                sorted[ --bkt[strings[i][depth]] ] = strings[i];
-
-            memcpy(strings, sorted, n * sizeof(string));
-            free(sorted);
-
-            str = strings;
-            idx = 0;        // will increment to 1 on first process
-        }
-    };
+    typedef RadixStep_CE_nr RadixStep;
 
     std::stack< RadixStep, std::vector<RadixStep> > radixstack;
     radixstack.push( RadixStep(strings,n,0) );
@@ -492,44 +494,46 @@ bingmann_msd_CE_nr(string* strings, size_t n)
 
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CE_nr, "bingmann/msd_CE_nr (CE non-recursive)")
 
+struct RadixStep_CE_nr2
+{
+    string* str;
+    size_t bktsize[256];
+    size_t idx;
+
+    RadixStep_CE_nr2(string* strings, size_t n, size_t depth)
+    {
+        // count character occurances
+        memset(bktsize, 0, sizeof(bktsize));
+        for (size_t i=0; i < n; ++i)
+            ++bktsize[ strings[i][depth] ];
+
+        // prefix sum
+        size_t bkt[256];
+        bkt[0] = 0;
+        for (size_t i=1; i < 256; ++i)
+            bkt[i] = bkt[i-1] + bktsize[i-1];
+
+        // distribute out-of-place
+        string* sorted = (string*)malloc(n * sizeof(string));
+
+        for (size_t i=0; i < n; ++i)
+            sorted[ bkt[strings[i][depth]]++ ] = strings[i];
+
+        memcpy(strings, sorted, n * sizeof(string));
+        free(sorted);
+
+        str = strings + bktsize[0];
+        idx = 0; // will increment to 1 on first process
+    }
+};
+
 static void
 bingmann_msd_CE_nr2(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
 
-    struct RadixStep
-    {
-        string* str;
-        size_t bktsize[256];
-        size_t idx;
-
-        RadixStep(string* strings, size_t n, size_t depth)
-        {
-            // count character occurances
-            memset(bktsize, 0, sizeof(bktsize));
-            for (size_t i=0; i < n; ++i)
-                ++bktsize[ strings[i][depth] ];
-
-            // prefix sum
-            size_t bkt[256];
-            bkt[0] = 0;
-            for (size_t i=1; i < 256; ++i)
-                bkt[i] = bkt[i-1] + bktsize[i-1];
-
-            // distribute out-of-place
-            string* sorted = (string*)malloc(n * sizeof(string));
-
-            for (size_t i=0; i < n; ++i)
-                sorted[ bkt[strings[i][depth]]++ ] = strings[i];
-
-            memcpy(strings, sorted, n * sizeof(string));
-            free(sorted);
-
-            str = strings + bktsize[0];
-            idx = 0; // will increment to 1 on first process
-        }
-    };
+    typedef RadixStep_CE_nr2 RadixStep;
 
     std::stack< RadixStep, std::vector<RadixStep> > radixstack;
     radixstack.push( RadixStep(strings,n,0) );
@@ -561,62 +565,64 @@ bingmann_msd_CE_nr2(string* strings, size_t n)
 
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CE_nr2, "bingmann/msd_CE_nr2 (CE non-recursive)")
 
+struct RadixStep_CI_nr
+{
+    string* str;
+    size_t bkt[256+1];
+    size_t idx;
+
+    RadixStep_CI_nr(string* strings, size_t n, size_t depth)
+    {
+        // count character occurances
+        size_t bktsize[256] = { 0 };
+        for (size_t i=0; i < n; ++i)
+            ++bktsize[ strings[i][depth] ];
+
+        // inclusive prefix sum
+        bkt[0] = bktsize[0];
+        size_t last_bkt_size = bktsize[0], last_bkt_num = 0;
+        for (unsigned i=1; i < 256; ++i) {
+            bkt[i] = bkt[i-1] + bktsize[i];
+            if (bktsize[i]) {
+                last_bkt_size = bktsize[i];
+                last_bkt_num = i;
+            }
+        }
+        bkt[256] = bkt[255];
+        assert(bkt[256] == n);
+
+        // premute in-place
+        for (size_t i=0, j; i < n-last_bkt_size; )
+        {
+            string perm = strings[i];
+            if (bkt[ perm[depth] ] == i)
+            {
+                i += bktsize[ perm[depth] ];
+                continue;
+            }
+            while ( (j = --bkt[ perm[depth] ]) > i )
+            {
+                std::swap(perm, strings[j]);
+            }
+            assert(j == i);
+            strings[i] = perm;
+            i += bktsize[ perm[depth] ];
+        }
+        // update bkt boundary of last (unpermuted) bucket
+        bkt[last_bkt_num] = n-last_bkt_size;
+
+        str = strings;
+        idx = 0;        // will increment to 1 on first process
+    }
+};
+
 static void
 bingmann_msd_CI_nr(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
 
-    struct RadixStep
-    {
-        string* str;
-        size_t bkt[256+1];
-        size_t idx;
-
-        RadixStep(string* strings, size_t n, size_t depth)
-        {
-            // count character occurances
-            size_t bktsize[256] = { 0 };
-            for (size_t i=0; i < n; ++i)
-                ++bktsize[ strings[i][depth] ];
-
-            // inclusive prefix sum
-            bkt[0] = bktsize[0];
-            size_t last_bkt_size = bktsize[0], last_bkt_num = 0;
-            for (unsigned i=1; i < 256; ++i) {
-                bkt[i] = bkt[i-1] + bktsize[i];
-                if (bktsize[i]) {
-                    last_bkt_size = bktsize[i];
-                    last_bkt_num = i;
-                }
-            }
-            bkt[256] = bkt[255];
-            assert(bkt[256] == n);
-
-            // premute in-place
-            for (size_t i=0, j; i < n-last_bkt_size; )
-            {
-                string perm = strings[i];
-                if (bkt[ perm[depth] ] == i)
-                {
-                    i += bktsize[ perm[depth] ];
-                    continue;
-                }
-                while ( (j = --bkt[ perm[depth] ]) > i )
-                {
-                    std::swap(perm, strings[j]);
-                }
-                assert(j == i);
-                strings[i] = perm;
-                i += bktsize[ perm[depth] ];
-            }
-            // update bkt boundary of last (unpermuted) bucket
-            bkt[last_bkt_num] = n-last_bkt_size;
-
-            str = strings;
-            idx = 0;        // will increment to 1 on first process
-        }
-    };
+    typedef RadixStep_CI_nr RadixStep;
 
     std::stack< RadixStep, std::vector<RadixStep> > radixstack;
     radixstack.push( RadixStep(strings,n,0) );
@@ -654,50 +660,52 @@ bingmann_msd_CI_nr(string* strings, size_t n)
 
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI_nr, "bingmann/msd_CI_nr (CI non-recursive)")
 
+struct RadixStep_CI_nr2
+{
+    string* str;
+    size_t idx;
+    size_t bktsize[256];
+
+    RadixStep_CI_nr2(string* strings, size_t n, size_t depth)
+    {
+        // count character occurances
+        memset(bktsize,0,sizeof(bktsize));
+        for (size_t i=0; i < n; ++i)
+            ++bktsize[ strings[i][depth] ];
+
+        // inclusive prefix sum
+        size_t bkt[256];
+        bkt[0] = bktsize[0];
+        size_t last_bkt_size = bktsize[0];
+        for (unsigned i=1; i < 256; ++i) {
+            bkt[i] = bkt[i-1] + bktsize[i];
+            if (bktsize[i]) last_bkt_size = bktsize[i];
+        }
+
+        // premute in-place
+        for (size_t i=0, j; i < n-last_bkt_size; )
+        {
+            string perm = strings[i];
+            while ( (j = --bkt[ perm[depth] ]) > i )
+            {
+                std::swap(perm, strings[j]);
+            }
+            strings[i] = perm;
+            i += bktsize[ perm[depth] ];
+        }
+
+        str = strings + bktsize[0];
+        idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
+    }
+};
+
 static void
 bingmann_msd_CI_nr2(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
 
-    struct RadixStep
-    {
-        string* str;
-        size_t idx;
-        size_t bktsize[256];
-
-        RadixStep(string* strings, size_t n, size_t depth)
-        {
-            // count character occurances
-            memset(bktsize,0,sizeof(bktsize));
-            for (size_t i=0; i < n; ++i)
-                ++bktsize[ strings[i][depth] ];
-
-            // inclusive prefix sum
-            size_t bkt[256];
-            bkt[0] = bktsize[0];
-            size_t last_bkt_size = bktsize[0];
-            for (unsigned i=1; i < 256; ++i) {
-                bkt[i] = bkt[i-1] + bktsize[i];
-                if (bktsize[i]) last_bkt_size = bktsize[i];
-            }
-
-            // premute in-place
-            for (size_t i=0, j; i < n-last_bkt_size; )
-            {
-                string perm = strings[i];
-                while ( (j = --bkt[ perm[depth] ]) > i )
-                {
-                    std::swap(perm, strings[j]);
-                }
-                strings[i] = perm;
-                i += bktsize[ perm[depth] ];
-            }
-
-            str = strings + bktsize[0];
-            idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
-        }
-    };
+    typedef RadixStep_CI_nr2 RadixStep;
 
     std::stack< RadixStep, std::vector<RadixStep> > radixstack;
     radixstack.push( RadixStep(strings,n,0) );
@@ -729,56 +737,58 @@ bingmann_msd_CI_nr2(string* strings, size_t n)
 
 CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI_nr2, "bingmann/msd_CI_nr2 (CI non-recursive)")
 
+struct RadixStep_CI_nr3
+{
+    string* str;
+    size_t idx;
+    size_t bktsize[256];
+
+    RadixStep_CI_nr3(string* strings, size_t n, size_t depth, uint8_t* charcache)
+    {
+        // cache characters
+        for (size_t i=0; i < n; ++i)
+            charcache[i] = strings[i][depth];
+
+        // count character occurances
+        memset(bktsize,0,sizeof(bktsize));
+        for (size_t i=0; i < n; ++i)
+            ++bktsize[ charcache[i] ];
+
+        // inclusive prefix sum
+        size_t bkt[256];
+        bkt[0] = bktsize[0];
+        size_t last_bkt_size = bktsize[0];
+        for (unsigned i=1; i < 256; ++i) {
+            bkt[i] = bkt[i-1] + bktsize[i];
+            if (bktsize[i]) last_bkt_size = bktsize[i];
+        }
+
+        // premute in-place
+        for (size_t i=0, j; i < n-last_bkt_size; )
+        {
+            string perm = strings[i];
+            uint8_t permch = charcache[i];
+            while ( (j = --bkt[ permch ]) > i )
+            {
+                std::swap(perm, strings[j]);
+                std::swap(permch, charcache[j]);
+            }
+            strings[i] = perm;
+            i += bktsize[ permch ];
+        }
+
+        str = strings + bktsize[0];
+        idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
+    }
+};
+
 static void
 bingmann_msd_CI_nr3(string* strings, size_t n)
 {
     if (n < 32)
         return insertion_sort(strings,n,0);
 
-    struct RadixStep
-    {
-        string* str;
-        size_t idx;
-        size_t bktsize[256];
-
-        RadixStep(string* strings, size_t n, size_t depth, uint8_t* charcache)
-        {
-            // cache characters
-            for (size_t i=0; i < n; ++i)
-                charcache[i] = strings[i][depth];
-
-            // count character occurances
-            memset(bktsize,0,sizeof(bktsize));
-            for (size_t i=0; i < n; ++i)
-                ++bktsize[ charcache[i] ];
-
-            // inclusive prefix sum
-            size_t bkt[256];
-            bkt[0] = bktsize[0];
-            size_t last_bkt_size = bktsize[0];
-            for (unsigned i=1; i < 256; ++i) {
-                bkt[i] = bkt[i-1] + bktsize[i];
-                if (bktsize[i]) last_bkt_size = bktsize[i];
-            }
-
-            // premute in-place
-            for (size_t i=0, j; i < n-last_bkt_size; )
-            {
-                string perm = strings[i];
-                uint8_t permch = charcache[i];
-                while ( (j = --bkt[ permch ]) > i )
-                {
-                    std::swap(perm, strings[j]);
-                    std::swap(permch, charcache[j]);
-                }
-                strings[i] = perm;
-                i += bktsize[ permch ];
-            }
-
-            str = strings + bktsize[0];
-            idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
-        }
-    };
+    typedef RadixStep_CI_nr3 RadixStep;
 
     uint8_t* charcache = new uint8_t[n];
 

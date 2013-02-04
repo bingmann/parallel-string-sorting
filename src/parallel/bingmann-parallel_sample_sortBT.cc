@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include <iostream>
 #include <vector>
@@ -33,6 +34,7 @@
 #include "../tools/contest.h"
 #include "../tools/stringtools.h"
 #include "../tools/jobqueue.h"
+#include "../tools/logfloor.h"
 
 namespace bingmann_parallel_radix_sort3 {
 
@@ -78,7 +80,7 @@ struct SampleSortStep
     static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
     //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
 
-    static const size_t numsplitters = pow(2, floor(log(numsplitters2)/log(2))) - 1;
+    static const size_t numsplitters = (1 << logfloor_<numsplitters2>::value) - 1;
 
 #endif
 

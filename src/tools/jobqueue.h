@@ -20,9 +20,16 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-#include <atomic>
 #include <iostream>
 #include <omp.h>
+
+#include "src/config.h"
+
+#if defined(HAVE_ATOMIC_H)
+#include <atomic>
+#elif defined(HAVE_CSTDATOMIC_H)
+#include <cstdatomic>
+#endif
 
 extern "C" {
 #include <liblfds611.h>

@@ -18,6 +18,12 @@ endif("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
 
 option(BUILD_ALL "Build different test programs" OFF)
 
+# Enable warnings
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Drestrict=__restrict__ -std=c++0x")
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
+
 # Use OpenMP
 
 include(FindOpenMP)
@@ -29,11 +35,11 @@ else()
   message(FATAL_ERROR "OpenMP not found.")
 endif()
 
-# Enable warnings
+# Find <atomic> header
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Drestrict=__restrict__ -std=c++0x")
-
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
+include(CheckIncludeFileCXX)
+check_include_file_cxx(atomic HAVE_ATOMIC_H)
+check_include_file_cxx(cstdatomic HAVE_CSTDATOMIC_H)
 
 # build libzio for transparent decompression
 add_subdirectory(libzio)
@@ -43,3 +49,6 @@ add_subdirectory(liblfds)
 
 # descend into source
 add_subdirectory(src)
+
+# write platform specific configuration
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)

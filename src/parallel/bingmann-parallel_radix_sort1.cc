@@ -41,7 +41,6 @@
 
 #include <iostream>
 #include <vector>
-#include <atomic>
 
 #include "../tools/debug.h"
 #include "../tools/contest.h"
@@ -92,6 +91,45 @@ insertion_sort(string* strings, int n, size_t depth)
     }
 }
 
+struct RadixStepCI
+{
+    string* str;
+    size_t idx;
+    size_t bktsize[256];
+
+    RadixStepCI(string* strings, size_t n, size_t depth)
+    {
+        // count character occurances
+        memset(bktsize, 0, sizeof(bktsize));
+        for (size_t i=0; i < n; ++i)
+            ++bktsize[ strings[i][depth] ];
+
+        // inclusive prefix sum
+        size_t bkt[256];
+        bkt[0] = bktsize[0];
+        size_t last_bkt_size = bktsize[0];
+        for (unsigned int i=1; i < 256; ++i) {
+            bkt[i] = bkt[i-1] + bktsize[i];
+            if (bktsize[i]) last_bkt_size = bktsize[i];
+        }
+
+        // premute in-place
+        for (size_t i=0, j; i < n-last_bkt_size; )
+        {
+            string perm = strings[i];
+            while ( (j = --bkt[ perm[depth] ]) > i )
+            {
+                std::swap(perm, strings[j]);
+            }
+            strings[i] = perm;
+            i += bktsize[ perm[depth] ];
+        }
+
+        str = strings + bktsize[0];
+        idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
+    }
+};
+
 void SmallsortJob::run(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
@@ -99,55 +137,16 @@ void SmallsortJob::run(JobQueue& jobqueue)
     if (n < 32)
         return insertion_sort(strings,n,depth);
 
-    struct RadixStep
-    {
-        string* str;
-        size_t idx;
-        size_t bktsize[256];
-
-        RadixStep(string* strings, size_t n, size_t depth)
-        {
-            // count character occurances
-            memset(bktsize, 0, sizeof(bktsize));
-            for (size_t i=0; i < n; ++i)
-                ++bktsize[ strings[i][depth] ];
-
-            // inclusive prefix sum
-            size_t bkt[256];
-            bkt[0] = bktsize[0];
-            size_t last_bkt_size = bktsize[0];
-            for (unsigned int i=1; i < 256; ++i) {
-                bkt[i] = bkt[i-1] + bktsize[i];
-                if (bktsize[i]) last_bkt_size = bktsize[i];
-            }
-
-            // premute in-place
-            for (size_t i=0, j; i < n-last_bkt_size; )
-            {
-                string perm = strings[i];
-                while ( (j = --bkt[ perm[depth] ]) > i )
-                {
-                    std::swap(perm, strings[j]);
-                }
-                strings[i] = perm;
-                i += bktsize[ perm[depth] ];
-            }
-
-            str = strings + bktsize[0];
-            idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
-        }
-    };
-
     // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
     size_t pop_front = 0;
-    std::vector<RadixStep> radixstack;
-    radixstack.push_back( RadixStep(strings,n,depth) );
+    std::vector<RadixStepCI> radixstack;
+    radixstack.push_back( RadixStepCI(strings,n,depth) );
 
     while ( radixstack.size() > pop_front )
     {
         while ( radixstack.back().idx < 255 )
         {
-            RadixStep& rs = radixstack.back();
+            RadixStepCI& rs = radixstack.back();
             ++rs.idx; // process the bucket rs.idx
 
             if (rs.bktsize[rs.idx] == 0)
@@ -160,9 +159,9 @@ void SmallsortJob::run(JobQueue& jobqueue)
             else
             {
                 rs.str += rs.bktsize[rs.idx];
-                radixstack.push_back( RadixStep(rs.str - rs.bktsize[rs.idx],
-                                                rs.bktsize[rs.idx],
-                                                depth + radixstack.size()) );
+                radixstack.push_back( RadixStepCI(rs.str - rs.bktsize[rs.idx],
+                                                  rs.bktsize[rs.idx],
+                                                  depth + radixstack.size()) );
                 // cannot add to rs.str here, because rs may have invalidated
             }
 
@@ -171,7 +170,7 @@ void SmallsortJob::run(JobQueue& jobqueue)
                 // convert top level of stack into independent jobs
                 DBG(debug_jobs, "Freeing top level of SmallsortJob's radixsort stack");
 
-                RadixStep& rt = radixstack[pop_front];
+                RadixStepCI& rt = radixstack[pop_front];
 
                 while ( rt.idx < 255 )
                 {

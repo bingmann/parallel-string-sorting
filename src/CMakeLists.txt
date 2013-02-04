@@ -1,7 +1,8 @@
 # Simple CMake file
 
 include_directories("${PROJECT_SOURCE_DIR}/libzio/")
-include_directories("${PROJECT_SOURCE_DIR}/liblfds/inc")
+include_directories("${PROJECT_SOURCE_DIR}/liblfds/inc/")
+include_directories("${PROJECT_BINARY_DIR}/")
 
 add_executable(psstest
   psstest.cc

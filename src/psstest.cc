@@ -25,6 +25,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
+#include <math.h>
 
 #include <string>
 #include <bitset>
@@ -47,6 +48,7 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 
+#include "src/config.h"
 #include "zio.h"
 
 #ifdef DMALLOC
@@ -77,6 +79,7 @@ static const char* statsfile = "pss-runs1.txt";
 #include "tools/input.h"
 #include "tools/checker.h"
 #include "tools/stringtools.h"
+#include "tools/logfloor.h"
 
 #include "sequential/inssort.h"
 #include "sequential/mbm-radix.h"
