@@ -69,15 +69,27 @@ static void* callback_cookie = NULL;
 
 /* add allocation to statistics */
 static void inc_count(size_t inc) {
+#if 0
     if ((curr += inc) > peak) peak = curr;
     total += inc;
     if (callback) callback(callback_cookie, curr);
+#else
+    long long mycurr = __sync_add_and_fetch(&curr, inc);
+    if (mycurr > peak) peak = mycurr;
+    total += inc;
+    if (callback) callback(callback_cookie, mycurr);
+#endif
 }
 
 /* decrement allocation to statistics */
 static void dec_count(size_t dec) {
+#if 0
     curr -= dec;
     if (callback) callback(callback_cookie, curr);
+#else
+    long long mycurr = __sync_sub_and_fetch(&curr, dec);
+    if (callback) callback(callback_cookie, mycurr);
+#endif
 }
 
 /* user function to return the currently allocated amount of memory */

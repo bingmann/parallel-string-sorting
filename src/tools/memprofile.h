@@ -30,6 +30,7 @@ class MemProfile
 protected:
     double      m_base_ts;
     size_t      m_base_use;
+    uint8_t*    m_stack_base;
 
     double      m_prev_ts;
     size_t      m_prev_use;
@@ -48,19 +49,22 @@ protected:
 
     void output(double ts, size_t memcurr)
     {
-        fprintf(m_file, "func=%s\tts=%f\tmem=%lu\n", m_funcname, ts - m_base_ts, memcurr);
+        fprintf(m_file, "RESULT\tfunc=%s\tts=%f\tmem=%lu\n", m_funcname, ts - m_base_ts, memcurr);
     }
 
     inline void callback(size_t memcurr)
     {
         size_t use = (memcurr > m_base_use) ? (memcurr - m_base_use) : 0;
 
+        if ((uint8_t*)&use < m_stack_base) // add stack usage
+            use += m_stack_base - (uint8_t*)&use;
+
         double ts = omp_get_wtime();
         if (m_max < use) m_max = use;
 
-        if (1 || ts - m_prev_ts > 0.01 || absdiff(use, m_prev_use) > 16*1024 )
+        if (ts - m_prev_ts > 0.01 || absdiff(use, m_prev_use) > 16*1024 )
         {
-            output(ts, m_max );
+            output(ts, m_max);
             m_max = 0;
             m_prev_ts = ts;
             m_prev_use = use;
@@ -74,10 +78,11 @@ protected:
 
 public:
 
-    MemProfile(const char* funcname)
+    MemProfile(const char* funcname, const char* filepath)
         : m_funcname(funcname)
     {
-        m_file = fopen("/home/bingmann/datahdd/memprofile.txt", "a");
+        uint8_t stack; m_stack_base = &stack;
+        m_file = fopen(filepath, "a");
         malloc_count_set_callback(MemProfile::static_callback, this);
         clear();
     }

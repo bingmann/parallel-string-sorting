@@ -59,6 +59,8 @@
 #include "tools/memprofile.h"
 #endif
 
+static const char* memprofile_path = "memprofile.txt";
+
 // *** Global Input Data Structures ***
 
 size_t          gopt_inputsizelimit = 0;
@@ -187,9 +189,10 @@ void Contestant_UCArray::run()
     //(std::cerr << m_funcname << "\t").flush();
 
 #ifdef MALLOC_COUNT
-    MemProfile memprofile( m_funcname );
+    //MemProfile memprofile( m_funcname, memprofile_path );
     size_t memuse = malloc_count_current();
-    //void* stack = stack_count_clear();
+    void* stack = stack_count_clear();
+    malloc_count_reset_peak();
 #endif
 
     double ts1, ts2;
@@ -199,8 +202,12 @@ void Contestant_UCArray::run()
     ts2 = omp_get_wtime();
 
 #ifdef MALLOC_COUNT
-    //stack_count_usage(stack);
-    memprofile.finish();
+    std::cerr << "Max stack usage: " << stack_count_usage(stack) << "\n";
+    std::cerr << "Max heap usage: " << malloc_count_peak() - memuse << "\n";
+    //memprofile.finish();
+
+    g_statscache >> "heapuse" << (malloc_count_peak() - memuse)
+                 >> "stackuse" << stack_count_usage(stack);
 
     if (memuse < malloc_count_current())
     {
@@ -220,7 +227,7 @@ void Contestant_UCArray::run()
     }
 
     // print timing data out to results file
-    //StatsWriter(statsfile).append_statsmap(g_statscache);
+    StatsWriter(statsfile).append_statsmap(g_statscache);
     g_statscache.clear();
 }
 
@@ -250,6 +257,10 @@ int main(int argc, char* argv[])
         { "algo",    required_argument,  0, 'a' },
         { 0,0,0,0 },
     };
+
+    if (truncate(memprofile_path, 0)) {
+        perror("Cannot truncate memprofile datafile.");
+    }
 
     while (1)
     {
