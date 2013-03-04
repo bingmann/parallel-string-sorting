@@ -366,8 +366,8 @@ list MSD(list a, int n)
 
 void arssort(string strings[], size_t scnt)
 {
-   list listnodes;
-   size_t i;
+    list listnodes;
+    size_t i;
 
     /* allocate memory based on the number of strings in the array */
     listnodes = (list ) calloc(scnt, sizeof(struct listrec));
@@ -377,19 +377,19 @@ void arssort(string strings[], size_t scnt)
     {
         listnodes[i].str = strings[i];
         if (i<(scnt-1))
-           listnodes[i].next = &listnodes[i+1]; 
+            listnodes[i].next = &listnodes[i+1]; 
         else
-           listnodes[i].next = NULL;
+            listnodes[i].next = NULL;
     }
 
     /* sort */
-    listnodes = MSD(listnodes, scnt);
+    list sortednodes = MSD(listnodes, scnt);
 
     /* write the strings back into the array */
-    for (i = 0;  i < scnt ; i++, listnodes=listnodes->next)
-       strings[i] = listnodes->str;
+    for (i = 0;  i < scnt ; i++, sortednodes=sortednodes->next)
+        strings[i] = sortednodes->str;
 
-   return;
+    free(listnodes);
 }
 
 void nilsson_adaptive_msd(unsigned char **strings, size_t n)

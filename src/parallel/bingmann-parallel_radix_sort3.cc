@@ -210,7 +210,7 @@ void SmallsortJob::run(JobQueue& jobqueue)
         radixstack.pop_back();
     }
 
-    delete charcache;
+    delete [] charcache;
 }
 
 // ****************************************************************************
@@ -346,7 +346,7 @@ void SmallsortJob16::run(JobQueue& jobqueue)
         radixstack.pop_back();
     }
 
-    delete charcache;
+    delete [] charcache;
 }
 
 void EnqueueSmall(JobQueue& jobqueue, string* strings, size_t n, size_t depth)

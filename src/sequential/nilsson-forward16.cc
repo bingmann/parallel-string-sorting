@@ -353,8 +353,8 @@ static inline list forward2(list t, int n)
 
 void frssort(string strings[], size_t scnt)
 {
-   list listnodes;
-   size_t i;
+    list listnodes;
+    size_t i;
 
     /* allocate memory based on the number of strings in the array */
     listnodes = (list ) calloc(scnt, sizeof(struct listrec));
@@ -364,19 +364,19 @@ void frssort(string strings[], size_t scnt)
     {
         listnodes[i].str = strings[i];
         if (i<(scnt-1))
-           listnodes[i].next = &listnodes[i+1];
+            listnodes[i].next = &listnodes[i+1];
         else
-           listnodes[i].next = NULL;
+            listnodes[i].next = NULL;
     }
 
     /* sort */
-    listnodes = forward2(listnodes, scnt);
+    list sortednodes = forward2(listnodes, scnt);
 
     /* write the strings back into the array */
-    for (i = 0;  i < scnt ; i++, listnodes=listnodes->next)
-       strings[i] = listnodes->str;
+    for (i = 0;  i < scnt ; i++, sortednodes=sortednodes->next)
+        strings[i] = sortednodes->str;
 
-   return;
+    free(listnodes);
 }
 
 void nilsson_forward16(unsigned char **strings, size_t n)

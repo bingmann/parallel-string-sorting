@@ -4,7 +4,7 @@ include_directories("${PROJECT_SOURCE_DIR}/libzio/")
 include_directories("${PROJECT_SOURCE_DIR}/liblfds/inc/")
 include_directories("${PROJECT_BINARY_DIR}/")
 
-add_executable(psstest
+set(SOURCES
   psstest.cc
   rantala/funnelsort.cc
   sequential/nilsson-adaptive.cc
@@ -19,12 +19,19 @@ add_executable(psstest
   parallel/bingmann-parallel_sample_sortBT.cc
   parallel/bingmann-parallel_sample_sortBTC.cc
 )
-target_link_libraries(psstest zio)
-target_link_libraries(psstest lfds)
 
-if(WITH_DMALLOC)
+set(LIBS zio lfds)
 
-  add_definitions(-DDMALLOC)
-  target_link_libraries(psstest "dmallocthcxx")
+if(WITH_MALLOC_COUNT)
 
-endif(WITH_DMALLOC)
+  add_definitions(-DMALLOC_COUNT)
+  list(APPEND SOURCES
+    tools/malloc_count.c
+    tools/stack_count.c
+  )
+  list(APPEND LIBS "dl")
+
+endif(WITH_MALLOC_COUNT)
+
+add_executable(psstest ${SOURCES})
+target_link_libraries(psstest ${LIBS})

@@ -51,11 +51,13 @@
 #include "src/config.h"
 #include "zio.h"
 
-#ifdef DMALLOC
-#include <dmalloc.h>
-#endif
-
 #include "tools/statsfile.h"
+
+#ifdef MALLOC_COUNT
+#include "tools/malloc_count.h"
+#include "tools/stack_count.h"
+#include "tools/memprofile.h"
+#endif
 
 // *** Global Input Data Structures ***
 
@@ -104,8 +106,8 @@ static const char* statsfile = "pss-runs1.txt";
 #include "rantala/multikey_block.h"
 #include "rantala/multikey_cache.h"
 #include "rantala/multikey_dynamic.h"
-#include "rantala/multikey_multipivot.h"
-#include "rantala/multikey_simd.h"
+//#include "rantala/multikey_multipivot.h"
+//#include "rantala/multikey_simd.h"
 
 #include "rantala/msd_a.h"
 #include "rantala/msd_a2.h"
@@ -184,9 +186,10 @@ void Contestant_UCArray::run()
 
     //(std::cerr << m_funcname << "\t").flush();
 
-#ifdef DMALLOC
-    unsigned long dm_mark = dmalloc_mark();
-    unsigned long dm_memuse1 = dmalloc_memory_allocated();
+#ifdef MALLOC_COUNT
+    MemProfile memprofile( m_funcname );
+    size_t memuse = malloc_count_current();
+    //void* stack = stack_count_clear();
 #endif
 
     double ts1, ts2;
@@ -195,16 +198,14 @@ void Contestant_UCArray::run()
     m_func(stringptr.data(), stringptr.size());
     ts2 = omp_get_wtime();
 
-#ifdef DMALLOC
-    unsigned long dm_memuse2 = dmalloc_memory_allocated();
+#ifdef MALLOC_COUNT
+    //stack_count_usage(stack);
+    memprofile.finish();
 
-    if (dmalloc_count_changed(dm_mark, 1, 0) != 0)
+    if (memuse < malloc_count_current())
     {
-        std::cerr << "MEMORY LEAKED: " << (dmalloc_count_changed(dm_mark, 1, 0)  / 1024) << "kb\n";
+        std::cerr << "MEMORY LEAKED: " << (malloc_count_current() - memuse) << " B\n";
     }
-
-    unsigned int dm_memuse = (dm_memuse2 - dm_memuse1) / 1024;
-    std::cerr << " with " << dm_memuse << " KiB";
 #endif
 
     g_statscache >> "time" << (ts2-ts1);
