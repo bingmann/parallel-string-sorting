@@ -57,13 +57,16 @@
 #include "tools/malloc_count.h"
 #include "tools/stack_count.h"
 #include "tools/memprofile.h"
-#endif
 
 static const char* memprofile_path = "memprofile.txt";
+#endif
 
 // *** Global Input Data Structures ***
 
-size_t          gopt_inputsizelimit = 0;
+size_t          gopt_inputsize = 0;
+size_t          gopt_inputsize_minlimit = 0;
+size_t          gopt_inputsize_maxlimit = 0;
+size_t          gopt_repeats = 0;
 std::vector<const char*> gopt_algorithm;
 
 const char*     g_stringdata = NULL;
@@ -108,8 +111,8 @@ static const char* statsfile = "pss-runs1.txt";
 #include "rantala/multikey_block.h"
 #include "rantala/multikey_cache.h"
 #include "rantala/multikey_dynamic.h"
-//#include "rantala/multikey_multipivot.h"
-//#include "rantala/multikey_simd.h"
+#include "rantala/multikey_multipivot.h"
+#include "rantala/multikey_simd.h"
 
 #include "rantala/msd_a.h"
 #include "rantala/msd_a2.h"
@@ -168,6 +171,8 @@ void Contest::run_contest(const char* path)
 
 void Contestant_UCArray::run()
 {
+    size_t repeats = gopt_repeats ? gopt_repeats : 1;
+
     // create unsigned char* array from offsets
     std::vector<unsigned char*> stringptr;
     stringptr.reserve( g_stringoffsets.size() );
@@ -186,6 +191,9 @@ void Contestant_UCArray::run()
                  >> "char_count" << g_stringdatasize
                  >> "string_count" << stringptr.size();
 
+    if (repeats > 1)
+        g_statscache >> "repeats" << repeats;
+
     //(std::cerr << m_funcname << "\t").flush();
 
 #ifdef MALLOC_COUNT
@@ -198,7 +206,16 @@ void Contestant_UCArray::run()
     double ts1, ts2;
 
     ts1 = omp_get_wtime();
-    m_func(stringptr.data(), stringptr.size());
+    do
+    {
+        m_func(stringptr.data(), stringptr.size());
+
+        if (repeats > 1) { // refill stringptr array for next repeat
+            for (size_t i = 0; i < g_stringoffsets.size(); ++i) {
+                stringptr[i] = (unsigned char*)g_stringdata + g_stringoffsets[i];
+            }
+        }
+    } while (--repeats);
     ts2 = omp_get_wtime();
 
 #ifdef MALLOC_COUNT
@@ -254,18 +271,22 @@ int main(int argc, char* argv[])
     static const struct option longopts[] = {
         { "help",    no_argument,        0, 'h' },
         { "size",    required_argument,  0, 's' },
+        { "maxsize", required_argument,  0, 'S' },
         { "algo",    required_argument,  0, 'a' },
+        { "repeat",  required_argument,  0, 'r' },
         { 0,0,0,0 },
     };
 
-    if (truncate(memprofile_path, 0)) {
-        perror("Cannot truncate memprofile datafile.");
+#ifdef MALLOC_COUNT
+    if (truncate(memprofile_path, 0))
+        perror("Cannot truncate memprofile datafile");
     }
+#endif
 
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:a:", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:r:", longopts, &index);
 
         if (argi < 0) break;
 
@@ -281,11 +302,24 @@ int main(int argc, char* argv[])
             break;
 
         case 's':
-            if (!input::parse_filesize(optarg, gopt_inputsizelimit)) {
+            if (!input::parse_filesize(optarg, gopt_inputsize_minlimit)) {
                 std::cerr << "Invalid size parameter: " << optarg << std::endl;
-                exit(EXIT_FAILURE);                
+                exit(EXIT_FAILURE);
             }
-            std::cerr << "Limiting input size to " << gopt_inputsizelimit << std::endl;
+            std::cerr << "Limiting input size to " << gopt_inputsize_minlimit << std::endl;
+            break;
+
+        case 'S':
+            if (!input::parse_filesize(optarg, gopt_inputsize_maxlimit)) {
+                std::cerr << "Invalid maxsize parameter: " << optarg << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            std::cerr << "Limiting maximum input size to " << gopt_inputsize_maxlimit << std::endl;
+            break;
+
+        case 'r':
+            gopt_repeats = atoi(optarg);
+            std::cerr << "Repeating string sorting algorithms " << gopt_repeats << std::endl;
             break;
 
         default:
@@ -299,9 +333,17 @@ int main(int argc, char* argv[])
         print_usage(argv[0]);
     }
 
-    while (optind < argc)
+    if (gopt_inputsize_maxlimit < gopt_inputsize_minlimit)
+        gopt_inputsize_maxlimit = gopt_inputsize_minlimit;
+
+    for (; optind < argc; ++optind)
     {
-        getContestSingleton()->run_contest(argv[optind++]);
+        // iterate over input size range
+        for (gopt_inputsize = gopt_inputsize_minlimit; gopt_inputsize <= gopt_inputsize_maxlimit;
+             gopt_inputsize += 16)
+        {
+            getContestSingleton()->run_contest(argv[optind]);
+        }
     }
 
     if (g_stringdata)

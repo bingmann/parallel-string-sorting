@@ -71,8 +71,8 @@ bool readfile_lines(const std::string& path)
     }
 
     // apply size limit
-    if (gopt_inputsizelimit && filesize > gopt_inputsizelimit)
-        filesize = gopt_inputsizelimit;
+    if (gopt_inputsize && filesize > gopt_inputsize)
+        filesize = gopt_inputsize;
 
     // free previous data file
     if (g_stringdata) free( (char*)g_stringdata );
@@ -133,12 +133,12 @@ bool readfile_lines(const std::string& path)
 /// Generate artificial random input with given base letter set.
 bool generate_random(const std::string& letters)
 {
-    if (!gopt_inputsizelimit) {
+    if (!gopt_inputsize) {
         std::cerr << "Random input size must be specified via '-s <size>'\n";
         return false;
     }
 
-    size_t size = gopt_inputsizelimit;
+    size_t size = gopt_inputsize;
 
     // free previous data file
     if (g_stringdata) free( (char*)g_stringdata );

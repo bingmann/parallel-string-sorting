@@ -20,7 +20,9 @@
 
 namespace inssort {
 
-int scmp(unsigned char *s1, unsigned char *s2)
+typedef unsigned char* string;
+
+int scmp(string s1, string s2)
 {
     while( *s1 != '\0' && *s1 == *s2 )
         s1++, s2++;
@@ -28,12 +30,12 @@ int scmp(unsigned char *s1, unsigned char *s2)
 }
 
 void
-inssort(unsigned char** a, int n, int d)
+inssort(string* a, int n, int d)
 {
-    unsigned char **pi, **pj, *s, *t;
+    string *pi, *pj, s, t;
 
     for (pi = a + 1; --n > 0; pi++) {
-        unsigned char* tmp = *pi;
+        string tmp = *pi;
 
         for (pj = pi; pj > a; pj--) {
             for (s=*(pj-1)+d, t=tmp+d; *s==*t && *s!=0; ++s, ++t)
@@ -45,5 +47,10 @@ inssort(unsigned char** a, int n, int d)
         *pj = tmp;
     }
 }
+
+void insertion_sort(string a[], size_t n)
+{ inssort(a, n, 0); }
+
+//CONTESTANT_REGISTER_UCARRAY(insertion_sort, "String Insertion-Sort")
 
 } // namespace  inssort
