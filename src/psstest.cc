@@ -69,6 +69,7 @@ size_t          gopt_inputsize_maxlimit = 0;
 size_t          gopt_repeats = 0;
 std::vector<const char*> gopt_algorithm;
 
+const char*     g_dataname = NULL;
 const char*     g_stringdata = NULL;
 size_t          g_stringdatasize = 0;
 std::vector<size_t> g_stringoffsets;
@@ -77,6 +78,8 @@ static StatsCache g_statscache;
 
 // file name of statistics output
 static const char* statsfile = "pss-runs1.txt";
+
+static size_t g_smallsort = 64;
 
 // *** Tools and Algorithms
 
@@ -147,6 +150,8 @@ void Contest::run_contest(const char* path)
     if (!input::load(path))
         return;
 
+    g_dataname = path;
+
     std::cerr << "Sorting " << g_stringoffsets.size() << " strings composed of " << g_stringdatasize << " bytes." << std::endl;
 
     std::sort(m_list.begin(), m_list.end(), sort_contestants);
@@ -188,8 +193,11 @@ void Contestant_UCArray::run()
     std::cerr << "Running " << m_funcname << " - " << m_description << "\n";
 
     g_statscache >> "algo" << m_funcname
+                 >> "data" << g_dataname
                  >> "char_count" << g_stringdatasize
                  >> "string_count" << stringptr.size();
+
+    g_statscache >> "smallsort" << g_smallsort;
 
     if (repeats > 1)
         g_statscache >> "repeats" << repeats;
@@ -342,7 +350,11 @@ int main(int argc, char* argv[])
         for (gopt_inputsize = gopt_inputsize_minlimit; gopt_inputsize <= gopt_inputsize_maxlimit;
              gopt_inputsize += 16)
         {
-            getContestSingleton()->run_contest(argv[optind]);
+            // iterate over small sort size
+            for (g_smallsort = 4; g_smallsort < 1024; g_smallsort += g_smallsort/4)
+            {
+                getContestSingleton()->run_contest(argv[optind]);
+            }
         }
     }
 

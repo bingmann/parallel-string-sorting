@@ -98,27 +98,12 @@ static string *med3func(string *a, string *b, string *c, int depth)
         : (vb > vc ? b : (va < vc ? a : c ) );
 }
 
-static void insertsort(string *a, int n, int d)
-{
-    string *pi, *pj, s, t;
-    for (pi = a + 1; --n > 0; pi++)
-        for (pj = pi; pj > a; pj--) {
-            /* Inline strcmp: break if *(pj-1) <= *pj */
-            for (s=*(pj-1)+d, t=*pj+d; *s==*t && *s!=0; s++, t++)
-                ;
-            if (*s <= *t)
-                break;
-            std::swap(*pj, *(pj-1));
-        }
-}
-
-static void ssort2(string a[], int n, int depth)
+static void ssort2(string a[], size_t n, int depth)
 {
     int d, r, partval;
     string *pa, *pb, *pc, *pd, *pl, *pm, *pn;
-    if (n < 10) {
-        insertsort(a, n, depth);
-        return;
+    if (n < 64) {
+        return inssort::inssort(a, n, depth);
     }
     pl = a;
     pm = a + (n/2);

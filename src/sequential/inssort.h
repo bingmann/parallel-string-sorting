@@ -29,16 +29,16 @@ int scmp(string s1, string s2)
     return( *s1-*s2 );
 }
 
-void
-inssort(string* a, int n, int d)
+static inline void
+inssort(string* str, int n, int d)
 {
-    string *pi, *pj, s, t;
+    string *pj, s, t;
 
-    for (pi = a + 1; --n > 0; pi++) {
+    for (string* pi = str + 1; --n > 0; pi++) {
         string tmp = *pi;
 
-        for (pj = pi; pj > a; pj--) {
-            for (s=*(pj-1)+d, t=tmp+d; *s==*t && *s!=0; ++s, ++t)
+        for (pj = pi; pj > str; pj--) {
+            for (s = *(pj-1)+d, t = tmp+d; *s == *t && *s != 0; ++s, ++t)
                 ;
             if (*s <= *t)
                 break;
@@ -48,7 +48,7 @@ inssort(string* a, int n, int d)
     }
 }
 
-void insertion_sort(string a[], size_t n)
+void insertion_sort(string* a, size_t n)
 { inssort(a, n, 0); }
 
 //CONTESTANT_REGISTER_UCARRAY(insertion_sort, "String Insertion-Sort")

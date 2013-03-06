@@ -23,25 +23,9 @@
 
 namespace bingmann_radix_sort {
 
-typedef unsigned char* string;
+static const int g_inssort_threshold = 64;
 
-static inline void
-insertion_sort(string* strings, int n, size_t depth)
-{
-    for (string* i = strings + 1; --n > 0; ++i) {
-        string* j = i;
-        string tmp = *i;
-        while (j > strings) {
-            string s = *(j-1)+depth;
-            string t = tmp+depth;
-            while (*s == *t && *s != 0) ++s, ++t;
-            if (*s <= *t) break;
-            *j = *(j-1);
-            --j;
-        }
-        *j = tmp;
-    }
-}
+typedef unsigned char* string;
 
 static inline void
 insertion_sort(string* str_begin, string* str_end, size_t depth)
@@ -64,8 +48,8 @@ insertion_sort(string* str_begin, string* str_end, size_t depth)
 static void
 msd_CE(string* strings, size_t n, size_t depth)
 {
-    if (n < 32)
-        return insertion_sort(strings, n, depth);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, depth);
 
     // count character occurances
     size_t bktsize[256] = { 0 };
@@ -102,8 +86,8 @@ CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CE, "bingmann/msd_CE (rantala CE origin
 static void
 msd_CE2(string* strings, size_t n, size_t depth)
 {
-    if (n < 32)
-        return insertion_sort(strings, n, depth);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, depth);
 
     // count character occurances
     size_t bkt[256+1] = {0};
@@ -137,7 +121,7 @@ CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CE2, "bingmann/msd_CE2 (CE with reused 
 static void
 msd_CE3(string* str_begin, string* str_end, size_t depth)
 {
-    if (str_begin + 32 > str_end)
+    if (str_begin + g_inssort_threshold > str_end)
         return insertion_sort(str_begin, str_end, depth);
 
     // count character occurances
@@ -178,8 +162,8 @@ struct distblock {
 template <typename BucketsizeType>
 static void msd_CI(string* strings, size_t n, size_t depth)
 {
-    if (n < 32) {
-        insertion_sort(strings, n, depth);
+    if (n < g_inssort_threshold) {
+        inssort::inssort(strings, n, depth);
         return;
     }
     BucketsizeType bktsize[256] = {0};
@@ -232,8 +216,8 @@ CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI, "bingmann/msd_CI (rantala CI origin
 template <typename BucketsizeType>
 static void msd_CI2(string* strings, size_t n, size_t depth)
 {
-    if (n < 32) {
-        insertion_sort(strings, n, depth);
+    if (n < g_inssort_threshold) {
+        inssort::inssort(strings, n, depth);
         return;
     }
     BucketsizeType bktsize[256] = {0};
@@ -281,8 +265,8 @@ CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI2, "bingmann/msd_CI2 (CI without orac
 static void
 msd_CI3(string* strings, size_t n, size_t depth)
 {
-    if (n < 32)
-        return insertion_sort(strings, n, depth);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, depth);
 
     // count character occurances
     size_t bktsize[256] = { 0 };
@@ -327,8 +311,8 @@ CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI3, "bingmann/msd_CI3 (CI2 with swap o
 static void
 msd_CI4(string* strings, size_t n, size_t depth)
 {
-    if (n < 32)
-        return insertion_sort(strings, n, depth);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, depth);
 
     // count character occurances
     size_t bktsize[256] = { 0 };
@@ -371,8 +355,8 @@ CONTESTANT_REGISTER_UCARRAY(bingmann_msd_CI4, "bingmann/msd_CI4 (CI3 with swap c
 static void
 msd_CI5(string* strings, size_t n, size_t depth)
 {
-    if (n < 32)
-        return insertion_sort(strings, n, depth);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, depth);
 
     // cache characters
     uint8_t* charcache = new uint8_t[n];
@@ -453,8 +437,8 @@ struct RadixStep_CE_nr
 static void
 bingmann_msd_CE_nr(string* strings, size_t n)
 {
-    if (n < 32)
-        return insertion_sort(strings,n,0);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings,n,0);
 
     typedef RadixStep_CE_nr RadixStep;
 
@@ -471,11 +455,11 @@ bingmann_msd_CE_nr(string* strings, size_t n)
 
             if (rs.bkt[rs.idx] == rs.bkt[rs.idx+1])
                 ;
-            else if (rs.bkt[rs.idx+1] < rs.bkt[rs.idx] + 32)
+            else if (rs.bkt[rs.idx+1] < rs.bkt[rs.idx] + g_inssort_threshold)
             {
-                insertion_sort(rs.str + rs.bkt[ rs.idx ],
-                               rs.bkt[ rs.idx+1 ] - rs.bkt[ rs.idx ],
-                               radixstack.size());
+                inssort::inssort(rs.str + rs.bkt[ rs.idx ],
+                                 rs.bkt[ rs.idx+1 ] - rs.bkt[ rs.idx ],
+                                 radixstack.size());
             }
             else
             {
@@ -530,8 +514,8 @@ struct RadixStep_CE_nr2
 static void
 bingmann_msd_CE_nr2(string* strings, size_t n)
 {
-    if (n < 32)
-        return insertion_sort(strings,n,0);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings,n,0);
 
     typedef RadixStep_CE_nr2 RadixStep;
 
@@ -547,9 +531,9 @@ bingmann_msd_CE_nr2(string* strings, size_t n)
 
             if (rs.bktsize[rs.idx] == 0)
                 ;
-            else if (rs.bktsize[rs.idx] < 32)
+            else if (rs.bktsize[rs.idx] < g_inssort_threshold)
             {
-                insertion_sort(rs.str, rs.bktsize[rs.idx], radixstack.size());
+                inssort::inssort(rs.str, rs.bktsize[rs.idx], radixstack.size());
                 rs.str += rs.bktsize[ rs.idx ];
             }
             else
@@ -619,8 +603,8 @@ struct RadixStep_CI_nr
 static void
 bingmann_msd_CI_nr(string* strings, size_t n)
 {
-    if (n < 32)
-        return insertion_sort(strings,n,0);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings,n,0);
 
     typedef RadixStep_CI_nr RadixStep;
 
@@ -637,11 +621,11 @@ bingmann_msd_CI_nr(string* strings, size_t n)
 
             if (rs.bkt[rs.idx] == rs.bkt[rs.idx+1])
                 ;
-            else if (rs.bkt[rs.idx+1] < rs.bkt[rs.idx] + 32)
+            else if (rs.bkt[rs.idx+1] < rs.bkt[rs.idx] + g_inssort_threshold)
             {
-                insertion_sort(rs.str + rs.bkt[ rs.idx ],
-                               rs.bkt[ rs.idx+1 ] - rs.bkt[ rs.idx ],
-                               radixstack.size());
+                inssort::inssort(rs.str + rs.bkt[ rs.idx ],
+                                 rs.bkt[ rs.idx+1 ] - rs.bkt[ rs.idx ],
+                                 radixstack.size());
             }
             else
             {
@@ -702,8 +686,8 @@ struct RadixStep_CI_nr2
 static void
 bingmann_msd_CI_nr2(string* strings, size_t n)
 {
-    if (n < 32)
-        return insertion_sort(strings,n,0);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings,n,0);
 
     typedef RadixStep_CI_nr2 RadixStep;
 
@@ -719,9 +703,9 @@ bingmann_msd_CI_nr2(string* strings, size_t n)
 
             if (rs.bktsize[rs.idx] == 0)
                 ;
-            else if (rs.bktsize[rs.idx] < 32)
+            else if (rs.bktsize[rs.idx] < g_inssort_threshold)
             {
-                insertion_sort(rs.str, rs.bktsize[rs.idx], radixstack.size());
+                inssort::inssort(rs.str, rs.bktsize[rs.idx], radixstack.size());
                 rs.str += rs.bktsize[ rs.idx ];
             }
             else
@@ -785,8 +769,8 @@ struct RadixStep_CI_nr3
 static void
 bingmann_msd_CI_nr3(string* strings, size_t n)
 {
-    if (n < 32)
-        return insertion_sort(strings,n,0);
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings,n,0);
 
     typedef RadixStep_CI_nr3 RadixStep;
 
@@ -804,9 +788,9 @@ bingmann_msd_CI_nr3(string* strings, size_t n)
 
             if (rs.bktsize[rs.idx] == 0)
                 ;
-            else if (rs.bktsize[rs.idx] < 32)
+            else if (rs.bktsize[rs.idx] < g_inssort_threshold)
             {
-                insertion_sort(rs.str, rs.bktsize[rs.idx], radixstack.size());
+                inssort::inssort(rs.str, rs.bktsize[rs.idx], radixstack.size());
                 rs.str += rs.bktsize[ rs.idx ];
             }
             else

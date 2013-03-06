@@ -58,6 +58,8 @@ static const bool use_work_stealing = true;
 
 typedef unsigned char* string;
 
+static const int g_inssort_threshold = 64;
+
 /// Prototype called to schedule deeper sorts
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth);
 
@@ -137,7 +139,7 @@ void SmallsortJob::run(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
-    if (n < 32)
+    if (n < g_inssort_threshold)
         return insertion_sort(strings,n,depth);
 
     // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
@@ -154,7 +156,7 @@ void SmallsortJob::run(JobQueue& jobqueue)
 
             if (rs.bktsize[rs.idx] == 0)
                 continue;
-            else if (rs.bktsize[rs.idx] < 32)
+            else if (rs.bktsize[rs.idx] < g_inssort_threshold)
             {
                 insertion_sort(rs.str, rs.bktsize[rs.idx], depth + radixstack.size());
                 rs.str += rs.bktsize[ rs.idx ];

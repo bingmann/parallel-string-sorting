@@ -81,7 +81,7 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 
 #endif
 
-    if (n < 1024*1024)
+    if (n < g_smallsort)
     {
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
@@ -250,7 +250,7 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 
 #endif
 
-    if (n < 1024*1024)
+    if (n < g_smallsort)
     {
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
@@ -476,7 +476,7 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
     static const size_t numsplitters = (1 << logfloor_<numsplitters2>::value) - 1;
 #endif
 
-    if (depth != 0 && n < 1024*1024)
+    if (depth != 0 && n < g_smallsort)
     {
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
@@ -685,7 +685,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     static const size_t numsplitters = (1 << logfloor_<numsplitters2>::value) - 1;
 #endif
 
-    if (depth != 0 && n < 1024*1024)
+    if (depth != 0 && n < g_smallsort)
     {
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
