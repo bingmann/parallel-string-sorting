@@ -144,6 +144,19 @@ Contest* getContestSingleton()
     return c;
 }
 
+static inline bool gopt_algorithm_match(const char* funcname)
+{
+    if (!gopt_algorithm.size()) return true;
+
+    // iterate over gopt_algorithm list as a filter
+    for (size_t ai = 0; ai < gopt_algorithm.size(); ++ai) {
+        if (strstr(funcname, gopt_algorithm[ai]) != NULL)
+            return true;
+    }
+
+    return false;
+}
+
 void Contest::run_contest(const char* path)
 {
     // read input datafile
@@ -159,18 +172,30 @@ void Contest::run_contest(const char* path)
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (!gopt_algorithm.size()) {
+        if (gopt_algorithm_match( (*c)->m_funcname )) {
             (*c)->run();
         }
-        else {
-            // iterate over gopt_algorithm list as a filter
-            for (size_t ai = 0; ai < gopt_algorithm.size(); ++ai) {
-                if (strstr((*c)->m_funcname, gopt_algorithm[ai]) != NULL) {
-                    (*c)->run();
-                    break;
-                }
-            }
-        }
+    }
+}
+
+void Contest::list_contentants()
+{
+    std::cout << "Available string sorting algorithms:" << std::endl;
+
+    std::sort(m_list.begin(), m_list.end(), sort_contestants);
+
+    size_t w_funcname = 0;
+    for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
+    {
+        if (!gopt_algorithm_match( (*c)->m_funcname )) continue;
+        w_funcname = std::max(w_funcname, strlen( (*c)->m_funcname ));
+    }
+
+    // iterate over all contestants
+    for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
+    {
+        if (!gopt_algorithm_match( (*c)->m_funcname )) continue;
+        std::cout << std::left << std::setw(w_funcname) << (*c)->m_funcname << "  " << (*c)->m_description << std::endl;
     }
 }
 
@@ -310,6 +335,11 @@ int main(int argc, char* argv[])
             break;
 
         case 'a':
+            if (strcmp(optarg,"list") == 0)
+            {
+                getContestSingleton()->list_contentants();
+                return 0;
+            }
             gopt_algorithm.push_back(optarg);
             std::cerr << "Selecting algorithms containing " << optarg << std::endl;
             break;

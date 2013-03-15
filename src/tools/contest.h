@@ -39,6 +39,8 @@ public:
     }
 
     void run_contest(const char* path); // implemented in main.cc
+
+    void list_contentants(); // implemented in main.cc
 };
 
 extern Contest* getContestSingleton();
