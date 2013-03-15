@@ -23,7 +23,7 @@
 
 namespace bingmann_radix_sort {
 
-static const int g_inssort_threshold = 64;
+static const size_t g_inssort_threshold = 64;
 
 typedef unsigned char* string;
 

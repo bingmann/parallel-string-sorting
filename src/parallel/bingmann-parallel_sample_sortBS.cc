@@ -33,6 +33,8 @@
 #include "../tools/stringtools.h"
 #include "../tools/jobqueue.h"
 
+extern size_t g_smallsort;
+
 namespace bingmann_parallel_radix_sort3 {
 
 using namespace stringtools;
@@ -414,7 +416,7 @@ void EnqueueBig(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 {
     // TODO: tune parameter
-    if (n > 1024*1024)
+    if (n > g_smallsort)
         return EnqueueBig(jobqueue, strings, n, depth);
     else
         return bingmann_parallel_radix_sort3::EnqueueSmall(jobqueue, strings, n, depth);

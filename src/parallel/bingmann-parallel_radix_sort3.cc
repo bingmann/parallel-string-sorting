@@ -50,6 +50,10 @@
 #include "../tools/stringtools.h"
 #include "../tools/jobqueue.h"
 
+#include "../sequential/inssort.h"
+
+extern size_t g_smallsort;
+
 namespace bingmann_parallel_radix_sort3 {
 
 using namespace stringtools;
@@ -61,7 +65,7 @@ static const bool use_work_stealing = true;
 
 typedef unsigned char* string;
 
-static const int g_inssort_threshold = 64;
+static const size_t g_inssort_threshold = 64;
 
 /// Prototype called to schedule deeper sorts
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth);
@@ -81,24 +85,6 @@ struct SmallsortJob : public Job
     virtual void run(JobQueue& jobqueue);
 };
 
-static inline void
-insertion_sort(string* strings, int n, size_t depth)
-{
-    for (string* i = strings + 1; --n > 0; ++i) {
-        string* j = i;
-        string tmp = *i;
-        while (j > strings) {
-            string s = *(j-1)+depth;
-            string t = tmp+depth;
-            while (*s == *t && *s != 0) ++s, ++t;
-            if (*s <= *t) break;
-            *j = *(j-1);
-            --j;
-        }
-        *j = tmp;
-    }
-}
-
 struct RadixStepCI
 {
     string* str;
@@ -109,8 +95,8 @@ struct RadixStepCI
     {
         // count character occurances
 #if 1
-        // First variant to first fill charcache and then count. This is 2x
-        // as fast as the second variant.
+        // DONE: first variant to first fill charcache and then count. This is
+        // 2x as fast as the second variant.
         for (size_t i=0; i < n; ++i)
             charcache[i] = strings[i][depth];
 
@@ -156,7 +142,7 @@ void SmallsortJob::run(JobQueue& jobqueue)
     DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
     if (n < g_inssort_threshold)
-        return insertion_sort(strings,n,depth);
+        return inssort::inssort(strings,n,depth);
 
     uint8_t* charcache = new uint8_t[n];
 
@@ -176,7 +162,7 @@ void SmallsortJob::run(JobQueue& jobqueue)
                 continue;
             else if (rs.bktsize[rs.idx] < g_inssort_threshold)
             {
-                insertion_sort(rs.str, rs.bktsize[rs.idx], depth + radixstack.size());
+                inssort::inssort(rs.str, rs.bktsize[rs.idx], depth + radixstack.size());
                 rs.str += rs.bktsize[ rs.idx ];
             }
             else
@@ -283,7 +269,7 @@ void SmallsortJob16::run(JobQueue& jobqueue)
     DBG(debug_jobs, "Process SmallsortJob16 " << this << " of size " << n);
 
     if (n < g_inssort_threshold)
-        return insertion_sort(strings,n,depth);
+        return inssort::inssort(strings,n,depth);
 
     typedef uint16_t key_type;
 
@@ -312,7 +298,7 @@ void SmallsortJob16::run(JobQueue& jobqueue)
                 continue;
             else if (rs.bktsize[rs.idx] < g_inssort_threshold)
             {
-                insertion_sort(rs.str, rs.bktsize[rs.idx], depth + 2*radixstack.size());
+                inssort::inssort(rs.str, rs.bktsize[rs.idx], depth + 2*radixstack.size());
                 rs.str += rs.bktsize[rs.idx];
             }
             else
@@ -447,22 +433,23 @@ void RadixStepCE<key_type>::count(unsigned int p, JobQueue& jobqueue)
     key_type* mycache = charcache + p * psize;
     key_type* mycacheE = mycache + (strE - strB);
 
-    // TODO: check if processor-local stack + copy is faster
+    // DONE: check if processor-local stack + copy is faster. On 48-core AMD
+    // Opteron it is not faster to copy first.
 #if 1
-    size_t* mybkt = bkt + p * numbkts;
-
     for (string* str = strB; str != strE; ++str, ++mycache)
         *mycache = get_char<key_type>(*str, depth);
 
+    size_t* mybkt = bkt + p * numbkts;
     memset(mybkt, 0, numbkts * sizeof(size_t));
     for (mycache = charcache + p * psize; mycache != mycacheE; ++mycache)
         ++mybkt[ *mycache ];
 #else
+    for (string* str = strB; str != strE; ++str, ++mycache)
+        *mycache = get_char<key_type>(*str, depth);
+
     size_t mybkt[numbkts] = { 0 };
-
-    for (string* str = strB; str != strE; ++str)
-        ++mybkt[ get_char<key_type>(*str, depth) ];
-
+    for (mycache = charcache + p * psize; mycache != mycacheE; ++mycache)
+        ++mybkt[ *mycache ];
     memcpy(bkt + p * numbkts, mybkt, sizeof(mybkt));
 #endif
 
@@ -505,7 +492,8 @@ void RadixStepCE<key_type>::distribute(unsigned int p, JobQueue& jobqueue)
 
     key_type* mycache = charcache + p * psize;
 
-    // TODO: check if processor-local stack + copy is faster
+    // DONE: check if processor-local stack + copy is faster. On 48-core AMD
+    // Opteron it is not faster to copy first.
 #if 1
     size_t* mybkt = bkt + p * numbkts;
 
@@ -515,8 +503,8 @@ void RadixStepCE<key_type>::distribute(unsigned int p, JobQueue& jobqueue)
     size_t mybkt[numbkts];
     memcpy(mybkt, bkt + p * numbkts, sizeof(mybkt));
 
-    for (string* str = strB; str != strE; ++str)
-        sorted[ --mybkt[ get_char<key_type>(*str, depth) ] ] = *str;
+    for (string* str = strB; str != strE; ++str, ++mycache)
+        sorted[ --mybkt[ *mycache ] ] = *str;
 
     if (p == 0) // these are needed for recursion into bkts
         memcpy(bkt, mybkt, sizeof(mybkt));
@@ -557,6 +545,7 @@ void RadixStepCE<uint8_t>::copyback_finished(JobQueue& jobqueue)
     DBG(debug_jobs, "Finishing CopybackJob " << this << " with copy to original");
 
     free(sorted);
+    delete [] charcache;
 
     // first p's bkt pointers are boundaries between bkts, just add sentinel:
     bkt[numbkts] = n;
@@ -624,8 +613,7 @@ void EnqueueBig(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 {
     // TODO: tune parameter
-    if (n > 1024*1024)
-        //if (depth == 0)
+    if (n > 128*1024)
         return EnqueueBig(jobqueue, strings, n, depth);
     else
         return EnqueueSmall(jobqueue, strings, n, depth);
@@ -639,8 +627,6 @@ void bingmann_parallel_radix_sort3(string* strings, size_t n)
     Enqueue(jobqueue, strings, n, 0);
     jobqueue.loop();
 }
-
-//CONTESTANT_REGISTER_UCARRAY(bingmann_parallel_radix_sort3, "bingmann/parallel_radix_sort3")
 
 CONTESTANT_REGISTER_UCARRAY_PARALLEL(bingmann_parallel_radix_sort3, "bingmann/parallel_radix_sort3")
 

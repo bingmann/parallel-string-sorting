@@ -58,7 +58,7 @@ static const bool use_work_stealing = true;
 
 typedef unsigned char* string;
 
-static const int g_inssort_threshold = 64;
+static const size_t g_inssort_threshold = 64;
 
 /// Prototype called to schedule deeper sorts
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth);

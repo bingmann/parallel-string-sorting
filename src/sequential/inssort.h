@@ -22,6 +22,7 @@ namespace inssort {
 
 typedef unsigned char* string;
 
+static inline
 int scmp(string s1, string s2)
 {
     while( *s1 != '\0' && *s1 == *s2 )
@@ -48,6 +49,7 @@ inssort(string* str, int n, int d)
     }
 }
 
+static inline
 void insertion_sort(string* a, size_t n)
 { inssort(a, n, 0); }
 

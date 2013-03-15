@@ -79,7 +79,7 @@ static StatsCache g_statscache;
 // file name of statistics output
 static const char* statsfile = "pss-runs1.txt";
 
-static size_t g_smallsort = 64;
+size_t g_smallsort = 64;
 
 // *** Tools and Algorithms
 
@@ -258,7 +258,9 @@ void Contestant_UCArray::run()
 
 void Contestant_UCArray_Parallel::run()
 {
-    for (int p = 1; p <= omp_get_num_procs(); p *= 2)
+    int p = 1;
+
+    while (1)
     {
         pss_num_threads = p;
         std::cerr << "threads=" << p << " ";
@@ -266,6 +268,9 @@ void Contestant_UCArray_Parallel::run()
         g_statscache >> "threads" << p;
 
         Contestant_UCArray::run();
+
+        if (p == omp_get_num_procs()) break;
+        p = std::min( omp_get_num_procs(), 2 * p );
     }
 }
 
@@ -286,7 +291,7 @@ int main(int argc, char* argv[])
     };
 
 #ifdef MALLOC_COUNT
-    if (truncate(memprofile_path, 0))
+    if (truncate(memprofile_path, 0)) {
         perror("Cannot truncate memprofile datafile");
     }
 #endif
@@ -351,7 +356,7 @@ int main(int argc, char* argv[])
              gopt_inputsize += 16)
         {
             // iterate over small sort size
-            for (g_smallsort = 4; g_smallsort < 1024; g_smallsort += g_smallsort/4)
+            for (g_smallsort = 1024; g_smallsort < 16*1024*1024; g_smallsort += g_smallsort)
             {
                 getContestSingleton()->run_contest(argv[optind]);
             }
