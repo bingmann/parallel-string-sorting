@@ -386,7 +386,7 @@ int main(int argc, char* argv[])
              gopt_inputsize += 16)
         {
             // iterate over small sort size
-            for (g_smallsort = 1024; g_smallsort < 16*1024*1024; g_smallsort += g_smallsort)
+            //for (g_smallsort = 64; g_smallsort < 512; g_smallsort += 8)
             {
                 getContestSingleton()->run_contest(argv[optind]);
             }
