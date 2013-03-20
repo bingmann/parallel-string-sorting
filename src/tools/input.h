@@ -75,14 +75,14 @@ bool readfile_lines(const std::string& path)
         filesize = gopt_inputsize;
 
     // free previous data file
-    if (g_stringdata) free( (char*)g_stringdata );
+    if (g_string_data) free( (char*)g_string_data );
 
     // allocate one continuous area of memory
     std::cerr << "Allocating " << filesize << " bytes in RAM, reading " << path << "\n";
     char* stringdata = (char*)malloc(filesize);
 
-    g_stringdata = stringdata;
-    g_stringdatasize = filesize;
+    g_string_data = stringdata;
+    g_string_datasize = filesize;
 
     if (!stringdata) {
         std::cerr << "\n" << strerror(errno) << "\n";
@@ -91,8 +91,8 @@ bool readfile_lines(const std::string& path)
     }
 
     // mark offsets of '\n' -> '\0' terminated line starts
-    g_stringoffsets.clear();
-    g_stringoffsets.push_back(0);
+    g_string_offsets.clear();
+    g_string_offsets.push_back(0);
 
     // read complete file
     size_t rpos = 0;
@@ -115,7 +115,7 @@ bool readfile_lines(const std::string& path)
             if (stringdata[i] == '\n') {
                 stringdata[i] = 0;
                 if (i+1 < filesize)
-                    g_stringoffsets.push_back(i+1);
+                    g_string_offsets.push_back(i+1);
             }
         }
 
@@ -141,28 +141,28 @@ bool generate_random(const std::string& letters)
     size_t size = gopt_inputsize;
 
     // free previous data file
-    if (g_stringdata) free( (char*)g_stringdata );
+    if (g_string_data) free( (char*)g_string_data );
 
     // allocate one continuous area of memory
     std::cerr << "Allocating " << size << " bytes in RAM, generating random data.\n";
     char* stringdata = (char*)malloc(size);
 
-    g_stringdata = stringdata;
-    g_stringdatasize = size;
+    g_string_data = stringdata;
+    g_string_datasize = size;
 
     if (!stringdata) {
         std::cerr << "\n" << strerror(errno) << "\n";
         return false;
     }
 
-    g_stringoffsets.clear();
+    g_string_offsets.clear();
     LCGRandom rng(239423494);
     size_t slen = 0;
 
     for (size_t i = 0; i < size; ++i)
     {
         if (i == slen) { // start of string
-            g_stringoffsets.push_back(i);
+            g_string_offsets.push_back(i);
             slen += (rng() % 3) + 16;
         }
 

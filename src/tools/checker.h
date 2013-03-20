@@ -24,7 +24,7 @@ class PermutationCheck
 {
 private:
     // polynomial evaluation of (z-0)*(z-1)*(z-2)...(z-(n-1)) mod (p)
-    static const uint64_t p = 4294967291;       // greatest prime < 2^32
+    static const uint64_t p = 4294967291;       // largest prime < 2^32
 
     uint64_t v;         // evaluation result
     size_t iter;        // offset / iteration
@@ -35,7 +35,7 @@ public:
         for (iter = 1; iter < 100000; ++iter)
         {
             // use address after end of string area as evalution point
-            uint64_t z = (uint64_t)g_stringdata + g_stringdatasize + iter;
+            uint64_t z = (uint64_t)g_string_data + g_string_datasize + iter;
             v = 1;
 
             for (size_t i = 0; i < stringptr.size(); ++i)
@@ -56,7 +56,7 @@ public:
     bool check(const std::vector<unsigned char*>& stringptr) const
     {
         // use address after end of string area as evalution point
-        uint64_t z = (uint64_t)g_stringdata + g_stringdatasize + iter;
+        uint64_t z = (uint64_t)g_string_data + g_string_datasize + iter;
         uint64_t w = 1;
 
         for (size_t i = 0; i < stringptr.size(); ++i)
@@ -92,4 +92,29 @@ bool check_sorted_order(const std::vector<unsigned char*>& stringptr, const Perm
     }
 
     return true;
+}
+
+size_t calc_distinguishing_prefix(const std::vector<unsigned char*>& stringptr, size_t n)
+{
+    size_t D = 0;
+    size_t pdepth = 0;
+
+    for (size_t i = 1; i < stringptr.size(); ++i)
+    {
+        size_t depth = 0;
+        while ( stringptr[i-1][depth] == stringptr[i][depth] &&
+                stringptr[i-1][depth] != 0 ) ++depth;
+        // depth == LCP of prev and this
+        depth++;
+
+        if (pdepth < depth) {
+            D += depth - pdepth; // add extra distinguishing characters
+        }
+        D += depth;
+        pdepth = depth;
+    }
+
+    std::cout << "percentage dprefix = " << (D * 100.0 / n) << "\n";
+
+    return D;
 }

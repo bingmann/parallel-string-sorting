@@ -70,9 +70,10 @@ size_t          gopt_repeats = 0;
 std::vector<const char*> gopt_algorithm;
 
 const char*     g_dataname = NULL;
-const char*     g_stringdata = NULL;
-size_t          g_stringdatasize = 0;
-std::vector<size_t> g_stringoffsets;
+const char*     g_string_data = NULL;
+size_t          g_string_datasize = 0;
+std::vector<size_t> g_string_offsets;
+size_t          g_string_dprefix = 0;
 
 static StatsCache g_statscache;
 
@@ -164,8 +165,9 @@ void Contest::run_contest(const char* path)
         return;
 
     g_dataname = path;
+    g_string_dprefix = 0;
 
-    std::cerr << "Sorting " << g_stringoffsets.size() << " strings composed of " << g_stringdatasize << " bytes." << std::endl;
+    std::cerr << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
 
     std::sort(m_list.begin(), m_list.end(), sort_contestants);
 
@@ -205,11 +207,11 @@ void Contestant_UCArray::run()
 
     // create unsigned char* array from offsets
     std::vector<unsigned char*> stringptr;
-    stringptr.reserve( g_stringoffsets.size() );
+    stringptr.reserve( g_string_offsets.size() );
 
-    for (size_t i = 0; i < g_stringoffsets.size(); ++i)
+    for (size_t i = 0; i < g_string_offsets.size(); ++i)
     {
-        stringptr.push_back( (unsigned char*)g_stringdata + g_stringoffsets[i] );
+        stringptr.push_back( (unsigned char*)g_string_data + g_string_offsets[i] );
     }
 
     // save permutation check evaluation result
@@ -219,7 +221,7 @@ void Contestant_UCArray::run()
 
     g_statscache >> "algo" << m_funcname
                  >> "data" << g_dataname
-                 >> "char_count" << g_stringdatasize
+                 >> "char_count" << g_string_datasize
                  >> "string_count" << stringptr.size();
 
     g_statscache >> "smallsort" << g_smallsort;
@@ -244,8 +246,8 @@ void Contestant_UCArray::run()
         m_func(stringptr.data(), stringptr.size());
 
         if (repeats > 1) { // refill stringptr array for next repeat
-            for (size_t i = 0; i < g_stringoffsets.size(); ++i) {
-                stringptr[i] = (unsigned char*)g_stringdata + g_stringoffsets[i];
+            for (size_t i = 0; i < g_string_offsets.size(); ++i) {
+                stringptr[i] = (unsigned char*)g_string_data + g_string_offsets[i];
             }
         }
     } while (--repeats);
@@ -271,6 +273,11 @@ void Contestant_UCArray::run()
     if (check_sorted_order(stringptr, pc)) {
         std::cerr << "ok" << std::endl;
         g_statscache >> "status" << "ok";
+
+        if (!g_string_dprefix)
+            g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_datasize);
+
+        g_statscache >> "dprefix" << g_string_dprefix;
     }
     else {
         g_statscache >> "status" << "failed";
@@ -393,8 +400,8 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (g_stringdata)
-        free((void*)g_stringdata);
+    if (g_string_data)
+        free((void*)g_string_data);
 
     return 0;
 }
