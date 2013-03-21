@@ -69,6 +69,7 @@ size_t          gopt_inputsize_minlimit = 0;
 size_t          gopt_inputsize_maxlimit = 0;
 size_t          gopt_repeats = 0;
 std::vector<const char*> gopt_algorithm;
+int             gopt_timeout = 0;
 
 const char*     g_dataname = NULL;
 const char*     g_string_data = NULL;
@@ -86,7 +87,6 @@ static const char* statsfile = "pss-runs1.txt";
 //size_t g_smallsort = 64;
 
 static const bool use_fork = true;
-static const int use_timeout = 10; // terminate test after 10 sec
 
 // *** Tools and Algorithms
 
@@ -214,7 +214,7 @@ void Contestant_UCArray::run()
     pid_t p = fork();
     if (p == 0)
     {
-        if (use_timeout) alarm(use_timeout); // terminate child program after use_timeout seconds
+        if (gopt_timeout) alarm(gopt_timeout); // terminate child program after use_timeout seconds
         real_run();
         exit(0);
     }
@@ -382,6 +382,7 @@ void print_usage(const char* prog)
               << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>        Run through powers of two for input size limit." << std::endl
+              << "  -T, --timeout <sec>         Abort algorithms after this timeout (default: disabled)." << std::endl
         ;
 }
 
@@ -394,6 +395,7 @@ int main(int argc, char* argv[])
         { "output",  required_argument,  0, 'o' },
         { "repeat",  required_argument,  0, 'r' },
         { "size",    required_argument,  0, 's' },
+        { "timeout", required_argument,  0, 'T' },
         { 0,0,0,0 },
     };
 
@@ -406,7 +408,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:r:o:", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:r:o:T:", longopts, &index);
 
         if (argi < 0) break;
 
@@ -449,7 +451,12 @@ int main(int argc, char* argv[])
 
         case 'o':
             gopt_output = optarg;
-            std::cerr << "Writing output strings to " << gopt_output << std::endl;
+            std::cerr << "Will write output strings to " << gopt_output << std::endl;
+            break;
+
+        case 'T':
+            gopt_timeout = atoi(optarg);
+            std::cerr << "Aborting algorithms after " << gopt_timeout << " seconds timeout." << std::endl;
             break;
 
         default:
