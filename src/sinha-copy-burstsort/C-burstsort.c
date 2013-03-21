@@ -268,7 +268,7 @@ void clear(NODE1 *nd)
 				 but it is projected to burst based on its current
 				 content and the known sampling rate, burst it 
 				 preemptively. */
-			if (((ct<<2) + bn->ap-bn->bp) * SAMPLERATE>CACHESIZE)
+                        if (((ct * sizeof(string*)) + bn->ap-bn->bp) * SAMPLERATE>CACHESIZE)
 			{
 				samburst(bn); clear((NODE1*) bn->bp);
 			}
@@ -344,7 +344,6 @@ void sadd(string b, string blim, NODE1 *rt)
 				CACHESIZE, burst bin regardless of FREEBURSTS. */ 
 				if (FREEBURSTS > 0 || sz == CACHESIZE)
 				{
-					
 					/* Set timer phase to "burst". */
 					ton(tb); 
 					
@@ -443,7 +442,7 @@ void straverse(NODE1 *nd)
 		if (ct < 1) continue;
 
 		/* Calculate room needed for pointers to each string tail. */
-		tpsz = ct<<2; 
+		tpsz = ct * sizeof(string*); 
 		
 		/* Get the base pointer and active pointer (next free byte). */
 		s = bp = bn->bp; ap = bn->ap;
@@ -507,7 +506,7 @@ void skill(NODE1 *nd)
 			FREE(p, MAXKEYLEN + (bn->lp-p));
 			
 			/* Free buffer holding sorted pointers. */
-			FREE(bn->ap, bn->ct<<2);
+			FREE(bn->ap, bn->ct * sizeof(string*));
 		}
 	}
 	
@@ -592,6 +591,85 @@ void sputtrie(NODE1 *nd, FILE *f, string pfx, int d)
 	pfx[d] = 0;
 }
 
+/** Added by Timo Bingmann to output the trie to a string pointer array */
+
+string* sputtrie_strout;        /* string pointer output iterator */
+char* sputtrie_chout;           /* character output iterator */
+
+void tb_sputtrie(NODE1 *nd, string pfx, int d)
+{
+	int ct, c; string *tp; NODE1 *bn;
+        string p;
+
+	/* pfx holds any prefix chars accumulated at char depth 0 .. d - 1. */
+	pfx[d + 1] = 0; 
+	
+	/* For the count of exhausted keys in this node ... */
+	ct = nd->ct;
+	while (ct--)
+	{
+            *sputtrie_strout++ = sputtrie_chout;
+
+            /* Output only the shared prefix. */
+            /*-tb fputs(pfx, stdout); */
+            /*-tb fputc('\n', stdout); */
+
+            for(p = pfx; *p; ++p)
+                *sputtrie_chout++ = *p;
+
+            *sputtrie_chout++ = 0;
+	}
+
+	/* For the keys with tails ... */
+	for (c = LOCHAR; c <= HICHAR; ++c)
+	{
+		/* Build shared prefix from traversed chars. */
+		bn = nd + c; pfx[d] = c;
+		
+		/* Recursively output subtries. */
+		if (bn != NULL && (ct = bn->ct) == -1)
+                    tb_sputtrie((NODE1*) bn->bp, pfx, d + 1);
+
+		/* For non-empty bins ... */
+		else if (ct)
+		{
+			/* Use sorted pointers to access string tails in order. */
+			tp = (string*) bn->ap;
+			while (ct--)
+			{
+                            *sputtrie_strout++ = sputtrie_chout;
+
+                            /* Output shared prefix. */
+                            /*-tb fputs(pfx, stdout); */
+
+                            for(p = pfx; *p; ++p)
+                                *sputtrie_chout++ = *p;
+                                
+                            /* Append tail and delimiter. */
+                            /*-tb fputs(*tp++, stdout); */
+                            /*-tb fputc('\n', stdout); */
+
+                            for(p = *tp++; *p; ++p)
+                                *sputtrie_chout++ = *p;
+
+                            *sputtrie_chout++ = 0;
+			}
+		}
+	}
+	pfx[d] = 0;
+}
+
+void tb_ssavetrie(NODE1 *rt, string* strout, char* chout)
+{
+	char pfx[4000];
+
+        sputtrie_strout = strout;
+        sputtrie_chout = chout;
+
+        /* Write trie or subtrie to file. */
+        tb_sputtrie(rt, pfx, 0);
+}
+
 /*
  * Insertion sort - among the most efficient sorting alternatives for short
  * lists; a good cutoff is n <= 12 for mkqsort or n <= 23 for forward radix.
@@ -631,7 +709,7 @@ void inssort(string *tp, int n, int d)
 void mkqsort(string *tp, int n, int d)
 {
 	 int k, nl, ne, nr, pv;
-	 char **ol, **il, **ir, **or, **l, **m, **r, *t;
+	 char **ol, **il, **ir, **_or, **l, **m, **r, *t;
 
 	 if (n < 13)
 	 {
@@ -651,7 +729,7 @@ void mkqsort(string *tp, int n, int d)
 	 m=med3(l, m, r, d);
 	 PSWAP(tp, m, t);
 	 pv=P2C(tp, d);
-	 r = tp + n; ol = il = tp + 1; ir = or = r - 1;
+	 r = tp + n; ol = il = tp + 1; ir = _or = r - 1;
 
 	 while (il <= ir && P2C(il, d) == pv)
 	 {
@@ -660,7 +738,7 @@ void mkqsort(string *tp, int n, int d)
 
 	 while (il <= ir && P2C(ir, d) == pv)
 	 {
-		 --or; --ir;
+		 --_or; --ir;
 	 }
 
 	 for (;;)
@@ -678,7 +756,7 @@ void mkqsort(string *tp, int n, int d)
 		 {
 			 if (k == 0)
 			 {
-				 PSWAP(ir, or, t); --or;
+				 PSWAP(ir, _or, t); --_or;
 			 }
 			 --ir;
 		 }
@@ -690,10 +768,10 @@ void mkqsort(string *tp, int n, int d)
 		 ++il; --ir;
 	 }
 
-	 nl = il - ol; nr = or - ir; ne = n - (nl + nr);
+	 nl = il - ol; nr = _or - ir; ne = n - (nl + nr);
 
 	 k = MIN(ol - tp, nl); vswap(tp, il - k, k);
-	 k = MIN(nr, r - or - 1); vswap(r - k, il, k);
+	 k = MIN(nr, r - _or - 1); vswap(r - k, il, k);
 
 	 if (ne > 1 && pv > 0)
 		 mkqsort(tp + nl, ne, d + 1);

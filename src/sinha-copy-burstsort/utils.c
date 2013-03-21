@@ -38,13 +38,13 @@ void dot()
 	printf(". ");
 }
 
-void say(string s)
+void say(const char* s)
 {
 	printf("%s ", s);
 	fflush(stdout);
 }
 
-void sayln(string s)
+void sayln(const char* s)
 {
 	printf("%s\n", s);
 	fflush(stdout);
@@ -121,7 +121,7 @@ int tokenize(string s, string *tok, char d, char dd)
 	return(n);
 }
 
-string fp(string dir, string fn, string ft)
+string fp(string dir, string fn, const char* ft)
 {
 	string s = (string) malloc(100);
 	strcpy(s, dir);
@@ -131,6 +131,8 @@ string fp(string dir, string fn, string ft)
 
 void treset(int nt, int nr)
 {
+#if 0
+    //-tb removed
 	 int i, j;
 
 	 for (i=0;i<nt;++i)
@@ -140,20 +142,24 @@ void treset(int nt, int nr)
 			  TR[i].t[j]=0;
 	 }
 	 TMR=TR+(TIMERPHASE=0);
+#endif
 }
 
+#if 0
+    //-tb removed via inline {}
 void ton(int i)
 {
-	 static clock_t t1=0;
-	 clock_t t2;
+        static clock_t t1=0;
+        clock_t t2;
 
-	 t2=clock();
-	 TMR->t[REP]+=t2-t1;
-	 TMR->n=REP+1;
-	 TIMERPHASE=i;
-	 TMR=TR+i;
-	 t1=t2;
+        t2=clock();
+        TMR->t[REP]+=t2-t1;
+        TMR->n=REP+1;
+        TIMERPHASE=i;
+        TMR=TR+i;
+        t1=t2;
 }
+#endif
 
 timer *tsort(int i)
 {

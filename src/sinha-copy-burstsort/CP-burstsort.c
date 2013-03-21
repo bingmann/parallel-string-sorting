@@ -207,7 +207,7 @@ void radd(string b, int n, NODE1 *rt)
 				{
 					sz = s - bn->bp; 
 					sz2 = sz<<1; ALLOCATED += sz;
-					bp = bn->bp = realloc(bn->bp, sz2);
+					bp = bn->bp = (string)realloc(bn->bp, sz2);
 					bn->lp = bp + sz2;
 					bn->ap = bp + sz;
 				}
@@ -313,7 +313,7 @@ void rburst(NODE1 *bn)
 					{
 						sz = s - bn->bp; 
 						sz2 = sz<<1; ALLOCATED += sz;
-						bp = bn->bp = realloc(bn->bp, sz2);
+						bp = bn->bp = (string)realloc(bn->bp, sz2);
 						bn->lp = bp + sz2; bn->ap = bp + sz; 
 					}
 				}
@@ -374,7 +374,7 @@ void rtraverse(NODE1 *nd)
 		if (bn != NULL && (ct = bn->ct) == -1) rtraverse((NODE1*) bn->bp);
 		if (ct < 1) continue;
 
-		tpsz = ct<<2;
+		tpsz = ct * sizeof(string*);
 		s = bp = bn->bp; ap = bn->ap;
 
 		if (ap + tpsz > bp + CACHESIZE)
@@ -432,7 +432,7 @@ void rkill(NODE1 *nd)
 			/* At this point in CP-burstsort, we've already freed
 				the bin's original container at bp, but we need to
 				free the sorted record pointers at ap. */
-			FREE(bn->ap, bn->ct<<2);
+                    FREE(bn->ap, bn->ct * sizeof(string*));
 		}
 	}
 	if (nd->ct)
@@ -615,7 +615,7 @@ void stabilize(string *tp, int n)
 void mkqsorts(string *tp, int n, int d)
 {
 	int k, nl, ne, nr, pv;
-	char **ol, **il, **ir, **or, **l, **m, **r, *t;
+	char **ol, **il, **ir, **_or, **l, **m, **r, *t;
 
 	if (n < 13)
 	{
@@ -635,7 +635,7 @@ void mkqsorts(string *tp, int n, int d)
 	m = med3(l, m, r, d);
 	PSWAP(tp, m, t);
 	pv=P2C(tp, d);
-	r = tp + n; ol = il =tp + 1; ir = or = r - 1;
+	r = tp + n; ol = il =tp + 1; ir = _or = r - 1;
 
 	while (il <= ir && P2C(il, d) == pv)
 	{
@@ -643,7 +643,7 @@ void mkqsorts(string *tp, int n, int d)
 	}
 	while (il <= ir && P2C(ir, d) == pv)
 	{
-		--or; --ir;
+		--_or; --ir;
 	}
 
 	for (;;)
@@ -660,7 +660,7 @@ void mkqsorts(string *tp, int n, int d)
 		{
 			if (k == 0)
 			{
-				PSWAP(ir, or, t); --or;
+				PSWAP(ir, _or, t); --_or;
 			}
 			--ir;
 		}
@@ -670,11 +670,11 @@ void mkqsorts(string *tp, int n, int d)
 		PSWAP(il, ir, t);
 		++il; --ir;
 	}
-	nl = il - ol; nr = or - ir; ne = n - (nl + nr);
+	nl = il - ol; nr = _or - ir; ne = n - (nl + nr);
 
 	k = MIN(ol - tp, nl);
 	vswap(tp, il - k, k);
-	k = MIN(nr, r - or - 1);
+	k = MIN(nr, r - _or - 1);
 	vswap(r - k, il, k);
 
 	if (ne > 1)

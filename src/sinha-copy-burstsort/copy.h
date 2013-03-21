@@ -1,3 +1,4 @@
+/* -*- tab-width: 8 -*- */
 #ifndef COPY_H
 #define COPY_H
 	#include <time.h>
@@ -42,19 +43,23 @@
 	/* in CP-burstsort, returns a pointer to the record matching a key tail */
 	#define RP(x) *((string*) (x))
 
-/* memory allocation macros */
+/* memory allocation macros */ /* tb: stripped of counting */
 
 	/* compare current/maximum allocated memory; update maximum if needed */
-	#define UPDATEMEM if (ALLOCATED > MAXALLOCATED) MAXALLOCATED = ALLOCATED
+        /*#define UPDATEMEM if (ALLOCATED > MAXALLOCATED) MAXALLOCATED = ALLOCATED*/
+        #define UPDATEMEM
 
 	/* return x bytes from malloc(), update running total of allocated memory */
-	#define MALLOC(x) malloc(x); ALLOCATED += (x)
+	/*#define MALLOC(x) malloc(x); ALLOCATED += (x)*/
+        #define MALLOC(x) malloc(x);
 
 	/* return mem from calloc() and update running total */
-	#define CALLOC(x, y) calloc(x, y); ALLOCATED += (x * y)
+        /*#define CALLOC(x, y) calloc(x, y); ALLOCATED += (x * y)*/
+        #define CALLOC(x, y) calloc(x, y);
 
 	/* free y bytes of memory at pointer x and adjust running total */
-	#define FREE(x, y) ALLOCATED -= y; free(x)
+        /*#define FREE(x, y) ALLOCATED -= y; free(x)*/
+        #define FREE(x, y) free(x)
 
 /* timer macros */
 
@@ -129,26 +134,26 @@
 
 	/* globals */
 	int	
-		MAXKEYS, 		/* maximum keys to read and sort (arg) */
-		MAXBYTES, 		/* maximum bytes to read and sort (arg) */
+                MAXKEYS, 		/* maximum keys to read and sort (arg) */
+	        MAXBYTES, 		/* maximum bytes to read and sort (arg) */
 		NKEYS, 			/* number of keys sorted */
 		NBYTES, 			/* number of bytes sorted */
-		CHARCOUNT[256], 	/* array used to determine char usage */
+                CHARCOUNT[256], 	/* array used to determine char usage */
 		LOCHAR, 			/* lowest char value found in data */
 		HICHAR, 			/* highest char value found in data */
-		NCHARS, 			/* equals 1 + HICHAR - LOCHAR */
+                NCHARS, 			/* equals 1 + HICHAR - LOCHAR */
 		
-		NSEGS0, 			/* default segment count of input buffer (arg) */
+                NSEGS0, 			/* default segment count of input buffer (arg) */
 		NSEGS, 			/* adjusted segment count of input buffer */
-		SEGSIZE0, 		/* default size of input buffer segments */
+                SEGSIZE0, 		/* default size of input buffer segments */
 		SEGSIZE, 		/* adjusted size of input buffer segments */
 		CACHESIZE, 		/* size of cache memory in bytes (arg) */
 		BINSIZE0, 		/* initial container size (arg) */
 		MAXKEYLEN, 		/* should be >= longest expected key */
 		LIMSIZE0, 		/* equals BINSIZE0 - MAXKEYLEN */
-		FREEBURSTS0, 	/* number of free bursts to allow (arg) */
-		FREEBURSTS, 	/* number of free bursts available */
-		SAMPLERATE0, 	/* sampling rate (arg) */
+                FREEBURSTS0, 	/* number of free bursts to allow (arg) */
+	 	FREEBURSTS, 	/* number of free bursts available */
+                SAMPLERATE0, 	/* sampling rate (arg) */
 		SAMPLERATE,		/* sampling rate in use */
 		TAILSIZE0, 		/* default tail size for CPL-burstsort (arg) */
 		TAILRATE, 		/* used in setting TAILSIZE (arg) */
@@ -156,7 +161,7 @@
 		TAILSIZE4, 		/* TAILSIZE+4 */
 		THR[20], 		/* thresholds for CPL-burstsort */
 		
-		INPUTORDER, 	/* load sorted/random/reversed input data (arg) */
+                INPUTORDER, 	/* load sorted/random/reversed input data (arg) */
 		WRITEFILE, 		/* toggles output of sorted strings (arg) */		
 		TIMERPHASE, 	/* index of currently active timer */
 		REP, 				/* # of current rep */
@@ -174,9 +179,9 @@
 	double
 		TMIN, 			/* lowest time required by a repeat of a sort */
 		TNORM;			/* equals TMIN/(NKEYS * log10(NKEYS)) */
-	string
+        string
 		INPUTDIR, 		/* directory containing input files */
-		DATANAME, 		/* name of file to be sorted */
+                DATANAME, 		/* name of file to be sorted */
 		FILETYPE, 		/* file extension */
 		OUTPUTDIR, 		/* directory in which to create output files */
 		SORTNAME, 		/* name of sort algorithm in use */
@@ -204,7 +209,7 @@
 
 	/* C-burstsort */
 	void sbdo(int nr, string fp);
-	void sbs(string *seg, string *seglim);
+        void sbs(string *seg, string *seglim);
 	void ssample(string *seg, string *seglim, NODE1 *rt, int n);
 	void samburst(NODE1 *bn);
 	void clear(NODE1 *t);
@@ -256,8 +261,8 @@
 	
 	void cr();
 	void dot();
-	void say(string s);
-	void sayln(string s);
+	void say(const char* s);
+	void sayln(const char* s);
 	void isay(int i);	  void isaye(int i, string s);
 	void dsay(double d, int n);
 	void esay(string s);
@@ -267,10 +272,10 @@
 	string allof(string s);
 	int tokenize(string s, string *tok, char d, char dd);
 	
-	string fp(string dir, string fn, string ft);
+	string fp(string dir, string fn, const char* ft);
 	
 	void treset(int nt, int nr);
-	void ton(int i);
+        static inline void ton(int x) {}
 	timer *tsort(int i);
 	double tmean(int i);
 	double tmed(int i);

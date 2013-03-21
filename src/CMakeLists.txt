@@ -6,10 +6,11 @@ include_directories("${PROJECT_BINARY_DIR}/")
 
 set(SOURCES
   psstest.cc
-  rantala/funnelsort.cc
   sequential/nilsson-adaptive.cc
   sequential/nilsson-forward8.cc
   sequential/nilsson-forward16.cc
+  rantala/funnelsort.cc
+  sinha-copy-burstsort/glue.cc
   parallel/akiba-parallel_string_radix_sort.cc
   parallel/bingmann-parallel_radix_sort1.cc
   parallel/bingmann-parallel_radix_sort2.cc
@@ -35,3 +36,6 @@ endif(WITH_MALLOC_COUNT)
 
 add_executable(psstest ${SOURCES})
 target_link_libraries(psstest ${LIBS})
+
+# silence some warnings from legacy code
+set_property(SOURCE sinha-copy-burstsort/glue.cc PROPERTY COMPILE_FLAGS "-Wno-write-strings -Wno-unused-parameter -Wno-unused-but-set-variable")

@@ -1,3 +1,5 @@
+/* -*- tab-width: 8 -*- */
+
 #include "copy.h"
 
 /*
@@ -8,7 +10,7 @@
 int main(int argc, char *argv[])
 {
 	int i, j, nreps, ntoks, set, dset1, srt, v[20], sn[20] = {10, 11, 12, 20, 21, 22, 30, 31, 32, -1};
-	string VP, tok[20];
+	string VP = NULL, tok[20];
 
 	string dnam[] = {"set1_nodup", "set2_nodup", "set3_nodup", 
 		 "set4_nodup", "set5_nodup", "set6_nodup", "set1_genome", 
@@ -18,7 +20,7 @@ int main(int argc, char *argv[])
 		 "set2_url", "set3_url", "set4_url", "set5_url"};
 
 	/* set default values for command line args. */
-    INPUTDIR = "/home/rsinha3/PhdResearch/Research/string/data/";
+    INPUTDIR = "data/";
     OUTPUTDIR = "sort-output/";
 	MAXKEYS = 100000000;	/* maximum keys to load */
 	MAXBYTES = 700000000;	/* maximum bytes to load */

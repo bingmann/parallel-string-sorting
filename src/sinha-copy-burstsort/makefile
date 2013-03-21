@@ -9,7 +9,7 @@ CC= gcc
 
 # The flags (options) that the C-compiler needs:
 #CFLAGS = -O3            # optimization
-CFLAGS = -g -Wall -ansi  -pedantic    # debugging, warnings
+CFLAGS = -g -Wall  -pedantic    # debugging, warnings
 
 # Names of libraries we need to link with our program:
 LDLIBS= -lm

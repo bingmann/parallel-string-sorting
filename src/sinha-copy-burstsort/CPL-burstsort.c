@@ -280,9 +280,9 @@ void padd(string b, int n, NODE2 *rt) {
 					compare bin size with key count and the fixed 
 					size per key (size of record pointer + TAILSIZE 
 					bytes for a key or 0 for an exhausted key). */
-				if (ct<<2 == sz)
+				if (ct * sizeof(string*) == sz)
 				{
-					bp = bn->bp = realloc(bn->bp, sz<<1); 
+                                        bp = bn->bp = (string)realloc(bn->bp, sz<<1); 
 					ALLOCATED += sz; ++bn->lv; bn->ap = bp + sz;
 				}
 			}
@@ -390,9 +390,9 @@ void pburst(NODE2 *bn) {
 						record pointer; since bin size is always a 
 						multiple of 4, the bin is full when ct * 4
 						equals bin size. */
-					if (ct<<2 == sz) 
+					if (ct * sizeof(string*) == sz) 
 					{
-						rt->ap = rt->bp = realloc(rt->bp, sz<<1); 
+                                                rt->ap = rt->bp = (string)realloc(rt->bp, sz<<1); 
 						ALLOCATED += sz; ++rt->lv; rt->ap += sz;
 					}
 				}
@@ -467,7 +467,7 @@ void ptraverse(NODE2 *nd)
 		if ((bp = bn->bp) == NULL) continue;
 
 		ct = bn->ct;
-		tpsz = ct<<2;
+		tpsz = ct * sizeof(string*);
 		s = bp;
 		ap = bn->ap;
 
@@ -507,7 +507,7 @@ void pkill(NODE2 *nd)
 			pkill((NODE2*) bn->bp);
 		else if ((ct = bn->ct) > 0)
 		{
-			FREE(bn->ap, ct<<2);
+                    FREE(bn->ap, ct * sizeof(string*));
 		}
 	}
 	if (nd->ct)
@@ -623,7 +623,7 @@ void inssortp(string *tp, int n, int d)
 void mkqsortp(string *tp, int n, int d)
 {
 	int k, nl, ne, nr, pv;
-	char **ol, **il, **ir, **or, **l, **m, **r, *t, *s, *rp, **q;
+	char **ol, **il, **ir, **_or, **l, **m, **r, *t, *s, *rp, **q;
 
 	if (d == TAILSIZE)
 	{
@@ -660,7 +660,7 @@ void mkqsortp(string *tp, int n, int d)
 	m = med3(l, m, r, d);
 	PSWAP(tp, m, t);
 	pv = P2C(tp, d);
-	r = tp + n; ol = il = tp + 1; ir = or = r - 1;
+	r = tp + n; ol = il = tp + 1; ir = _or = r - 1;
 
 	while (il <= ir && P2C(il, d) == pv)
 	{
@@ -669,7 +669,7 @@ void mkqsortp(string *tp, int n, int d)
 
 	while (il <= ir && P2C(ir, d) == pv)
 	{
-		--or; --ir;
+		--_or; --ir;
 	}
 
 	for (;;)
@@ -687,7 +687,7 @@ void mkqsortp(string *tp, int n, int d)
 		{
 			if (k == 0)
 			{
-				PSWAP(ir, or, t); --or;
+				PSWAP(ir, _or, t); --_or;
 			}
 			--ir;
 		}
@@ -698,11 +698,11 @@ void mkqsortp(string *tp, int n, int d)
 		++il; --ir;
 	}
 	nl = il - ol;
-	nr = or - ir;
+	nr = _or - ir;
 	ne = n - (nl + nr);
 
 	k = MIN(ol - tp, nl); vswap(tp, il - k, k);
-	k = MIN(nr, r - or - 1); vswap(r - k, il, k);
+	k = MIN(nr, r - _or - 1); vswap(r - k, il, k);
 
 	if (ne > 1)
 	{
