@@ -38,4 +38,4 @@ add_executable(psstest ${SOURCES})
 target_link_libraries(psstest ${LIBS})
 
 # silence some warnings from legacy code
-set_property(SOURCE sinha-copy-burstsort/glue.cc PROPERTY COMPILE_FLAGS "-Wno-write-strings -Wno-unused-parameter -Wno-unused-but-set-variable")
+set_property(SOURCE sinha-copy-burstsort/glue.cc PROPERTY COMPILE_FLAGS "-Wno-write-strings -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-sign-compare -Wno-sequence-point -Wno-uninitialized")

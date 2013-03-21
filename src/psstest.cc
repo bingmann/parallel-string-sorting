@@ -26,6 +26,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <sys/wait.h>
 
 #include <string>
 #include <bitset>
@@ -82,7 +83,10 @@ static StatsCache g_statscache;
 // file name of statistics output
 static const char* statsfile = "pss-runs1.txt";
 
-size_t g_smallsort = 64;
+//size_t g_smallsort = 64;
+
+static const bool use_fork = true;
+static const int use_timeout = 10; // terminate test after 10 sec
 
 // *** Tools and Algorithms
 
@@ -177,7 +181,7 @@ void Contest::run_contest(const char* path)
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
         if (gopt_algorithm_match( (*c)->m_funcname )) {
-            (*c)->run();
+                (*c)->run();
         }
     }
 }
@@ -205,6 +209,58 @@ void Contest::list_contentants()
 
 void Contestant_UCArray::run()
 {
+    if (!use_fork) return real_run();
+
+    pid_t p = fork();
+    if (p == 0)
+    {
+        if (use_timeout) alarm(use_timeout); // terminate child program after use_timeout seconds
+        real_run();
+        exit(0);
+    }
+
+    int status;
+    wait(&status);
+
+    if (!WIFEXITED(status)) {
+        std::cout << "Child terminated abnormally with signal " << WTERMSIG(status) << std::endl;
+
+        // write out exit status information to results file
+
+        g_statscache >> "algo" << m_funcname
+                     >> "data" << g_dataname
+                     >> "char_count" << g_string_datasize
+                     >> "string_count" << g_string_offsets.size();
+
+        if (gopt_repeats > 1)
+            g_statscache >> "repeats" << gopt_repeats;
+
+        if (WTERMSIG(status) == SIGALRM)
+        {
+            g_statscache >> "status" << "timeout";
+        }
+        else if (WTERMSIG(status) == SIGSEGV)
+        {
+            g_statscache >> "status" << "segfault";
+        }
+        else if (WTERMSIG(status) == SIGABRT)
+        {
+            g_statscache >> "status" << "aborted";
+        }
+        else
+        {
+            g_statscache >> "status" << "SIG" << WTERMSIG(status);
+        }
+
+        StatsWriter(statsfile).append_statsmap(g_statscache);
+    }
+
+    if (gopt_output) exit(0);
+    g_statscache.clear();
+}
+
+void Contestant_UCArray::real_run()
+{
     size_t repeats = gopt_repeats ? gopt_repeats : 1;
 
     // create unsigned char* array from offsets
@@ -226,7 +282,7 @@ void Contestant_UCArray::run()
                  >> "char_count" << g_string_datasize
                  >> "string_count" << stringptr.size();
 
-    g_statscache >> "smallsort" << g_smallsort;
+    //g_statscache >> "smallsort" << g_smallsort;
 
     if (repeats > 1)
         g_statscache >> "repeats" << repeats;

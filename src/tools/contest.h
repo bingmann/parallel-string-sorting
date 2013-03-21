@@ -90,7 +90,8 @@ public:
     {
     }
 
-    virtual void run(); // implemented in main.cc
+    virtual void run();         // implemented in main.cc
+    void         real_run();    // implemented in main.cc
 };
 
 #define CONTESTANT_REGISTER_UCARRAY(func, desc)                         \

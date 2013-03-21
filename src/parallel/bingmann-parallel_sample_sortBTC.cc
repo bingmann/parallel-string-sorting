@@ -469,7 +469,7 @@ void EnqueueBig(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 {
     // TODO: tune parameter
-    if (n > g_smallsort)
+    if (n > 128*1024)
         return EnqueueBig(jobqueue, strings, n, depth);
     else
         return bingmann_parallel_radix_sort3::EnqueueSmall(jobqueue, strings, n, depth);
