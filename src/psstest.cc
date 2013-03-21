@@ -75,6 +75,8 @@ size_t          g_string_datasize = 0;
 std::vector<size_t> g_string_offsets;
 size_t          g_string_dprefix = 0;
 
+const char*     gopt_output = NULL;
+
 static StatsCache g_statscache;
 
 // file name of statistics output
@@ -229,8 +231,6 @@ void Contestant_UCArray::run()
     if (repeats > 1)
         g_statscache >> "repeats" << repeats;
 
-    //(std::cerr << m_funcname << "\t").flush();
-
 #ifdef MALLOC_COUNT
     //MemProfile memprofile( m_funcname, memprofile_path );
     size_t memuse = malloc_count_current();
@@ -238,12 +238,15 @@ void Contestant_UCArray::run()
     malloc_count_reset_peak();
 #endif
 
+    if (m_prepare_func)
+        m_prepare_func(stringptr.data(), stringptr.size());
+
     double ts1, ts2;
 
     ts1 = omp_get_wtime();
     do
     {
-        m_func(stringptr.data(), stringptr.size());
+        m_run_func(stringptr.data(), stringptr.size());
 
         if (repeats > 1) { // refill stringptr array for next repeat
             for (size_t i = 0; i < g_string_offsets.size(); ++i) {
@@ -273,19 +276,27 @@ void Contestant_UCArray::run()
     if (check_sorted_order(stringptr, pc)) {
         std::cerr << "ok" << std::endl;
         g_statscache >> "status" << "ok";
-
-        if (!g_string_dprefix)
-            g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_datasize);
-
-        g_statscache >> "dprefix" << g_string_dprefix;
     }
     else {
         g_statscache >> "status" << "failed";
     }
+    
+    if (!g_string_dprefix)
+        g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_datasize);
+
+    g_statscache >> "dprefix" << g_string_dprefix;
 
     // print timing data out to results file
     StatsWriter(statsfile).append_statsmap(g_statscache);
     g_statscache.clear();
+
+    if (gopt_output)
+    {
+        std::ofstream f(gopt_output);
+        for (size_t i = 0; i < stringptr.size(); ++i)
+            f << stringptr[i] << "\n";
+        exit(0);
+    }
 }
 
 void Contestant_UCArray_Parallel::run()
@@ -311,20 +322,22 @@ void print_usage(const char* prog)
     std::cerr << "Usage: " << prog << " [options] filename" << std::endl
               << "Options:" << std::endl
               << "  -a, --algo <match>          Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
+              << "  -o, --output <path>         Write sorted strings to output file, terminate after first algorithm run." << std::endl
+              << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>        Run through powers of two for input size limit." << std::endl
-              << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
         ;
 }
 
 int main(int argc, char* argv[])
 {
     static const struct option longopts[] = {
-        { "help",    no_argument,        0, 'h' },
-        { "size",    required_argument,  0, 's' },
-        { "maxsize", required_argument,  0, 'S' },
         { "algo",    required_argument,  0, 'a' },
+        { "help",    no_argument,        0, 'h' },
+        { "maxsize", required_argument,  0, 'S' },
+        { "output",  required_argument,  0, 'o' },
         { "repeat",  required_argument,  0, 'r' },
+        { "size",    required_argument,  0, 's' },
         { 0,0,0,0 },
     };
 
@@ -337,7 +350,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:r:", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:r:o:", longopts, &index);
 
         if (argi < 0) break;
 
@@ -376,6 +389,11 @@ int main(int argc, char* argv[])
         case 'r':
             gopt_repeats = atoi(optarg);
             std::cerr << "Repeating string sorting algorithms " << gopt_repeats << std::endl;
+            break;
+
+        case 'o':
+            gopt_output = optarg;
+            std::cerr << "Writing output strings to " << gopt_output << std::endl;
             break;
 
         default:

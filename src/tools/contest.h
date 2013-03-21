@@ -20,6 +20,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#include <stdlib.h>
+#include <string.h>
 #include <vector>
 
 extern int pss_num_threads;
@@ -75,13 +77,16 @@ class Contestant_UCArray : public Contestant
 public:
     typedef void (*func_type)(unsigned char** strings, size_t n);
 
-    func_type           m_func;
+    func_type           m_prepare_func;
+    func_type           m_run_func;
 
-    Contestant_UCArray(func_type func,
+    Contestant_UCArray(func_type prepare_func,
+                       func_type run_func,
                        const char* funcname,
                        const char* description)
         : Contestant(funcname,description),
-          m_func(func)
+          m_prepare_func(prepare_func),
+          m_run_func(run_func)
     {
     }
 
@@ -90,15 +95,20 @@ public:
 
 #define CONTESTANT_REGISTER_UCARRAY(func, desc)                         \
     static const class Contestant* _Contestant_##func##_register =      \
-        new Contestant_UCArray(func,#func,desc);
+        new Contestant_UCArray(NULL,func,#func,desc);
+
+#define CONTESTANT_REGISTER_UCARRAY_PREPARE(pfunc, func, desc)          \
+    static const class Contestant* _Contestant_##func##_register =      \
+        new Contestant_UCArray(pfunc,func,#func,desc);
 
 class Contestant_UCArray_Parallel : public Contestant_UCArray
 {
 public:
-    Contestant_UCArray_Parallel(func_type func,
+    Contestant_UCArray_Parallel(func_type prepare_func,
+                                func_type run_func,
                                 const char* funcname,
                                 const char* description)
-        : Contestant_UCArray(func,funcname,description)
+        : Contestant_UCArray(prepare_func,run_func,funcname,description)
     {
     }
 
@@ -107,4 +117,4 @@ public:
 
 #define CONTESTANT_REGISTER_UCARRAY_PARALLEL(func, desc)                \
     static const class Contestant* _Contestant_##func##_register =      \
-        new Contestant_UCArray_Parallel(func,#func,desc);
+        new Contestant_UCArray_Parallel(NULL,func,#func,desc);
