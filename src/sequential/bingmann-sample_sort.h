@@ -456,7 +456,7 @@ find_bkt_cacheline(const key_type& key, const key_type* splitter, size_t leaves)
     asm("xorl   %%ecx, %%ecx \n"          // ecx = lo
         "movl	%[leaves], %%edx \n"      // edx = hi
         // body of while loop
-        ".myL2985: \n"
+        "1: \n"
         "leal   (%%rcx,%%rdx), %%eax \n"
         "shrl	%%eax \n"                 // eax = mid = (lo + hi) >> 1;
         "cmpq	(%[splitter],%%rax,8), %[key] \n"
@@ -464,7 +464,7 @@ find_bkt_cacheline(const key_type& key, const key_type* splitter, size_t leaves)
         "leal	1(%%rax), %%eax \n"
         "cmova  %%eax, %%ecx \n"
         "cmpl	%%edx, %%ecx \n"          // lo < hi
-        "jb	.myL2985 \n"              // if (lo < hi) -> loop
+        "jb	1b \n"                    // if (lo < hi) -> loop
         : "=&c" (lo)
         : [leaves] "g" (leaves), [key] "r" (key), [splitter] "r" (splitter)
         : "eax", "edx");

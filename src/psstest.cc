@@ -308,7 +308,13 @@ void Contestant_UCArray_Parallel::run()
 
 void print_usage(const char* prog)
 {
-    std::cerr << "Usage: " << prog << " [-s <input size limit>] [-a <algorithm match>] filename" << std::endl;
+    std::cerr << "Usage: " << prog << " [options] filename" << std::endl
+              << "Options:" << std::endl
+              << "  -a, --algo <match>          Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
+              << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
+              << "  -S, --maxsize <size>        Run through powers of two for input size limit." << std::endl
+              << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
+        ;
 }
 
 int main(int argc, char* argv[])
@@ -390,7 +396,7 @@ int main(int argc, char* argv[])
     {
         // iterate over input size range
         for (gopt_inputsize = gopt_inputsize_minlimit; gopt_inputsize <= gopt_inputsize_maxlimit;
-             gopt_inputsize += 16)
+             gopt_inputsize *= 2)
         {
             // iterate over small sort size
             //for (g_smallsort = 64; g_smallsort < 512; g_smallsort += 8)
