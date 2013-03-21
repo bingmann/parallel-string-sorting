@@ -1,0 +1,91 @@
+/*
+   The code presented in this file has been tested with care but is
+   not guaranteed for any purpose. The writer does not offer any
+   warranties nor does he accept any liabilities with respect to
+   the code.
+
+   *Ranjan Sinha, 20th September 2005
+   David Ring, 20th September 2005
+
+   *School of Computer Science and Information Technology, RMIT University,
+   Melbourne, Australia 
+   rsinha@cs.rmit.edu.au
+*/
+
+These source codes have been tested on our primary 2 GHz Pentium 4
+machine with 512 KByte L2 cache.
+
+1. Three directories are created:
+ (a) copy-sorts: copy-based algorithms
+ (b) data: stores string collections
+ (c) sort-output: for output of strings in sort order
+
+Copy-based Sorting Algorithms
+=============================
+1. cd copy-sorts
+
+2. make
+
+3. Usage: copy-burstsort sn=<algorithm number> ds=<dataset number> nr=<repeat> wr=<write sorted output>
+
+   Algorithms: (*) indicates the main algorithms
+         *10:C-burstsort
+         11:CF-burstsort
+         *20:CP-burstsort
+         21:CPF-burstsort
+         30:CPL-burstsort
+         31:CPLF-burstsort
+
+   For help: copy-burstsort ??
+
+   Example: copy-burstsort sn=10 ds=0 nr=1 wr=0
+
+   Output: 
+   DS SORTNAME CACHESIZE FREEBURSTS . NKEYS . Ti Tg Tb Tt . Tmed Tmin Tnorm
+   set1_dup C-burstsort 524288 100 . 100000 . 30 10 0 20  . 60   60   0.000120
+
+   Here, DS = dataset name; Ti=time to insert; Tg=time to grow buckets;
+   Tb=Time to burst; Tt=time to traverse; Tmed=median total time;
+   Tmin=minimum total time.
+
+   Note: In some cases in copy-based methods, Tmed may be lesser than Tmin.
+   Tmin calculates the minimum of the total time, while Tmed calculates the
+   median of each phase for each repeat and separately sums them up.
+   Tmin is used in the paper.
+
+9. VERIFY: To verify whether the algorithms are sorting correctly, 
+   include wr=1 in the command line arguments; wr=0 indicates no
+   output. The sorted output will be written to the "sort-output"
+   directory with the algorithm name as suffix.
+
+10. DATA: Some of the data used in the experiments could be downloaded from
+   http://goanna.cs.rmit.edu.au/~rsinha/resources/data/. These should
+   then be copied to the "data" directory. Only the largest datasets are
+   available online, the smaller sets can be obtained from the largest.
+   The duplicate set is not available due to TREC copyright
+   restrictions. The following main datasets could be downloaded for
+   testing purposes.
+
+   set5_url.zip            19-Dec-2002 13:02  94.2M 
+   set6_genome.zip         19-Dec-2002 13:01  97.1M 
+   set6_nodup.zip          19-Dec-2002 13:01   157M 
+   set6_random.dat
+   set3_random_fl100_c95.dat (used to test CPL-burstsort as in Table
+   10).
+
+11. SOURCE: The sources for previous algorithms are also available online at
+   http://goanna.cs.rmit.edu.au/~rsinha/resources/alenex.html.
+
+Other issues
+============
+1. In some instances in copy-based methods, Tmed may be lesser than Tmin.
+Tmin calculates the minimum of the total time, while Tmed calculates the
+median of each phase for each repeat and separately sums them up.
+
+2. The PPL structure (tested on Pentium 4) of the copy-based methods is
+provided. There are several other structures such as BIS (included in
+the paper) that have been developed. Furthermore, newer variants of the
+structures that further reduce the size of the trie node structure will
+be released in the coming months.
+
+3. PLease direct any queries regarding code and data to rsinha@cs.rmit.edu.au.
