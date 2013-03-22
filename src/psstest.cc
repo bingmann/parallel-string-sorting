@@ -81,6 +81,8 @@ size_t          g_string_dprefix = 0;
 
 const char*     gopt_output = NULL;
 
+bool            gopt_suffixsort = false;
+
 static StatsCache g_statscache;
 
 // file name of statistics output
@@ -321,6 +323,8 @@ void Contestant_UCArray::real_run()
     if (repeats > 1)
         g_statscache >> "repeats" << repeats;
 
+    omp_set_num_threads(pss_num_threads);
+
 #ifdef MALLOC_COUNT
     //MemProfile memprofile( m_funcname, memprofile_path );
     size_t memuse = malloc_count_current();
@@ -382,9 +386,11 @@ void Contestant_UCArray::real_run()
 
     if (gopt_output)
     {
+        std::cout << "Writing sorted output to " << gopt_output << std::endl;
         std::ofstream f(gopt_output);
         for (size_t i = 0; i < stringptr.size(); ++i)
             f << stringptr[i] << "\n";
+        f.close();
         exit(0);
     }
 }
@@ -397,7 +403,6 @@ void Contestant_UCArray_Parallel::run()
     {
         pss_num_threads = p;
         std::cerr << "threads=" << p << " ";
-        omp_set_num_threads(p);
         g_statscache >> "threads" << p;
 
         Contestant_UCArray::run();
@@ -416,6 +421,7 @@ void print_usage(const char* prog)
               << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>        Run through powers of two for input size limit." << std::endl
+              << "      --suffix                Suffix sort the input file." << std::endl
               << "  -T, --timeout <sec>         Abort algorithms after this timeout (default: disabled)." << std::endl
         ;
 }
@@ -430,6 +436,7 @@ int main(int argc, char* argv[])
         { "repeat",  required_argument,  0, 'r' },
         { "size",    required_argument,  0, 's' },
         { "timeout", required_argument,  0, 'T' },
+        { "suffix",  no_argument,        0, 1 },
         { 0,0,0,0 },
     };
 
@@ -491,6 +498,11 @@ int main(int argc, char* argv[])
         case 'T':
             gopt_timeout = atoi(optarg);
             std::cerr << "Aborting algorithms after " << gopt_timeout << " seconds timeout." << std::endl;
+            break;
+
+        case 1:
+            gopt_suffixsort = true;
+            std::cerr << "Running as suffix sorter on input file." << std::endl;
             break;
 
         default:

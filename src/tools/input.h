@@ -118,10 +118,16 @@ bool readfile_lines(const std::string& path)
         // iterate over read buffer, identify lines and replace \n -> \0
         for (size_t i = rpos; i < rpos + rb; ++i)
         {
-            if (stringdata[i] == '\n') {
-                stringdata[i] = 0;
-                if (i+1 < filesize)
-                    g_string_offsets.push_back(i+1);
+            if (gopt_suffixsort) {
+                g_string_offsets.push_back(i);
+            }
+            else
+            {
+                if (stringdata[i] == '\n') {
+                    stringdata[i] = 0;
+                    if (i+1 < filesize)
+                        g_string_offsets.push_back(i+1);
+                }
             }
         }
 
