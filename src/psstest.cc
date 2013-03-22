@@ -108,8 +108,9 @@ static const bool use_forkdataload = false;
 #include "sequential/mkqs.h"
 #include "sequential/burstsortA.h"
 #include "sequential/burstsortL.h"
-#include "sequential/cradix.h"
-#include "sequential/cradix-rantala.h"
+#include "sequential/ng-cradix.h"
+#include "sequential/ng-cradix-rantala.h"
+#include "sequential/ng-lcpmergesort.h"
 #include "sequential/bingmann-radix_sort.h"
 #include "sequential/bingmann-sample_sort.h"
 
