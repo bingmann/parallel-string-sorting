@@ -3,6 +3,7 @@
 include_directories("${PROJECT_SOURCE_DIR}/libzio/")
 include_directories("${PROJECT_SOURCE_DIR}/liblfds/inc/")
 include_directories("${PROJECT_BINARY_DIR}/")
+include_directories("${GMP_INCLUDE_DIR}")
 
 set(SOURCES
   psstest.cc
@@ -21,7 +22,7 @@ set(SOURCES
   parallel/bingmann-parallel_sample_sortBTC.cc
 )
 
-set(LIBS zio lfds)
+set(LIBS zio lfds ${GMP_LIBRARIES})
 
 if(WITH_MALLOC_COUNT)
 

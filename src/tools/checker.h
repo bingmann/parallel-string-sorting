@@ -24,13 +24,66 @@ class PermutationCheck
 {
 private:
     // polynomial evaluation of (z-0)*(z-1)*(z-2)...(z-(n-1)) mod (p)
+
+    mpz_class v;        // evaluation result
+    size_t iter;        // offset / iteration
+
+public:
+    PermutationCheck(const std::vector<unsigned char*>& stringptr)
+    {
+        mpz_class p("18446744073709551557", 10); // largest prime < 2^64
+
+        for (iter = 1; iter < 100000; ++iter)
+        {
+            // use address after end of string area as evalution point
+            uint64_t z = (uint64_t)g_string_data + g_string_datasize + iter;
+            v = 1;
+
+            for (size_t i = 0; i < stringptr.size(); ++i)
+            {
+                assert(z >= (uint64_t)stringptr[i]);
+                v *= (z - (uint64_t)stringptr[i]);
+                v %= p;
+            }
+
+            //std::cout << "eval = " << v << "\n";
+
+            if (v != 0) break; // v != 0, thus a true check value
+
+            std::cerr << "PermutationCheck: evaluation returned zero, repeating.\n";
+        }
+    }
+
+    bool check(const std::vector<unsigned char*>& stringptr) const
+    {
+        mpz_class p("18446744073709551557", 10); // largest prime < 2^64
+
+        // use address after end of string area as evalution point
+        uint64_t z = (uint64_t)g_string_data + g_string_datasize + iter;
+        mpz_class w = 1;
+
+        for (size_t i = 0; i < stringptr.size(); ++i)
+        {
+            assert(z >= (uint64_t)stringptr[i]);
+            w *= (z - (uint64_t)stringptr[i]);
+            w %= p;
+        }
+
+        return (v == w);
+    }
+};
+
+class PermutationCheck64
+{
+private:
+    // polynomial evaluation of (z-0)*(z-1)*(z-2)...(z-(n-1)) mod (p)
     static const uint64_t p = 4294967291;       // largest prime < 2^32
 
     uint64_t v;         // evaluation result
     size_t iter;        // offset / iteration
 
 public:
-    PermutationCheck(const std::vector<unsigned char*>& stringptr)
+    PermutationCheck64(const std::vector<unsigned char*>& stringptr)
     {
         for (iter = 1; iter < 100000; ++iter)
         {
@@ -44,7 +97,7 @@ public:
                 v *= (z - (uint64_t)stringptr[i]);
                 v %= p;
             }
-        
+
             //std::cout << "eval = " << v << "\n";
 
             if (v != 0) return;

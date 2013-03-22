@@ -43,6 +43,7 @@
 
 #include <omp.h>
 #include <getopt.h>
+#include <gmpxx.h>
 
 #include <boost/static_assert.hpp>
 #include <boost/array.hpp>
@@ -87,7 +88,8 @@ static const char* statsfile = "pss-runs1.txt";
 
 //size_t g_smallsort = 64;
 
-static const bool use_fork = true;
+static const bool use_forkrun = true;
+static const bool use_forkdataload = false;
 
 // *** Tools and Algorithms
 
@@ -167,14 +169,18 @@ static inline bool gopt_algorithm_match(const char* funcname)
 
 void Contest::run_contest(const char* path)
 {
-    // read input datafile
-    if (!input::load(path))
-        return;
-
     g_dataname = path;
-    g_string_dprefix = 0;
 
-    std::cerr << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
+    if (!use_forkdataload)
+    {
+        // read input datafile
+        if (!input::load(g_dataname))
+            return;
+
+        g_string_dprefix = 0;
+
+        std::cerr << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
+    }
 
     std::sort(m_list.begin(), m_list.end(), sort_contestants);
 
@@ -210,11 +216,22 @@ void Contest::list_contentants()
 
 void Contestant_UCArray::run()
 {
-    if (!use_fork) return real_run();
+    if (!use_forkrun) return real_run();
 
     pid_t p = fork();
     if (p == 0)
     {
+        if (use_forkdataload)
+        {
+            // read input datafile
+            if (!input::load(g_dataname))
+                return;
+
+            g_string_dprefix = 0;
+
+            std::cerr << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
+        }
+
         if (gopt_timeout) alarm(gopt_timeout); // terminate child program after use_timeout seconds
         real_run();
 

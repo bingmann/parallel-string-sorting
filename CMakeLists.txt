@@ -41,6 +41,17 @@ include(CheckIncludeFileCXX)
 check_include_file_cxx(atomic HAVE_ATOMIC_H)
 check_include_file_cxx(cstdatomic HAVE_CSTDATOMIC_H)
 
+# Find GMP libraries and header
+
+find_path(GMP_INCLUDE_DIR NAMES gmpxx.h)
+find_library(GMP_LIBRARIES NAMES gmp libgmp)
+find_library(GMPXX_LIBRARIES NAMES gmpxx libgmpxx)
+message(STATUS "GMP library: " ${GMP_LIBRARIES} " " ${GMPXX_LIBRARIES})
+set(GMP_LIBRARIES ${GMPXX_LIBRARIES} ${GMP_LIBRARIES})
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(GMP DEFAULT_MSG GMP_INCLUDE_DIR GMP_LIBRARIES)
+
 # build libzio for transparent decompression
 add_subdirectory(libzio)
 
