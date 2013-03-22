@@ -51,7 +51,6 @@ void sinha_C_burstsort_prepare(unsigned char **strings, size_t size)
         }
         if (j > MAXKEYLEN) MAXKEYLEN = j;
     }
-
     LOCHAR = 32; while (!CHARCOUNT[LOCHAR]) ++LOCHAR;
     HICHAR = 255; while (!CHARCOUNT[HICHAR]) --HICHAR;
 }
@@ -61,6 +60,7 @@ void sinha_C_burstsort(unsigned char **strings, size_t size)
     /* set default values for command line args. */
     CACHESIZE = 1<<19;
     BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */	
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2;
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -97,6 +97,7 @@ void sinha_fbC_burstsort(unsigned char **strings, size_t size)
     CACHESIZE = 1<<19;
     BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */	
     FREEBURSTS = 100;		/* number of low threshold bursts to allow */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2;
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -132,6 +133,7 @@ void sinha_sC_burstsort(unsigned char **strings, size_t size)
     /* set default values for command line args. */
     CACHESIZE = 1<<19;
     BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */	
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2;
 
     SAMPLERATE = 4000;		/* if >0, will sample 1/SAMPLERATE of data */
     //FREEBURSTS0 = 100;		/* number of low threshold bursts to allow */

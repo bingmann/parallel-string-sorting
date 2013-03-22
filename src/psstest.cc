@@ -484,6 +484,8 @@ int main(int argc, char* argv[])
             {
                 getContestSingleton()->run_contest(argv[optind]);
             }
+
+            if (gopt_inputsize == 0) break;
         }
     }
 
