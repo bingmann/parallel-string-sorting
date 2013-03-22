@@ -43,6 +43,9 @@
 	/* in CP-burstsort, returns a pointer to the record matching a key tail */
 	#define RP(x) *((string*) (x))
 
+        /*-tb the size of the record pointer */
+        #define RPSIZE  sizeof(string*)
+
 /* memory allocation macros */ /* tb: stripped of counting */
 
 	/* compare current/maximum allocated memory; update maximum if needed */
@@ -158,7 +161,7 @@
 		TAILSIZE0, 		/* default tail size for CPL-burstsort (arg) */
 		TAILRATE, 		/* used in setting TAILSIZE (arg) */
 		TAILSIZE, 		/* length of tail segments used in CPL-burstsort */
-		TAILSIZE4, 		/* TAILSIZE+4 */
+		TAILSIZE4, 		/* TAILSIZE+RPSIZE */
 		THR[20], 		/* thresholds for CPL-burstsort */
 		
                 INPUTORDER, 	/* load sorted/random/reversed input data (arg) */

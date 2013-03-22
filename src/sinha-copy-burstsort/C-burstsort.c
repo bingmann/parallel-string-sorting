@@ -1,3 +1,5 @@
+/* -*- tab-width: 8 -*- */
+
 #include "copy.h"
 
 /*

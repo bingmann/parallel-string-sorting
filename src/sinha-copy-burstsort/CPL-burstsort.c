@@ -42,7 +42,7 @@ void pbdo(int nr, string fp)
 			four bytes is room for a pointer to the original
 			record, which is kept immediately before the
 			TAILSIZE bytes of suffix. */
-		TAILSIZE4 = TAILSIZE + sizeof(string);
+		TAILSIZE4 = TAILSIZE + RPSIZE;
 
 		/* In contrast to C- and CP- burstsort, the key
 			segments inserted in bins during CPL-burstsort
@@ -265,12 +265,12 @@ void padd(string b, int n, NODE2 *rt) {
 			{
 				++NULLBINS; 
 				s = bn->bp = (string) MALLOC(BINSIZE0); 
-				RP(s) = rp; bn->ap = s + 4;
+				RP(s) = rp; bn->ap = s + RPSIZE;
 			} 
 			else 
 			{
 				RP(bn->ap) = rp; 
-				bn->ap += 4; 
+				bn->ap += RPSIZE; 
 				sz = BINSIZE0<<bn->lv;
 
 				/* Since CPL-burstsort copies only fixed length 
@@ -296,17 +296,17 @@ void padd(string b, int n, NODE2 *rt) {
 				s = bn->bp = (string) MALLOC(BINSIZE0); 
 
 			  /* Instead of copying up to a null terminator, we
-			  	  increment the active pointer by TAILSIZE + 4
+			  	  increment the active pointer by TAILSIZE + RPSIZE
 			  	  and copy up to it. */
 				ap = bn->ap = s + TAILSIZE4; 
-				RP(s) = b; s += 4; 
+				RP(s) = b; s += RPSIZE; 
 				do {*s++ = c = *b++;} while (c > 0 && s < ap);
 			} 
 			else 
 			{
 				s = bn->ap; 
 				ap = bn->ap += TAILSIZE4; 
-				RP(s) = b; s += 4; 
+				RP(s) = b; s += RPSIZE; 
 				do {*s++ = c = *b++;} while (c > 0 && s < ap);
 				
 				if (ct == THR[lv = bn->lv])
@@ -360,7 +360,7 @@ void pburst(NODE2 *bn) {
 			rp = RP(b1);
 			
 			/* Skip over the record pointer to get the first tail byte. */
-			c = *(b1 + 4);
+			c = *(b1 + RPSIZE);
 			
 			/* Leave b1 pointing to the next record pointer. */
 			b1 += TAILSIZE4;
@@ -378,12 +378,12 @@ void pburst(NODE2 *bn) {
 					++NULLBINS; 
 					s = rt->bp = (string) MALLOC(BINSIZE0); 
 					RP(s) = rp; 
-					rt->ap = s + 4;
+					rt->ap = s + RPSIZE;
 				}
 				else
 				{
 					RP(rt->ap) = rp; 
-					rt->ap += 4; 
+					rt->ap += RPSIZE; 
 					sz = BINSIZE0<<rt->lv;
 					
 					/* An exhausted key needs four bytes for its
@@ -417,14 +417,14 @@ void pburst(NODE2 *bn) {
 					++BINS; 
 					s = bn->bp = (string) MALLOC(BINSIZE0); 
 					ap = bn->ap = s + TAILSIZE4; 
-					RP(s) = b; s += 4; 
+					RP(s) = b; s += RPSIZE; 
 					do {*s++ = c = *b++;} while (c > 0 && s < ap);
 				}
 				else
 				{
 					s = bn->ap; 
 					ap = bn->ap += TAILSIZE4; 
-					RP(s) = b; s += 4; 
+					RP(s) = b; s += RPSIZE; 
 					do {*s++ = c = *b++;} while (c > 0 && s < ap);
 					
 					if (ct == THR[lv = bn->lv]) 
@@ -472,7 +472,7 @@ void ptraverse(NODE2 *nd)
 		ap = bn->ap;
 
 		tp = tp0 = (string*) MALLOC(tpsz);
-		bn->ap = (string) tp0; s += 4;
+		bn->ap = (string) tp0; s += RPSIZE;
 		
 		while (s < ap) {*tp++ = s; s += TAILSIZE4;}
 
@@ -481,7 +481,7 @@ void ptraverse(NODE2 *nd)
 		tp=tp0;
 		while (ct--)
 		{
-			s = *tp - 4;
+			s = *tp - RPSIZE;
 			*tp++ = allof(RP(s));
 		}
 
@@ -574,6 +574,59 @@ void pputtrie(NODE2 *nd, FILE *f)
 	}
 }
 
+/** Added by Timo Bingmann to output the trie to a string pointer array */
+
+string* pputtrie_strout;        /* string pointer output iterator */
+
+/*
+ * Append sorted records to a file.
+ *
+ */
+void tb_pputtrie(NODE2 *nd)
+{
+	int ct, c; string *tp; NODE2 *bn;
+
+	ct = nd->ct;
+	
+	/* While sputtrie() had to reconstruct a prefix from
+		traversed chars, puttrie() can simply use a record
+		pointer to retrieve the original key.	This version
+		just outputs the key; to output the whole record, 
+		puttrie() would need to know about the fields of 
+		the record and how they are delimited. */
+	tp = (string*) nd->bp;
+	
+	/* Output any exhausted keys. */
+	while (ct--)
+	{
+                *pputtrie_strout++ = *tp++;
+	}
+
+	for (c = LOCHAR; c <= HICHAR; ++c)
+	{
+		bn = nd + c;
+		if (bn != NULL && bn->lv == -1)
+			tb_pputtrie((NODE2*) bn->bp);
+		else if ((ct = bn->ct) > 0)
+		{
+			tp = (string*) bn->ap;
+			while (ct--)
+			{
+                                *pputtrie_strout++ = *tp++;
+			}
+		}
+	}
+}
+
+/*
+ * Output a sorted file of records.
+ */
+void tb_psavetrie(NODE2 *nd, string* strout)
+{
+        pputtrie_strout = strout;
+        tb_pputtrie(nd);
+}
+
 /*
  * A version of stabilizing inssorts() adapted to the segmented
  * data access of CPL-burstsort.
@@ -598,8 +651,8 @@ void inssortp(string *tp, int n, int d)
 			{
 				if (++o == TAILSIZE)
 				{
-					ld = *(string*) (ls - 4) + TAILSIZE;
-					rd = *(string*) (rs - 4) + TAILSIZE;
+					ld = *(string*) (ls - RPSIZE) + TAILSIZE;
+					rd = *(string*) (rs - RPSIZE) + TAILSIZE;
 				}
 				else
 				{
@@ -631,13 +684,14 @@ void mkqsortp(string *tp, int n, int d)
 		for (k = 0; k < n; ++k)
 		{
 			s = tp[k];
-			q = (string*) (s - 4);
+			q = (string*) (s - RPSIZE);
 			rp = *q += TAILSIZE;
 			t = s + TAILSIZE;
 			do
 			{
-				*s++ = *rp++;
-			} while (s < t);}
+                            *s++ = *rp++;
+			} while (s < t);
+                }
 	}
 
 	if (n < 13)

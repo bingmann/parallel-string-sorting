@@ -1,7 +1,7 @@
 /******************************************************************************
  * src/sinha-copy-burstsort/glue.cc
  *
- * Glue to attach Sinha's CopyBurstsort code to parallel-string-sort framework.
+ * Glue to attach Sinha's C-Burstsort code to parallel-string-sort framework.
  *
  ******************************************************************************
  * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
@@ -21,6 +21,14 @@
  *****************************************************************************/
 
 #include "../tools/contest.h"
+
+#include <time.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include <float.h>
+#include <limits.h>
 
 extern const char* g_string_data;
 extern size_t g_string_datasize;
@@ -59,8 +67,11 @@ void sinha_C_burstsort(unsigned char **strings, size_t size)
 {
     /* set default values for command line args. */
     CACHESIZE = 1<<19;
-    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */	
-    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2;
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
+
+    SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
+    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -95,9 +106,11 @@ void sinha_fbC_burstsort(unsigned char **strings, size_t size)
 {
     /* set default values for command line args. */
     CACHESIZE = 1<<19;
-    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */	
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
+
+    SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
     FREEBURSTS = 100;		/* number of low threshold bursts to allow */
-    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2;
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -132,11 +145,11 @@ void sinha_sC_burstsort(unsigned char **strings, size_t size)
 {
     /* set default values for command line args. */
     CACHESIZE = 1<<19;
-    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */	
-    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2;
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
 
     SAMPLERATE = 4000;		/* if >0, will sample 1/SAMPLERATE of data */
-    //FREEBURSTS0 = 100;		/* number of low threshold bursts to allow */
+    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -187,5 +200,299 @@ CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_C_burstsort
 CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_fbC_burstsort, "Original fbC-burstsort");
 
 CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_sC_burstsort, "Original sC-burstsort");
+
+void sinha_CP_burstsort(unsigned char **strings, size_t size)
+{
+    /* set default values for command line args. */
+    CACHESIZE = 1<<19;
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
+
+    SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
+    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+
+    NKEYS = size;
+    NBYTES = g_string_datasize;
+    LIMSIZE0 = BINSIZE0 - MAXKEYLEN;
+
+    /* Zero counters for burst trie objects. */
+    NODES = BINS = NULLBINS = 0;
+
+    /* Create root node of burst trie. */
+    NODE1 *rt = GETNODE(NODE1); ++NODES;
+
+    /* Read string sequence. */
+    radd((string)g_string_data, NKEYS, rt);
+
+    /* Discard any remaining free bursts; see below in rtraverse() for why. */
+    FREEBURSTS = 0;
+
+    /* Starting at the root node, traverse the trie and sort each bin. */
+    rtraverse(rt);
+
+    /* Write out string characters and string pointers to psstest */
+    tb_savetrie(rt, (string*)strings);
+
+    /* Deallocate the root node. */
+    rkill(rt);
+}
+
+void sinha_fbCP_burstsort(unsigned char **strings, size_t size)
+{
+    /* set default values for command line args. */
+    CACHESIZE = 1<<19;
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
+
+    SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
+    FREEBURSTS = 100;		/* number of low threshold bursts to allow */
+
+    NKEYS = size;
+    NBYTES = g_string_datasize;
+    LIMSIZE0 = BINSIZE0 - MAXKEYLEN;
+
+    /* Zero counters for burst trie objects. */
+    NODES = BINS = NULLBINS = 0;
+
+    /* Create root node of burst trie. */
+    NODE1 *rt = GETNODE(NODE1); ++NODES;
+
+    /* Read string sequence. */
+    radd((string)g_string_data, NKEYS, rt);
+
+    /* Discard any remaining free bursts; see below in rtraverse() for why. */
+    FREEBURSTS = 0;
+
+    /* Starting at the root node, traverse the trie and sort each bin. */
+    rtraverse(rt);
+
+    /* Write out string characters and string pointers to psstest */
+    tb_savetrie(rt, (string*)strings);
+
+    /* Deallocate the root node. */
+    rkill(rt);
+}
+
+void sinha_sCP_burstsort(unsigned char **strings, size_t size)
+{
+    /* set default values for command line args. */
+    CACHESIZE = 1<<19;
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
+
+    SAMPLERATE = 4000;		/* if >0, will sample 1/SAMPLERATE of data */
+    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+
+    NKEYS = size;
+    NBYTES = g_string_datasize;
+    LIMSIZE0 = BINSIZE0 - MAXKEYLEN;
+
+    /* Zero counters for burst trie objects. */
+    NODES = BINS = NULLBINS = 0;
+
+    /* Create root node of burst trie. */
+    NODE1 *rt = GETNODE(NODE1); ++NODES;
+
+    if (SAMPLERATE)
+    {
+        rsample((string)g_string_data, rt, NKEYS / SAMPLERATE);
+        clear(rt);
+    }
+
+    /* Read string sequence. */
+    radd((string)g_string_data, NKEYS, rt);
+
+    /* Discard any remaining free bursts; see below in rtraverse() for why. */
+    FREEBURSTS = 0;
+
+    /* Starting at the root node, traverse the trie and sort each bin. */
+    rtraverse(rt);
+
+    /* Write out string characters and string pointers to psstest */
+    tb_savetrie(rt, (string*)strings);
+
+    /* Deallocate the root node. */
+    rkill(rt);
+}
+
+CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_CP_burstsort, "Original CP-burstsort");
+
+CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_fbCP_burstsort, "Original fbCP-burstsort");
+
+CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_sCP_burstsort, "Original sCP-burstsort");
+
+/* Initialization from pbdo() */
+void sinha_CPL_burstsort_initialize()
+{
+    /* The command line arg TAILRATE specifies a
+       percentage of the average key length to use as
+       the key segment size; we calculate this now. */
+    double d = TAILRATE; d /= 100;
+    d *= NBYTES; d /= NKEYS;
+
+    /* Command line arg TAILSIZE0 specifies a maximum
+       key segment size; we choose the smaller of
+       TAILSIZE0 and TAILSIZE calculated above. */
+    TAILSIZE = MIN(d, TAILSIZE0);
+
+    /* Both TAILSIZE and TAILSIZE + 4 are used in many
+       operations, so we precalculate both; the extra
+       four bytes is room for a pointer to the original
+       record, which is kept immediately before the
+       TAILSIZE bytes of suffix. */
+    TAILSIZE4 = TAILSIZE + sizeof(string);
+
+    /* In contrast to C- and CP- burstsort, the key
+       segments inserted in bins during CPL-burstsort
+       are of known fixed length and we can calculate
+       ahead of time how many will fit for each bin
+       size. */
+    int	lv = 0; int sz = BINSIZE0;
+    while (sz < CACHESIZE)
+    {
+        THR[lv] = sz / TAILSIZE4;
+        sz *= 2;
+        ++lv;
+    }
+
+    /* For the preceding levels, we allowed room for
+       TAILSIZE bytes of each key plus a record pointer;
+       when the bin reaches cache size, we also need to
+       reserve room for the sorting pointerss that will
+       be needed during container sorting.*/
+    THR[lv] = CACHESIZE / (TAILSIZE + 8);
+}
+
+void sinha_CPL_burstsort(unsigned char **strings, size_t size)
+{
+    /* set default values for command line args. */
+    CACHESIZE = 1<<19;
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
+
+    SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
+    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+    TAILSIZE0 = 12;             /* maximum tail size in CPL-burstsort */
+    TAILRATE = 80;		/* used with TAILSIZE0 in CPL-burstsort */
+
+    NKEYS = size;
+    NBYTES = g_string_datasize;
+    LIMSIZE0 = BINSIZE0 - MAXKEYLEN;
+
+    sinha_CPL_burstsort_initialize();
+
+    /* Zero counters for burst trie objects. */
+    NODES = BINS = NULLBINS = 0;
+
+    /* Create root node of burst trie. */
+    NODE2 *rt = GETNODE(NODE2); ++NODES;
+
+    /* Read string sequence. */
+    padd((string)g_string_data, NKEYS, rt);
+
+    /* Discard any remaining free bursts; see below in rtraverse() for why. */
+    FREEBURSTS = 0;
+
+    /* Starting at the root node, traverse the trie and sort each bin. */
+    ptraverse(rt);
+
+    /* Write out string characters and string pointers to psstest */
+    tb_psavetrie(rt, (string*)strings);
+
+    /* Deallocate the root node. */
+    pkill(rt);
+}
+
+void sinha_fbCPL_burstsort(unsigned char **strings, size_t size)
+{
+    /* set default values for command line args. */
+    CACHESIZE = 1<<19;
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
+
+    SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
+    FREEBURSTS = 100;		/* number of low threshold bursts to allow */
+    TAILSIZE0 = 12;             /* maximum tail size in CPL-burstsort */
+    TAILRATE = 80;		/* used with TAILSIZE0 in CPL-burstsort */
+
+    NKEYS = size;
+    NBYTES = g_string_datasize;
+    LIMSIZE0 = BINSIZE0 - MAXKEYLEN;
+
+    sinha_CPL_burstsort_initialize();
+
+    /* Zero counters for burst trie objects. */
+    NODES = BINS = NULLBINS = 0;
+
+    /* Create root node of burst trie. */
+    NODE2 *rt = GETNODE(NODE2); ++NODES;
+
+    /* Read string sequence. */
+    padd((string)g_string_data, NKEYS, rt);
+
+    /* Discard any remaining free bursts; see below in rtraverse() for why. */
+    FREEBURSTS = 0;
+
+    /* Starting at the root node, traverse the trie and sort each bin. */
+    ptraverse(rt);
+
+    /* Write out string characters and string pointers to psstest */
+    tb_psavetrie(rt, (string*)strings);
+
+    /* Deallocate the root node. */
+    pkill(rt);
+}
+
+void sinha_sCPL_burstsort(unsigned char **strings, size_t size)
+{
+    /* set default values for command line args. */
+    CACHESIZE = 1<<19;
+    BINSIZE0 = 1<<9;		/* initial size of buffer in terminal node */
+    while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
+
+    SAMPLERATE = 4000;		/* if >0, will sample 1/SAMPLERATE of data */
+    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+    TAILSIZE0 = 12;             /* maximum tail size in CPL-burstsort */
+    TAILRATE = 80;		/* used with TAILSIZE0 in CPL-burstsort */
+
+    NKEYS = size;
+    NBYTES = g_string_datasize;
+    LIMSIZE0 = BINSIZE0 - MAXKEYLEN;
+
+    sinha_CPL_burstsort_initialize();
+
+    /* Zero counters for burst trie objects. */
+    NODES = BINS = NULLBINS = 0;
+
+    /* Create root node of burst trie. */
+    NODE2 *rt = GETNODE(NODE2); ++NODES;
+
+    if (SAMPLERATE)
+    {
+        psample((string)g_string_data, rt, NKEYS / SAMPLERATE);
+        pclear(rt);
+    }
+
+    /* Read string sequence. */
+    padd((string)g_string_data, NKEYS, rt);
+
+    /* Discard any remaining free bursts; see below in rtraverse() for why. */
+    FREEBURSTS = 0;
+
+    /* Starting at the root node, traverse the trie and sort each bin. */
+    ptraverse(rt);
+
+    /* Write out string characters and string pointers to psstest */
+    tb_psavetrie(rt, (string*)strings);
+
+    /* Deallocate the root node. */
+    pkill(rt);
+}
+
+CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_CPL_burstsort, "Original CPL-burstsort");
+
+CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_fbCPL_burstsort, "Original fbCPL-burstsort");
+
+CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_sCPL_burstsort, "Original sCPL-burstsort");
 
 }

@@ -1,3 +1,5 @@
+/* -*- tab-width: 8 -*- */
+
 #include "copy.h"
 
 /*
@@ -196,12 +198,12 @@ void radd(string b, int n, NODE1 *rt)
 				
 				/* Having inserted the record pointer, we then set the bin's
 				active pointer to the following byte. */
-				bn->ap = s + 4;
+				bn->ap = s + RPSIZE;
 			}
 			else
 			{
 				RP(bn->ap) = rp; 
-				s = bn->ap += 4;
+				s = bn->ap += RPSIZE;
 				
 				if (s == bn->lp)
 				{
@@ -221,14 +223,14 @@ void radd(string b, int n, NODE1 *rt)
 				s = bn->bp = (string) MALLOC(BINSIZE0);
 				bn->lp = s + LIMSIZE0;
 
-				RP(s) = rp; s += 4;
+				RP(s) = rp; s += RPSIZE;
 				while ((*s++ = *b++) != 0) ; 
 				bn->ap = s;
 			}
 			else
 			{
 				s = bn->ap; 
-				RP(s) = rp; s += 4;
+				RP(s) = rp; s += RPSIZE;
 				while ((*s++ = *b++) != 0) ; 
 				bn->ap = s;
 
@@ -284,7 +286,7 @@ void rburst(NODE1 *bn)
 				copy the existing record pointer and (b) we need
 				to skip over its bytes and use only the remaining
 				tail bytes in building the subtrie structure. */
-			rp = RP(b); b += 4;
+			rp = RP(b); b += RPSIZE;
 			
 			bn = rt + (c = *b++);
 			while (bn != NULL && bn->ct == -1)
@@ -301,12 +303,12 @@ void rburst(NODE1 *bn)
 					++NULLBINS;
 					s = bn->bp = (string) MALLOC(BINSIZE0);
 					bn->lp = s + BINSIZE0;
-					RP(s) = rp; bn->ap = s + 4;
+					RP(s) = rp; bn->ap = s + RPSIZE;
 				}
 				else
 				{
 					s = bn->ap; 
-					RP(s) = rp; s += 4; 
+					RP(s) = rp; s += RPSIZE; 
 					bn->ap = s;
 					
 					if (s == bn->lp)
@@ -325,7 +327,7 @@ void rburst(NODE1 *bn)
 					++BINS;
 					s = bn->bp = (string) MALLOC(BINSIZE0);
 					bn->lp = s + LIMSIZE0;
-					RP(s) = rp; s += 4;
+					RP(s) = rp; s += RPSIZE;
 
 					while ((*s++ = *b++) != 0) ;
 					bn->ap = s;
@@ -333,7 +335,7 @@ void rburst(NODE1 *bn)
 				else
 				{
 					s = bn->ap; 
-					RP(s) = rp; s += 4;
+					RP(s) = rp; s += RPSIZE;
 					while ((*s++ = *b++) != 0) ;
 					bn->ap = s;
 
@@ -392,7 +394,7 @@ void rtraverse(NODE1 *nd)
 		while (s < ap)
 		{
 			/* Skip over the record pointer. */
-			s += 4; 
+			s += RPSIZE; 
 			/* Set the tail pointer. */
 			*tp++ = s;
 			/* Scan thru the rest of the tail. */
@@ -407,7 +409,7 @@ void rtraverse(NODE1 *nd)
 			the records pointers in order in a minimal contiguous
 			block, and we can then release the char array that held
 			the interspersed record pointers and tails. */
-		for (tp = tp0; ct-- > 0; ++tp) *tp = RP(*tp - 4);
+		for (tp = tp0; ct-- > 0; ++tp) *tp = RP(*tp - RPSIZE);
 
 		UPDATEMEM; ALLOCATED -= (MAXKEYLEN + bn->lp - bp);
 		free(bp); --BINS;
@@ -504,6 +506,59 @@ void puttrie(NODE1 *nd, FILE *f)
 			}
 		}
 	}
+}
+
+/** Added by Timo Bingmann to output the trie to a string pointer array */
+
+string* puttrie_strout;        /* string pointer output iterator */
+
+/*
+ * Append sorted records to a file.
+ *
+ */
+void tb_puttrie(NODE1 *nd)
+{
+	int ct, c; string *tp; NODE1 *bn;
+
+	ct = nd->ct;
+	
+	/* While sputtrie() had to reconstruct a prefix from
+		traversed chars, puttrie() can simply use a record
+		pointer to retrieve the original key.	This version
+		just outputs the key; to output the whole record, 
+		puttrie() would need to know about the fields of 
+		the record and how they are delimited. */
+	tp = (string*) nd->bp;
+	
+	/* Output any exhausted keys. */
+	while (ct--)
+	{
+                *puttrie_strout++ = *tp++;
+	}
+
+	for (c = LOCHAR; c <= HICHAR; ++c)
+	{
+		bn = nd + c;
+		if (bn != NULL && (ct = bn->ct) == -1)
+			tb_puttrie((NODE1*) bn->bp);
+		else if (ct)
+		{
+			tp = (string*) bn->ap;
+			while (ct--)
+			{
+                                *puttrie_strout++ = *tp++;
+			}
+		}
+	}
+}
+
+/*
+ * Output a sorted file of records.
+ */
+void tb_savetrie(NODE1 *nd, string* strout)
+{
+        puttrie_strout = strout;
+        tb_puttrie(nd);
 }
 
 /*

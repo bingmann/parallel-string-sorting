@@ -132,7 +132,7 @@ string fp(string dir, string fn, const char* ft)
 void treset(int nt, int nr)
 {
 #if 0
-    //-tb removed
+    /*-tb removed */
 	 int i, j;
 
 	 for (i=0;i<nt;++i)
@@ -146,7 +146,7 @@ void treset(int nt, int nr)
 }
 
 #if 0
-    //-tb removed via inline {}
+/*-tb removed via inline {} */
 void ton(int i)
 {
         static clock_t t1=0;
