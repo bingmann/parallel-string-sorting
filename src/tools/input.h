@@ -75,13 +75,14 @@ bool readfile_lines(const std::string& path)
         filesize = gopt_inputsize;
 
     // free previous data file
-    if (g_string_data) free( (char*)g_string_data );
+    if (g_string_data) free(g_string_databuff);
 
     // allocate one continuous area of memory
     std::cerr << "Allocating " << filesize << " bytes in RAM, reading " << path << "\n";
     char* stringdata = (char*)malloc(filesize + 2);
 
     // CPL-burstsort needs terminator immediately before and after stringdata
+    g_string_databuff = stringdata;
     stringdata[0] = 0;
     stringdata[filesize+1] = 0;
     ++stringdata;
@@ -146,13 +147,14 @@ bool generate_random(const std::string& letters)
     size_t size = gopt_inputsize;
 
     // free previous data file
-    if (g_string_data) free( (char*)g_string_data );
+    if (g_string_data) free(g_string_databuff);
 
     // allocate one continuous area of memory
     std::cerr << "Allocating " << size << " bytes in RAM, generating random data.\n";
     char* stringdata = (char*)malloc(size + 2);
 
     // CPL-burstsort needs terminator immediately before and after stringdata
+    g_string_databuff = stringdata;
     stringdata[0] = 0;
     stringdata[size+1] = 0;
     ++stringdata;

@@ -74,6 +74,7 @@ int             gopt_timeout = 0;
 const char*     g_dataname = NULL;
 const char*     g_string_data = NULL;
 size_t          g_string_datasize = 0;
+char*           g_string_databuff = NULL;
 std::vector<size_t> g_string_offsets;
 size_t          g_string_dprefix = 0;
 
@@ -216,13 +217,18 @@ void Contestant_UCArray::run()
     {
         if (gopt_timeout) alarm(gopt_timeout); // terminate child program after use_timeout seconds
         real_run();
+
+        if (g_string_data) free(g_string_databuff);
         exit(0);
     }
 
     int status;
     wait(&status);
 
-    if (!WIFEXITED(status)) {
+    if (WIFEXITED(status)) {
+        //std::cout << "Child normally with return code " << WEXITSTATUS(status) << std::endl;
+    }
+    else if (WIFSIGNALED(status)) {
         std::cout << "Child terminated abnormally with signal " << WTERMSIG(status) << std::endl;
 
         // write out exit status information to results file
@@ -251,6 +257,17 @@ void Contestant_UCArray::run()
         {
             g_statscache >> "status" << "SIG" << WTERMSIG(status);
         }
+
+        StatsWriter(statsfile).append_statsmap(g_statscache);
+    }
+    else {
+        std::cout << "Child wait returned with status " << status << std::endl;
+
+        g_statscache >> "algo" << m_funcname
+                     >> "data" << g_dataname
+                     >> "char_count" << g_string_datasize
+                     >> "string_count" << g_string_offsets.size()
+                     >> "status" << "weird";
 
         StatsWriter(statsfile).append_statsmap(g_statscache);
     }
@@ -489,8 +506,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (g_string_data)
-        free((void*)g_string_data);
+    if (g_string_data) free(g_string_databuff);
 
     return 0;
 }
