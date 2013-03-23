@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <math.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
 
 #include <string>
 #include <bitset>
@@ -300,6 +301,14 @@ void Contestant_UCArray::real_run()
 {
     size_t repeats = gopt_repeats ? gopt_repeats : 1;
 
+    // lock process into memory (on Linux)
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        std::cerr << "Error locking process into memory: " << strerror(errno) << std::endl;
+    }
+    else {
+        std::cerr << "Successfully locked process into memory." << std::endl;
+    }
+
     // create unsigned char* array from offsets
     std::vector<unsigned char*> stringptr;
     stringptr.reserve( g_string_offsets.size() );
@@ -312,7 +321,7 @@ void Contestant_UCArray::real_run()
     // save permutation check evaluation result
     PermutationCheck pc(stringptr);
 
-    std::cerr << "Running " << m_algoname << " - " << m_description << "\n";
+    std::cerr << "Running " << m_algoname << " - " << m_description << std::endl;
 
     g_statscache >> "algo" << m_algoname
                  >> "data" << g_dataname
@@ -352,8 +361,8 @@ void Contestant_UCArray::real_run()
     ts2 = omp_get_wtime();
 
 #ifdef MALLOC_COUNT
-    std::cerr << "Max stack usage: " << stack_count_usage(stack) << "\n";
-    std::cerr << "Max heap usage: " << malloc_count_peak() - memuse << "\n";
+    std::cerr << "Max stack usage: " << stack_count_usage(stack) << std::endl;
+    std::cerr << "Max heap usage: " << malloc_count_peak() - memuse << std::endl;
     //memprofile.finish();
 
     g_statscache >> "heapuse" << (malloc_count_peak() - memuse)
@@ -361,7 +370,7 @@ void Contestant_UCArray::real_run()
 
     if (memuse < malloc_count_current())
     {
-        std::cerr << "MEMORY LEAKED: " << (malloc_count_current() - memuse) << " B\n";
+        std::cerr << "MEMORY LEAKED: " << (malloc_count_current() - memuse) << " B" << std::endl;
     }
 #endif
 
