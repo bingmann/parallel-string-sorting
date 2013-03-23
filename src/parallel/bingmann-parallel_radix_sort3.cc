@@ -619,7 +619,7 @@ void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
         return EnqueueSmall(jobqueue, strings, n, depth);
 }
 
-void bingmann_parallel_radix_sort3(string* strings, size_t n)
+void parallel_radix_sort3(string* strings, size_t n)
 {
     totalsize = n;
 
@@ -628,6 +628,8 @@ void bingmann_parallel_radix_sort3(string* strings, size_t n)
     jobqueue.loop();
 }
 
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(bingmann_parallel_radix_sort3, "bingmann/parallel_radix_sort3")
+CONTESTANT_REGISTER_PARALLEL(parallel_radix_sort3,
+                             "bingmann/parallel_radix_sort3",
+                             "bingmann/parallel_radix_sort3")
 
 } // namespace bingmann_parallel_radix_sort3

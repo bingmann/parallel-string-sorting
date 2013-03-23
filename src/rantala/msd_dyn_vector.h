@@ -168,14 +168,16 @@ void msd_D_##name(unsigned char** strings, size_t n)                           \
         vec<unsigned char*> buckets[256];                                      \
         msd_D<vec<unsigned char*>, size_t>(strings, n, 0, buckets);            \
 }                                                                              \
-CONTESTANT_REGISTER_UCARRAY(msd_D_##name, "rantala/msd_D_"#name)               \
+CONTESTANT_REGISTER(msd_D_##name, "rantala/msd_D_"#name,                       \
+                    "msd_D_"#name)                                             \
 void msd_D_##name##_adaptive(unsigned char** strings, size_t n)                \
 {                                                                              \
         vec<unsigned char*>* buckets = new vec<unsigned char*>[0x10000];       \
         msd_D_adaptive(strings, n, 0, buckets);                                \
         delete [] buckets;                                                     \
 }                                                                              \
-CONTESTANT_REGISTER_UCARRAY(msd_D_##name##_adaptive, "rantala/msd_D_"#name"_adaptive")
+CONTESTANT_REGISTER(msd_D_##name##_adaptive, "rantala/msd_D_"#name"_adaptive", \
+                    "msd_D_"#name"_adaptive")
 
 #define MAKE_ALG1(vec) MAKE_ALG2(vec, vec)
 

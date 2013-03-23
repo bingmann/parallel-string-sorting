@@ -430,14 +430,15 @@ void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
         return bingmann_parallel_radix_sort3::EnqueueSmall(jobqueue, strings, n, depth);
 }
 
-void bingmann_parallel_sample_sortBSC(string* strings, size_t n)
+void parallel_sample_sortBSC(string* strings, size_t n)
 {
     JobQueue jobqueue;
     Enqueue(jobqueue, strings,n,0);
     jobqueue.loop();
 }
 
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(bingmann_parallel_sample_sortBSC,
-                                     "bingmann/parallel_sample_sortBSC: binary search, bktcache")
+CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBSC,
+                             "bingmann/parallel_sample_sortBSC",
+                             "bingmann/parallel_sample_sortBSC: binary search, bktcache")
 
 } // namespace bingmann_parallel_sample_sortBSC

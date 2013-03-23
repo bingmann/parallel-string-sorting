@@ -195,11 +195,14 @@ void sinha_sC_burstsort(unsigned char **strings, size_t size)
     skill(rt);
 }
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_C_burstsort, "Original C-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_C_burstsort,
+                            "sinha/C_burstsort", "Original C-burstsort");
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_fbC_burstsort, "Original fbC-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_fbC_burstsort,
+                            "sinha/fbC_burstsort", "Original fbC-burstsort");
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_sC_burstsort, "Original sC-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_sC_burstsort,
+                            "sinha/sC_burstsort", "Original sC-burstsort");
 
 void sinha_CP_burstsort(unsigned char **strings, size_t size)
 {
@@ -315,11 +318,14 @@ void sinha_sCP_burstsort(unsigned char **strings, size_t size)
     rkill(rt);
 }
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_CP_burstsort, "Original CP-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_CP_burstsort,
+                            "sinha/CP_burstsort", "Original CP-burstsort");
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_fbCP_burstsort, "Original fbCP-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_fbCP_burstsort,
+                            "sinha/fbCP_burstsort", "Original fbCP-burstsort");
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_sCP_burstsort, "Original sCP-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_sCP_burstsort,
+                            "sinha/sCP_burstsort", "Original sCP-burstsort");
 
 /* Initialization from pbdo() */
 void sinha_CPL_burstsort_initialize()
@@ -489,10 +495,13 @@ void sinha_sCPL_burstsort(unsigned char **strings, size_t size)
     pkill(rt);
 }
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_CPL_burstsort, "Original CPL-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_CPL_burstsort,
+                            "sinha/CPL_burstsort", "Original CPL-burstsort");
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_fbCPL_burstsort, "Original fbCPL-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_fbCPL_burstsort,
+                            "sinha/fbCPL_burstsort", "Original fbCPL-burstsort");
 
-CONTESTANT_REGISTER_UCARRAY_PREPARE(sinha_C_burstsort_prepare, sinha_sCPL_burstsort, "Original sCPL-burstsort");
+CONTESTANT_REGISTER_PREPARE(sinha_C_burstsort_prepare, sinha_sCPL_burstsort,
+                            "sinha/sCPL_burstsort", "Original sCPL-burstsort");
 
 }

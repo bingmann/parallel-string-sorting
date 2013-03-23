@@ -233,7 +233,9 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 }
 
 void bingmann_sample_sortBS(string* strings, size_t n) { return sample_sortBS(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBS, "bingmann/sample_sortBS (binary search, no cache)")
+
+CONTESTANT_REGISTER(bingmann_sample_sortBS, "bingmann/sample_sortBS",
+                    "bingmann/sample_sortBS (binary search, no cache)")
 
 // ------------------------------------------------------------------------------------------------------------------------
 
@@ -397,7 +399,9 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 }
 
 void bingmann_sample_sortBSC(string* strings, size_t n) { return sample_sortBSC(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBSC, "bingmann/sample_sortBSC (binary search, bkt cache)")
+
+CONTESTANT_REGISTER(bingmann_sample_sortBSC, "bingmann/sample_sortBSC",
+                    "bingmann/sample_sortBSC (binary search, bkt cache)")
 
 // ------------------------------------------------------------------------------------------------------------------------
 
@@ -645,7 +649,9 @@ void sample_sortBSCA(string* strings, size_t n, size_t depth)
 }
 
 void bingmann_sample_sortBSCA(string* strings, size_t n) { return sample_sortBSCA(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBSCA, "bingmann/sample_sortBSCA (binary search, assembler cmov, bkt cache)")
+
+CONTESTANT_REGISTER(bingmann_sample_sortBSCA, "bingmann/sample_sortBSCA",
+                    "bingmann/sample_sortBSCA (binary search, assembler cmov, bkt cache)")
 
 // ------------------------------------------------------------------------------------------------------------------------
 
@@ -914,7 +920,9 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 }
 
 void bingmann_sample_sortBT(string* strings, size_t n) { return sample_sortBT(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBT, "bingmann/sample_sortBT (binary tree, no cache)")
+
+CONTESTANT_REGISTER(bingmann_sample_sortBT, "bingmann/sample_sortBT",
+                    "bingmann/sample_sortBT (binary tree, no cache)")
 
 // ------------------------------------------------------------------------------------------------------------------------
 
@@ -1120,6 +1128,8 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 }
 
 void bingmann_sample_sortBTC(string* strings, size_t n) { return sample_sortBTC(strings,n,0); }
-CONTESTANT_REGISTER_UCARRAY(bingmann_sample_sortBTC, "bingmann/sample_sortBTC (binary tree, bkt cache)")
+
+CONTESTANT_REGISTER(bingmann_sample_sortBTC, "bingmann/sample_sortBTC",
+                    "bingmann/sample_sortBTC (binary tree, bkt cache)")
 
 } // namespace bingmann_sample_sort

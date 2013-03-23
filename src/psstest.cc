@@ -106,8 +106,8 @@ static const bool use_forkdataload = false;
 #include "sequential/inssort.h"
 #include "sequential/mbm-radix.h"
 #include "sequential/mkqs.h"
-#include "sequential/burstsortA.h"
-#include "sequential/burstsortL.h"
+#include "sequential/sinha-burstsortA.h"
+#include "sequential/sinha-burstsortL.h"
 #include "sequential/ng-cradix.h"
 #include "sequential/ng-cradix-rantala.h"
 #include "sequential/ng-lcpmergesort.h"
@@ -144,7 +144,7 @@ static const bool use_forkdataload = false;
 #include "rantala/mergesort_unstable.h"
 #include "rantala/tools/losertree.h"
 #include "rantala/mergesort_losertree.h"
-//#include "rantala/mergesort_lcp.h"
+#include "rantala/mergesort_lcp.h"
 
 #undef debug
 
@@ -157,13 +157,13 @@ Contest* getContestSingleton()
     return c;
 }
 
-static inline bool gopt_algorithm_match(const char* funcname)
+static inline bool gopt_algorithm_match(const char* algoname)
 {
     if (!gopt_algorithm.size()) return true;
 
     // iterate over gopt_algorithm list as a filter
     for (size_t ai = 0; ai < gopt_algorithm.size(); ++ai) {
-        if (strstr(funcname, gopt_algorithm[ai]) != NULL)
+        if (strstr(algoname, gopt_algorithm[ai]) != NULL)
             return true;
     }
 
@@ -190,7 +190,7 @@ void Contest::run_contest(const char* path)
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (gopt_algorithm_match( (*c)->m_funcname )) {
+        if (gopt_algorithm_match( (*c)->m_algoname )) {
                 (*c)->run();
         }
     }
@@ -202,18 +202,18 @@ void Contest::list_contentants()
 
     std::sort(m_list.begin(), m_list.end(), sort_contestants);
 
-    size_t w_funcname = 0;
+    size_t w_algoname = 0;
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (!gopt_algorithm_match( (*c)->m_funcname )) continue;
-        w_funcname = std::max(w_funcname, strlen( (*c)->m_funcname ));
+        if (!gopt_algorithm_match( (*c)->m_algoname )) continue;
+        w_algoname = std::max(w_algoname, strlen( (*c)->m_algoname ));
     }
 
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (!gopt_algorithm_match( (*c)->m_funcname )) continue;
-        std::cout << std::left << std::setw(w_funcname) << (*c)->m_funcname << "  " << (*c)->m_description << std::endl;
+        if (!gopt_algorithm_match( (*c)->m_algoname )) continue;
+        std::cout << std::left << std::setw(w_algoname) << (*c)->m_algoname << "  " << (*c)->m_description << std::endl;
     }
 }
 
@@ -253,7 +253,7 @@ void Contestant_UCArray::run()
 
         // write out exit status information to results file
 
-        g_statscache >> "algo" << m_funcname
+        g_statscache >> "algo" << m_algoname
                      >> "data" << g_dataname
                      >> "char_count" << g_string_datasize
                      >> "string_count" << g_string_offsets.size();
@@ -283,7 +283,7 @@ void Contestant_UCArray::run()
     else {
         std::cout << "Child wait returned with status " << status << std::endl;
 
-        g_statscache >> "algo" << m_funcname
+        g_statscache >> "algo" << m_algoname
                      >> "data" << g_dataname
                      >> "char_count" << g_string_datasize
                      >> "string_count" << g_string_offsets.size()
@@ -312,9 +312,9 @@ void Contestant_UCArray::real_run()
     // save permutation check evaluation result
     PermutationCheck pc(stringptr);
 
-    std::cerr << "Running " << m_funcname << " - " << m_description << "\n";
+    std::cerr << "Running " << m_algoname << " - " << m_description << "\n";
 
-    g_statscache >> "algo" << m_funcname
+    g_statscache >> "algo" << m_algoname
                  >> "data" << g_dataname
                  >> "char_count" << g_string_datasize
                  >> "string_count" << stringptr.size();
@@ -327,7 +327,7 @@ void Contestant_UCArray::real_run()
     omp_set_num_threads(pss_num_threads);
 
 #ifdef MALLOC_COUNT
-    //MemProfile memprofile( m_funcname, memprofile_path );
+    //MemProfile memprofile( m_algoname, memprofile_path );
     size_t memuse = malloc_count_current();
     void* stack = stack_count_clear();
     malloc_count_reset_peak();

@@ -137,7 +137,9 @@ void mergesort_2way_unstable(unsigned char** strings, size_t n)
 	mergesort_2way_unstable(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER_UCARRAY(mergesort_2way_unstable, "rantala/mergesort 2way unstable")
+CONTESTANT_REGISTER(mergesort_2way_unstable,
+                    "rantala/mergesort_2way_unstable",
+                    "mergesort 2way unstable")
 
 /*******************************************************************************
  *
@@ -318,7 +320,9 @@ void mergesort_3way_unstable(unsigned char** strings, size_t n)
 	mergesort_3way_unstable(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER_UCARRAY(mergesort_3way_unstable, "rantala/mergesort 3way unstable")
+CONTESTANT_REGISTER(mergesort_3way_unstable,
+                    "rantala/mergesort_3way_unstable",
+                    "mergesort 3way unstable")
 
 /*******************************************************************************
  *
@@ -1861,6 +1865,8 @@ void mergesort_4way_unstable(unsigned char** strings, size_t n)
 	mergesort_4way_unstable(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER_UCARRAY(mergesort_4way_unstable, "rantala/mergesort 4way unstable")
+CONTESTANT_REGISTER(mergesort_4way_unstable,
+                    "rantala/mergesort_4way_unstable",
+                    "mergesort 4way unstable")
 
 } // namespace rantala

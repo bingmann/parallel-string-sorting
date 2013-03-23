@@ -427,5 +427,6 @@ void akiba_parallel_radix_sort(unsigned char **strings, size_t count)
         (const unsigned char **)strings, count);
 }
 
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(akiba_parallel_radix_sort,
-                                     "Parallel MSD radix sort by Takuya Akiba")
+CONTESTANT_REGISTER_PARALLEL(akiba_parallel_radix_sort,
+        "akiba/parallel_radix_sort",
+        "Parallel MSD radix sort by Takuya Akiba")

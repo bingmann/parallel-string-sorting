@@ -146,12 +146,14 @@ static void ssort2(string a[], size_t n, int depth)
 
 void multikey2(string a[], size_t n) { ssort2(a, n, 0); }
 
-void mkqsort_bs(unsigned char **strings, size_t n)
+void bs_mkqsort(unsigned char **strings, size_t n)
 {
     return multikey2(strings, n);
 }
 
-CONTESTANT_REGISTER_UCARRAY(mkqsort_bs, "bs_mkqs Original Multikey-Quicksort")
+CONTESTANT_REGISTER(bs_mkqsort,
+                    "bs/mkqsort",
+                    "bs_mkqs Original Multikey-Quicksort")
 
 #undef i2c
 #undef ptr2char

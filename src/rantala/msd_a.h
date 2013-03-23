@@ -162,7 +162,9 @@ msd_A(unsigned char** strings, size_t N)
 	for (size_t i=0; i < N; ++i) strings[i] = cache[i].ptr;
 	free(cache);
 }
-CONTESTANT_REGISTER_UCARRAY(msd_A, "rantala/msd_A")
+CONTESTANT_REGISTER(msd_A,
+                    "rantala/msd_A",
+                    "msd_A")
 
 void
 msd_A_adaptive(unsigned char** strings, size_t N)
@@ -174,6 +176,8 @@ msd_A_adaptive(unsigned char** strings, size_t N)
 	for (size_t i=0; i < N; ++i) strings[i] = cache[i].ptr;
 	free(cache);
 }
-CONTESTANT_REGISTER_UCARRAY(msd_A_adaptive, "rantala/msd_A_adaptive")
+CONTESTANT_REGISTER(msd_A_adaptive,
+                    "rantala/msd_A_adaptive",
+                    "msd_A_adaptive")
 
 } // namespace rantala_msd_a

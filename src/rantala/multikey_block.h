@@ -196,11 +196,14 @@ void multikey_block4(unsigned char** strings, size_t n)
 	multikey_block<1024, uint32_t>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_UCARRAY(multikey_block1,
-		"rantala/multikey_block with 1byte alphabet")
-CONTESTANT_REGISTER_UCARRAY(multikey_block2,
-		"rantala/multikey_block with 2byte alphabet")
-CONTESTANT_REGISTER_UCARRAY(multikey_block4,
-		"rantala/multikey_block with 4byte alphabet")
+CONTESTANT_REGISTER(multikey_block1,
+                    "rantala/multikey_block1",
+                    "multikey_block with 1byte alphabet")
+CONTESTANT_REGISTER(multikey_block2,
+                    "rantala/multikey_block2",
+                    "multikey_block with 2byte alphabet")
+CONTESTANT_REGISTER(multikey_block4,
+                    "rantala/multikey_block4",
+                    "multikey_block with 4byte alphabet")
 
 } // namespace rantala_multikey_block

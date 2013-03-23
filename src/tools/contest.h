@@ -50,12 +50,12 @@ extern Contest* getContestSingleton();
 class Contestant
 {
 public:
-    const char*         m_funcname;
+    const char*         m_algoname;
     const char*         m_description;
 
-    Contestant(const char* funcname,
+    Contestant(const char* algoname,
                const char* description)
-        : m_funcname(funcname),
+        : m_algoname(algoname),
           m_description(description)
     {
         getContestSingleton()->register_contestant(this);
@@ -64,7 +64,7 @@ public:
     virtual void run() = 0; // depends on individual sorter's interface
 
     inline bool operator< (const Contestant &b) const {
-        return (strcmp(m_funcname, b.m_funcname) < 0);
+        return (strcmp(m_algoname, b.m_algoname) < 0);
     }
 };
 
@@ -82,9 +82,9 @@ public:
 
     Contestant_UCArray(func_type prepare_func,
                        func_type run_func,
-                       const char* funcname,
+                       const char* algoname,
                        const char* description)
-        : Contestant(funcname,description),
+        : Contestant(algoname,description),
           m_prepare_func(prepare_func),
           m_run_func(run_func)
     {
@@ -94,28 +94,28 @@ public:
     void         real_run();    // implemented in main.cc
 };
 
-#define CONTESTANT_REGISTER_UCARRAY(func, desc)                         \
+#define CONTESTANT_REGISTER(func, algoname, desc)                       \
     static const class Contestant* _Contestant_##func##_register =      \
-        new Contestant_UCArray(NULL,func,#func,desc);
+        new Contestant_UCArray(NULL,func,algoname,desc);
 
-#define CONTESTANT_REGISTER_UCARRAY_PREPARE(pfunc, func, desc)          \
+#define CONTESTANT_REGISTER_PREPARE(pfunc, func, algoname, desc)        \
     static const class Contestant* _Contestant_##func##_register =      \
-        new Contestant_UCArray(pfunc,func,#func,desc);
+        new Contestant_UCArray(pfunc,func,algoname,desc);
 
 class Contestant_UCArray_Parallel : public Contestant_UCArray
 {
 public:
     Contestant_UCArray_Parallel(func_type prepare_func,
                                 func_type run_func,
-                                const char* funcname,
+                                const char* algoname,
                                 const char* description)
-        : Contestant_UCArray(prepare_func,run_func,funcname,description)
+        : Contestant_UCArray(prepare_func,run_func,algoname,description)
     {
     }
 
     virtual void run(); // implemented in main.cc
 };
 
-#define CONTESTANT_REGISTER_UCARRAY_PARALLEL(func, desc)                \
+#define CONTESTANT_REGISTER_PARALLEL(func, algoname, desc)              \
     static const class Contestant* _Contestant_##func##_register =      \
-        new Contestant_UCArray_Parallel(NULL,func,#func,desc);
+        new Contestant_UCArray_Parallel(NULL,func,algoname,desc);

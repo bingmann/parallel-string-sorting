@@ -295,12 +295,15 @@ void multikey_simd2(unsigned char** strings, size_t n)
 void multikey_simd4(unsigned char** strings, size_t n)
 { multikey_simd<uint32_t>(strings, n, 0); }
 
-CONTESTANT_REGISTER_UCARRAY(multikey_simd1,
-		"rantala/multikey_simd with 1byte alphabet")
-CONTESTANT_REGISTER_UCARRAY(multikey_simd2,
-		"rantala/multikey_simd with 2byte alphabet")
-CONTESTANT_REGISTER_UCARRAY(multikey_simd4,
-		"rantala/multikey_simd with 4byte alphabet")
+CONTESTANT_REGISTER(multikey_simd1,
+                    "rantala/multikey_simd1",
+                    "multikey_simd with 1byte alphabet")
+CONTESTANT_REGISTER(multikey_simd2,
+                    "rantala/multikey_simd2",
+                    "multikey_simd with 2byte alphabet")
+CONTESTANT_REGISTER(multikey_simd4,
+                    "rantala/multikey_simd4",
+                    "multikey_simd with 4byte alphabet")
 
 template <typename CharT>
 static void
@@ -370,11 +373,14 @@ void multikey_simd_parallel2(unsigned char** strings, size_t n)
 void multikey_simd_parallel4(unsigned char** strings, size_t n)
 { multikey_simd_parallel<uint32_t>(strings, n, 0); }
 
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(multikey_simd_parallel1,
-                                     "rantala/multikey_simd_parallel with 1byte alphabet")
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(multikey_simd_parallel2,
-                                     "rantala/multikey_simd_parallel with 2byte alphabet")
-CONTESTANT_REGISTER_UCARRAY_PARALLEL(multikey_simd_parallel4,
-                                     "rantala/multikey_simd_parallel with 4byte alphabet")
+CONTESTANT_REGISTER_PARALLEL(multikey_simd_parallel1,
+                             "rantala/multikey_simd_parallel1",
+                             "multikey_simd_parallel with 1byte alphabet")
+CONTESTANT_REGISTER_PARALLEL(multikey_simd_parallel2,
+                             "rantala/multikey_simd_parallel2",
+                             "multikey_simd_parallel with 2byte alphabet")
+CONTESTANT_REGISTER_PARALLEL(multikey_simd_parallel4,
+                             "rantala/multikey_simd_parallel4",
+                             "multikey_simd_parallel with 4byte alphabet")
 
 } // namespace rantala

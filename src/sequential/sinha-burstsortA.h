@@ -355,6 +355,8 @@ burstsortA(string strings[], size_t scnt)
     return;
 }
 
-CONTESTANT_REGISTER_UCARRAY(burstsortA, "burstsortA Original Burstsort with arrays")
+CONTESTANT_REGISTER(burstsortA,
+                    "sinha/burstsortA",
+                    "burstsortA Original Burstsort with arrays")
 
 } // namespace sinha_burstsortA

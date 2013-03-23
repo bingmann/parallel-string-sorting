@@ -383,5 +383,6 @@ void nilsson_forward8(unsigned char **strings, size_t n)
     return frssort1(strings, n);
 }
 
-CONTESTANT_REGISTER_UCARRAY(nilsson_forward8,
-                            "Forward Radix Sort 8-bit by Stefan Nilsson")
+CONTESTANT_REGISTER(nilsson_forward8,
+                    "nilsson/forward8",
+                    "Forward Radix Sort 8-bit by Stefan Nilsson")
