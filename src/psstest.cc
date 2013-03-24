@@ -80,9 +80,10 @@ char*           g_string_databuff = NULL;
 std::vector<size_t> g_string_offsets;
 size_t          g_string_dprefix = 0;
 
-const char*     gopt_output = NULL;
+const char*     gopt_output = NULL; // argument -o, --output
 
-bool            gopt_suffixsort = false;
+bool            gopt_suffixsort = false; // argument --suffix
+bool            gopt_allthreads = false; // argument --allthreads
 
 static StatsCache g_statscache;
 
@@ -384,7 +385,7 @@ void Contestant_UCArray::real_run()
     else {
         g_statscache >> "status" << "failed";
     }
-    
+
     if (!g_string_dprefix)
         g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_datasize);
 
@@ -418,7 +419,11 @@ void Contestant_UCArray_Parallel::run()
         Contestant_UCArray::run();
 
         if (p == omp_get_num_procs()) break;
-        p = std::min( omp_get_num_procs(), 2 * p );
+
+        if (!gopt_allthreads)
+            p = std::min( omp_get_num_procs(), 2 * p );
+        else
+            p = std::min( omp_get_num_procs(), p+1 );
     }
 }
 
@@ -427,6 +432,7 @@ void print_usage(const char* prog)
     std::cerr << "Usage: " << prog << " [options] filename" << std::endl
               << "Options:" << std::endl
               << "  -a, --algo <match>          Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
+              << "  --allthreads                Run linear thread increase test from 1 to max_processors." << std::endl
               << "  -o, --output <path>         Write sorted strings to output file, terminate after first algorithm run." << std::endl
               << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
@@ -447,6 +453,7 @@ int main(int argc, char* argv[])
         { "size",    required_argument,  0, 's' },
         { "timeout", required_argument,  0, 'T' },
         { "suffix",  no_argument,        0, 1 },
+        { "allthreads", no_argument,    0, 2 },
         { 0,0,0,0 },
     };
 
@@ -513,6 +520,11 @@ int main(int argc, char* argv[])
         case 1:
             gopt_suffixsort = true;
             std::cerr << "Running as suffix sorter on input file." << std::endl;
+            break;
+
+        case 2:
+            gopt_allthreads = true;
+            std::cerr << "Running test with linear increasing thread count." << std::endl;
             break;
 
         default:

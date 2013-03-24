@@ -214,14 +214,14 @@ void SampleSortStep::sample(JobQueue& jobqueue)
         DBG(debug_splitter, "key " << toHex(splitter[i]));
 
         if (i != 0) {
-            key_type andSplit = splitter[i-1] ^ splitter[i];
+            key_type xorSplit = splitter[i-1] ^ splitter[i];
 
-            DBG1(debug_splitter, "    XOR -> " << toHex(andSplit) << " - ");
+            DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
 
-            DBG3(debug_splitter, count_high_zero_bits(andSplit) << " bits = "
-                << count_high_zero_bits(andSplit) / 8 << " chars lcp");
+            DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
+                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-            splitter_lcp[i] = count_high_zero_bits(andSplit) / 8;
+            splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
         }
 
         j += oversample_factor;
