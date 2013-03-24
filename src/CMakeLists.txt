@@ -18,6 +18,7 @@ set(SOURCES
   parallel/bingmann-parallel_radix_sort3.cc
   parallel/bingmann-parallel_sample_sortBS.cc
   parallel/bingmann-parallel_sample_sortBSC.cc
+  parallel/bingmann-parallel_sample_sortBSCA.cc
   parallel/bingmann-parallel_sample_sortBT.cc
   parallel/bingmann-parallel_sample_sortBTC.cc
 )
