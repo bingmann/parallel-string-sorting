@@ -651,7 +651,7 @@ void sample_sortBSCA(string* strings, size_t n, size_t depth)
 void bingmann_sample_sortBSCA(string* strings, size_t n) { return sample_sortBSCA(strings,n,0); }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBSCA, "bingmann/sample_sortBSCA",
-                    "bingmann/sample_sortBSCA (binary search, assembler cmov, bkt cache)")
+                    "bingmann/sample_sortBSCA (binary search, assembler CMOV, bkt cache)")
 
 // ------------------------------------------------------------------------------------------------------------------------
 

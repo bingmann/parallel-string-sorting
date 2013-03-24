@@ -174,6 +174,7 @@ inline int count_high_zero_bits<uint32_t>(const uint32_t& t)
 template <>
 inline int count_high_zero_bits<uint64_t>(const uint64_t& t)
 {
+    if (t == 0) return sizeof(t) * 8;
     return __builtin_clzll(t);
 }
 
