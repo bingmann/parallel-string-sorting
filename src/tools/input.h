@@ -139,13 +139,13 @@ bool load_compressed(const std::string& path)
     const char* decompressor = NULL;
 
     if ( path.substr(path.size()-3,3) == ".gz" )
-        decompressor = "zcat";
+        decompressor = "gzip";
     else if ( path.substr(path.size()-4,4) == ".bz2" )
-        decompressor = "bzcat";
+        decompressor = "bzip2";
     else if ( path.substr(path.size()-3,3) == ".xz" )
-        decompressor = "xzcat";
+        decompressor = "xz";
     else if ( path.substr(path.size()-4,4) == ".lzo" )
-        decompressor = "lzcat";
+        decompressor = "lzop";
 
     if (!decompressor) return false;
 
@@ -170,7 +170,10 @@ bool load_compressed(const std::string& path)
 
     // create pipe, fork and call decompressor as child
     int pipefd[2]; // pipe[0] = read, pipe[1] = write
-    pipe(pipefd);
+    if (pipe(pipefd) != 0) {
+        std::cerr << "Error creating pipe: " << strerror(errno) << "\n";
+        exit(-1);
+    }
 
     pid_t pid = fork();
     if (pid == 0)
@@ -178,7 +181,7 @@ bool load_compressed(const std::string& path)
         close(pipefd[0]); // close read end
         dup2(pipefd[1], STDOUT_FILENO); // replace stdout with pipe
         
-        execlp(decompressor, decompressor, path.c_str(), NULL);
+        execlp(decompressor, decompressor, "-dc", path.c_str(), NULL);
 
         std::cerr << "Pipe execution failed: " << strerror(errno) << std::endl;
         close(pipefd[1]); // close write end
@@ -193,7 +196,7 @@ bool load_compressed(const std::string& path)
         exit(-1);
     }
 
-    // read complete file
+    // read complete file from decompressor child's pipe
     size_t rpos = 0;
     while ( rpos < size )
     {
@@ -234,7 +237,7 @@ bool load_compressed(const std::string& path)
     for (size_t i = size; i < size+9; ++i)
         stringdata[i] = 0;
 
-    // kill and wait for child program
+    // kill and reap child program
     close(pipefd[1]);
 
     kill(pid, SIGTERM);
