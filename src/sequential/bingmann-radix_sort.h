@@ -366,19 +366,17 @@ void bingmann_msd_CI4(string* strings, size_t n) { msd_CI4(strings, n, 0); }
 CONTESTANT_REGISTER(bingmann_msd_CI4, "bingmann/msd_CI4",
                     "bingmann/msd_CI4 (CI3 with swap cache)")
 
-static void
-msd_CI5(string* strings, size_t n, size_t depth)
+static inline size_t*
+msd_CI5_bktsize(string* strings, size_t n, size_t depth)
 {
-    if (n < g_inssort_threshold)
-        return inssort::inssort(strings, n, depth);
-
     // cache characters
     uint8_t* charcache = new uint8_t[n];
     for (size_t i=0; i < n; ++i)
         charcache[i] = strings[i][depth];
 
     // count character occurances
-    size_t bktsize[256] = { 0 };
+    size_t* bktsize = new size_t[256];
+    memset(bktsize, 0, 256 * sizeof(size_t));
     for (size_t i=0; i < n; ++i)
         ++bktsize[ charcache[i] ];
 
@@ -407,6 +405,17 @@ msd_CI5(string* strings, size_t n, size_t depth)
 
     delete [] charcache;
 
+    return bktsize;
+}
+
+static void
+msd_CI5(string* strings, size_t n, size_t depth)
+{
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, depth);
+
+    size_t* bktsize = msd_CI5_bktsize(strings, n, depth);
+
     // recursion
     size_t bsum = bktsize[0];
     for (size_t i=1; i < 256; ++i) {
@@ -414,6 +423,8 @@ msd_CI5(string* strings, size_t n, size_t depth)
         msd_CI5(strings+bsum, bktsize[i], depth+1);
         bsum += bktsize[i];
     }
+
+    delete [] bktsize;
 }
 
 void bingmann_msd_CI5(string* strings, size_t n) { msd_CI5(strings, n, 0); }
