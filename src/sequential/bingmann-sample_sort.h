@@ -31,9 +31,9 @@ using namespace stringtools;
 
 typedef uint64_t key_type;
 
-static const size_t l2cache = 256*1024;
+static const size_t l2cache = 128*1024;
 
-static const size_t g_samplesort_smallsort = 128*1024;
+static const size_t g_samplesort_smallsort = 128;
 
 /// binary search on splitter array for bucket number
 static inline unsigned int
@@ -98,7 +98,7 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 
     key_type* samples = new key_type[ samplesize ];
 
-    LCGRandom rng(9384234);
+    LCGRandom rng(&samples);
 
     for (unsigned int i = 0; i < samplesize; ++i)
     {
@@ -137,7 +137,8 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*leaves+1;
 
-    size_t bktsize[2*leaves+1] = { 0 };
+    size_t* bktsize = new size_t[bktnum];
+    memset(bktsize, 0, bktnum * sizeof(size_t));
 
     for (size_t si = 0; si < n; ++si)
     {
@@ -230,6 +231,8 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
+
+    delete [] bktsize;
 }
 
 void bingmann_sample_sortBS(string* strings, size_t n) { return sample_sortBS(strings,n,0); }
@@ -267,7 +270,7 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 
     key_type* samples = new key_type[ samplesize ];
 
-    LCGRandom rng(9384234);
+    LCGRandom rng(&samples);
 
     for (unsigned int i = 0; i < samplesize; ++i)
     {
@@ -306,7 +309,8 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*leaves+1;
 
-    size_t bktsize[2*leaves+1] = { 0 };
+    size_t* bktsize = new size_t[bktnum];
+    memset(bktsize, 0, bktnum * sizeof(size_t));
 
     uint16_t* bktcache = new uint16_t[n];
 
@@ -396,6 +400,8 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
+
+    delete [] bktsize;
 }
 
 void bingmann_sample_sortBSC(string* strings, size_t n) { return sample_sortBSC(strings,n,0); }
@@ -517,7 +523,7 @@ void sample_sortBSCA(string* strings, size_t n, size_t depth)
 
     key_type* samples = new key_type[ samplesize ];
 
-    LCGRandom rng(9384234);
+    LCGRandom rng(&samples);
 
     for (unsigned int i = 0; i < samplesize; ++i)
     {
@@ -556,7 +562,8 @@ void sample_sortBSCA(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*leaves+1;
 
-    size_t bktsize[2*leaves+1] = { 0 };
+    size_t* bktsize = new size_t[bktnum];
+    memset(bktsize, 0, bktnum * sizeof(size_t));
 
     uint16_t* bktcache = new uint16_t[n];
 
@@ -646,6 +653,8 @@ void sample_sortBSCA(string* strings, size_t n, size_t depth)
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
+
+    delete [] bktsize;
 }
 
 void bingmann_sample_sortBSCA(string* strings, size_t n) { return sample_sortBSCA(strings,n,0); }
@@ -655,8 +664,9 @@ CONTESTANT_REGISTER(bingmann_sample_sortBSCA, "bingmann/sample_sortBSCA",
 
 // ------------------------------------------------------------------------------------------------------------------------
 
-/// binary search on splitter array for bucket number
-inline unsigned int find_bkt_splittertree(const key_type& key, const key_type* splitter, const key_type* splitter_tree0, size_t numsplitters)
+/// search in splitter tree for bucket number
+static inline unsigned int
+find_bkt_splittertree(const key_type& key, const key_type* splitter, const key_type* splitter_tree0, size_t numsplitters)
 {
 #if 1
     // binary tree traversal without left branch
@@ -733,7 +743,7 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
     static const size_t numsplitters = (1 << logfloor_<numsplitters2>::value) - 1;
 #endif
 
-    if (depth != 0 && n < g_samplesort_smallsort)
+    if (n < g_samplesort_smallsort)
     {
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
@@ -747,7 +757,7 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     key_type* samples = new key_type[ samplesize ];
 
-    LCGRandom rng(9384234);
+    LCGRandom rng(&samples);
 
     for (unsigned int i = 0; i < samplesize; ++i)
     {
@@ -824,7 +834,8 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*numsplitters+1;
 
-    size_t bktsize[bktnum] = { 0 };
+    size_t* bktsize = new size_t[bktnum];
+    memset(bktsize, 0, bktnum * sizeof(size_t));
 
     for (size_t si = 0; si < n; ++si)
     {
@@ -917,6 +928,8 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
+
+    delete [] bktsize;
 }
 
 void bingmann_sample_sortBT(string* strings, size_t n) { return sample_sortBT(strings,n,0); }
@@ -926,7 +939,7 @@ CONTESTANT_REGISTER(bingmann_sample_sortBT, "bingmann/sample_sortBT",
 
 // ------------------------------------------------------------------------------------------------------------------------
 
-/// Variant 4 of string sample-sort: use super-scalar binary search on splitters, without index caching.
+/// Variant 4 of string sample-sort: use super-scalar binary search on splitters, with index caching.
 void sample_sortBTC(string* strings, size_t n, size_t depth)
 {
 #if 0
@@ -938,14 +951,20 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     // splitters            + bktsize
     // n * sizeof(key_type) + (2*n+1) * sizeof(size_t) <= l2cache
 
-    static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
+    //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
+    //static const size_t numsplitters2 = l2cache / sizeof(key_type);
+    static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (2 * sizeof(size_t));
+
     //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
 
     static const size_t numsplitters = (1 << logfloor_<numsplitters2>::value) - 1;
 #endif
 
-    if (depth != 0 && n < g_samplesort_smallsort)
+    //std::cout << "l2cache : " << l2cache << " - numsplitter " << numsplitters << "\n";
+
+    if (n < g_smallsort)
     {
+        //return inssort::inssort(strings, n, depth);
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
 
@@ -953,12 +972,12 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     // step 1: select splitters with oversampling
 
-    const size_t oversample_factor = 4;
+    const size_t oversample_factor = 1;
     size_t samplesize = oversample_factor * numsplitters;
 
     key_type* samples = new key_type[ samplesize ];
 
-    LCGRandom rng(9384234);
+    LCGRandom rng(&samples);
 
     for (unsigned int i = 0; i < samplesize; ++i)
     {
@@ -967,8 +986,8 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     std::sort(samples, samples + samplesize);
 
-    key_type splitter[numsplitters];
-    unsigned char splitter_lcp[numsplitters];
+    key_type* splitter = new key_type[numsplitters];
+    unsigned char* splitter_lcp = new unsigned char[numsplitters];
 
     DBG(debug_splitter, "splitter:");
     splitter_lcp[0] = 0; // sentinel for first < everything bucket
@@ -995,7 +1014,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     // step 2.1: construct splitter tree to perform binary search
 
-    key_type splitter_tree[numsplitters];
+    key_type* splitter_tree = new key_type[numsplitters];
 
     {
         size_t t = 0;
@@ -1020,6 +1039,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
             highbit >>= 1;
         }
     }
+    delete [] splitter_tree;
 
     if (debug_splitter_tree)
     {
@@ -1033,11 +1053,13 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     // step 2.2: classify all strings and count bucket sizes
 
+#if 0
     uint16_t* bktcache = new uint16_t[n];
 
     static const size_t bktnum = 2*numsplitters+1;
 
-    size_t bktsize[bktnum] = { 0 };
+    size_t* bktsize = new size_t[bktnum];
+    memset(bktsize, 0, bktnum * sizeof(size_t));
 
     for (size_t si = 0; si < n; ++si)
     {
@@ -1051,6 +1073,32 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
         bktcache[si] = b;
         ++bktsize[ b ];
     }
+
+#else
+    uint16_t* bktcache = new uint16_t[n];
+
+    static const size_t bktnum = 2*numsplitters+1;
+
+    for (size_t si = 0; si < n; ++si)
+    {
+        // binary search in splitter with equal check
+        key_type key = get_char<key_type>(strings[si], depth);
+
+        unsigned int b = find_bkt_splittertree(key, splitter, splitter_tree, numsplitters);
+
+        assert(b < bktnum);
+
+        bktcache[si] = b;
+    }
+
+    delete [] splitter_tree;
+
+    size_t* bktsize = new size_t[bktnum];
+    memset(bktsize, 0, bktnum * sizeof(size_t));
+
+    for (size_t si = 0; si < n; ++si)
+        ++bktsize[ bktcache[si] ];
+#endif
 
     if (debug_bucketsize)
     {
@@ -1095,7 +1143,8 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     // step 5: recursion
 
     size_t bsum = 0;
-    for (size_t i=0; i < bktnum-1; ++i) {
+    for (size_t i=0; i < bktnum-1; ++i)
+    {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
@@ -1125,11 +1174,22 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     }
     bsum += bktsize[bktnum-1];
     assert(bsum == n);
+
+    delete [] splitter_lcp;
+    delete [] splitter;
+    delete [] bktsize;
 }
 
-void bingmann_sample_sortBTC(string* strings, size_t n) { return sample_sortBTC(strings,n,0); }
+void bingmann_sample_sortBTC(string* strings, size_t n)
+{
+    g_statscache >> "l2cache" << l2cache;
+
+    return sample_sortBTC(strings,n,0);
+}
 
 CONTESTANT_REGISTER(bingmann_sample_sortBTC, "bingmann/sample_sortBTC",
                     "bingmann/sample_sortBTC (binary tree, bkt cache)")
+
+// ------------------------------------------------------------------------------------------------------------------------
 
 } // namespace bingmann_sample_sort
