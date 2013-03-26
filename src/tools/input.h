@@ -22,76 +22,61 @@
 
 namespace input {
 
-/// Read a compressed file containing newline terminated strings
-bool readfile_lines(const std::string& path)
+/// Allocate space in g_string_data
+char* allocate_stringdata(size_t size, const std::string& path)
 {
-    FILE* file;
-    size_t filesize = 0;
-
-    if (path.size() >= 4 &&
-        ( path.substr(path.size()-3,3) == ".gz" ||
-          path.substr(path.size()-4,4) == ".bz2" ||
-          path.substr(path.size()-3,3) == ".xz" )
-        )
-    {
-        // extract filesize from filename
-        std::string::size_type i = path.rfind('.')-1;
-        size_t v = 1;
-
-        while ( isdigit(path[i]) ) {
-            filesize += (path[i] - '0') * v;
-            v *= 10; --i;
-        }
-        if (filesize == 0 || path[i] != '.') {
-            std::cerr << "\nCould not find decompressed size in filename " << path << "\n";
-            return false;
-        }
-
-        if (!(file = fzopen(path.c_str(), "r"))) {
-            std::cerr << "\n" << strerror(errno) << "\n";
-            return false;
-        }
-    }
-    else
-    {
-        if (!(file = fopen(path.c_str(), "r"))) {
-            std::cerr << "\n" << strerror(errno) << "\n";
-            return false;
-        }
-
-        if (fseek(file,0,SEEK_END)) {
-            std::cerr << "\n" << strerror(errno) << "\n";
-            fclose(file);
-            return false;
-        }
-
-        filesize = ftell(file);
-
-        rewind(file);
-    }
-
-    // apply size limit
-    if (gopt_inputsize && filesize > gopt_inputsize)
-        filesize = gopt_inputsize;
-
     // free previous data file
-    if (g_string_data) free(g_string_databuff);
+    if (g_string_databuff)
+        free(g_string_databuff);
 
     // allocate one continuous area of memory
-    std::cerr << "Allocating " << filesize << " bytes in RAM, reading " << path << "\n";
-    char* stringdata = (char*)malloc(filesize + 2 + 8);
+    std::cerr << "Allocating " << size << " bytes in RAM, reading " << path << "\n";
+    char* stringdata = (char*)malloc(size + 2 + 8);
 
     // CPL-burstsort needs terminator immediately before and after stringdata
     g_string_databuff = stringdata;
     stringdata[0] = 0;
-    stringdata[filesize+1] = 0;
+    stringdata[size+1] = 0;
     ++stringdata;
 
     g_string_data = stringdata;
-    g_string_datasize = filesize;
+    g_string_datasize = size;
 
     if (!stringdata) {
         std::cerr << "\n" << strerror(errno) << "\n";
+        return NULL;
+    }
+
+    return stringdata;
+}
+
+/// Read a plain file containing newline terminated strings
+bool load_plain(const std::string& path)
+{
+    FILE* file;
+    size_t size = 0;
+
+    if (!(file = fopen(path.c_str(), "r"))) {
+        std::cerr << "\n" << strerror(errno) << "\n";
+        return false;
+    }
+
+    if (fseek(file,0,SEEK_END)) {
+        std::cerr << "\n" << strerror(errno) << "\n";
+        fclose(file);
+        return false;
+    }
+
+    size = ftell(file);
+    rewind(file);
+
+    // apply size limit
+    if (gopt_inputsize && size > gopt_inputsize)
+        size = gopt_inputsize;
+
+    // create memory area
+    char* stringdata = allocate_stringdata(size, path);
+    if (!stringdata) {
         fclose(file);
         return false;
     }
@@ -102,10 +87,10 @@ bool readfile_lines(const std::string& path)
 
     // read complete file
     size_t rpos = 0;
-    while ( rpos < filesize )
+    while ( rpos < size )
     {
-        size_t batch = std::min<size_t>(8*1024*1024, filesize - rpos);
-        if (batch + rpos > filesize) batch = filesize - rpos;
+        size_t batch = std::min<size_t>(8*1024*1024, size - rpos);
+        if (batch + rpos > size) batch = size - rpos;
 
         ssize_t rb = fread(stringdata+rpos, sizeof(char), batch, file);
 
@@ -125,7 +110,7 @@ bool readfile_lines(const std::string& path)
             {
                 if (stringdata[i] == '\n') {
                     stringdata[i] = 0;
-                    if (i+1 < filesize)
+                    if (i+1 < size)
                         g_string_offsets.push_back(i+1);
                 }
             }
@@ -135,13 +120,126 @@ bool readfile_lines(const std::string& path)
     }
 
     // force terminatation of last string
-    stringdata[ filesize-1 ] = 0;
+    stringdata[ size-1 ] = 0;
 
     // add more termination
-    for (size_t i = filesize; i < filesize+9; ++i)
+    for (size_t i = size; i < size+9; ++i)
         stringdata[i] = 0;
   
     fclose(file);
+
+    return true;
+}
+
+/// Read a compressed file containing newline terminated strings
+bool load_compressed(const std::string& path)
+{
+    if (path.size() < 4) return false;
+
+    const char* decompressor = NULL;
+
+    if ( path.substr(path.size()-3,3) == ".gz" )
+        decompressor = "zcat";
+    else if ( path.substr(path.size()-4,4) == ".bz2" )
+        decompressor = "bzcat";
+    else if ( path.substr(path.size()-3,3) == ".xz" )
+        decompressor = "xzcat";
+    else if ( path.substr(path.size()-4,4) == ".lzo" )
+        decompressor = "lzcat";
+
+    if (!decompressor) return false;
+
+    size_t size = 0;
+
+    // extract filesize from filename
+    std::string::size_type i = path.rfind('.')-1;
+    size_t v = 1;
+
+    while ( isdigit(path[i]) ) {
+        size += (path[i] - '0') * v;
+        v *= 10; --i;
+    }
+    if (size == 0 || path[i] != '.') {
+        std::cerr << "\nCould not find decompressed size in filename " << path << "\n";
+        return false;
+    }
+
+    // apply size limit
+    if (gopt_inputsize && size > gopt_inputsize)
+        size = gopt_inputsize;
+
+    // create pipe, fork and call decompressor as child
+    int pipefd[2]; // pipe[0] = read, pipe[1] = write
+    pipe(pipefd);
+
+    pid_t pid = fork();
+    if (pid == 0)
+    {
+        close(pipefd[0]); // close read end
+        dup2(pipefd[1], STDOUT_FILENO); // replace stdout with pipe
+        
+        execlp(decompressor, decompressor, path.c_str(), NULL);
+
+        std::cerr << "Pipe execution failed: " << strerror(errno) << std::endl;
+        close(pipefd[1]); // close write end
+        exit(-1);
+    }
+
+    close(pipefd[1]); // close write end
+
+    // create memory area
+    char* stringdata = allocate_stringdata(size, path);
+    if (!stringdata) {
+        exit(-1);
+    }
+
+    // read complete file
+    size_t rpos = 0;
+    while ( rpos < size )
+    {
+        size_t batch = std::min<size_t>(8*1024*1024, size - rpos);
+        if (batch + rpos > size) batch = size - rpos;
+
+        ssize_t rb = read(pipefd[0], stringdata+rpos, batch);
+
+        if (rb <= 0) {
+            std::cerr << "Error reading pipe: " << strerror(errno) << "\n";
+            close(pipefd[1]);
+            exit(-1);
+        }
+
+        // iterate over read buffer, identify lines and replace \n -> \0
+        for (size_t i = rpos; i < rpos + rb; ++i)
+        {
+            if (gopt_suffixsort) {
+                g_string_offsets.push_back(i);
+            }
+            else
+            {
+                if (stringdata[i] == '\n') {
+                    stringdata[i] = 0;
+                    if (i+1 < size)
+                        g_string_offsets.push_back(i+1);
+                }
+            }
+        }
+
+        rpos += rb;
+    }
+
+    // force terminatation of last string
+    stringdata[ size-1 ] = 0;
+  
+    // add more termination
+    for (size_t i = size; i < size+9; ++i)
+        stringdata[i] = 0;
+
+    // kill and wait for child program
+    close(pipefd[1]);
+
+    kill(pid, SIGTERM);
+    int status;
+    wait(&status);
 
     return true;
 }
@@ -156,29 +254,15 @@ bool generate_random(const std::string& letters)
 
     size_t size = gopt_inputsize;
 
-    // free previous data file
-    if (g_string_data) free(g_string_databuff);
-
-    // allocate one continuous area of memory
-    std::cerr << "Allocating " << size << " bytes in RAM, generating random data.\n";
-    char* stringdata = (char*)malloc(size + 2 + 8);
-
-    // CPL-burstsort needs terminator immediately before and after stringdata
-    g_string_databuff = stringdata;
-    stringdata[0] = 0;
-    stringdata[size+1] = 0;
-    ++stringdata;
-
-    g_string_data = stringdata;
-    g_string_datasize = size;
+    // create memory area
+    char* stringdata = allocate_stringdata(size, "random");
 
     if (!stringdata) {
-        std::cerr << "\n" << strerror(errno) << "\n";
         return false;
     }
 
     g_string_offsets.clear();
-    LCGRandom rng(239423494);
+    LCGRandom rng(1234567);
     size_t slen = 0;
 
     for (size_t i = 0; i < size; ++i)
@@ -250,12 +334,24 @@ bool parse_filesize(const char* str, size_t& outsize)
 /// Load an input set into memory
 bool load(const std::string& path)
 {
+    double ts1 = omp_get_wtime();
+
     if (load_artifical(path)) {
-        return true;
+    }
+    else if (load_compressed(path)) {
+    }
+    else if (load_plain(path)) {
     }
     else {
-        return readfile_lines(path);
+        return false;
     }
+
+    double ts2 = omp_get_wtime();
+
+    std::cout << "Loaded input in " << ts2-ts1 << " sec with "
+              << (g_string_datasize / (ts2-ts1) / 1024.0 / 1024.0) << " MiB/s" << std::endl;
+
+    return true;
 }
 
 } // namespace input

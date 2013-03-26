@@ -23,7 +23,7 @@ set(SOURCES
   parallel/bingmann-parallel_sample_sortBTC.cc
 )
 
-set(LIBS zio lfds ${GMP_LIBRARIES})
+set(LIBS lfds ${GMP_LIBRARIES})
 
 if(WITH_MALLOC_COUNT)
 

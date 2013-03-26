@@ -75,8 +75,8 @@ int             gopt_timeout = 0;
 
 const char*     g_dataname = NULL;
 const char*     g_string_data = NULL;
-size_t          g_string_datasize = 0;
 char*           g_string_databuff = NULL;
+size_t          g_string_datasize = 0;
 std::vector<size_t> g_string_offsets;
 size_t          g_string_dprefix = 0;
 
@@ -240,7 +240,7 @@ void Contestant_UCArray::run()
         if (gopt_timeout) alarm(gopt_timeout); // terminate child program after use_timeout seconds
         real_run();
 
-        if (g_string_data) free(g_string_databuff);
+        if (g_string_databuff) free(g_string_databuff);
         exit(0);
     }
 
@@ -558,7 +558,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (g_string_data) free(g_string_databuff);
+    if (g_string_databuff) free(g_string_databuff);
 
     return 0;
 }
