@@ -52,7 +52,6 @@
 #include <boost/type_traits/integral_constant.hpp>
 
 #include "src/config.h"
-#include "zio.h"
 
 #include "tools/statsfile.h"
 
