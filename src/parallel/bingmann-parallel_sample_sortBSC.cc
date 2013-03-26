@@ -200,7 +200,7 @@ void SampleSortStep::sample(JobQueue& jobqueue)
 
     key_type samples[ samplesize ];
 
-    LCGRandom rng(9384234);
+    LCGRandom rng(&samples);
 
     for (unsigned int i = 0; i < samplesize; ++i)
     {

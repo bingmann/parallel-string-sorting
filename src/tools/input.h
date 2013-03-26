@@ -79,7 +79,7 @@ bool readfile_lines(const std::string& path)
 
     // allocate one continuous area of memory
     std::cerr << "Allocating " << filesize << " bytes in RAM, reading " << path << "\n";
-    char* stringdata = (char*)malloc(filesize + 2);
+    char* stringdata = (char*)malloc(filesize + 2 + 8);
 
     // CPL-burstsort needs terminator immediately before and after stringdata
     g_string_databuff = stringdata;
@@ -136,6 +136,10 @@ bool readfile_lines(const std::string& path)
 
     // force terminatation of last string
     stringdata[ filesize-1 ] = 0;
+
+    // add more termination
+    for (size_t i = filesize; i < filesize+9; ++i)
+        stringdata[i] = 0;
   
     fclose(file);
 
@@ -157,7 +161,7 @@ bool generate_random(const std::string& letters)
 
     // allocate one continuous area of memory
     std::cerr << "Allocating " << size << " bytes in RAM, generating random data.\n";
-    char* stringdata = (char*)malloc(size + 2);
+    char* stringdata = (char*)malloc(size + 2 + 8);
 
     // CPL-burstsort needs terminator immediately before and after stringdata
     g_string_databuff = stringdata;
@@ -192,6 +196,10 @@ bool generate_random(const std::string& letters)
 
     // force terminatation of last string
     stringdata[ size-1 ] = 0;
+
+    // add more termination
+    for (size_t i = size; i < size+9; ++i)
+        stringdata[i] = 0;
 
     return true;
 }

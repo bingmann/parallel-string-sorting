@@ -103,6 +103,7 @@ inline uint32_t get_char<uint32_t>(string str, size_t depth)
 template <>
 inline uint64_t get_char<uint64_t>(string str, size_t depth)
 {
+#if 0
     uint64_t v = 0;
     if (str[depth] == 0) return v;
     v = (uint64_t(str[depth]) << 56); ++str;
@@ -120,6 +121,24 @@ inline uint64_t get_char<uint64_t>(string str, size_t depth)
     v |= (uint64_t(str[depth]) << 8); ++str;
     v |= (uint64_t(str[depth]) << 0);
     return v;
+#else
+    uint64_t v = __builtin_bswap64( *(uint64_t*)(str+depth) );
+    if ( (v & 0xFF00000000000000LLU) == 0 )
+        return 0;
+    else if (  (v & 0x00FF000000000000LLU) == 0 )
+        return (v & 0xFFFF000000000000LLU);
+    else if (  (v & 0x0000FF0000000000LLU) == 0 )
+        return (v & 0xFFFFFF0000000000LLU);
+    else if (  (v & 0x000000FF00000000LLU) == 0 )
+        return (v & 0xFFFFFFFF00000000LLU);
+    else if (  (v & 0x00000000FF000000LLU) == 0 )
+        return (v & 0xFFFFFFFFFF000000LLU);
+    else if (  (v & 0x0000000000FF0000LLU) == 0 )
+        return (v & 0xFFFFFFFFFFFF0000LLU);
+    else if (  (v & 0x000000000000FF00LLU) == 0 )
+        return (v & 0xFFFFFFFFFFFFFF00LLU);
+    return v;
+#endif
 }
 
 template <>

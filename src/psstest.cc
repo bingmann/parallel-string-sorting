@@ -90,9 +90,9 @@ static StatsCache g_statscache;
 // file name of statistics output
 static const char* statsfile = "pss-runs1.txt";
 
-//size_t g_smallsort = 64;
+size_t          g_smallsort = 0;
 
-static const bool use_forkrun = true;
+static const bool use_forkrun = false;
 static const bool use_forkdataload = false;
 
 // *** Tools and Algorithms
@@ -329,7 +329,8 @@ void Contestant_UCArray::real_run()
                  >> "char_count" << g_string_datasize
                  >> "string_count" << stringptr.size();
 
-    //g_statscache >> "smallsort" << g_smallsort;
+    if (g_smallsort)
+        g_statscache >> "smallsort" << g_smallsort;
 
     if (repeats > 1)
         g_statscache >> "repeats" << repeats;
@@ -548,7 +549,7 @@ int main(int argc, char* argv[])
              gopt_inputsize *= 2)
         {
             // iterate over small sort size
-            //for (g_smallsort = 64; g_smallsort < 512; g_smallsort += 8)
+            //for (g_smallsort = 1*1024*1024; g_smallsort <= 1*1024*1024; g_smallsort *= 2)
             {
                 getContestSingleton()->run_contest(argv[optind]);
             }

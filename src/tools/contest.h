@@ -25,6 +25,7 @@
 #include <vector>
 
 extern int pss_num_threads;
+extern size_t g_small_sort;
 
 class Contestant;
 

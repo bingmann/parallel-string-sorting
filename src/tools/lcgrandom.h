@@ -27,6 +27,7 @@ private:
     size_t      xn;
 public:
     inline LCGRandom(size_t seed) : xn(seed) { }
+    inline LCGRandom(void* ptrseed) : xn((size_t)ptrseed) { }
     inline size_t operator()() {
         xn = 0x27BB2EE687B0B0FDLLU * xn + 0xB504F32DLU;
         return xn;
