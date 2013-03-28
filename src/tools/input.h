@@ -248,7 +248,7 @@ bool load_compressed(const std::string& path)
 }
 
 /// Generate artificial random input with given base letter set.
-bool generate_random(const std::string& letters)
+bool generate_random(const std::string& path, const std::string& letters)
 {
     if (!gopt_inputsize) {
         std::cerr << "Random input size must be specified via '-s <size>'\n";
@@ -258,7 +258,7 @@ bool generate_random(const std::string& letters)
     size_t size = gopt_inputsize;
 
     // create memory area
-    char* stringdata = allocate_stringdata(size, "random");
+    char* stringdata = allocate_stringdata(size, path);
 
     if (!stringdata) {
         return false;
@@ -291,20 +291,73 @@ bool generate_random(const std::string& letters)
     return true;
 }
 
+/// Generate artificial random input in exactly the same way as sinha's
+/// randomstrings.c does.
+bool generate_sinha_randomASCII()
+{
+    if (!gopt_inputsize) {
+        std::cerr << "Random input size must be specified via '-s <size>'\n";
+        return false;
+    }
+
+    size_t size = gopt_inputsize;
+
+    // create memory area
+    char* stringdata = allocate_stringdata(size, "randomASCII");
+    if (!stringdata) return false;
+
+    g_string_offsets.clear();
+    srandom(73802);
+
+    size_t slen = (rand() % 20); // excludes zero terminator
+    g_string_offsets.push_back(0);
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        if (i == slen) // end of string
+        {
+            stringdata[i] = 0;
+            slen += 1 + (rand() % 20); // includes zero terminator of this
+            if (i+1 < size)
+                g_string_offsets.push_back(i+1);
+        }
+        else
+        {
+            int value = rand() % 127;
+            if (value > 32 && value < 127)
+                stringdata[i] = value;
+            else
+                i--;
+        }
+    }
+
+    // force terminatation of last string
+    stringdata[ size-1 ] = 0;
+
+    // add more termination
+    for (size_t i = size; i < size+9; ++i)
+        stringdata[i] = 0;
+
+    return true;
+}
+
 /// Run through a list of artificial inputs and maybe generate one.
 bool load_artifical(const std::string& path)
 {
-    if (path == "random") {
-        return generate_random("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+    if (path == "random10") {
+        return generate_random("random10", "0123456789");
     }
-    else if (path == "random10") {
-        return generate_random("0123456789");
+    else if (path == "random62") {
+        return generate_random("random62", "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
     }
     else if (path == "random255")
     {
         std::string letters(255,0);
         for (int i = 0; i < 255; ++i) letters[i] = (char)(i+1);
-        return generate_random(letters);
+        return generate_random("random255", letters);
+    }
+    else if (path == "randomASCII") {
+        return generate_sinha_randomASCII();
     }
     else
         return false;

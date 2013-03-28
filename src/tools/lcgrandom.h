@@ -20,10 +20,10 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-/// Simple linear congruential random generator
+/// Simple 64-bit linear congruential random generator
 class LCGRandom
 {
-private:
+protected:
     size_t      xn;
 public:
     inline LCGRandom(size_t seed) : xn(seed) { }

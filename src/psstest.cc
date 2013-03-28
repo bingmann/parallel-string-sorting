@@ -79,6 +79,7 @@ size_t          g_string_datasize = 0;
 std::vector<size_t> g_string_offsets;
 size_t          g_string_dprefix = 0;
 
+const char*     gopt_inputwrite = NULL; // argument -i, --input
 const char*     gopt_output = NULL; // argument -o, --output
 
 bool            gopt_suffixsort = false; // argument --suffix
@@ -91,8 +92,8 @@ static const char* statsfile = "pss-runs1.txt";
 
 size_t          g_smallsort = 0;
 
-static const bool use_forkrun = false;
-static const bool use_forkdataload = false;
+bool            gopt_forkrun = false;
+bool            gopt_forkdataload = false;
 
 // *** Tools and Algorithms
 
@@ -171,11 +172,21 @@ static inline bool gopt_algorithm_match(const char* algoname)
     return false;
 }
 
+static inline void maybe_inputwrite()
+{
+    if (!gopt_inputwrite) return;
+
+    std::cout << "Writing unsorted input to " << gopt_inputwrite << std::endl;
+    std::ofstream f(gopt_inputwrite);
+    for (size_t i = 0; i < g_string_offsets.size(); ++i)
+        f << g_string_data + g_string_offsets[i] << "\n";
+}
+
 void Contest::run_contest(const char* path)
 {
     g_dataname = path;
 
-    if (!use_forkdataload)
+    if (!gopt_forkdataload)
     {
         // read input datafile
         if (!input::load(g_dataname))
@@ -183,6 +194,7 @@ void Contest::run_contest(const char* path)
 
         g_string_dprefix = 0;
 
+        maybe_inputwrite();
         std::cerr << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
     }
 
@@ -220,12 +232,12 @@ void Contest::list_contentants()
 
 void Contestant_UCArray::run()
 {
-    if (!use_forkrun) return real_run();
+    if (!gopt_forkrun) return real_run();
 
     pid_t p = fork();
     if (p == 0)
     {
-        if (use_forkdataload)
+        if (gopt_forkdataload)
         {
             // read input datafile
             if (!input::load(g_dataname))
@@ -233,10 +245,11 @@ void Contestant_UCArray::run()
 
             g_string_dprefix = 0;
 
+            maybe_inputwrite();
             std::cerr << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
         }
 
-        if (gopt_timeout) alarm(gopt_timeout); // terminate child program after use_timeout seconds
+        if (gopt_timeout) alarm(gopt_timeout); // terminate child program after gopt_timeout seconds
         real_run();
 
         if (g_string_databuff) free(g_string_databuff);
@@ -433,6 +446,8 @@ void print_usage(const char* prog)
               << "Options:" << std::endl
               << "  -a, --algo <match>          Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
               << "  --allthreads                Run linear thread increase test from 1 to max_processors." << std::endl
+              << "  -D, --datafork              Fork before running algorithm and load data within fork!" << std::endl
+              << "  -i, --input <path>          Write unsorted input strings to file, usually for checking." << std::endl
               << "  -o, --output <path>         Write sorted strings to output file, terminate after first algorithm run." << std::endl
               << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
@@ -449,9 +464,11 @@ int main(int argc, char* argv[])
         { "help",    no_argument,        0, 'h' },
         { "maxsize", required_argument,  0, 'S' },
         { "output",  required_argument,  0, 'o' },
+        { "input",   required_argument,  0, 'i' },
         { "repeat",  required_argument,  0, 'r' },
         { "size",    required_argument,  0, 's' },
         { "timeout", required_argument,  0, 'T' },
+        { "datafork", no_argument,       0, 'D' },
         { "suffix",  no_argument,        0, 1 },
         { "allthreads", no_argument,    0, 2 },
         { 0,0,0,0 },
@@ -466,7 +483,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:r:o:T:", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:r:o:i:T:D", longopts, &index);
 
         if (argi < 0) break;
 
@@ -484,6 +501,11 @@ int main(int argc, char* argv[])
             }
             gopt_algorithm.push_back(optarg);
             std::cerr << "Selecting algorithms containing " << optarg << std::endl;
+            break;
+
+        case 'D':
+            gopt_forkrun = gopt_forkdataload = true;
+            std::cerr << "Forking before each algorithm run and loading data after fork." << std::endl;
             break;
 
         case 's':
@@ -509,7 +531,12 @@ int main(int argc, char* argv[])
 
         case 'o':
             gopt_output = optarg;
-            std::cerr << "Will write output strings to " << gopt_output << std::endl;
+            std::cerr << "Will write output strings to \"" << gopt_output << "\"" << std::endl;
+            break;
+
+        case 'i':
+            gopt_inputwrite = optarg;
+            std::cerr << "Will write input strings to \"" << gopt_inputwrite << "\"" << std::endl;
             break;
 
         case 'T':
