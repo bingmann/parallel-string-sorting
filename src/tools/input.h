@@ -43,7 +43,7 @@ char* allocate_stringdata(size_t size, const std::string& path)
     g_string_datasize = size;
 
     if (!stringdata) {
-        std::cout << "\n" << strerror(errno) << "\n";
+        std::cout << "Error allocating memory: " << strerror(errno) << "\n";
         return NULL;
     }
 
@@ -57,12 +57,12 @@ bool load_plain(const std::string& path)
     size_t size = 0;
 
     if (!(file = fopen(path.c_str(), "r"))) {
-        std::cout << "\n" << strerror(errno) << "\n";
+        std::cout << "Cannot open file: " << strerror(errno) << "\n";
         return false;
     }
 
     if (fseek(file,0,SEEK_END)) {
-        std::cout << "\n" << strerror(errno) << "\n";
+        std::cout << "Cannot seek in file: " << strerror(errno) << "\n";
         fclose(file);
         return false;
     }
@@ -95,7 +95,7 @@ bool load_plain(const std::string& path)
         ssize_t rb = fread(stringdata+rpos, sizeof(char), batch, file);
 
         if (rb < 0) {
-            std::cout << "\n" << strerror(errno) << "\n";
+            std::cout << "Cannot read from file: " << strerror(errno) << "\n";
             fclose(file);
             return false;
         }
@@ -160,7 +160,7 @@ bool load_compressed(const std::string& path)
         v *= 10; --i;
     }
     if (size == 0 || path[i] != '.') {
-        std::cout << "\nCould not find decompressed size in filename " << path << "\n";
+        std::cout << "Could not find decompressed size in filename " << path << "\n";
         return false;
     }
 

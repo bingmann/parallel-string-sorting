@@ -95,6 +95,8 @@ size_t          g_smallsort = 0;
 bool            gopt_forkrun = false;
 bool            gopt_forkdataload = false;
 
+bool            gopt_sequential_only = false; // argument --sequential
+
 const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 
 // *** Tools and Algorithms
@@ -116,7 +118,7 @@ const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 #include "sequential/ng-cradix-rantala.h"
 #include "sequential/ng-lcpmergesort.h"
 #include "sequential/bingmann-radix_sort.h"
-#include "sequential/bingmann-sample_sort.h"
+//#include "sequential/bingmann-sample_sort.h"
 
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"
@@ -426,6 +428,8 @@ void Contestant_UCArray::real_run()
 
 void Contestant_UCArray_Parallel::run()
 {
+    if (gopt_sequential_only) return;
+
     int p = 1;
 
     while (1)
@@ -476,6 +480,7 @@ void print_usage(const char* prog)
               << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>        Run through powers of two for input size limit." << std::endl
+              << "      --sequential            Run only sequential algorithms." << std::endl
               << "      --suffix                Suffix sort the input file." << std::endl
               << "  -T, --timeout <sec>         Abort algorithms after this timeout (default: disabled)." << std::endl
         ;
@@ -494,7 +499,8 @@ int main(int argc, char* argv[])
         { "timeout", required_argument,  0, 'T' },
         { "datafork", no_argument,       0, 'D' },
         { "suffix",  no_argument,        0, 1 },
-        { "allthreads", no_argument,    0, 2 },
+        { "allthreads", no_argument,     0, 2 },
+        { "sequential", no_argument,     0, 3 },
         { 0,0,0,0 },
     };
 
@@ -575,7 +581,12 @@ int main(int argc, char* argv[])
 
         case 2:
             gopt_allthreads = true;
-            std::cout << "Option --allthreads: Running test with linear increasing thread count." << std::endl;
+            std::cout << "Option --allthreads: running test with linear increasing thread count." << std::endl;
+            break;
+
+        case 3:
+            gopt_sequential_only = true;
+            std::cout << "Option --sequential: running only sequential algorithms." << std::endl;
             break;
 
         default:
@@ -588,6 +599,12 @@ int main(int argc, char* argv[])
     if (optind == argc) { // no input data parameter given
         print_usage(argv[0]);
         return 0;
+    }
+
+    {
+        char hostname[128];
+        gethostname(hostname, sizeof(hostname));
+        std::cout << "Running parallel-string-sorting test on " << hostname << std::endl;
     }
 
     increase_stacklimit(g_stacklimit);
