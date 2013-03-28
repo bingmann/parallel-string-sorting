@@ -587,6 +587,7 @@ int main(int argc, char* argv[])
 
     if (optind == argc) { // no input data parameter given
         print_usage(argv[0]);
+        return 0;
     }
 
     increase_stacklimit(g_stacklimit);

@@ -432,6 +432,80 @@ void bingmann_msd_CI5(string* strings, size_t n) { msd_CI5(strings, n, 0); }
 CONTESTANT_REGISTER(bingmann_msd_CI5, "bingmann/msd_CI5",
                     "bingmann/msd_CI5 (CI4 with charcache)")
 
+// --------------------------------------------------------------------------------
+
+static inline size_t*
+msd_CI5_16bit_bktsize(string* strings, size_t n, size_t depth)
+{
+    static const size_t RADIX = 0x10000;
+    using namespace stringtools;
+
+    // cache characters
+    uint16_t* charcache = new uint16_t[n];
+    for (size_t i=0; i < n; ++i)
+        charcache[i] = get_char<uint16_t>(strings[i], depth);
+
+    // count character occurances
+    size_t* bktsize = new size_t[RADIX];
+    memset(bktsize, 0, RADIX * sizeof(size_t));
+    for (size_t i=0; i < n; ++i)
+        ++bktsize[ charcache[i] ];
+
+    // inclusive prefix sum
+    size_t bkt[RADIX];
+    bkt[0] = bktsize[0];
+    size_t last_bkt_size = bktsize[0];
+    for (unsigned i=1; i < RADIX; ++i) {
+        bkt[i] = bkt[i-1] + bktsize[i];
+        if (bktsize[i]) last_bkt_size = bktsize[i];
+    }
+
+    // premute in-place
+    for (size_t i=0, j; i < n-last_bkt_size; )
+    {
+        string perm = strings[i];
+        uint16_t permch = charcache[i];
+        while ( (j = --bkt[ permch ]) > i )
+        {
+            std::swap(perm, strings[j]);
+            std::swap(permch, charcache[j]);
+        }
+        strings[i] = perm;
+        i += bktsize[ permch ];
+    }
+
+    delete [] charcache;
+
+    return bktsize;
+}
+
+static void
+msd_CI5_16bit(string* strings, size_t n, size_t depth)
+{
+    if (n < 0x10000)
+        return msd_CI5(strings, n, depth);
+
+    size_t* bktsize = msd_CI5_16bit_bktsize(strings, n, depth);
+
+    // recursion
+    size_t bsum = bktsize[0];
+    for (size_t i=1; i < 0x10000; ++i) {
+        if (bktsize[i] == 0) continue;
+        if (i & 0xFF) // not zero-terminated
+            msd_CI5_16bit(strings+bsum, bktsize[i], depth+2);
+        bsum += bktsize[i];
+    }
+
+    delete [] bktsize;
+}
+
+void bingmann_msd_CI5_16bit(string* strings, size_t n) { msd_CI5_16bit(strings, n, 0); }
+
+CONTESTANT_REGISTER(bingmann_msd_CI5_16bit, "bingmann/msd_CI5_16bit",
+                    "bingmann/msd_CI5_16bit (CI5 with 16-bit radix)")
+
+// --------------------------------------------------------------------------------
+
 struct RadixStep_CE_nr
 {
     string* str;
