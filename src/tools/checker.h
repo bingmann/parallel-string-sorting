@@ -50,7 +50,7 @@ public:
 
             if (v != 0) break; // v != 0, thus a true check value
 
-            std::cerr << "PermutationCheck: evaluation returned zero, repeating.\n";
+            std::cout << "PermutationCheck: evaluation returned zero, repeating.\n";
         }
     }
 
@@ -102,7 +102,7 @@ public:
 
             if (v != 0) return;
 
-            std::cerr << "PermutationCheck: evaluation returned zero, repeating.\n";
+            std::cout << "PermutationCheck: evaluation returned zero, repeating.\n";
         }
     }
 
@@ -129,7 +129,7 @@ bool check_sorted_order(const std::vector<unsigned char*>& stringptr, const Perm
 
     if (!pc.check(stringptr))
     {
-        std::cerr << "error: not a permutation\n";
+        std::cout << "error: not a permutation\n";
         //return false;
     }
 
@@ -139,7 +139,7 @@ bool check_sorted_order(const std::vector<unsigned char*>& stringptr, const Perm
     {
         if (strcmp((const char*)stringptr[i-1], (const char*)stringptr[i]) > 0)
         {
-            std::cerr << "error: invalid order at pair " << i-1 << " and " << i << "\n";
+            std::cout << "error: invalid order at pair " << i-1 << " and " << i << "\n";
             return false;
         }
     }

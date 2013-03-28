@@ -95,6 +95,8 @@ size_t          g_smallsort = 0;
 bool            gopt_forkrun = false;
 bool            gopt_forkdataload = false;
 
+const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
+
 // *** Tools and Algorithms
 
 #include "tools/debug.h"
@@ -195,7 +197,7 @@ void Contest::run_contest(const char* path)
         g_string_dprefix = 0;
 
         maybe_inputwrite();
-        std::cerr << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
+        std::cout << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
     }
 
     std::sort(m_list.begin(), m_list.end(), sort_contestants);
@@ -237,6 +239,8 @@ void Contestant_UCArray::run()
     pid_t p = fork();
     if (p == 0)
     {
+        std::cout << "fork() ------------------------------------------------------------" << std::endl;
+
         if (gopt_forkdataload)
         {
             // read input datafile
@@ -246,7 +250,7 @@ void Contestant_UCArray::run()
             g_string_dprefix = 0;
 
             maybe_inputwrite();
-            std::cerr << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
+            std::cout << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
         }
 
         if (gopt_timeout) alarm(gopt_timeout); // terminate child program after gopt_timeout seconds
@@ -277,7 +281,8 @@ void Contestant_UCArray::run()
 
         if (WTERMSIG(status) == SIGALRM)
         {
-            g_statscache >> "status" << "timeout";
+            g_statscache >> "status" << "timeout"
+                         >> "timeout" << gopt_timeout;
         }
         else if (WTERMSIG(status) == SIGSEGV)
         {
@@ -316,10 +321,10 @@ void Contestant_UCArray::real_run()
 
     // lock process into memory (on Linux)
     if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
-        std::cerr << "Error locking process into memory: " << strerror(errno) << std::endl;
+        std::cout << "Error locking process into memory: " << strerror(errno) << std::endl;
     }
     else {
-        std::cerr << "Successfully locked process into memory." << std::endl;
+        std::cout << "Successfully locked process into memory." << std::endl;
     }
 
     // create unsigned char* array from offsets
@@ -334,7 +339,7 @@ void Contestant_UCArray::real_run()
     // save permutation check evaluation result
     PermutationCheck pc(stringptr);
 
-    std::cerr << "Running " << m_algoname << " - " << m_description << std::endl;
+    std::cout << "Running " << m_algoname << " - " << m_description << std::endl;
 
     g_statscache >> "algo" << m_algoname
                  >> "data" << g_dataname
@@ -375,8 +380,8 @@ void Contestant_UCArray::real_run()
     ts2 = omp_get_wtime();
 
 #ifdef MALLOC_COUNT
-    std::cerr << "Max stack usage: " << stack_count_usage(stack) << std::endl;
-    std::cerr << "Max heap usage: " << malloc_count_peak() - memuse << std::endl;
+    std::cout << "Max stack usage: " << stack_count_usage(stack) << std::endl;
+    std::cout << "Max heap usage: " << malloc_count_peak() - memuse << std::endl;
     //memprofile.finish();
 
     g_statscache >> "heapuse" << (malloc_count_peak() - memuse)
@@ -384,15 +389,15 @@ void Contestant_UCArray::real_run()
 
     if (memuse < malloc_count_current())
     {
-        std::cerr << "MEMORY LEAKED: " << (malloc_count_current() - memuse) << " B" << std::endl;
+        std::cout << "MEMORY LEAKED: " << (malloc_count_current() - memuse) << " B" << std::endl;
     }
 #endif
 
     g_statscache >> "time" << (ts2-ts1);
-    (std::cerr << ts2-ts1 << "\tchecking ").flush();
+    (std::cout << ts2-ts1 << "\tchecking ").flush();
 
     if (check_sorted_order(stringptr, pc)) {
-        std::cerr << "ok" << std::endl;
+        std::cout << "ok" << std::endl;
         g_statscache >> "status" << "ok";
     }
     else {
@@ -426,7 +431,7 @@ void Contestant_UCArray_Parallel::run()
     while (1)
     {
         pss_num_threads = p;
-        std::cerr << "threads=" << p << " ";
+        std::cout << "threads=" << p << " ";
         g_statscache >> "threads" << p;
 
         Contestant_UCArray::run();
@@ -440,9 +445,28 @@ void Contestant_UCArray_Parallel::run()
     }
 }
 
+static inline void increase_stacklimit(size_t stacklimit)
+{
+    struct rlimit rl;
+
+    if (getrlimit(RLIMIT_STACK, &rl)) {
+        std::cout << "Error getrlimit(RLIMIT_STACK): " << strerror(errno) << std::endl;
+    }
+    else if (rl.rlim_cur < stacklimit)
+    {
+        rl.rlim_cur = stacklimit;
+        if (setrlimit(RLIMIT_STACK, &rl)) {
+            std::cout << "Error increasing stack limit with setrlimit(RLIMIT_STACK): " << strerror(errno) << std::endl;
+        }
+        else {
+            std::cout << "Successfully increased stack limit to " << stacklimit << std::endl;
+        }
+    }
+}
+
 void print_usage(const char* prog)
 {
-    std::cerr << "Usage: " << prog << " [options] filename" << std::endl
+    std::cout << "Usage: " << prog << " [options] filename" << std::endl
               << "Options:" << std::endl
               << "  -a, --algo <match>          Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
               << "  --allthreads                Run linear thread increase test from 1 to max_processors." << std::endl
@@ -500,62 +524,62 @@ int main(int argc, char* argv[])
                 return 0;
             }
             gopt_algorithm.push_back(optarg);
-            std::cerr << "Selecting algorithms containing " << optarg << std::endl;
+            std::cout << "Option -a: selecting algorithms containing " << optarg << std::endl;
             break;
 
         case 'D':
             gopt_forkrun = gopt_forkdataload = true;
-            std::cerr << "Forking before each algorithm run and loading data after fork." << std::endl;
+            std::cout << "Option -D: forking before each algorithm run and loading data after fork." << std::endl;
             break;
 
         case 's':
             if (!input::parse_filesize(optarg, gopt_inputsize_minlimit)) {
-                std::cerr << "Invalid size parameter: " << optarg << std::endl;
+                std::cout << "Option -s: invalid size parameter: " << optarg << std::endl;
                 exit(EXIT_FAILURE);
             }
-            std::cerr << "Limiting input size to " << gopt_inputsize_minlimit << std::endl;
+            std::cout << "Option -s: limiting input size to " << gopt_inputsize_minlimit << std::endl;
             break;
 
         case 'S':
             if (!input::parse_filesize(optarg, gopt_inputsize_maxlimit)) {
-                std::cerr << "Invalid maxsize parameter: " << optarg << std::endl;
+                std::cout << "Option -S: invalid maxsize parameter: " << optarg << std::endl;
                 exit(EXIT_FAILURE);
             }
-            std::cerr << "Limiting maximum input size to " << gopt_inputsize_maxlimit << std::endl;
+            std::cout << "Option -S: limiting maximum input size to " << gopt_inputsize_maxlimit << std::endl;
             break;
 
         case 'r':
             gopt_repeats = atoi(optarg);
-            std::cerr << "Repeating string sorting algorithms " << gopt_repeats << std::endl;
+            std::cout << "Option -r: repeating string sorting algorithms " << gopt_repeats << std::endl;
             break;
 
         case 'o':
             gopt_output = optarg;
-            std::cerr << "Will write output strings to \"" << gopt_output << "\"" << std::endl;
+            std::cout << "Option -o: will write output strings to \"" << gopt_output << "\"" << std::endl;
             break;
 
         case 'i':
             gopt_inputwrite = optarg;
-            std::cerr << "Will write input strings to \"" << gopt_inputwrite << "\"" << std::endl;
+            std::cout << "Option -i: will write input strings to \"" << gopt_inputwrite << "\"" << std::endl;
             break;
 
         case 'T':
             gopt_timeout = atoi(optarg);
-            std::cerr << "Aborting algorithms after " << gopt_timeout << " seconds timeout." << std::endl;
+            std::cout << "Option -T: aborting algorithms after " << gopt_timeout << " seconds timeout." << std::endl;
             break;
 
         case 1:
             gopt_suffixsort = true;
-            std::cerr << "Running as suffix sorter on input file." << std::endl;
+            std::cout << "Option --suffix: running as suffix sorter on input file." << std::endl;
             break;
 
         case 2:
             gopt_allthreads = true;
-            std::cerr << "Running test with linear increasing thread count." << std::endl;
+            std::cout << "Option --allthreads: Running test with linear increasing thread count." << std::endl;
             break;
 
         default:
-            std::cerr << "Invalid parameter: " << argi << std::endl;
+            std::cout << "Invalid parameter: " << argi << std::endl;
             print_usage(argv[0]);
             exit(EXIT_FAILURE);
         }
@@ -564,6 +588,8 @@ int main(int argc, char* argv[])
     if (optind == argc) { // no input data parameter given
         print_usage(argv[0]);
     }
+
+    increase_stacklimit(g_stacklimit);
 
     if (gopt_inputsize_maxlimit < gopt_inputsize_minlimit)
         gopt_inputsize_maxlimit = gopt_inputsize_minlimit;

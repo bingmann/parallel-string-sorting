@@ -30,7 +30,7 @@ char* allocate_stringdata(size_t size, const std::string& path)
         free(g_string_databuff);
 
     // allocate one continuous area of memory
-    std::cerr << "Allocating " << size << " bytes in RAM, reading " << path << "\n";
+    std::cout << "Allocating " << size << " bytes in RAM, reading " << path << "\n";
     char* stringdata = (char*)malloc(size + 2 + 8);
 
     // CPL-burstsort needs terminator immediately before and after stringdata
@@ -43,7 +43,7 @@ char* allocate_stringdata(size_t size, const std::string& path)
     g_string_datasize = size;
 
     if (!stringdata) {
-        std::cerr << "\n" << strerror(errno) << "\n";
+        std::cout << "\n" << strerror(errno) << "\n";
         return NULL;
     }
 
@@ -57,12 +57,12 @@ bool load_plain(const std::string& path)
     size_t size = 0;
 
     if (!(file = fopen(path.c_str(), "r"))) {
-        std::cerr << "\n" << strerror(errno) << "\n";
+        std::cout << "\n" << strerror(errno) << "\n";
         return false;
     }
 
     if (fseek(file,0,SEEK_END)) {
-        std::cerr << "\n" << strerror(errno) << "\n";
+        std::cout << "\n" << strerror(errno) << "\n";
         fclose(file);
         return false;
     }
@@ -95,7 +95,7 @@ bool load_plain(const std::string& path)
         ssize_t rb = fread(stringdata+rpos, sizeof(char), batch, file);
 
         if (rb < 0) {
-            std::cerr << "\n" << strerror(errno) << "\n";
+            std::cout << "\n" << strerror(errno) << "\n";
             fclose(file);
             return false;
         }
@@ -160,7 +160,7 @@ bool load_compressed(const std::string& path)
         v *= 10; --i;
     }
     if (size == 0 || path[i] != '.') {
-        std::cerr << "\nCould not find decompressed size in filename " << path << "\n";
+        std::cout << "\nCould not find decompressed size in filename " << path << "\n";
         return false;
     }
 
@@ -171,7 +171,7 @@ bool load_compressed(const std::string& path)
     // create pipe, fork and call decompressor as child
     int pipefd[2]; // pipe[0] = read, pipe[1] = write
     if (pipe(pipefd) != 0) {
-        std::cerr << "Error creating pipe: " << strerror(errno) << "\n";
+        std::cout << "Error creating pipe: " << strerror(errno) << "\n";
         exit(-1);
     }
 
@@ -183,7 +183,7 @@ bool load_compressed(const std::string& path)
         
         execlp(decompressor, decompressor, "-dc", path.c_str(), NULL);
 
-        std::cerr << "Pipe execution failed: " << strerror(errno) << std::endl;
+        std::cout << "Pipe execution failed: " << strerror(errno) << std::endl;
         close(pipefd[1]); // close write end
         exit(-1);
     }
@@ -206,7 +206,7 @@ bool load_compressed(const std::string& path)
         ssize_t rb = read(pipefd[0], stringdata+rpos, batch);
 
         if (rb <= 0) {
-            std::cerr << "Error reading pipe: " << strerror(errno) << "\n";
+            std::cout << "Error reading pipe: " << strerror(errno) << "\n";
             close(pipefd[1]);
             exit(-1);
         }
@@ -251,7 +251,7 @@ bool load_compressed(const std::string& path)
 bool generate_random(const std::string& path, const std::string& letters)
 {
     if (!gopt_inputsize) {
-        std::cerr << "Random input size must be specified via '-s <size>'\n";
+        std::cout << "Random input size must be specified via '-s <size>'\n";
         return false;
     }
 
@@ -296,7 +296,7 @@ bool generate_random(const std::string& path, const std::string& letters)
 bool generate_sinha_randomASCII()
 {
     if (!gopt_inputsize) {
-        std::cerr << "Random input size must be specified via '-s <size>'\n";
+        std::cout << "Random input size must be specified via '-s <size>'\n";
         return false;
     }
 
