@@ -118,7 +118,7 @@ const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 #include "sequential/ng-cradix-rantala.h"
 #include "sequential/ng-lcpmergesort.h"
 #include "sequential/bingmann-radix_sort.h"
-//#include "sequential/bingmann-sample_sort.h"
+#include "sequential/bingmann-sample_sort.h"
 
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"

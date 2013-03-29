@@ -33,7 +33,11 @@ typedef uint64_t key_type;
 
 static const size_t l2cache = 128*1024;
 
-static const size_t g_samplesort_smallsort = 32*1024;
+static const size_t g_samplesort_smallsort = 128;
+
+static const size_t oversample_factor = 1;
+
+// ------------------------------------------------------------------------------------------------------------------------
 
 /// binary search on splitter array for bucket number
 static inline unsigned int
@@ -93,7 +97,6 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 
     // step 1: select splitters with oversampling
 
-    const size_t oversample_factor = 4;
     size_t samplesize = oversample_factor * leaves;
 
     key_type* samples = new key_type[ samplesize ];
@@ -200,21 +203,21 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 
     // step 5: recursion
 
-    size_t bsum = 0;
-    for (size_t i=0; i < bktnum-1; ++i) {
+    size_t i = 0, bsum = 0;
+    while (i < bktnum-1)
+    {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
             sample_sortBS(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
-        bsum += bktsize[i];
-        ++i;
+        bsum += bktsize[i++];
+
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key
-                // done.
+            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key, done.
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
             }
             else {
@@ -222,20 +225,24 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
                 sample_sortBS(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
-        bsum += bktsize[i];
+        bsum += bktsize[i++];
     }
-    if (bktsize[bktnum-1] > 0)
+    if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sortBS(strings+bsum, bktsize[bktnum-1], depth);
+        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+        sample_sortBS(strings+bsum, bktsize[i], depth);
     }
-    bsum += bktsize[bktnum-1];
-    assert(bsum == n);
+    bsum += bktsize[i++];
+    assert(i == bktnum && bsum == n);
 
     delete [] bktsize;
 }
 
-void bingmann_sample_sortBS(string* strings, size_t n) { return sample_sortBS(strings,n,0); }
+void bingmann_sample_sortBS(string* strings, size_t n)
+{
+    g_statscache >> "l2cache" << l2cache;
+    return sample_sortBS(strings,n,0);
+}
 
 CONTESTANT_REGISTER(bingmann_sample_sortBS, "bingmann/sample_sortBS",
                     "bingmann/sample_sortBS (binary search, no cache)")
@@ -265,7 +272,6 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 
     // step 1: select splitters with oversampling
 
-    const size_t oversample_factor = 4;
     size_t samplesize = oversample_factor * leaves;
 
     key_type* samples = new key_type[ samplesize ];
@@ -369,21 +375,21 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 
     // step 5: recursion
 
-    size_t bsum = 0;
-    for (size_t i=0; i < bktnum-1; ++i) {
+    size_t i = 0, bsum = 0;
+    while (i < bktnum-1)
+    {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
             sample_sortBSC(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
-        bsum += bktsize[i];
-        ++i;
+        bsum += bktsize[i++];
+
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key
-                // done.
+            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key, done.
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
             }
             else {
@@ -391,20 +397,24 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
                 sample_sortBSC(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
-        bsum += bktsize[i];
+        bsum += bktsize[i++];
     }
-    if (bktsize[bktnum-1] > 0)
+    if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sortBSC(strings+bsum, bktsize[bktnum-1], depth);
+        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+        sample_sortBSC(strings+bsum, bktsize[i], depth);
     }
-    bsum += bktsize[bktnum-1];
-    assert(bsum == n);
+    bsum += bktsize[i++];
+    assert(i == bktnum && bsum == n);
 
     delete [] bktsize;
 }
 
-void bingmann_sample_sortBSC(string* strings, size_t n) { return sample_sortBSC(strings,n,0); }
+void bingmann_sample_sortBSC(string* strings, size_t n)
+{
+    g_statscache >> "l2cache" << l2cache;
+    return sample_sortBSC(strings,n,0);
+}
 
 CONTESTANT_REGISTER(bingmann_sample_sortBSC, "bingmann/sample_sortBSC",
                     "bingmann/sample_sortBSC (binary search, bkt cache)")
@@ -518,7 +528,6 @@ void sample_sortBSCA(string* strings, size_t n, size_t depth)
 
     // step 1: select splitters with oversampling
 
-    const size_t oversample_factor = 4;
     size_t samplesize = oversample_factor * leaves;
 
     key_type* samples = new key_type[ samplesize ];
@@ -622,42 +631,46 @@ void sample_sortBSCA(string* strings, size_t n, size_t depth)
 
     // step 5: recursion
 
-    size_t bsum = 0;
-    for (size_t i=0; i < bktnum-1; ++i) {
+    size_t i = 0, bsum = 0;
+    while (i < bktnum-1)
+    {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
-            sample_sortBSC(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
+            sample_sortBSCA(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
-        bsum += bktsize[i];
-        ++i;
+        bsum += bktsize[i++];
+
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key
-                // done.
+            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key, done.
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
             }
             else {
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sortBSC(strings+bsum, bktsize[i], depth + sizeof(key_type));
+                sample_sortBSCA(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
-        bsum += bktsize[i];
+        bsum += bktsize[i++];
     }
-    if (bktsize[bktnum-1] > 0)
+    if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sortBSC(strings+bsum, bktsize[bktnum-1], depth);
+        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+        sample_sortBSCA(strings+bsum, bktsize[i], depth);
     }
-    bsum += bktsize[bktnum-1];
-    assert(bsum == n);
+    bsum += bktsize[i++];
+    assert(i == bktnum && bsum == n);
 
     delete [] bktsize;
 }
 
-void bingmann_sample_sortBSCA(string* strings, size_t n) { return sample_sortBSCA(strings,n,0); }
+void bingmann_sample_sortBSCA(string* strings, size_t n)
+{
+    g_statscache >> "l2cache" << l2cache;
+    return sample_sortBSCA(strings,n,0);
+}
 
 CONTESTANT_REGISTER(bingmann_sample_sortBSCA, "bingmann/sample_sortBSCA",
                     "bingmann/sample_sortBSCA (binary search, assembler CMOV, bkt cache)")
@@ -752,7 +765,6 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     // step 1: select splitters with oversampling
 
-    const size_t oversample_factor = 4;
     size_t samplesize = oversample_factor * numsplitters;
 
     key_type* samples = new key_type[ samplesize ];
@@ -897,21 +909,21 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     // step 5: recursion
 
-    size_t bsum = 0;
-    for (size_t i=0; i < bktnum-1; ++i) {
+    size_t i = 0, bsum = 0;
+    while (i < bktnum-1)
+    {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
             sample_sortBT(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
-        bsum += bktsize[i];
-        ++i;
+        bsum += bktsize[i++];
+
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key
-                // done.
+            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key, done.
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
             }
             else {
@@ -919,20 +931,24 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
                 sample_sortBT(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
-        bsum += bktsize[i];
+        bsum += bktsize[i++];
     }
-    if (bktsize[bktnum-1] > 0)
+    if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sortBT(strings+bsum, bktsize[bktnum-1], depth);
+        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+        sample_sortBT(strings+bsum, bktsize[i], depth);
     }
-    bsum += bktsize[bktnum-1];
-    assert(bsum == n);
+    bsum += bktsize[i++];
+    assert(i == bktnum && bsum == n);
 
     delete [] bktsize;
 }
 
-void bingmann_sample_sortBT(string* strings, size_t n) { return sample_sortBT(strings,n,0); }
+void bingmann_sample_sortBT(string* strings, size_t n)
+{
+    g_statscache >> "l2cache" << l2cache;
+    return sample_sortBT(strings,n,0);
+}
 
 CONTESTANT_REGISTER(bingmann_sample_sortBT, "bingmann/sample_sortBT",
                     "bingmann/sample_sortBT (binary tree, no cache)")
@@ -972,7 +988,6 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     // step 1: select splitters with oversampling
 
-    const size_t oversample_factor = 1;
     const size_t samplesize = oversample_factor * numsplitters;
 
     static key_type samples[ samplesize ];
@@ -1139,8 +1154,8 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     // step 5: recursion
 
-    size_t bsum = 0;
-    for (size_t i=0; i < bktnum-1; ++i)
+    size_t i = 0, bsum = 0;
+    while (i < bktnum-1)
     {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
@@ -1148,13 +1163,12 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
             sample_sortBTC(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
         }
-        bsum += bktsize[i];
-        ++i;
+        bsum += bktsize[i++];
+
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key
-                // done.
+            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key, done.
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
             }
             else {
@@ -1162,15 +1176,15 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
                 sample_sortBTC(strings+bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
-        bsum += bktsize[i];
+        bsum += bktsize[i++];
     }
-    if (bktsize[bktnum-1] > 0)
+    if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[bktnum-1] << " no lcp");
-        sample_sortBTC(strings+bsum, bktsize[bktnum-1], depth);
+        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+        sample_sortBTC(strings+bsum, bktsize[i], depth);
     }
-    bsum += bktsize[bktnum-1];
-    assert(bsum == n);
+    bsum += bktsize[i++];
+    assert(i == bktnum && bsum == n);
 
     delete [] splitter_lcp;
     delete [] splitter;
@@ -1180,7 +1194,6 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 void bingmann_sample_sortBTC(string* strings, size_t n)
 {
     g_statscache >> "l2cache" << l2cache;
-
     return sample_sortBTC(strings,n,0);
 }
 
@@ -1224,7 +1237,6 @@ struct SampleSortBTCnr
     {
         // step 1: select splitters with oversampling
 
-        const size_t oversample_factor = 1;
         const size_t samplesize = oversample_factor * numsplitters;
 
         static key_type samples[ samplesize ];
@@ -1443,8 +1455,7 @@ void bingmann_sample_sortBTCnr(string* strings, size_t n)
             {
                 if (s.bktsize[i] == 0)
                     ;
-                else if ( (s.splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key
-                    // done.
+                else if ( (s.splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key, done.
                     DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " is done!");
                     s.str += s.bktsize[i];
                 }
