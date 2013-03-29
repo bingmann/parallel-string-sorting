@@ -504,6 +504,17 @@ int main(int argc, char* argv[])
         { 0,0,0,0 },
     };
 
+    {
+        char hostname[128];
+        gethostname(hostname, sizeof(hostname));
+        std::cout << "Running parallel-string-sorting test on " << hostname << std::endl;
+
+        std::cout << "Called as";
+        for (int i = 0; i < argc; ++i)
+            std::cout << " " << argv[i];
+        std::cout << std::endl;
+    }
+
 #ifdef MALLOC_COUNT
     if (truncate(memprofile_path, 0)) {
         perror("Cannot truncate memprofile datafile");
@@ -599,12 +610,6 @@ int main(int argc, char* argv[])
     if (optind == argc) { // no input data parameter given
         print_usage(argv[0]);
         return 0;
-    }
-
-    {
-        char hostname[128];
-        gethostname(hostname, sizeof(hostname));
-        std::cout << "Running parallel-string-sorting test on " << hostname << std::endl;
     }
 
     increase_stacklimit(g_stacklimit);
