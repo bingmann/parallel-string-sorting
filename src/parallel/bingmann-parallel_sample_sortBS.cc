@@ -98,6 +98,8 @@ struct SampleSortStep
 
     string*             sorted;
 
+    SampleSortStep() {}
+
     void sample(JobQueue& jobqueue);
 
     void count(unsigned int p, JobQueue& jobqueue);

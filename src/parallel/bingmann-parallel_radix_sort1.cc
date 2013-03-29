@@ -212,6 +212,8 @@ struct RadixStepCE
 
     string*             sorted;
 
+    RadixStepCE() {}
+
     void count(unsigned int p, JobQueue& jobqueue);
     void count_finished(JobQueue& jobqueue);
 

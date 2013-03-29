@@ -365,6 +365,8 @@ struct RadixStepCE
 
     key_type*           charcache;
 
+    RadixStepCE() {}
+
     void count(unsigned int p, JobQueue& jobqueue);
     void count_finished(JobQueue& jobqueue);
 

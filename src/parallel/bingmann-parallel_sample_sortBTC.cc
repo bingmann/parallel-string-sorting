@@ -106,6 +106,8 @@ struct SampleSortStep
 
     uint16_t*           bktcache[MAXPROCS];
 
+    SampleSortStep() {}
+
     void sample(JobQueue& jobqueue);
 
     void count(unsigned int p, JobQueue& jobqueue);
