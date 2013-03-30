@@ -111,7 +111,7 @@ const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 
 #include "sequential/inssort.h"
 #include "sequential/mbm-radix.h"
-#include "sequential/mkqs.h"
+#include "sequential/bs-mkqs.h"
 #include "sequential/sinha-burstsortA.h"
 #include "sequential/sinha-burstsortL.h"
 #include "sequential/ng-cradix.h"
@@ -119,6 +119,10 @@ const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 #include "sequential/ng-lcpmergesort.h"
 #include "sequential/bingmann-radix_sort.h"
 #include "sequential/bingmann-sample_sort.h"
+#include "sequential/bingmann-sample_sortBS.h"
+#include "sequential/bingmann-sample_sortBSC.h"
+#include "sequential/bingmann-sample_sortBT.h"
+#include "sequential/bingmann-sample_sortBTC.h"
 
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"
