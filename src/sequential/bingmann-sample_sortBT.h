@@ -109,8 +109,10 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     if (n < g_samplesort_smallsort)
     {
+        g_rs_steps++;
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
+    g_ss_steps++;
 
     //std::cout << "numsplitters: " << numsplitters << "\n";
 
@@ -297,8 +299,9 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
 void bingmann_sample_sortBT(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return sample_sortBT(strings,n,0);
+    sample_sort_pre();
+    sample_sortBT(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBT, "bingmann/sample_sortBT",

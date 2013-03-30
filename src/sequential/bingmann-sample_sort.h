@@ -31,11 +31,25 @@ using namespace stringtools;
 
 typedef uint64_t key_type;
 
-static const size_t l2cache = 128*1024;
+static const size_t l2cache = 256*1024;
 
-static const size_t g_samplesort_smallsort = 1024;
+static const size_t g_samplesort_smallsort = 128;
 
 static const size_t oversample_factor = 1;
+
+static size_t g_ss_steps, g_rs_steps;
+
+static inline void sample_sort_pre()
+{
+    g_ss_steps = g_rs_steps = 0;
+}
+
+static inline void sample_sort_post()
+{
+    g_statscache >> "l2cache" << l2cache
+                 >> "steps_sample_sort" << g_ss_steps
+                 >> "steps_base_sort" << g_rs_steps;
+}
 
 // ----------------------------------------------------------------------------
 

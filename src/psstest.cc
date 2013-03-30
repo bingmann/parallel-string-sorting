@@ -266,7 +266,7 @@ void Contestant_UCArray::run()
         exit(0);
     }
 
-    int status;
+    int status = 0;
     wait(&status);
 
     if (WIFEXITED(status)) {

@@ -131,8 +131,10 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 
     if (n < g_samplesort_smallsort)
     {
+        g_rs_steps++;
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
+    g_ss_steps++;
 
     //std::cout << "leaves: " << leaves << "\n";
 
@@ -280,8 +282,9 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 
 void bingmann_sample_sortBSC(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return sample_sortBSC<bingmann_sample_sortBS::find_bkt_binsearch>(strings,n,0);
+    sample_sort_pre();
+    sample_sortBSC<bingmann_sample_sortBS::find_bkt_binsearch>(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBSC, "bingmann/sample_sortBSC",
@@ -289,8 +292,9 @@ CONTESTANT_REGISTER(bingmann_sample_sortBSC, "bingmann/sample_sortBSC",
 
 void bingmann_sample_sortBSCA(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return sample_sortBSC<find_bkt_assembler>(strings,n,0);
+    sample_sort_pre();
+    sample_sortBSC<find_bkt_assembler>(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBSCA, "bingmann/sample_sortBSCA",
@@ -357,8 +361,9 @@ find_bkt_asmequal(const key_type& key, const key_type* splitter, size_t leaves)
 
 void bingmann_sample_sortBSCE(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return bingmann_sample_sortBSC::sample_sortBSC<find_bkt_equal>(strings,n,0);
+    sample_sort_pre();
+    bingmann_sample_sortBSC::sample_sortBSC<find_bkt_equal>(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBSCE, "bingmann/sample_sortBSCE",
@@ -366,8 +371,9 @@ CONTESTANT_REGISTER(bingmann_sample_sortBSCE, "bingmann/sample_sortBSCE",
 
 void bingmann_sample_sortBSCEA(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return bingmann_sample_sortBSC::sample_sortBSC<find_bkt_asmequal>(strings,n,0);
+    sample_sort_pre();
+    bingmann_sample_sortBSC::sample_sortBSC<find_bkt_asmequal>(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBSCEA, "bingmann/sample_sortBSCEA",

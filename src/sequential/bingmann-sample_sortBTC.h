@@ -144,9 +144,11 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     if (n < g_samplesort_smallsort)
     {
+        g_rs_steps++;
         //return inssort::inssort(strings, n, depth);
         return bingmann_radix_sort::msd_CI5(strings, n, depth);
     }
+    g_ss_steps++;
 
     //std::cout << "numsplitters: " << numsplitters << "\n";
 
@@ -357,8 +359,9 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
 void bingmann_sample_sortBTC(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return sample_sortBTC<find_bkt_tree>(strings,n,0);
+    sample_sort_pre();
+    sample_sortBTC<find_bkt_tree>(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBTC, "bingmann/sample_sortBTC",
@@ -366,8 +369,9 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTC, "bingmann/sample_sortBTC",
 
 void bingmann_sample_sortBTCA(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return sample_sortBTC<find_bkt_tree_asm>(strings,n,0);
+    sample_sort_pre();
+    sample_sortBTC<find_bkt_tree_asm>(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBTCA, "bingmann/sample_sortBTCA",
@@ -478,8 +482,9 @@ find_bkt_tree_asmequal(const key_type& key, const key_type* /* splitter */, cons
 
 void bingmann_sample_sortBTCE(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return sample_sortBTC<find_bkt_tree_equal>(strings,n,0);
+    sample_sort_pre();
+    sample_sortBTC<find_bkt_tree_equal>(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBTCE, "bingmann/sample_sortBTCE",
@@ -487,8 +492,9 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE, "bingmann/sample_sortBTCE",
 
 void bingmann_sample_sortBTCEA(string* strings, size_t n)
 {
-    g_statscache >> "l2cache" << l2cache;
-    return sample_sortBTC<find_bkt_tree_asmequal>(strings,n,0);
+    sample_sort_pre();
+    sample_sortBTC<find_bkt_tree_asmequal>(strings,n,0);
+    sample_sort_post();
 }
 
 CONTESTANT_REGISTER(bingmann_sample_sortBTCEA, "bingmann/sample_sortBTCEA",
