@@ -279,8 +279,7 @@ void Contestant_UCArray::run()
 
         g_statscache >> "algo" << m_algoname
                      >> "data" << g_dataname
-                     >> "char_count" << g_string_datasize
-                     >> "string_count" << g_string_offsets.size();
+                     >> "char_count" << gopt_inputsize;
 
         if (gopt_repeats > 1)
             g_statscache >> "repeats" << gopt_repeats;
