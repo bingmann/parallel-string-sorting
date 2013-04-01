@@ -121,17 +121,15 @@ static void ssort2(string a[], size_t n, int depth)
     pc = pd = a + n-1;
     for (;;) {
         while (pb <= pc && (r = ptr2char(pb)-partval) <= 0) {
-            if (r == 0) { std::swap(*pa, *pb); pa++; }
+            if (r == 0) std::swap(*pa++, *pb);
             pb++;
         }
         while (pb <= pc && (r = ptr2char(pc)-partval) >= 0) {
-            if (r == 0) { std::swap(*pc, *pd); pd--; }
+            if (r == 0) std::swap(*pc, *pd--);
             pc--;
         }
         if (pb > pc) break;
-        std::swap(*pb, *pc);
-        pb++;
-        pc--;
+        std::swap(*pb++, *pc--);
     }
     pn = a + n;
     r = std::min(pa-a, pb-pa);    vecswap2(a,  pb-r, r);

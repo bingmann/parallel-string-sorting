@@ -535,7 +535,7 @@ int main(int argc, char* argv[])
         {
         case 'h':
             print_usage(argv[0]);
-            break;
+            return 0;
 
         case 'a':
             if (strcmp(optarg,"list") == 0)
