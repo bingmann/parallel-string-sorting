@@ -123,6 +123,7 @@ const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 #include "sequential/bingmann-sample_sortBSC.h"
 #include "sequential/bingmann-sample_sortBT.h"
 #include "sequential/bingmann-sample_sortBTC.h"
+#include "sequential/bingmann-sample_sortBTCE.h"
 
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"

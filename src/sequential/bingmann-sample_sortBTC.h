@@ -3,7 +3,7 @@
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *
- * Binary tree search with bucket cache. Also with equality branch.
+ * Binary tree search with bucket cache.
  *
  ******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
@@ -379,6 +379,8 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCA, "bingmann/sample_sortBTCA",
 
 // ----------------------------------------------------------------------------
 
+#if 0 // improved version in bingmann-sample_sortBTCE.h
+
 /// Variant 4.5 of string sample-sort: use super-scalar binary search on splitters with equality check and index caching.
 
 static inline std::string binary(uint16_t v) {
@@ -435,7 +437,7 @@ find_bkt_tree_equal(const key_type& key, const key_type* /* splitter */, const k
     return 2 * i; // < or > bucket
 }
 
-// run -a /sample_sortBTCE -s 1mb random10
+// run -a /sample_sortBTCF -s 1mb random10
 //break bingmann_sample_sort::find_bkt_tree_asmequal
 /// binary search on splitter array for bucket number
 inline unsigned int
@@ -480,25 +482,27 @@ find_bkt_tree_asmequal(const key_type& key, const key_type* /* splitter */, cons
     return i;
 }
 
-void bingmann_sample_sortBTCE(string* strings, size_t n)
+void bingmann_sample_sortBTCF(string* strings, size_t n)
 {
     sample_sort_pre();
     sample_sortBTC<find_bkt_tree_equal>(strings,n,0);
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCE, "bingmann/sample_sortBTCE",
-                    "bingmann/sample_sortBTCE (binary tree equal, bkt cache)")
+CONTESTANT_REGISTER(bingmann_sample_sortBTCF, "bingmann/sample_sortBTCF",
+                    "bingmann/sample_sortBTCF (binary tree equal, bkt cache)")
 
-void bingmann_sample_sortBTCEA(string* strings, size_t n)
+void bingmann_sample_sortBTCFA(string* strings, size_t n)
 {
     sample_sort_pre();
     sample_sortBTC<find_bkt_tree_asmequal>(strings,n,0);
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCEA, "bingmann/sample_sortBTCEA",
-                    "bingmann/sample_sortBTCEA (binary tree equal, asm CMOV, bkt cache)")
+CONTESTANT_REGISTER(bingmann_sample_sortBTCFA, "bingmann/sample_sortBTCFA",
+                    "bingmann/sample_sortBTCFA (binary tree equal, asm CMOV, bkt cache)")
+
+#endif // improved version in bingmann-sample_sortBTCE.h
 
 // ----------------------------------------------------------------------------
 
