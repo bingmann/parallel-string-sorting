@@ -146,13 +146,17 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     {
         g_rs_steps++;
         //return inssort::inssort(strings, n, depth);
-        return bingmann_radix_sort::msd_CI5(strings, n, depth);
+        g_timer.change(TM_SMALLSORT);
+        bingmann_radix_sort::msd_CI5(strings, n, depth);
+        g_timer.change(TM_GENERAL);
+        return;
     }
     g_ss_steps++;
 
     //std::cout << "numsplitters: " << numsplitters << "\n";
 
     // step 1: select splitters with oversampling
+    g_timer.change(TM_MAKE_SAMPLE);
 
     const size_t samplesize = oversample_factor * numsplitters;
 
@@ -166,6 +170,8 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     }
 
     std::sort(samples, samples + samplesize);
+
+    g_timer.change(TM_MAKE_SPLITTER);
 
     key_type* splitter = new key_type[numsplitters];
     unsigned char* splitter_lcp = new unsigned char[numsplitters];
@@ -230,6 +236,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     }
 
     // step 2.2: classify all strings and count bucket sizes
+    g_timer.change(TM_CLASSIFY);
 
 #if 0
     uint16_t* bktcache = new uint16_t[n];
@@ -289,6 +296,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     }
 
     // step 3: prefix sum
+    g_timer.change(TM_PREFIXSUM);
 
     size_t bktindex[bktnum];
     bktindex[0] = bktsize[0];
@@ -300,6 +308,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     assert(bktindex[bktnum-1] == n);
 
     // step 4: premute in-place
+    g_timer.change(TM_PERMUTE);
 
     for (size_t i=0, j; i < n - last_bkt_size; )
     {
@@ -319,6 +328,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     delete [] bktcache;
 
     // step 5: recursion
+    g_timer.change(TM_GENERAL);
 
     size_t i = 0, bsum = 0;
     while (i < bktnum-1)

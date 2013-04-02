@@ -152,20 +152,20 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     static const size_t numsplitters = (1 << treebits) - 1;
 #endif
 
-    //std::cout << "l2cache : " << l2cache << " - numsplitter " << numsplitters << "\n";
-
     if (n < g_samplesort_smallsort)
     {
         g_rs_steps++;
         //return inssort::inssort(strings, n, depth);
-        return bingmann_radix_sort::msd_CI5(strings, n, depth);
         //return bs_mkqs::ssort2(strings, n, depth);
+        g_timer.change(TM_SMALLSORT);
+        bingmann_radix_sort::msd_CI5(strings, n, depth);
+        g_timer.change(TM_GENERAL);
+        return;
     }
     g_ss_steps++;
 
-    //std::cout << "numsplitters: " << numsplitters << "\n";
-
     // step 1: select splitters with oversampling
+    g_timer.change(TM_MAKE_SAMPLE);
 
     const size_t samplesize = oversample_factor * numsplitters;
 
@@ -179,6 +179,8 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     }
 
     std::sort(samples, samples + samplesize);
+
+    g_timer.change(TM_MAKE_SPLITTER);
 
     key_type* splitter_tree = new key_type[numsplitters];
     unsigned char* splitter_lcp = new unsigned char[numsplitters];
@@ -235,6 +237,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     }
 
     // step 2.2: classify all strings and count bucket sizes
+    g_timer.change(TM_CLASSIFY);
 
     uint16_t* bktcache = new uint16_t[n];
 
@@ -271,6 +274,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     }
 
     // step 3: prefix sum
+    g_timer.change(TM_PREFIXSUM);
 
     size_t bktindex[bktnum];
     bktindex[0] = bktsize[0];
@@ -282,6 +286,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     assert(bktindex[bktnum-1] == n);
 
     // step 4: premute in-place
+    g_timer.change(TM_PERMUTE);
 
     for (size_t i=0, j; i < n - last_bkt_size; )
     {
@@ -301,6 +306,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     delete [] bktcache;
 
     // step 5: recursion
+    g_timer.change(TM_GENERAL);
 
     size_t i = 0, bsum = 0;
     while (i < bktnum-1)
@@ -456,12 +462,16 @@ public:
         {
             g_rs_steps++;
             //return inssort::inssort(strings, n, depth);
-            return bingmann_radix_sort::msd_CI5(strings, n, depth);
             //return bs_mkqs::ssort2(strings, n, depth);
+            g_timer.change(TM_SMALLSORT);
+            bingmann_radix_sort::msd_CI5(strings, n, depth);
+            g_timer.change(TM_GENERAL);
+            return;
         }
         g_ss_steps++;
 
         // step 1: select splitters with oversampling
+        g_timer.change(TM_MAKE_SAMPLE);
 
         //const size_t oversample_factor = 1;
         const size_t samplesize = oversample_factor * numsplitters;
@@ -476,6 +486,8 @@ public:
         }
 
         std::sort(samples, samples + samplesize);
+
+        g_timer.change(TM_MAKE_SPLITTER);
 
         SplitterTree tree;
         {
@@ -541,6 +553,7 @@ public:
 #endif
 
         // step 2.2: classify all strings and count bucket sizes
+        g_timer.change(TM_CLASSIFY);
 
         uint16_t* bktcache = new uint16_t[n];
 
@@ -551,7 +564,7 @@ public:
             // binary search in splitter with equal check
             key_type key = get_char<key_type>(strings[si], depth);
 
-            unsigned int b = find_bkt(key, NULL, tree.splitter_tree, treebits, numsplitters);
+            unsigned int b = find_bkt(key, NULL, tree.splitter_tree+1, treebits, numsplitters);
 
             assert(b < bktnum);
 
@@ -575,6 +588,7 @@ public:
         }
 
         // step 3: prefix sum
+        g_timer.change(TM_PREFIXSUM);
 
         size_t bktindex[bktnum];
         bktindex[0] = bktsize[0];
@@ -586,6 +600,7 @@ public:
         assert(bktindex[bktnum-1] == n);
 
         // step 4: premute in-place
+        g_timer.change(TM_PERMUTE);
 
         for (size_t i=0, j; i < n - last_bkt_size; )
         {
@@ -605,6 +620,7 @@ public:
         delete [] bktcache;
 
         // step 5: recursion
+        g_timer.change(TM_GENERAL);
 
         size_t i = 0, bsum = 0;
         while (i < bktnum-1)

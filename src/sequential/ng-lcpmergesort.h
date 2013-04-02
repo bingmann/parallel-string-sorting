@@ -114,5 +114,4 @@ CONTESTANT_REGISTER(ng_lcpmergesort,
                     "ng/lcpmergesort",
                     "LCP-Mergesort Original by Waihong Ng and Katsuhiko Kakehi")
 
-
 } // namespace ng_lcpmergesort

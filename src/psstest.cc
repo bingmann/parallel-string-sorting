@@ -303,7 +303,7 @@ void Contestant_UCArray::run()
             g_statscache >> "status" << "SIG" << WTERMSIG(status);
         }
 
-        StatsWriter(statsfile).append_statsmap(g_statscache);
+        StatsWriter(statsfile).append_stats(g_statscache);
     }
     else {
         std::cout << "Child wait returned with status " << status << std::endl;
@@ -314,7 +314,7 @@ void Contestant_UCArray::run()
                      >> "string_count" << g_string_offsets.size()
                      >> "status" << "weird";
 
-        StatsWriter(statsfile).append_statsmap(g_statscache);
+        StatsWriter(statsfile).append_stats(g_statscache);
     }
 
     if (gopt_output) exit(0);
@@ -370,9 +370,9 @@ void Contestant_UCArray::real_run()
     if (m_prepare_func)
         m_prepare_func(stringptr.data(), stringptr.size());
 
-    double ts1, ts2;
+    MeasureTime timer;
 
-    ts1 = omp_get_wtime();
+    timer.start();
     do
     {
         m_run_func(stringptr.data(), stringptr.size());
@@ -383,7 +383,7 @@ void Contestant_UCArray::real_run()
             }
         }
     } while (--repeats);
-    ts2 = omp_get_wtime();
+    timer.stop();
 
 #ifdef MALLOC_COUNT
     std::cout << "Max stack usage: " << stack_count_usage(stack) << std::endl;
@@ -399,8 +399,8 @@ void Contestant_UCArray::real_run()
     }
 #endif
 
-    g_statscache >> "time" << (ts2-ts1);
-    (std::cout << ts2-ts1 << "\tchecking ").flush();
+    g_statscache >> "time" << timer.delta();
+    (std::cout << timer.delta() << "\tchecking ").flush();
 
     if (check_sorted_order(stringptr, pc)) {
         std::cout << "ok" << std::endl;
@@ -416,7 +416,7 @@ void Contestant_UCArray::real_run()
     g_statscache >> "dprefix" << g_string_dprefix;
 
     // print timing data out to results file
-    StatsWriter(statsfile).append_statsmap(g_statscache);
+    StatsWriter(statsfile).append_stats(g_statscache);
     g_statscache.clear();
 
     if (gopt_output)
@@ -617,6 +617,8 @@ int main(int argc, char* argv[])
     }
 
     increase_stacklimit(g_stacklimit);
+
+    std::cout << "CLOCK_MONOTONIC resolution: " << MeasureTime().resolution() << std::endl;
 
     if (gopt_inputsize_maxlimit < gopt_inputsize_minlimit)
         gopt_inputsize_maxlimit = gopt_inputsize_minlimit;

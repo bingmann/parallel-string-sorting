@@ -32,17 +32,21 @@ using namespace stringtools;
 
 typedef uint64_t key_type;
 
-static const size_t l2cache = 256*1024;
+static const size_t l2cache = 1024;
 
-static const size_t g_samplesort_smallsort = 128;
+static const size_t g_samplesort_smallsort = 32*1024;
 
 static const size_t oversample_factor = 1;
 
 static size_t g_ss_steps, g_rs_steps;
 
+enum { TM_GENERAL, TM_MAKE_SAMPLE, TM_MAKE_SPLITTER, TM_CLASSIFY, TM_PREFIXSUM, TM_PERMUTE, TM_SMALLSORT };
+static TimerArray g_timer(16);
+
 static inline void sample_sort_pre()
 {
     g_ss_steps = g_rs_steps = 0;
+    g_timer.clear();
 }
 
 static inline void sample_sort_post()
@@ -50,6 +54,14 @@ static inline void sample_sort_post()
     g_statscache >> "l2cache" << l2cache
                  >> "steps_sample_sort" << g_ss_steps
                  >> "steps_base_sort" << g_rs_steps;
+
+    g_statscache >> "tm_general" << g_timer.get(TM_GENERAL)
+                 >> "tm_make_sample" << g_timer.get(TM_MAKE_SAMPLE)
+                 >> "tm_make_splitter" << g_timer.get(TM_MAKE_SPLITTER)
+                 >> "tm_classify" << g_timer.get(TM_CLASSIFY)
+                 >> "tm_prefixsum" << g_timer.get(TM_PREFIXSUM)
+                 >> "tm_permute" << g_timer.get(TM_PERMUTE)
+                 >> "tm_smallsort" << g_timer.get(TM_SMALLSORT);
 }
 
 // ----------------------------------------------------------------------------

@@ -25,11 +25,12 @@ class StatsCache
 {
 public:
 
-    typedef std::map<std::string, std::string>  statsmap_type;
+    typedef std::pair<std::string, std::string> strpair_type;
+    typedef std::vector<strpair_type>  statsvec_type;
 
 private:
 
-    statsmap_type               m_statsmap;
+    statsvec_type               m_statsvec;
 
     std::string                 m_thiskey;
 
@@ -40,7 +41,7 @@ public:
     /// Clear all data
     void clear()
     {
-        m_statsmap.clear();
+        m_statsvec.clear();
         m_thiskey.clear();
         m_curritem.str("");
     }
@@ -51,7 +52,7 @@ public:
     {
         if (m_thiskey.size())
         {
-            m_statsmap.insert( std::make_pair(m_thiskey, m_curritem.str()) );
+            m_statsvec.push_back( strpair_type(m_thiskey, m_curritem.str()) );
             m_thiskey.clear();
             m_curritem.str("");
         }
@@ -60,6 +61,7 @@ public:
         return *this;
     }
 
+    /// Append the value to a previously >>-ed key.
     template <typename Type>
     StatsCache& operator<< (const Type& t)
     {
@@ -74,16 +76,17 @@ public:
         return *this;
     }
 
-    const statsmap_type& get_statsmap()
+    /// Return vector for inclusion in a StatsWriter.
+    const statsvec_type& get_statsvec()
     {
         if (m_thiskey.size())
         {
-            m_statsmap.insert( std::make_pair(m_thiskey, m_curritem.str()) );
+            m_statsvec.push_back( strpair_type(m_thiskey, m_curritem.str()) );
             m_thiskey.clear();
             m_curritem.str("");
         }
 
-        return m_statsmap;
+        return m_statsvec;
     }
 };
 
@@ -151,11 +154,11 @@ public:
     }
 
     // Append a stats map
-    void append_statsmap(StatsCache& sc)
+    void append_stats(StatsCache& sc)
     {
-        const StatsCache::statsmap_type& sm = sc.get_statsmap();
+        const StatsCache::statsvec_type& sm = sc.get_statsvec();
 
-        for (StatsCache::statsmap_type::const_iterator si = sm.begin();
+        for (StatsCache::statsvec_type::const_iterator si = sm.begin();
              si != sm.end(); ++si)
         {
             m_line << "\t" << si->first << "=" << si->second;
@@ -166,7 +169,7 @@ public:
 class SizeLogger
 {
 private:
-    
+
     /// log output file
     std::ofstream       m_logfile;
 
@@ -231,5 +234,141 @@ public:
             m_logfile << std::setprecision(16) << ((m_begintime + m_endtime) / 2.0) << " "
                       << std::setprecision(16) << (m_avgsum / m_avgcount) << " " << m_avgcount << "\n";
         }
+    }
+};
+
+/// Very simple class to measure runtime of function using clock_gettime.
+class MeasureTime
+{
+private:
+
+    struct timespec     m_tp1, m_tp2;
+
+public:
+    /// return the resolution of the CLOCK_MONOTONIC used
+    inline double resolution() const
+    {
+        struct timespec tp_res;
+
+        if (clock_getres(CLOCK_MONOTONIC, &tp_res)) {
+            perror("Could not clock_getres(CLOCK_MONOTONIC)");
+            return -1;
+        }
+
+        return tp_res.tv_sec + tp_res.tv_nsec / 1e9;
+    }
+
+    /// Start timing
+    inline void start()
+    {
+        if (clock_gettime(CLOCK_MONOTONIC, &m_tp1)) {
+            perror("Could not clock_gettime(CLOCK_MONOTONIC)");
+        }
+    }
+
+    /// End timing
+    inline void stop()
+    {
+        if (clock_gettime(CLOCK_MONOTONIC, &m_tp2)) {
+            perror("Could not clock_gettime(CLOCK_MONOTONIC)");
+        }
+    }
+
+    /// Return delta in seconds between start() and stop().
+    inline double delta()
+    {
+        return (m_tp2.tv_sec + m_tp2.tv_nsec / 1e9)
+            - (m_tp1.tv_sec + m_tp1.tv_nsec / 1e9);
+    }
+};
+
+/// Class to measure different parts of a funciton by switching between
+/// different aggregating timers. Immediately start with timer 0. Use enums in
+/// your code to give the timer numbers names.
+class TimerArray
+{
+private:
+
+    // clock time of last call
+    struct timespec     m_tplast;
+
+    // currently running timer
+    unsigned int        m_tmcurr;
+
+    // array of timers (usually preallocated)
+    std::vector<struct timespec> m_tpvector;
+
+public:
+
+    TimerArray(unsigned int timers)
+    {
+        m_tplast.tv_sec = m_tplast.tv_nsec = 0;
+        m_tpvector.resize(timers, m_tplast);
+
+        clear();
+    }
+
+    /// clear all timers and start counting in timer 0.
+    void clear()
+    {
+        m_tplast.tv_sec = m_tplast.tv_nsec = 0;
+        std::fill(m_tpvector.begin(), m_tpvector.end(), m_tplast);
+        m_tmcurr = 0;
+
+        if (clock_gettime(CLOCK_MONOTONIC, &m_tplast)) {
+            perror("Could not clock_gettime(CLOCK_MONOTONIC)");
+        }
+    }
+
+    /// switch to other timer
+    inline void change(unsigned int tm)
+    {
+        assert(tm < m_tpvector.size());
+        struct timespec tpnow;
+
+        // get current time
+        if (clock_gettime(CLOCK_MONOTONIC, &tpnow)) {
+            perror("Could not clock_gettime(CLOCK_MONOTONIC)");
+        }
+
+        // add difference to current timer
+        m_tpvector[ m_tmcurr ].tv_sec += tpnow.tv_sec - m_tplast.tv_sec;
+        m_tpvector[ m_tmcurr ].tv_nsec += tpnow.tv_nsec - m_tplast.tv_nsec;
+
+        m_tplast = tpnow;
+        m_tmcurr = tm;
+    }
+
+    /// return amount of time spent in a timer
+    inline double get(unsigned int tm)
+    {
+        assert(tm < m_tpvector.size());
+        return (m_tpvector[tm].tv_sec + m_tpvector[tm].tv_nsec / 1e9);
+    }
+};
+
+/// Dummy class to replace TimerArray with no-ops.
+class TimerArrayDummy
+{
+public:
+
+    TimerArrayDummy(unsigned int /* timers */)
+    {
+    }
+
+    /// clear all timers and start counting in timer 0.
+    void clear()
+    {
+    }
+
+    /// switch to other timer
+    inline void change(unsigned int /* tm */)
+    {
+    }
+
+    /// return amount of time spent in a timer
+    inline double get(unsigned int /* tm */)
+    {
+        return 0;
     }
 };
