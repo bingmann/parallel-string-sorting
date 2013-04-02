@@ -22,6 +22,7 @@
 
 namespace bingmann_sample_sort {
 
+static const bool debug = true;
 static const bool debug_splitter = false;
 static const bool debug_bucketsize = false;
 static const bool debug_recursion = false;

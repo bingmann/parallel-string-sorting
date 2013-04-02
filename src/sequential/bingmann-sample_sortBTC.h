@@ -1,5 +1,5 @@
 /******************************************************************************
- * src/sequential/bingmann-sample_sortBSC.h
+ * src/sequential/bingmann-sample_sortBTC.h
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *
@@ -437,8 +437,6 @@ find_bkt_tree_equal(const key_type& key, const key_type* /* splitter */, const k
     return 2 * i; // < or > bucket
 }
 
-// run -a /sample_sortBTCF -s 1mb random10
-//break bingmann_sample_sort::find_bkt_tree_asmequal
 /// binary search on splitter array for bucket number
 inline unsigned int
 find_bkt_tree_asmequal(const key_type& key, const key_type* /* splitter */, const key_type* splitter_tree0, size_t treebits, size_t numsplitters)
@@ -482,25 +480,25 @@ find_bkt_tree_asmequal(const key_type& key, const key_type* /* splitter */, cons
     return i;
 }
 
-void bingmann_sample_sortBTCF(string* strings, size_t n)
+void bingmann_sample_sortBTCE1(string* strings, size_t n)
 {
     sample_sort_pre();
     sample_sortBTC<find_bkt_tree_equal>(strings,n,0);
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCF, "bingmann/sample_sortBTCF",
-                    "bingmann/sample_sortBTCF (binary tree equal, bkt cache)")
+CONTESTANT_REGISTER(bingmann_sample_sortBTCE1, "bingmann/sample_sortBTCE1",
+                    "bingmann/sample_sortBTCE1 (binary tree equal, bkt cache)")
 
-void bingmann_sample_sortBTCFA(string* strings, size_t n)
+void bingmann_sample_sortBTCE1A(string* strings, size_t n)
 {
     sample_sort_pre();
     sample_sortBTC<find_bkt_tree_asmequal>(strings,n,0);
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCFA, "bingmann/sample_sortBTCFA",
-                    "bingmann/sample_sortBTCFA (binary tree equal, asm CMOV, bkt cache)")
+CONTESTANT_REGISTER(bingmann_sample_sortBTCE1A, "bingmann/sample_sortBTCE1A",
+                    "bingmann/sample_sortBTCE1A (binary tree equal, asm CMOV, bkt cache)")
 
 #endif // improved version in bingmann-sample_sortBTCE.h
 
