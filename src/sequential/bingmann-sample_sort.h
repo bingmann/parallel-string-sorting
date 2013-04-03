@@ -22,7 +22,7 @@
 
 namespace bingmann_sample_sort {
 
-static const bool debug = true;
+static const bool debug = false;
 static const bool debug_splitter = false;
 static const bool debug_bucketsize = false;
 static const bool debug_recursion = false;
@@ -32,7 +32,7 @@ using namespace stringtools;
 
 typedef uint64_t key_type;
 
-static const size_t l2cache = 1024;
+static const size_t l2cache = 64*1024;
 
 static const size_t g_samplesort_smallsort = 32*1024;
 
