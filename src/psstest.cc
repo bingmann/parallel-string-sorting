@@ -83,6 +83,7 @@ const char*     gopt_inputwrite = NULL; // argument -i, --input
 const char*     gopt_output = NULL; // argument -o, --output
 
 bool            gopt_suffixsort = false; // argument --suffix
+bool            gopt_threads = false; // argument --threads
 bool            gopt_allthreads = false; // argument --allthreads
 
 static StatsCache g_statscache;
@@ -117,6 +118,7 @@ const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 #include "sequential/ng-cradix.h"
 #include "sequential/ng-cradix-rantala.h"
 #include "sequential/ng-lcpmergesort.h"
+
 #include "sequential/bingmann-radix_sort.h"
 #include "sequential/bingmann-sample_sort.h"
 #include "sequential/bingmann-sample_sortBS.h"
@@ -435,7 +437,7 @@ void Contestant_UCArray_Parallel::run()
 {
     if (gopt_sequential_only) return;
 
-    int p = 1;
+    int p = (gopt_threads ? 1 : omp_get_num_procs());
 
     while (1)
     {
@@ -488,6 +490,7 @@ void print_usage(const char* prog)
               << "      --sequential            Run only sequential algorithms." << std::endl
               << "      --suffix                Suffix sort the input file." << std::endl
               << "  -T, --timeout <sec>         Abort algorithms after this timeout (default: disabled)." << std::endl
+              << "  --threads                   Run tests with doubling number of threads from 1 to max_processors." << std::endl
         ;
 }
 
@@ -504,8 +507,9 @@ int main(int argc, char* argv[])
         { "timeout", required_argument,  0, 'T' },
         { "datafork", no_argument,       0, 'D' },
         { "suffix",  no_argument,        0, 1 },
-        { "allthreads", no_argument,     0, 2 },
-        { "sequential", no_argument,     0, 3 },
+        { "sequential", no_argument,     0, 2 },
+        { "threads", no_argument,        0, 3 },
+        { "allthreads", no_argument,     0, 4 },
         { 0,0,0,0 },
     };
 
@@ -596,13 +600,18 @@ int main(int argc, char* argv[])
             break;
 
         case 2:
-            gopt_allthreads = true;
-            std::cout << "Option --allthreads: running test with linear increasing thread count." << std::endl;
+            gopt_sequential_only = true;
+            std::cout << "Option --sequential: running only sequential algorithms." << std::endl;
             break;
 
         case 3:
-            gopt_sequential_only = true;
-            std::cout << "Option --sequential: running only sequential algorithms." << std::endl;
+            gopt_threads = true;
+            std::cout << "Option --threads: running test with exponentially increasing thread count." << std::endl;
+            break;
+
+        case 4:
+            gopt_allthreads = true;
+            std::cout << "Option --allthreads: running test with linear increasing thread count." << std::endl;
             break;
 
         default:
@@ -619,7 +628,7 @@ int main(int argc, char* argv[])
 
     increase_stacklimit(g_stacklimit);
 
-    std::cout << "CLOCK_MONOTONIC resolution: " << MeasureTime().resolution() << std::endl;
+    std::cout << "Using CLOCK_MONOTONIC with resolution: " << MeasureTime().resolution() << std::endl;
 
     if (gopt_inputsize_maxlimit < gopt_inputsize_minlimit)
         gopt_inputsize_maxlimit = gopt_inputsize_minlimit;

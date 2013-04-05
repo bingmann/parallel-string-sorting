@@ -394,6 +394,8 @@ public:
     static const size_t numsplitters = (1 << treebits) - 1;
 #endif
 
+    static size_t get_numsplitters() { return numsplitters; }
+
     struct SplitterTree
     {
         key_type splitter_tree[numsplitters+1];
@@ -746,6 +748,7 @@ public:
 void bingmann_sample_sortBTCE3(string* strings, size_t n)
 {
     sample_sort_pre();
+    g_statscache >> "numsplitters" << SampleSortBTCE3::get_numsplitters();
     SampleSortBTCE3::sort<find_bkt_tree_equal>(strings,n,0);
     sample_sort_post();
 }
@@ -756,6 +759,7 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE3, "bingmann/sample_sortBTCE3",
 void bingmann_sample_sortBTCE3A(string* strings, size_t n)
 {
     sample_sort_pre();
+    g_statscache >> "numsplitters" << SampleSortBTCE3::get_numsplitters();
     SampleSortBTCE3::sort<find_bkt_tree_asmequal>(strings,n,0);
     sample_sort_post();
 }
