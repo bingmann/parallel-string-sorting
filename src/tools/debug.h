@@ -20,6 +20,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef TOOLS_DEBUG_H
+#define TOOLS_DEBUG_H
+
+#include <sstream>
+#include <iostream>
+
 #define DBGX(dbg,X)   do { if (dbg) { std::cout << X; } } while(0)
 
 #define DBG(dbg,X)    DBGX(dbg, __FUNCTION__ << "() " << X << std::endl)
@@ -27,3 +33,17 @@
 #define DBG1(dbg,X)   DBGX(dbg, __FUNCTION__ << "() " << X)
 #define DBG2(dbg,X)   DBGX(dbg, X)
 #define DBG3(dbg,X)   DBGX(dbg, X << std::endl)
+
+// *** Support for multi-threaded programs, to activate:
+// #undef DBGX
+// #define DBGX DBGX_OMP
+
+#define DBGX_OMP(dbg,X) do { if (dbg) { std::ostringstream os; os << X; g_debug_output(os.str()); } } while(0)
+
+static inline void g_debug_output(const std::string& s)
+{
+#pragma omp critical
+    std::cout << s;
+}
+
+#endif // TOOLS_DEBUG_H

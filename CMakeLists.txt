@@ -55,6 +55,8 @@ find_package_handle_standard_args(GMP DEFAULT_MSG GMP_INCLUDE_DIR GMP_LIBRARIES)
 # build liblfds for lock-free data structures
 add_subdirectory(liblfds)
 
+add_subdirectory(minitbb)
+
 # descend into source
 add_subdirectory(src)
 

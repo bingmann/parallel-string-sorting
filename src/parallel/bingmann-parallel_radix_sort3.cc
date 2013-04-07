@@ -388,7 +388,6 @@ struct CountJob : public Job
 
     virtual void run(JobQueue& jobqueue)
     {
-        DBG(debug_jobs, "Process CountJob " << p << " @ " << step);
         step->count(p, jobqueue);
     }
 };
@@ -404,7 +403,6 @@ struct DistributeJob : public Job
 
     virtual void run(JobQueue& jobqueue)
     {
-        DBG(debug_jobs, "Process DistributeJob " << p << " @ " << step);
         step->distribute(p, jobqueue);
     }
 };
@@ -420,7 +418,6 @@ struct CopybackJob : public Job
 
     virtual void run(JobQueue& jobqueue)
     {
-        DBG(debug_jobs, "Process CopybackJob " << p << " @ " << step);
         step->copyback(p, jobqueue);
     }
 };
@@ -428,6 +425,8 @@ struct CopybackJob : public Job
 template <typename key_type>
 void RadixStepCE<key_type>::count(unsigned int p, JobQueue& jobqueue)
 {
+    DBG(debug_jobs, "Process CountJob " << p << " @ " << this);
+
     string* strB = strings + p * psize;
     string* strE = strings + std::min((p+1) * psize, n);
     if (strE < strB) strE = strB;
@@ -488,6 +487,8 @@ void RadixStepCE<key_type>::count_finished(JobQueue& jobqueue)
 template <typename key_type>
 void RadixStepCE<key_type>::distribute(unsigned int p, JobQueue& jobqueue)
 {
+    DBG(debug_jobs, "Process DistributeJob " << p << " @ " << this);
+
     string* strB = strings + p * psize;
     string* strE = strings + std::min((p+1) * psize, n);
     if (strE < strB) strE = strB;
@@ -531,6 +532,8 @@ void RadixStepCE<key_type>::distribute_finished(JobQueue& jobqueue)
 template <typename key_type>
 void RadixStepCE<key_type>::copyback(unsigned int p, JobQueue& jobqueue)
 {
+    DBG(debug_jobs, "Process CopybackJob " << p << " @ " << this);
+
     size_t strB = p * psize;
     size_t strE = std::min((p+1) * psize, n);
     if (strE < strB) strE = strB;
