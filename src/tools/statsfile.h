@@ -20,6 +20,18 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef TOOLS_STATSFILE_H
+#define TOOLS_STATSFILE_H
+
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <iomanip>
+
+#include <assert.h>
+#include <omp.h>
+
 /// Cache of key=value stats during run of algorithm
 class StatsCache
 {
@@ -372,3 +384,5 @@ public:
         return 0;
     }
 };
+
+#endif // TOOLS_STATSFILE_H

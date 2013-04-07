@@ -86,7 +86,7 @@ bool            gopt_suffixsort = false; // argument --suffix
 bool            gopt_threads = false; // argument --threads
 bool            gopt_allthreads = false; // argument --allthreads
 
-static StatsCache g_statscache;
+StatsCache      g_statscache;
 
 // file name of statistics output
 static const char* statsfile = "pss-runs1.txt";

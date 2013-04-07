@@ -20,9 +20,16 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef TOOLS_CONTEST_H
+#define TOOLS_CONTEST_H
+
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+
+#include "statsfile.h"
+
+extern StatsCache g_statscache;
 
 extern int pss_num_threads;
 extern size_t g_small_sort;
@@ -120,3 +127,5 @@ public:
 #define CONTESTANT_REGISTER_PARALLEL(func, algoname, desc)              \
     static const class Contestant* _Contestant_##func##_register =      \
         new Contestant_UCArray_Parallel(NULL,func,algoname,desc);
+
+#endif // TOOLS_CONTEST_H
