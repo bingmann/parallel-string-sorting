@@ -52,9 +52,7 @@ set(GMP_LIBRARIES ${GMPXX_LIBRARIES} ${GMP_LIBRARIES})
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GMP DEFAULT_MSG GMP_INCLUDE_DIR GMP_LIBRARIES)
 
-# build liblfds for lock-free data structures
-add_subdirectory(liblfds)
-
+# build subset of Intel TBB
 add_subdirectory(minitbb)
 
 # descend into source

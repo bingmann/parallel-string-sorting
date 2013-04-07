@@ -5,13 +5,20 @@ include_directories("${PROJECT_SOURCE_DIR}/minitbb/")
 # Define sources
 set(LIBMINITBB_SOURCES
 
+  src/cache_aligned_allocator.cpp
   src/concurrent_monitor.cpp
   src/concurrent_monitor.h
   src/concurrent_queue.cpp
+  src/dynamic_link.cpp
+  src/dynamic_link.h
   src/itt_notify.cpp
   src/itt_notify.h
   src/semaphore.cpp
   src/semaphore.h
+  src/tbb_assert_impl.h
+  src/tbb_misc.cpp
+  src/tbb_misc.h
+  src/tbb_version.h
   src/version_string.ver
 
   tbb/aligned_space.h
