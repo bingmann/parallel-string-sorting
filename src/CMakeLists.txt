@@ -12,9 +12,7 @@ set(SOURCES
   rantala/funnelsort.cc
   sinha-copy-burstsort/glue.cc
   parallel/akiba-parallel_string_radix_sort.cc
-  parallel/bingmann-parallel_radix_sort1.cc
-  parallel/bingmann-parallel_radix_sort2.cc
-  parallel/bingmann-parallel_radix_sort3.cc
+  parallel/bingmann-parallel_radix_sort.cc
   parallel/bingmann-parallel_mkqs.cc
   parallel/bingmann-parallel_sample_sortBS.cc
   parallel/bingmann-parallel_sample_sortBSC.cc

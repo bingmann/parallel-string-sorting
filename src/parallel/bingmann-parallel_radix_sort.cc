@@ -1,7 +1,7 @@
 /******************************************************************************
  * src/parallel/bingmann-parallel_radix_sort3.h
  *
- * Parallel radix sort with work-balancing, variant 3.
+ * Parallel radix sort with work-balancing.
  *
  * The set of strings is sorted using a 8- or 16-bit radix sort
  * algorithm. Recursive sorts are processed in parallel using a lock-free job
@@ -10,17 +10,14 @@
  *
  * The sequential radix sort is implemented using an explicit recursion stack,
  * which enables threads to "free up" work from the top of the stack when other
- * threads become idle. This variant uses in-place permuting and does _not_ use
- * a character cache (oracle).
+ * threads become idle. This variant uses in-place permuting and a character
+ * cache (oracle).
  *
  * To parallelize sorting of large buckets an out-of-place variant is
  * implemented using a sequence of three Jobs: count, distribute and
  * copyback. All threads work on a job-specific context called RadixStepCE,
- * which encapsules all variables of a 16-bit radix sort (templatized with
- * key_type).
- *
- * Difference to variant 3: all radix sorts now use a character cache (also
- * called oracle in rantala sources).
+ * which encapsules all variables of an 8-bit or 16-bit radix sort (templatized
+ * with key_type).
  *
  ******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
@@ -54,7 +51,7 @@
 
 extern size_t g_smallsort;
 
-namespace bingmann_parallel_radix_sort3 {
+namespace bingmann_parallel_radix_sort {
 
 using namespace stringtools;
 using namespace jobqueue;
@@ -65,33 +62,39 @@ static const bool use_work_stealing = true;
 
 typedef unsigned char* string;
 
+static size_t g_totalsize;
+
 static const size_t g_inssort_threshold = 64;
 
 /// Prototype called to schedule deeper sorts
+template <typename bigsort_key_type>
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth);
 
 // ****************************************************************************
-// *** SmallsortJob - sort 8-bit radix in-place with explicit stack-based recursion
+// *** SmallsortJob8 - sort 8-bit radix in-place with explicit stack-based recursion
 
-struct SmallsortJob : public Job
+struct SmallsortJob8 : public Job
 {
     string*             strings;
     size_t              n;
     size_t              depth;
 
-    SmallsortJob(string* _strings, size_t _n, size_t _depth)
-        : strings(_strings), n(_n), depth(_depth) { }
+    SmallsortJob8(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth)
+        : strings(_strings), n(_n), depth(_depth)
+    {
+        jobqueue.enqueue(this);
+    }
 
     virtual void run(JobQueue& jobqueue);
 };
 
-struct RadixStepCI
+struct RadixStep8_CI
 {
     string* str;
     size_t idx;
     size_t bktsize[256];
 
-    RadixStepCI(string* strings, size_t n, size_t depth, uint8_t* charcache)
+    RadixStep8_CI(string* strings, size_t n, size_t depth, uint8_t* charcache)
     {
         // count character occurances
 #if 1
@@ -137,9 +140,9 @@ struct RadixStepCI
     }
 };
 
-void SmallsortJob::run(JobQueue& jobqueue)
+void SmallsortJob8::run(JobQueue& jobqueue)
 {
-    DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
+    DBG(debug_jobs, "Process SmallsortJob8 " << this << " of size " << n);
 
     if (n < g_inssort_threshold)
         return inssort::inssort(strings,n,depth);
@@ -148,14 +151,14 @@ void SmallsortJob::run(JobQueue& jobqueue)
 
     // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
     size_t pop_front = 0;
-    std::vector<RadixStepCI> radixstack;
-    radixstack.push_back( RadixStepCI(strings,n,depth,charcache) );
+    std::vector<RadixStep8_CI> radixstack;
+    radixstack.push_back( RadixStep8_CI(strings,n,depth,charcache) );
 
     while ( radixstack.size() > pop_front )
     {
         while ( radixstack.back().idx < 255 )
         {
-            RadixStepCI& rs = radixstack.back();
+            RadixStep8_CI& rs = radixstack.back();
             ++rs.idx; // process the bucket rs.idx
 
             if (rs.bktsize[rs.idx] == 0)
@@ -168,26 +171,26 @@ void SmallsortJob::run(JobQueue& jobqueue)
             else
             {
                 rs.str += rs.bktsize[rs.idx];
-                radixstack.push_back( RadixStepCI(rs.str - rs.bktsize[rs.idx],
-                                                  rs.bktsize[rs.idx],
-                                                  depth + radixstack.size(),
-                                                  charcache) );
+                radixstack.push_back( RadixStep8_CI(rs.str - rs.bktsize[rs.idx],
+                                                    rs.bktsize[rs.idx],
+                                                    depth + radixstack.size(),
+                                                    charcache) );
                 // cannot add to rs.str here, because rs may have invalidated
             }
 
             if (use_work_stealing && jobqueue.has_idle())
             {
                 // convert top level of stack into independent jobs
-                DBG(debug_jobs, "Freeing top level of SmallsortJob's radixsort stack");
+                DBG(debug_jobs, "Freeing top level of SmallsortJob8's radixsort stack");
 
-                RadixStepCI& rt = radixstack[pop_front];
+                RadixStep8_CI& rt = radixstack[pop_front];
 
                 while ( rt.idx < 255 )
                 {
                     ++rt.idx; // enqueue the bucket rt.idx
 
                     if (rt.bktsize[rt.idx] == 0) continue;
-                    jobqueue.enqueue( new SmallsortJob(rt.str, rt.bktsize[rt.idx], depth + pop_front) );
+                    new SmallsortJob8(jobqueue, rt.str, rt.bktsize[rt.idx], depth + pop_front);
                     rt.str += rt.bktsize[rt.idx];
                 }
 
@@ -216,7 +219,7 @@ struct SmallsortJob16 : public Job
     virtual void run(JobQueue& jobqueue);
 };
 
-struct RadixStep16
+struct RadixStep16_CI
 {
     typedef uint16_t key_type;
     static const size_t numbkts = key_traits<key_type>::radix;
@@ -225,7 +228,7 @@ struct RadixStep16
     size_t idx;
     size_t bktsize[numbkts];
 
-    RadixStep16(string* strings, size_t n, size_t depth, key_type* charcache)
+    RadixStep16_CI(string* strings, size_t n, size_t depth, key_type* charcache)
     {
         // fill character cache
         for (size_t i=0; i < n; ++i)
@@ -279,14 +282,14 @@ void SmallsortJob16::run(JobQueue& jobqueue)
 
     // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
     size_t pop_front = 0;
-    std::vector<RadixStep16> radixstack;
-    radixstack.push_back( RadixStep16(strings,n,depth,charcache) );
+    std::vector<RadixStep16_CI> radixstack;
+    radixstack.push_back( RadixStep16_CI(strings,n,depth,charcache) );
 
     while ( radixstack.size() > pop_front )
     {
         while ( radixstack.back().idx < numbkts-1 )
         {
-            RadixStep16& rs = radixstack.back();
+            RadixStep16_CI& rs = radixstack.back();
             ++rs.idx; // process the bucket rs.idx
 
             if ( (rs.idx & 0xFF) == 0 ) { // skip over finished 0x??00 buckets
@@ -304,10 +307,10 @@ void SmallsortJob16::run(JobQueue& jobqueue)
             else
             {
                 rs.str += rs.bktsize[rs.idx];
-                radixstack.push_back( RadixStep16(rs.str - rs.bktsize[rs.idx],
-                                                  rs.bktsize[rs.idx],
-                                                  depth + 2*radixstack.size(),
-                                                  charcache) );
+                radixstack.push_back( RadixStep16_CI(rs.str - rs.bktsize[rs.idx],
+                                                     rs.bktsize[rs.idx],
+                                                     depth + 2*radixstack.size(),
+                                                     charcache) );
                 // cannot add to rs.str here, because rs may have invalidated
             }
 
@@ -316,7 +319,7 @@ void SmallsortJob16::run(JobQueue& jobqueue)
                 // convert top level of stack into independent jobs
                 DBG(debug_jobs, "Freeing top level of SmallsortJob16's radixsort stack");
 
-                RadixStep16& rt = radixstack[pop_front];
+                RadixStep16_CI& rt = radixstack[pop_front];
 
                 while ( rt.idx < numbkts-1 )
                 {
@@ -337,11 +340,6 @@ void SmallsortJob16::run(JobQueue& jobqueue)
     delete [] charcache;
 }
 
-void EnqueueSmall(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
-{
-    jobqueue.enqueue( new SmallsortJob(strings,n,depth) );
-}
-
 // ****************************************************************************
 // *** RadixStepCE out-of-place 8- or 16-bit parallel radix sort with Jobs
 
@@ -350,7 +348,7 @@ struct RadixStepCE
 {
     typedef KeyType key_type;
 
-    static const size_t numbkts = key_traits<key_type>::radix;
+    static const size_t numbkts = key_traits<key_type>::radix; // 256 or 65536
 
     string*             strings;
     size_t              n;
@@ -365,7 +363,7 @@ struct RadixStepCE
 
     key_type*           charcache;
 
-    RadixStepCE() {}
+    RadixStepCE(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth);
 
     void count(unsigned int p, JobQueue& jobqueue);
     void count_finished(JobQueue& jobqueue);
@@ -421,6 +419,24 @@ struct CopybackJob : public Job
         step->copyback(p, jobqueue);
     }
 };
+
+template <typename key_type>
+RadixStepCE<key_type>::RadixStepCE(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth)
+    : strings(_strings), n(_n), depth(_depth)
+{
+    parts = omp_get_max_threads() * n / g_totalsize;
+    if (parts == 0) parts = 1;
+
+    psize = (n + parts-1) / parts;
+
+    bkt = new size_t[numbkts * parts + 1];
+    charcache = new key_type[n];
+
+    // create worker jobs
+    pwork = parts;
+    for (unsigned int p = 0; p < parts; ++p)
+        jobqueue.enqueue( new CountJob<key_type>(this, p) );
+}
 
 template <typename key_type>
 void RadixStepCE<key_type>::count(unsigned int p, JobQueue& jobqueue)
@@ -558,7 +574,7 @@ void RadixStepCE<uint8_t>::copyback_finished(JobQueue& jobqueue)
     for (unsigned int i = 1; i < numbkts; ++i)
     {
         if (bkt[i] + 2 > bkt[i+1]) continue;
-        Enqueue(jobqueue, strings + bkt[i], bkt[i+1] - bkt[i], depth + key_traits<key_type>::add_depth);
+        Enqueue<key_type>(jobqueue, strings + bkt[i], bkt[i+1] - bkt[i], depth + key_traits<key_type>::add_depth);
     }
 
     delete [] bkt;
@@ -581,60 +597,52 @@ void RadixStepCE<uint16_t>::copyback_finished(JobQueue& jobqueue)
         if ((i & 0xFF) == 0) ++i; // skip over finished buckets 0x??00
 
         if (bkt[i] + 2 > bkt[i+1]) continue;
-        Enqueue(jobqueue, strings + bkt[i], bkt[i+1] - bkt[i], depth + key_traits<key_type>::add_depth);
+        Enqueue<key_type>(jobqueue, strings + bkt[i], bkt[i+1] - bkt[i], depth + key_traits<key_type>::add_depth);
     }
 
     delete [] bkt;
     delete this;
 }
 
-size_t totalsize;
-
-void EnqueueBig(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
+void EnqueueSmall(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 {
-    size_t parts = omp_get_max_threads() * n / totalsize;
-    if (parts == 0) parts = 1;
-    size_t psize = (n + parts-1) / parts;
-
-    typedef uint16_t key_type;
-    typedef RadixStepCE<key_type> RadixStep_type;
-
-    RadixStep_type* step = new RadixStep_type;
-    step->strings = strings;
-    step->n = n;
-    step->depth = depth;
-
-    step->parts = parts;
-    step->psize = psize;
-    step->pwork = parts;
-    step->bkt = new size_t[RadixStep_type::numbkts * parts + 1];
-
-    step->charcache = new key_type[n];
-
-    for (unsigned int p = 0; p < parts; ++p)
-        jobqueue.enqueue( new CountJob<key_type>(step, p) );
+    new SmallsortJob8(jobqueue, strings, n, depth);
 }
 
+template <typename bigsort_key_type>
 void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
 {
     // TODO: tune parameter
     if (n > 128*1024)
-        return EnqueueBig(jobqueue, strings, n, depth);
+        new RadixStepCE<bigsort_key_type>(jobqueue, strings, n, depth);
     else
-        return EnqueueSmall(jobqueue, strings, n, depth);
+        new SmallsortJob8(jobqueue, strings, n, depth);
 }
 
-void parallel_radix_sort3(string* strings, size_t n)
+static void parallel_radix_sort_8bit(string* strings, size_t n)
 {
-    totalsize = n;
+    g_totalsize = n;
 
     JobQueue jobqueue;
-    Enqueue(jobqueue, strings, n, 0);
+    Enqueue<uint8_t>(jobqueue, strings, n, 0);
     jobqueue.loop();
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_radix_sort3,
-                             "bingmann/parallel_radix_sort3",
-                             "bingmann/parallel_radix_sort3")
+CONTESTANT_REGISTER_PARALLEL(parallel_radix_sort_8bit,
+                             "bingmann/parallel_radix_sort_8bit",
+                             "Parallel MSD Radix sort with load balancing, 8-bit BigSorts")
 
-} // namespace bingmann_parallel_radix_sort3
+static void parallel_radix_sort_16bit(string* strings, size_t n)
+{
+    g_totalsize = n;
+
+    JobQueue jobqueue;
+    Enqueue<uint16_t>(jobqueue, strings, n, 0);
+    jobqueue.loop();
+}
+
+CONTESTANT_REGISTER_PARALLEL(parallel_radix_sort_16bit,
+                             "bingmann/parallel_radix_sort_16bit",
+                             "Parallel MSD Radix sort with load balancing, 16-bit BigSorts")
+
+} // namespace bingmann_parallel_radix_sort

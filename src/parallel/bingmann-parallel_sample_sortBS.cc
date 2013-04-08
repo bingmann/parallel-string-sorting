@@ -35,7 +35,7 @@
 
 extern size_t g_smallsort;
 
-namespace bingmann_parallel_radix_sort3 {
+namespace bingmann_parallel_radix_sort {
 
 using namespace stringtools;
 using namespace jobqueue;
@@ -421,7 +421,7 @@ void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
     if (n > 128*1024)
         return EnqueueBig(jobqueue, strings, n, depth);
     else
-        return bingmann_parallel_radix_sort3::EnqueueSmall(jobqueue, strings, n, depth);
+        return bingmann_parallel_radix_sort::EnqueueSmall(jobqueue, strings, n, depth);
 }
 
 void parallel_sample_sortBS(string* strings, size_t n)
