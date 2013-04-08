@@ -72,12 +72,12 @@ size_t          gopt_repeats = 0;
 std::vector<const char*> gopt_algorithm;
 int             gopt_timeout = 0;
 
-const char*     g_dataname = NULL;
-const char*     g_string_data = NULL;
-char*           g_string_databuff = NULL;
-size_t          g_string_datasize = 0;
-std::vector<size_t> g_string_offsets;
-size_t          g_string_dprefix = 0;
+const char*     g_dataname = NULL;      // input name
+const char*     g_string_data = NULL;   // pointer to first string
+char*           g_string_databuff = NULL; // pointer to data buffer (with padding)
+size_t          g_string_datasize = 0;  // total size of string data (without padding)
+size_t          g_string_count = 0;     // number of strings.
+size_t          g_string_dprefix = 0;   // calculated distinguishing prefix
 
 const char*     gopt_inputwrite = NULL; // argument -i, --input
 const char*     gopt_output = NULL; // argument -o, --output
@@ -190,8 +190,23 @@ static inline void maybe_inputwrite()
 
     std::cout << "Writing unsorted input to " << gopt_inputwrite << std::endl;
     std::ofstream f(gopt_inputwrite);
-    for (size_t i = 0; i < g_string_offsets.size(); ++i)
-        f << g_string_data + g_string_offsets[i] << "\n";
+
+    if (!gopt_suffixsort)
+    {
+        const char* sbegin = g_string_data;
+        for (size_t i = 0; i < g_string_datasize; ++i)
+        {
+            if (g_string_data[i] == 0) {
+                f << sbegin << "\n";
+                sbegin = g_string_data + i+1;
+            }
+        }
+    }
+    else
+    {
+        for (size_t i = 0; i < g_string_datasize; ++i)
+            f << g_string_data + i << "\n";
+    }
 }
 
 void Contest::run_contest(const char* path)
@@ -207,7 +222,7 @@ void Contest::run_contest(const char* path)
         g_string_dprefix = 0;
 
         maybe_inputwrite();
-        std::cout << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
+        std::cout << "Sorting " << g_string_count << " strings composed of " << g_string_datasize << " bytes." << std::endl;
     }
 
     std::sort(m_list.begin(), m_list.end(), sort_contestants);
@@ -260,7 +275,7 @@ void Contestant_UCArray::run()
             g_string_dprefix = 0;
 
             maybe_inputwrite();
-            std::cout << "Sorting " << g_string_offsets.size() << " strings composed of " << g_string_datasize << " bytes." << std::endl;
+            std::cout << "Sorting " << g_string_count << " strings composed of " << g_string_datasize << " bytes." << std::endl;
         }
 
         if (gopt_timeout) alarm(gopt_timeout); // terminate child program after gopt_timeout seconds
@@ -314,7 +329,7 @@ void Contestant_UCArray::run()
         g_statscache >> "algo" << m_algoname
                      >> "data" << g_dataname
                      >> "char_count" << g_string_datasize
-                     >> "string_count" << g_string_offsets.size()
+                     >> "string_count" << g_string_count
                      >> "status" << "weird";
 
         StatsWriter(statsfile).append_stats(g_statscache);
@@ -338,12 +353,30 @@ void Contestant_UCArray::real_run()
 
     // create unsigned char* array from offsets
     std::vector<unsigned char*> stringptr;
-    stringptr.reserve( g_string_offsets.size() );
+    stringptr.resize( g_string_count );
 
-    for (size_t i = 0; i < g_string_offsets.size(); ++i)
+    if (!gopt_suffixsort)
     {
-        stringptr.push_back( (unsigned char*)g_string_data + g_string_offsets[i] );
+        size_t j = 0;
+        stringptr[j++] = (unsigned char*)g_string_data;
+        for (size_t i = 0; i < g_string_datasize; ++i)
+        {
+            if (g_string_data[i] == 0 && i+1 < g_string_datasize) {
+                assert(j < stringptr.size());
+                stringptr[j++] = (unsigned char*)g_string_data + i+1;
+            }
+        }
+        assert(j == g_string_count);
     }
+    else
+    {
+        assert(g_string_count == g_string_datasize);
+        for (size_t i = 0; i < g_string_datasize; ++i)
+            stringptr[i] = (unsigned char*)g_string_data + i;
+    }
+
+    std::vector<unsigned char*> stringptr_copy;
+    if (repeats > 1) stringptr_copy = stringptr;
 
     // save permutation check evaluation result
     PermutationCheck pc(stringptr);
@@ -381,9 +414,7 @@ void Contestant_UCArray::real_run()
         m_run_func(stringptr.data(), stringptr.size());
 
         if (repeats > 1) { // refill stringptr array for next repeat
-            for (size_t i = 0; i < g_string_offsets.size(); ++i) {
-                stringptr[i] = (unsigned char*)g_string_data + g_string_offsets[i];
-            }
+            stringptr = stringptr_copy;
         }
     } while (--repeats);
     timer.stop();

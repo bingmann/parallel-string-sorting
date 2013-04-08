@@ -82,8 +82,7 @@ bool load_plain(const std::string& path)
     }
 
     // mark offsets of '\n' -> '\0' terminated line starts
-    g_string_offsets.clear();
-    g_string_offsets.push_back(0);
+    g_string_count = 0;
 
     // read complete file
     size_t rpos = 0;
@@ -104,14 +103,14 @@ bool load_plain(const std::string& path)
         for (size_t i = rpos; i < rpos + rb; ++i)
         {
             if (gopt_suffixsort) {
-                g_string_offsets.push_back(i);
+                g_string_count++;
             }
             else
             {
                 if (stringdata[i] == '\n') {
                     stringdata[i] = 0;
                     if (i+1 < size)
-                        g_string_offsets.push_back(i+1);
+                        g_string_count++;
                 }
             }
         }
@@ -195,6 +194,7 @@ bool load_compressed(const std::string& path)
     if (!stringdata) {
         exit(-1);
     }
+    g_string_count = 0;
 
     // read complete file from decompressor child's pipe
     size_t rpos = 0;
@@ -215,14 +215,14 @@ bool load_compressed(const std::string& path)
         for (size_t i = rpos; i < rpos + rb; ++i)
         {
             if (gopt_suffixsort) {
-                g_string_offsets.push_back(i);
+                g_string_count++;
             }
             else
             {
                 if (stringdata[i] == '\n') {
                     stringdata[i] = 0;
                     if (i+1 < size)
-                        g_string_offsets.push_back(i+1);
+                        g_string_count++;
                 }
             }
         }
@@ -264,14 +264,14 @@ bool generate_random(const std::string& path, const std::string& letters)
         return false;
     }
 
-    g_string_offsets.clear();
+    g_string_count = 0;
     LCGRandom rng(1234567);
     size_t slen = 0;
 
     for (size_t i = 0; i < size; ++i)
     {
         if (i == slen) { // start of string
-            g_string_offsets.push_back(i);
+            g_string_count++;
             slen += (rng() % 3) + 16;
         }
 
@@ -306,11 +306,11 @@ bool generate_sinha_randomASCII()
     char* stringdata = allocate_stringdata(size, "randomASCII");
     if (!stringdata) return false;
 
-    g_string_offsets.clear();
+    g_string_count = 0;
     srandom(73802);
 
     size_t slen = (rand() % 20); // excludes zero terminator
-    g_string_offsets.push_back(0);
+    g_string_count++;
 
     for (size_t i = 0; i < size; ++i)
     {
@@ -319,7 +319,7 @@ bool generate_sinha_randomASCII()
             stringdata[i] = 0;
             slen += 1 + (rand() % 20); // includes zero terminator of this
             if (i+1 < size)
-                g_string_offsets.push_back(i+1);
+                g_string_count++;
         }
         else
         {
