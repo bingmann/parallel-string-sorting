@@ -14,11 +14,8 @@ set(SOURCES
   parallel/akiba-parallel_string_radix_sort.cc
   parallel/bingmann-parallel_radix_sort.cc
   parallel/bingmann-parallel_mkqs.cc
-  #parallel/bingmann-parallel_sample_sortBS.cc
-  #parallel/bingmann-parallel_sample_sortBSC.cc
-  #parallel/bingmann-parallel_sample_sortBSCA.cc
-  #parallel/bingmann-parallel_sample_sortBT.cc
-  #parallel/bingmann-parallel_sample_sortBTC.cc
+  parallel/bingmann-parallel_sample_sortBSC.cc
+  parallel/bingmann-parallel_sample_sortBTC.cc
 )
 
 set(LIBS minitbb ${GMP_LIBRARIES})

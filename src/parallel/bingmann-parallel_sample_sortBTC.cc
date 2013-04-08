@@ -1,8 +1,8 @@
 /******************************************************************************
  * src/parallel/bingmann-parallel_sample_sortBTC.h
  *
- * Parallel Super Scalar String Sample-Sort with work-balancing, variant BT:
- * with binary splitter tree and no cache.
+ * Parallel Super Scalar String Sample-Sort with work-balancing, variant BTC:
+ * with binary splitter tree and cache.
  *
  ******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
@@ -44,7 +44,7 @@ using namespace stringtools;
 using namespace jobqueue;
 
 // prototype to call radix sort for small buckets
-extern void EnqueueSmall(JobQueue& jobqueue, string* strings, size_t n, size_t depth);
+extern void EnqueueSmall(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth);
 
 }
 
@@ -60,10 +60,12 @@ static const bool debug_bucketsize = false;
 static const bool debug_recursion = false;
 static const bool debug_splitter_tree = false;
 
-static const size_t MAXPROCS = 128;
+static const size_t MAXPROCS = 64;
+
+static size_t g_totalsize;
 
 /// Prototype called to schedule deeper sorts
-void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth);
+void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth);
 
 // ****************************************************************************
 // *** SampleSortStep out-of-place parallel sample sort with separate Jobs
@@ -77,22 +79,17 @@ struct SampleSortStep
 #else
     static const size_t l2cache = 256*1024;
 
-// bounding equations:
-// splitters            + bktsize
-// n * sizeof(key_type) + (2*n+1) * sizeof(size_t) <= l2cache
+    // bounding equation: 2*K+1 buckets when counting bkt occurances.
+    static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 
-    static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
-    //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
-
-    static const size_t numsplitters = (1 << logfloor_<numsplitters2>::value) - 1;
-
+    static const size_t treebits = logfloor_<numsplitters2>::value;
+    static const size_t numsplitters = (1 << treebits) - 1;
 #endif
 
     static const size_t bktnum = 2*numsplitters+1;
 
-    string*             strings;
-    size_t              n;
-    size_t              depth;
+    StringPtr           strptr;
+    size_t              n, depth;
     
     unsigned int        parts;
     size_t              psize;
@@ -102,13 +99,11 @@ struct SampleSortStep
     unsigned char       splitter_lcp[numsplitters];
     size_t*             bkt;
 
-    string*             sorted;
-
     uint16_t*           bktcache[MAXPROCS];
 
-    SampleSortStep() {}
+    SampleSortStep(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth);
 
-    void sample(JobQueue& jobqueue);
+    void sample(unsigned int p, JobQueue& jobqueue);
 
     void count(unsigned int p, JobQueue& jobqueue);
     void count_finished(JobQueue& jobqueue);
@@ -116,68 +111,43 @@ struct SampleSortStep
     void distribute(unsigned int p, JobQueue& jobqueue);
     void distribute_finished(JobQueue& jobqueue);
 
-    void copyback(unsigned int p, JobQueue& jobqueue);
-    void copyback_finished(JobQueue& jobqueue);
-};
-
-struct SampleJob : public Job
-{
-    SampleSortStep*   step;
-
-    SampleJob(SampleSortStep* _step)
-        : step(_step) { }
-
-    virtual void run(JobQueue& jobqueue)
+    static inline void put_stats()
     {
-        DBG(debug_jobs, "Process SampleJob " << step);
-        step->sample(jobqueue);
+        g_statscache >> "l2cache" << size_t(l2cache)
+                     >> "splitter_treebits" << size_t(treebits)
+                     >> "numsplitters" << size_t(numsplitters);
     }
 };
 
-struct CountJob : public Job
+template <void (SampleSortStep::*func)(unsigned int p, JobQueue& jobqueue)>
+struct GenericJob : public Job
 {
-    SampleSortStep*   step;
+    SampleSortStep*     step;
     unsigned int        p;
 
-    CountJob(SampleSortStep* _step, unsigned int _p)
+    GenericJob(SampleSortStep* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
     virtual void run(JobQueue& jobqueue)
     {
-        DBG(debug_jobs, "Process CountJob " << p << " @ " << step);
-        step->count(p, jobqueue);
+        (step->*func)(p, jobqueue);
     }
 };
 
-struct DistributeJob : public Job
+typedef GenericJob<&SampleSortStep::sample> SampleJob;
+typedef GenericJob<&SampleSortStep::count> CountJob;
+typedef GenericJob<&SampleSortStep::distribute> DistributeJob;
+
+SampleSortStep::SampleSortStep(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
+    : strptr(_strptr), n(_n), depth(_depth)
 {
-    SampleSortStep*   step;
-    unsigned int        p;
+    parts = omp_get_max_threads() * n / g_totalsize;
+    if (parts == 0) parts = 1;
 
-    DistributeJob(SampleSortStep* _step, unsigned int _p)
-        : step(_step), p(_p) { }
+    psize = (n + parts-1) / parts;
 
-    virtual void run(JobQueue& jobqueue)
-    {
-        DBG(debug_jobs, "Process DistributeJob " << p << " @ " << step);
-        step->distribute(p, jobqueue);
-    }
-};
-
-struct CopybackJob : public Job
-{
-    SampleSortStep*        step;
-    unsigned int        p;
-
-    CopybackJob(SampleSortStep* _step, unsigned int _p)
-        : step(_step), p(_p) { }
-
-    virtual void run(JobQueue& jobqueue)
-    {
-        DBG(debug_jobs, "Process CopybackJob " << p << " @ " << step);
-        step->copyback(p, jobqueue);
-    }
-};
+    jobqueue.enqueue( new SampleJob(this, 0) );
+}
 
 /// binary search on splitter array for bucket number
 static inline unsigned int
@@ -190,10 +160,7 @@ find_bkt_splittertree(const key_type& key, const key_type* splitter, const key_t
 
     while ( i <= numsplitters )
     {
-        if (key <= splitter_tree[i])
-            i = 2*i + 0;
-        else // (key > splitter_tree[i])
-            i = 2*i + 1;
+        i = 2*i + (key <= splitter_tree[i] ? 0 : 1);
     }
 
     i -= numsplitters+1;
@@ -204,11 +171,14 @@ find_bkt_splittertree(const key_type& key, const key_type* splitter, const key_t
     return b;
 }
 
-void SampleSortStep::sample(JobQueue& jobqueue)
+void SampleSortStep::sample(unsigned int p, JobQueue& jobqueue)
 {
-    const size_t oversample_factor = 4;
+    DBG(debug_jobs, "Process SampleJob " << p << " @ " << this);
+
+    const size_t oversample_factor = 1;
     size_t samplesize = oversample_factor * numsplitters;
 
+    string* strings = strptr.active();
     key_type samples[ samplesize ];
 
     LCGRandom rng(&samples);
@@ -280,23 +250,22 @@ void SampleSortStep::sample(JobQueue& jobqueue)
     bkt = new size_t[bktnum * parts + 1];
 
     // create new jobs
+    pwork = parts;
     for (unsigned int p = 0; p < parts; ++p)
         jobqueue.enqueue( new CountJob(this, p) );
 }
 
 void SampleSortStep::count(unsigned int p, JobQueue& jobqueue)
 {
-    string* strB = strings + p * psize;
-    string* strE = strings + std::min((p+1) * psize, n);
+    DBG(debug_jobs, "Process CountJob " << p << " @ " << this);
+
+    string* strB = strptr.active() + p * psize;
+    string* strE = strptr.active() + std::min((p+1) * psize, n);
     if (strE < strB) strE = strB;
     size_t strN = strE-strB;
 
-    // TODO: check if processor-local stack + copy is faster
-#if 1
-    size_t* mybkt = bkt + p * bktnum;
     uint16_t* mybktcache = bktcache[p] = new uint16_t[strN];
 
-    memset(mybkt, 0, bktnum * sizeof(size_t));
     for (size_t i = 0; i < strN; ++i)
     {
         // binary search in splitter with equal check
@@ -305,16 +274,13 @@ void SampleSortStep::count(unsigned int p, JobQueue& jobqueue)
         unsigned int b = find_bkt_splittertree(key, splitter, splitter_tree, numsplitters);
         assert(b < bktnum);
         mybktcache[ i ] = b;
-        ++mybkt[ b ];
     }
-#else
-    size_t mybkt[bktnum] = { 0 };
 
-    for (string* str = strB; str != strE; ++str)
-        ++mybkt[ (*str)[depth] ];
+    size_t* mybkt = bkt + p * bktnum;
+    memset(mybkt, 0, bktnum * sizeof(size_t));
 
-    memcpy(bkt + p * bktnum, mybkt, sizeof(mybkt));
-#endif
+    for (uint16_t* bc = mybktcache; bc != mybktcache + strN; ++bc)
+        ++mybkt[ *bc ];
 
     if (--pwork == 0)
         count_finished(jobqueue);
@@ -335,47 +301,29 @@ void SampleSortStep::count_finished(JobQueue& jobqueue)
     }
     assert(sum == n);
 
-    // allocate out-of-place memory
-    sorted = new string[n];
-
     // create new jobs
     pwork = parts;
-
     for (unsigned int p = 0; p < parts; ++p)
         jobqueue.enqueue( new DistributeJob(this, p) );
 }
 
 void SampleSortStep::distribute(unsigned int p, JobQueue& jobqueue)
 {
-    string* strB = strings + p * psize;
-    string* strE = strings + std::min((p+1) * psize, n);
-    if (strE < strB) strE = strB;
-    size_t strN = strE-strB;
+    DBG(debug_jobs, "Process DistributeJob " << p << " @ " << this);
 
-    // TODO: check if processor-local stack + copy is faster
-#if 1
+    string* strB = strptr.active() + p * psize;
+    string* strE = strptr.active() + std::min((p+1) * psize, n);
+    if (strE < strB) strE = strB;
+
+    string* sorted = strptr.shadow(); // get alternative shadow pointer array
+
     size_t* mybkt = bkt + p * bktnum;
     uint16_t* mybktcache = bktcache[p];
 
-    for (size_t i = 0; i < strN; ++i)
-    {
-        // binary search in splitter with equal check
-        unsigned int b = mybktcache[i];
-        assert(b < bktnum);
-        sorted[ --mybkt[b] ] = strB[i];
-    }
+    for (string* str = strB; str != strE; ++str, ++mybktcache)
+        sorted[ --mybkt[ *mybktcache ] ] = *str;
 
     delete bktcache[p];
-#else
-    size_t mybkt[bktnum];
-    memcpy(mybkt, bkt + p * bktnum, sizeof(mybkt));
-
-    for (string* str = strB; str != strE; ++str)
-        sorted[ --mybkt[(*str)[depth]] ] = *str;
-
-    if (p == 0) // these are needed for recursion into bkts
-        memcpy(bkt, mybkt, sizeof(mybkt));
-#endif
 
     if (--pwork == 0)
         distribute_finished(jobqueue);
@@ -383,105 +331,86 @@ void SampleSortStep::distribute(unsigned int p, JobQueue& jobqueue)
 
 void SampleSortStep::distribute_finished(JobQueue& jobqueue)
 {
-    DBG(debug_jobs, "Finishing DistributeJob " << this << " with copy to original");
-
-    // create new jobs
-    pwork = parts;
-
-    for (unsigned int p = 0; p < parts; ++p)
-        jobqueue.enqueue( new CopybackJob(this, p) );
-}
-
-void SampleSortStep::copyback(unsigned int p, JobQueue& jobqueue)
-{
-    size_t strB = p * psize;
-    size_t strE = std::min((p+1) * psize, n);
-    if (strE < strB) strE = strB;
-
-    memcpy(strings + strB, sorted + strB, (strE - strB) * sizeof(string));
-
-    if (--pwork == 0)
-        copyback_finished(jobqueue);
-}
-
-void SampleSortStep::copyback_finished(JobQueue& jobqueue)
-{
-    DBG(debug_jobs, "Finishing CopybackJob " << this << " with copy to original");
-
-    delete [] sorted;
+    DBG(debug_jobs, "Finishing DistributeJob " << this << " with enqueuing subjobs");
 
     // first processor's bkt pointers are boundaries between bkts, just add sentinel:
+    assert(bkt[0] == 0);
     bkt[bktnum] = n;
 
-    for (size_t i=0; i < bktnum-1; ++i) {
+    size_t i = 0;
+    while (i < bktnum-1)
+    {
         // i is even -> bkt[i] is less-than bucket
         size_t bktsize = bkt[i+1] - bkt[i];
-        if (bktsize > 1)
+        if (bktsize == 0)
+            ;
+        else if (bktsize == 1) // just one string pointer, copyback
+            strptr.flip_ptr(bkt[i]).to_original(1);
+        else
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bkt[i] << " size " << bktsize << " lcp " << int(splitter_lcp[i/2]));
-            Enqueue(jobqueue, strings+bkt[i], bktsize, depth + splitter_lcp[i/2]);
+            Enqueue(jobqueue, strptr.flip_ptr(bkt[i]), bktsize, depth + splitter_lcp[i/2]);
         }
         ++i;
         bktsize = bkt[i+1] - bkt[i];
         // i is odd -> bkt[i] is equal bucket
-        if (bktsize > 1)
+        if (bktsize == 0)
+            ;
+        else if (bktsize == 1) // just one string pointer, copyback
+            strptr.flip_ptr(bkt[i]).to_original(1);
+        else
         {
             if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key
                 // done.
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " is done!");
+                strptr.flip_ptr(bkt[i]).to_original(bktsize);
             }
             else {
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " lcp keydepth!");
-                Enqueue(jobqueue, strings+bkt[i], bktsize, depth + sizeof(key_type));
+                Enqueue(jobqueue, strptr.flip_ptr(bkt[i]), bktsize, depth + sizeof(key_type));
             }
         }
+        ++i;
     }
 
-    {
-        size_t bktsize = n - bkt[bktnum-1];
+    size_t bktsize = bkt[i+1] - bkt[i];
 
-        if (bktsize > 0)
-        {
-            DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bkt[bktnum-1] << " size " << bktsize << " no lcp");
-            Enqueue(jobqueue, strings+bkt[bktnum-1], bktsize, depth);
-        }
+    if (bktsize == 0)
+        ;
+    else if (bktsize == 1) // just one string pointer, copyback
+        strptr.flip_ptr(bkt[i]).to_original(1);
+    else
+    {
+        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bkt[i] << " size " << bktsize << " no lcp");
+        Enqueue(jobqueue, strptr.flip_ptr(bkt[i]), bktsize, depth);
     }
 
     delete [] bkt;
     delete this;
 }
 
-void EnqueueBig(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
-{
-    unsigned int parts = omp_get_max_threads();
-    size_t psize = (n + parts-1) / parts;
-
-    SampleSortStep* step = new SampleSortStep;
-    step->strings = strings;
-    step->n = n;
-    step->depth = depth;
-
-    step->parts = parts;
-    step->psize = psize;
-    step->pwork = parts;
-
-    jobqueue.enqueue( new SampleJob(step) );
-}
-
-void Enqueue(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
+void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
 {
     // TODO: tune parameter
     if (n > 128*1024)
-        return EnqueueBig(jobqueue, strings, n, depth);
+        new SampleSortStep(jobqueue, strptr, n, depth);
     else
-        return bingmann_parallel_radix_sort::EnqueueSmall(jobqueue, strings, n, depth);
+        bingmann_parallel_radix_sort::EnqueueSmall(jobqueue, strptr, n, depth);
 }
 
 void parallel_sample_sortBTC(string* strings, size_t n)
 {
+    SampleSortStep::put_stats();
+
+    g_totalsize = n;
+
+    string* shadow = new string[n]; // allocate shadow pointer array
+
     JobQueue jobqueue;
-    Enqueue(jobqueue, strings,n,0);
+    Enqueue(jobqueue, StringPtr(strings, shadow), n, 0);
     jobqueue.loop();
+
+    delete [] shadow;
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTC,
