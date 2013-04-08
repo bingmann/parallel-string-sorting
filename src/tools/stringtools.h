@@ -210,4 +210,60 @@ inline int count_high_zero_bits<uint128_t>(const uint128_t& t)
         return 64 + __builtin_clzll( (uint64_t)t );
 }
 
+/// Objectified string array pointer and shadow pointer array for out-of-place
+/// swapping of pointers.
+class StringPtr
+{
+public:
+
+    /// strings (front) and temporary shadow (back) array
+    string      *m_front, *m_back;
+
+    /// true if back array is active
+    bool        m_flip;
+
+    /// constructor specifying all attributes
+    inline StringPtr(string* front, string* back = NULL, bool flip = false)
+        : m_front(front), m_back(back), m_flip(flip)
+    {
+    }
+
+    /// true if flipped to back array
+    inline bool flipped() const
+    {
+        return m_flip;
+    }
+
+    /// return currently active array
+    inline string* active()
+    {
+        return (m_flip ? m_back : m_front);
+    }
+
+    /// return current shadow array
+    inline string* shadow()
+    {
+        return (m_flip ? m_front : m_back);
+    }
+
+    /// construct a StringPtr object specifying a subarray with flipping to
+    /// other array.
+    inline StringPtr flip_ptr(size_t offset) const
+    {
+        return StringPtr(m_front + offset, m_back + offset, !m_flip);
+    }
+
+    /// return subarray pointer to n strings in original array, might copy from
+    /// shadow before returning.
+    inline string* to_original(size_t n)
+    {
+        if (m_flip) {
+            assert(m_back);
+            memcpy(m_front, m_back, n * sizeof(string));
+            m_flip = false;
+        }
+        return m_front;
+    }
+};
+
 } // namespace stringtools

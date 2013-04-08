@@ -37,7 +37,6 @@
 #include "../sequential/inssort.h"
 
 #include <tr1/memory>
-
 #include <tbb/concurrent_queue.h>
 
 namespace bingmann_parallel_mkqs {

@@ -442,7 +442,7 @@ void Contestant_UCArray_Parallel::run()
     while (1)
     {
         pss_num_threads = p;
-        std::cout << "threads=" << p << " ";
+        std::cout << "threads=" << p << std::endl;
         g_statscache >> "threads" << p;
 
         Contestant_UCArray::run();
