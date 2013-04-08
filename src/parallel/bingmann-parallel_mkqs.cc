@@ -38,11 +38,7 @@
 
 #include <tr1/memory>
 
-#if USE_TBB
 #include <tbb/concurrent_queue.h>
-#else
-#include <boost/lockfree/queue.hpp>
-#endif
 
 namespace bingmann_parallel_mkqs {
 
@@ -71,11 +67,7 @@ size_t g_sequential_threshold; // calculated threshold for sequential sorting
 
 size_t g_threadnum;
 
-#ifdef BLOCKSIZE
-static const unsigned int block_size = BLOCKSIZE;
-#else
-static const unsigned int block_size = 1024;
-#endif
+static const unsigned int block_size = 128*1024;
 
 /// output string ranges for debugging
 
@@ -119,19 +111,9 @@ struct StrCacheBlock
     }
 };
 
-#if USE_TBB
-
 typedef tbb::concurrent_queue<StrCacheBlock*> BlockQueueType;
 typedef tbb::concurrent_queue<key_type> PivotKeyQueueType;
 typedef tbb::concurrent_queue<string> PivotStrQueueType;
-
-#else
-
-typedef boost::lockfree::queue<StrCacheBlock*> BlockQueueType;
-typedef boost::lockfree::queue<key_type> PivotKeyQueueType;
-typedef boost::lockfree::queue<string> PivotStrQueueType;
-
-#endif
 
 template <typename CharT>
 static inline const CharT&
@@ -387,11 +369,7 @@ struct SequentialMKQS : public Job
                 DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings,n));
 
                 StrCacheBlock* scb = NULL;
-#if USE_TBB
                 while ( block_queue->try_pop(scb) )
-#else
-                while ( block_queue->unsynchronized_pop(scb) )
-#endif
                 {
                     assert(scb && (scb->fill == 0 || scb->fill == 1));
                     if (scb->fill == 1) {
@@ -399,11 +377,8 @@ struct SequentialMKQS : public Job
                     }
                     delete scb;
                 }
-#if USE_TBB
+
                 while ( block_queue->try_pop(scb) )
-#else
-                while ( block_queue->unsynchronized_pop(scb) )
-#endif
                 {
                     assert(scb && scb->fill == 0);
                     delete scb;
@@ -423,11 +398,8 @@ struct SequentialMKQS : public Job
 
             StrCacheBlock* scb;
             size_t o = 0;
-#if USE_TBB
-                while ( block_queue->try_pop(scb) )
-#else
-                while ( block_queue->unsynchronized_pop(scb) )
-#endif
+
+            while ( block_queue->try_pop(scb) )
             {
                 for (unsigned int i = 0; i < scb->fill; ++i, ++o)
                 {
@@ -707,11 +679,7 @@ struct BlockSourceQueueUnequal
         pivots.reserve( n / block_size + 1 );
 
         key_type k;
-#if USE_TBB
         while( pivot_queue->try_pop(k) ) {
-#else
-        while( pivot_queue->unsynchronized_pop(k) ) {
-#endif
             pivots.push_back(k);
         }
         delete pivot_queue;
@@ -728,11 +696,7 @@ struct BlockSourceQueueUnequal
     StrCacheBlock* get_block(unsigned int &fill)
     {
         StrCacheBlock* blk;
-#if USE_TBB
         if (!block_queue->try_pop(blk)) return NULL;
-#else
-        if (!block_queue->pop(blk)) return NULL;
-#endif
 
         DBG(debug_blocks, "pop()ed input block " << blk << " fill " << blk->fill);
         fill = blk->fill;
@@ -768,11 +732,7 @@ struct BlockSourceQueueEqual
         pivots.reserve( n / block_size + 1 );
 
         string s;
-#if USE_TBB
         while( pivot_queue->try_pop(s) ) {
-#else
-        while( pivot_queue->unsynchronized_pop(s) ) {
-#endif
             pivots.push_back( get_char<key_type>(s, depth) );
         }
         delete pivot_queue;
@@ -789,11 +749,7 @@ struct BlockSourceQueueEqual
     StrCacheBlock* get_block(unsigned int &fill)
     {
         StrCacheBlock* blk;
-#if USE_TBB
         if (!block_queue->try_pop(blk)) return NULL;
-#else
-        if (!block_queue->pop(blk)) return NULL;
-#endif
 
         DBG(debug_blocks, "pop()ed input block " << blk << " fill " << blk->fill);
         fill = blk->fill;
@@ -858,7 +814,6 @@ struct ParallelMKQS
     inline ParallelMKQS(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
         : blks(strings, n, depth),
           pivot( blks.select_pivot() ),
-#if USE_TBB
           // contruct queues
           oblk_lt( new BlockQueueType() ),
           oblk_eq( new BlockQueueType() ),
@@ -866,16 +821,6 @@ struct ParallelMKQS
           oblk_lt_pivot( new PivotKeyQueueType() ),
           oblk_eq_pivot( new PivotStrQueueType() ),
           oblk_gt_pivot( new PivotKeyQueueType() ),
-#else
-          // estimate block numbers
-          oblk_lt( new BlockQueueType(blks.n / block_size / 2) ),
-          oblk_eq( new BlockQueueType(1) ),
-          oblk_gt( new BlockQueueType(blks.n / block_size / 2) ),
-          // estimate block numbers
-          oblk_lt_pivot( new PivotKeyQueueType(blks.n / block_size / 2) ),
-          oblk_eq_pivot( new PivotStrQueueType(1) ),
-          oblk_gt_pivot( new PivotKeyQueueType(blks.n / block_size / 2) ),
-#endif
           count_lt(0), count_eq(0)
     {
         enqueue_jobs(jobqueue);
@@ -886,7 +831,6 @@ struct ParallelMKQS
                         BlockQueueType* iblk, PivotKeyQueueType* iblk_pivot)
         : blks(strings, n, depth, iblk, iblk_pivot),
           pivot( blks.select_pivot() ),
-#if USE_TBB
           // contruct queues
           oblk_lt( new BlockQueueType() ),
           oblk_eq( new BlockQueueType() ),
@@ -894,16 +838,6 @@ struct ParallelMKQS
           oblk_lt_pivot( new PivotKeyQueueType() ),
           oblk_eq_pivot( new PivotStrQueueType() ),
           oblk_gt_pivot( new PivotKeyQueueType() ),
-#else
-          // estimate block numbers
-          oblk_lt( new BlockQueueType(blks.n / block_size / 2) ),
-          oblk_eq( new BlockQueueType(1) ),
-          oblk_gt( new BlockQueueType(blks.n / block_size / 2) ),
-          // estimate block numbers
-          oblk_lt_pivot( new PivotKeyQueueType(blks.n / block_size / 2) ),
-          oblk_eq_pivot( new PivotStrQueueType(1) ),
-          oblk_gt_pivot( new PivotKeyQueueType(blks.n / block_size / 2) ),
-#endif
           count_lt(0), count_eq(0)
     {
         enqueue_jobs(jobqueue);
@@ -914,7 +848,6 @@ struct ParallelMKQS
                         BlockQueueType* iblk, PivotStrQueueType* iblk_pivot)
         : blks(strings, n, depth, iblk, iblk_pivot),
           pivot( blks.select_pivot() ),
-#if USE_TBB
           // contruct queues
           oblk_lt( new BlockQueueType() ),
           oblk_eq( new BlockQueueType() ),
@@ -922,16 +855,6 @@ struct ParallelMKQS
           oblk_lt_pivot( new PivotKeyQueueType() ),
           oblk_eq_pivot( new PivotStrQueueType() ),
           oblk_gt_pivot( new PivotKeyQueueType() ),
-#else
-          // estimate block numbers
-          oblk_lt( new BlockQueueType(blks.n / block_size / 2) ),
-          oblk_eq( new BlockQueueType(1) ),
-          oblk_gt( new BlockQueueType(blks.n / block_size / 2) ),
-          // estimate block numbers
-          oblk_lt_pivot( new PivotKeyQueueType(blks.n / block_size / 2) ),
-          oblk_eq_pivot( new PivotStrQueueType(1) ),
-          oblk_gt_pivot( new PivotKeyQueueType(blks.n / block_size / 2) ),
-#endif
           count_lt(0), count_eq(0)
     {
         enqueue_jobs(jobqueue);
@@ -1196,7 +1119,6 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
     DBG(debug_parajobs, "finished partitioning - " << count_lt << " lt "
         << count_eq << " eq " << blks.n - count_lt - count_eq << " gt - total " << blks.n);
 
-#if USE_TBB
     if (debug_selfcheck)
     {
         size_t count = 0;
@@ -1238,7 +1160,6 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
         std::cout << "count " << count << " - " << blks.n << "\n";
         assert(count == blks.n);
     }
-#endif
 
     // *** Create Recursive Jobs
 

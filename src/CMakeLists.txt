@@ -1,7 +1,6 @@
 # Simple CMake file
 
 include_directories("${PROJECT_SOURCE_DIR}/minitbb/")
-include_directories("${PROJECT_SOURCE_DIR}/")
 include_directories("${PROJECT_BINARY_DIR}/")
 include_directories("${GMP_INCLUDE_DIR}")
 
@@ -45,12 +44,12 @@ set_property(SOURCE sinha-copy-burstsort/glue.cc PROPERTY COMPILE_FLAGS "-Wno-wr
 
 if(BUILD_ALL)
 
-  foreach(BLK 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576)
+  foreach(BPARAM 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576)
 
-    add_executable(psstest-${BLK} ${SOURCES})
-    target_link_libraries(psstest-${BLK} ${LIBS})
-    set_property(TARGET psstest-${BLK} PROPERTY COMPILE_DEFINITIONS "BLOCKSIZE=${BLK}")
+    add_executable(psstest-${BPARAM} ${SOURCES})
+    target_link_libraries(psstest-${BPARAM} ${LIBS})
+    set_property(TARGET psstest-${BPARAM} PROPERTY COMPILE_DEFINITIONS "BPARAM=${BPARAM}")
 
-  endforeach(BLK)
+  endforeach(BPARAM)
 
 endif(BUILD_ALL)
