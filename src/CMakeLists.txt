@@ -16,6 +16,7 @@ set(SOURCES
   parallel/bingmann-parallel_mkqs.cc
   parallel/bingmann-parallel_sample_sortBSC.cc
   parallel/bingmann-parallel_sample_sortBTC.cc
+  parallel/bingmann-parallel_sample_sortBTCE.cc
 )
 
 set(LIBS minitbb ${GMP_LIBRARIES})
