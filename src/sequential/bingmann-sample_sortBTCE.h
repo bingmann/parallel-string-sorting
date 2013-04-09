@@ -462,7 +462,7 @@ public:
             recurse(samples, samples + samplesize, 1, sentinel);
 
             assert(m_lcp_iter == st.splitter_lcp + numsplitters);
-            st.splitter_lcp[0] = 0; // overwrite sentinel for first < everything bucket
+            st.splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
         }
 
         ptrdiff_t snum(key_type* s) const

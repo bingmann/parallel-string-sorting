@@ -242,12 +242,12 @@ struct SampleSortStep
 
     StringPtr           strptr;
     size_t              n, depth;
-    
+
     unsigned int        parts;
     size_t              psize;
     std::atomic<unsigned int> pwork;
     key_type            splitter[numsplitters];
-    key_type            splitter_tree[numsplitters];
+    key_type            splitter_tree[numsplitters+1];
     unsigned char       splitter_lcp[numsplitters];
     size_t*             bkt;
 
@@ -311,6 +311,93 @@ struct SampleSortStep
 
     // *** Sample Step
 
+    struct TreeBuilder
+    {
+        key_type*       m_splitter;
+        key_type*       m_tree;
+        unsigned char*  m_lcp_iter;
+        key_type*       m_samples;
+
+        TreeBuilder(key_type* splitter, key_type* splitter_tree, unsigned char* splitter_lcp, key_type* samples, size_t samplesize)
+            : m_splitter( splitter ),
+              m_tree( splitter_tree ),
+              m_lcp_iter( splitter_lcp ),
+              m_samples( samples )
+        {
+
+            key_type sentinel = 0;
+            recurse(samples, samples + samplesize, 1, sentinel);
+
+            assert(m_splitter == splitter + numsplitters);
+            assert(m_lcp_iter == splitter_lcp + numsplitters);
+            splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
+        }
+
+        ptrdiff_t snum(key_type* s) const
+        {
+            return (ptrdiff_t)(s - m_samples);
+        }
+
+        key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
+                         key_type& rec_prevkey)
+        {
+            DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
+                << ", treeidx=" << treeidx << ")");
+
+            // pick middle element as splitter
+            key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
+
+            DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
+                << toHex(*mid));
+
+            key_type mykey = m_tree[treeidx] = *mid;
+#if 1
+            key_type* midlo = mid;
+            while (lo < midlo && *(midlo-1) == mykey) midlo--;
+
+            key_type* midhi = mid+1;
+            while (midhi < hi && *midhi == mykey) midhi++;
+
+            if (midhi - midlo > 1)
+                DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
+#else
+            key_type *midlo = mid, *midhi = mid+1;
+#endif
+            if (2 * treeidx < numsplitters)
+            {
+                key_type prevkey = recurse(lo, midlo, 2 * treeidx + 0, rec_prevkey);
+
+                key_type xorSplit = prevkey ^ mykey;
+
+                DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
+                    << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+
+                *m_splitter++ = mykey;
+
+                *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                    | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+
+                return recurse(midhi, hi, 2 * treeidx + 1, mykey);
+            }
+            else
+            {
+                key_type xorSplit = rec_prevkey ^ mykey;
+
+                DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
+                    << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+
+                *m_splitter++ = mykey;
+
+                *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                    | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+
+                return mykey;
+            }
+        }
+    };
+
     void sample(JobQueue& jobqueue)
     {
         DBG(debug_jobs, "Process SampleJob @ " << this);
@@ -330,52 +417,7 @@ struct SampleSortStep
 
         std::sort(samples, samples + samplesize);
 
-        DBG(debug_splitter, "splitter:");
-        splitter_lcp[0] = 0; // sentinel for first < everything bucket
-        for (size_t i = 0, j = oversample_factor/2; i < numsplitters; ++i)
-        {
-            splitter[i] = samples[j];
-            DBG(debug_splitter, "key " << toHex(splitter[i]));
-
-            if (i != 0) {
-                key_type xorSplit = splitter[i-1] ^ splitter[i];
-
-                DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
-
-                DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                     << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
-
-                splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
-            }
-
-            j += oversample_factor;
-        }
-
-        // step 2.1: construct splitter tree to perform binary search
-
-        {
-            size_t t = 0;
-            size_t highbit = (numsplitters+1) / 2;
-
-            while ( highbit > 0 )
-            {
-                DBG(debug_splitter_tree, "highbit = " << highbit);
-
-                size_t p = highbit-1;
-                size_t inc = highbit << 1;
-
-                while ( p <= numsplitters )
-                {
-                    DBG(debug_splitter_tree, "p = " << p);
-
-                    splitter_tree[t++] = splitter[p];
-
-                    p += inc;
-                }
-
-                highbit >>= 1;
-            }
-        }
+        TreeBuilder(splitter, splitter_tree, splitter_lcp, samples, samplesize);
 
         if (debug_splitter_tree)
         {
@@ -409,7 +451,7 @@ struct SampleSortStep
         uint16_t* bktout = mybktcache;
 
         Classify::classify(strB, strE, bktout,
-                           splitter, splitter_tree, numsplitters,
+                           splitter, splitter_tree+1, numsplitters,
                            treebits, depth);
 
         size_t* mybkt = bkt + p * bktnum;
@@ -490,8 +532,8 @@ struct SampleSortStep
                 strptr.flip_ptr(bkt[i]).to_original(1);
             else
             {
-                DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bkt[i] << " size " << bktsize << " lcp " << int(splitter_lcp[i/2]));
-                Enqueue(jobqueue, strptr.flip_ptr(bkt[i]), bktsize, depth + splitter_lcp[i/2]);
+                DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bkt[i] << " size " << bktsize << " lcp " << int(splitter_lcp[i/2] & 0x7F));
+                Enqueue(jobqueue, strptr.flip_ptr(bkt[i]), bktsize, depth + (splitter_lcp[i/2] & 0x7F));
             }
             ++i;
             // i is odd -> bkt[i] is equal bucket
@@ -502,7 +544,7 @@ struct SampleSortStep
                 strptr.flip_ptr(bkt[i]).to_original(1);
             else
             {
-                if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key
+                if ( splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key
                     // done.
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " is done!");
                     strptr.flip_ptr(bkt[i]).to_original(bktsize);

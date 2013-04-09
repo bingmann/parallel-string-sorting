@@ -86,14 +86,14 @@ struct SplitterTree
             DBG(debug_splitter, "Builder for subtree[" << treenum << "] at depth " << depth);
 
             std::fill(st.splitter_subtree, st.splitter_subtree + numsplitters, 0);
-            
+
             key_type sentinel = 0;
             recurse(samples, samples_end, 1, sentinel);
 
             assert(m_lcp_iter == st.splitter_lcp + numsplitters);
             assert(m_subtree_iter == st.splitter_subtree + numsplitters);
 
-            st.splitter_lcp[0] = 0; // overwrite sentinel for first < everything bucket
+            st.splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
 
             DBG(debug_splitter, "done building subtree[" << treenum << "] at depth " << depth);
         }
@@ -102,7 +102,7 @@ struct SplitterTree
         {
             return (ptrdiff_t)(s - m_samples);
         }
-        
+
         inline void keynode(key_type& prevkey, key_type& mykey,
                             samplepair_type* midlo, samplepair_type* midhi)
         {
@@ -280,7 +280,7 @@ struct SplitterTree
 
     std::vector<uint16_t> bktcache;     // bktcache for all trees != 0
 
-    size_t bktsize[bktnum], bktindex[bktnum]; 
+    size_t bktsize[bktnum], bktindex[bktnum];
 
     inline void calc_bktsize_prefixsum(uint16_t* bktcache, size_t n)
     {
@@ -326,7 +326,7 @@ struct SplitterTree
 
                 assert( splitter_subtree[i/2] < treelist.size() );
                 SplitterTree& t = *treelist[ splitter_subtree[i/2] ];
-                
+
                 assert( bktsize[i] == t.bktcache.size() );
                 t.recursive_permute(strings + bsum, bktsize[i], t.bktcache.data(), sorted, treelist);
             }
@@ -364,7 +364,7 @@ struct SplitterTree
                     SplitterTree& t = *treelist[ splitter_subtree[i/2] ];
 
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth, into subtree " << int(splitter_subtree[i/2]) << "!");
-                
+
                     t.recursive_sort<find_bkt>(strings + bsum, bktsize[i], treelist, depth + sizeof(key_type));
                 }
                 else {
@@ -480,10 +480,10 @@ struct SplitterTree
         delete [] sorted;
 
         delete [] bktcache;
-    
+
         // step 5: recursion
         g_timer.change(TM_GENERAL);
-    
+
         treelist[0]->recursive_sort<find_bkt>(strings, n, treelist, depth);
     }
 };
