@@ -82,7 +82,7 @@ bool load_plain(const std::string& path)
     }
 
     // mark offsets of '\n' -> '\0' terminated line starts
-    g_string_count = 0;
+    g_string_count = 1;
 
     // read complete file
     size_t rpos = 0;
@@ -100,23 +100,21 @@ bool load_plain(const std::string& path)
         }
 
         // iterate over read buffer, identify lines and replace \n -> \0
-        for (size_t i = rpos; i < rpos + rb; ++i)
+        if (!gopt_suffixsort)
         {
-            if (gopt_suffixsort) {
-                g_string_count++;
-            }
-            else
+            for (size_t i = rpos; i < rpos + rb; ++i)
             {
                 if (stringdata[i] == '\n') {
                     stringdata[i] = 0;
-                    if (i+1 < size)
-                        g_string_count++;
+                    if (i+1 < size) g_string_count++;
                 }
             }
         }
 
         rpos += rb;
     }
+
+    if (gopt_suffixsort) g_string_count = size;
 
     // force terminatation of last string
     stringdata[ size-1 ] = 0;
@@ -194,7 +192,7 @@ bool load_compressed(const std::string& path)
     if (!stringdata) {
         exit(-1);
     }
-    g_string_count = 0;
+    g_string_count = 1;
 
     // read complete file from decompressor child's pipe
     size_t rpos = 0;
@@ -212,23 +210,21 @@ bool load_compressed(const std::string& path)
         }
 
         // iterate over read buffer, identify lines and replace \n -> \0
-        for (size_t i = rpos; i < rpos + rb; ++i)
+        if (!gopt_suffixsort)
         {
-            if (gopt_suffixsort) {
-                g_string_count++;
-            }
-            else
+            for (size_t i = rpos; i < rpos + rb; ++i)
             {
                 if (stringdata[i] == '\n') {
                     stringdata[i] = 0;
-                    if (i+1 < size)
-                        g_string_count++;
+                    if (i+1 < size) g_string_count++;
                 }
             }
         }
 
         rpos += rb;
     }
+
+    if (gopt_suffixsort) g_string_count = size;
 
     // force terminatation of last string
     stringdata[ size-1 ] = 0;
@@ -281,6 +277,8 @@ bool generate_random(const std::string& path, const std::string& letters)
             stringdata[i] = letters[ rng() % letters.size() ];
     }
 
+    if (gopt_suffixsort) g_string_count = size;
+
     // force terminatation of last string
     stringdata[ size-1 ] = 0;
 
@@ -330,6 +328,8 @@ bool generate_sinha_randomASCII()
                 i--;
         }
     }
+
+    if (gopt_suffixsort) g_string_count = size;
 
     // force terminatation of last string
     stringdata[ size-1 ] = 0;
