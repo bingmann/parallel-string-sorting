@@ -85,6 +85,7 @@ const char*     gopt_output = NULL; // argument -o, --output
 bool            gopt_suffixsort = false; // argument --suffix
 bool            gopt_threads = false; // argument --threads
 bool            gopt_allthreads = false; // argument --allthreads
+bool            gopt_nocheck = false;   // argument --nocheck
 
 StatsCache      g_statscache;
 
@@ -103,6 +104,7 @@ const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 // *** Tools and Algorithms
 
 #include "tools/debug.h"
+#include "tools/membuffer.h"
 #include "tools/lcgrandom.h"
 #include "tools/contest.h"
 #include "tools/input.h"
@@ -341,6 +343,8 @@ void Contestant_UCArray::run()
 
 void Contestant_UCArray::real_run()
 {
+    typedef unsigned char* string;
+
     size_t repeats = gopt_repeats ? gopt_repeats : 1;
 
     // lock process into memory (on Linux)
@@ -352,18 +356,17 @@ void Contestant_UCArray::real_run()
     }
 
     // create unsigned char* array from offsets
-    std::vector<unsigned char*> stringptr;
-    stringptr.resize( g_string_count );
+    membuffer<string> stringptr( g_string_count );
 
     if (!gopt_suffixsort)
     {
         size_t j = 0;
-        stringptr[j++] = (unsigned char*)g_string_data;
+        stringptr[j++] = (string)g_string_data;
         for (size_t i = 0; i < g_string_datasize; ++i)
         {
             if (g_string_data[i] == 0 && i+1 < g_string_datasize) {
                 assert(j < stringptr.size());
-                stringptr[j++] = (unsigned char*)g_string_data + i+1;
+                stringptr[j++] = (string)g_string_data + i+1;
             }
         }
         assert(j == g_string_count);
@@ -372,14 +375,15 @@ void Contestant_UCArray::real_run()
     {
         assert(g_string_count == g_string_datasize);
         for (size_t i = 0; i < g_string_datasize; ++i)
-            stringptr[i] = (unsigned char*)g_string_data + i;
+            stringptr[i] = (string)g_string_data + i;
     }
 
-    std::vector<unsigned char*> stringptr_copy;
-    if (repeats > 1) stringptr_copy = stringptr;
+    membuffer<string> stringptr_copy;
+    if (repeats > 1) stringptr_copy.copy(stringptr);
 
     // save permutation check evaluation result
-    PermutationCheck pc(stringptr);
+    PermutationCheck pc;
+    if (!gopt_nocheck) pc = PermutationCheck(stringptr);
 
     std::cout << "Running " << m_algoname << " - " << m_description << std::endl;
 
@@ -413,9 +417,9 @@ void Contestant_UCArray::real_run()
     {
         m_run_func(stringptr.data(), stringptr.size());
 
-        if (repeats > 1) { // refill stringptr array for next repeat
-            stringptr = stringptr_copy;
-        }
+        if (repeats > 1) // refill stringptr array for next repeat
+            stringptr.copy(stringptr_copy);
+
     } while (--repeats);
     timer.stop();
 
@@ -436,18 +440,25 @@ void Contestant_UCArray::real_run()
     g_statscache >> "time" << timer.delta();
     (std::cout << timer.delta() << "\tchecking ").flush();
 
-    if (check_sorted_order(stringptr, pc)) {
-        std::cout << "ok" << std::endl;
-        g_statscache >> "status" << "ok";
-    }
-    else {
-        g_statscache >> "status" << "failed";
-    }
+    if (!gopt_nocheck)
+    {
+        if (check_sorted_order(stringptr, pc)) {
+            std::cout << "ok" << std::endl;
+            g_statscache >> "status" << "ok";
+        }
+        else {
+            g_statscache >> "status" << "failed";
+        }
 
-    if (!g_string_dprefix)
-        g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_datasize);
+        if (!g_string_dprefix)
+            g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_datasize);
 
-    g_statscache >> "dprefix" << g_string_dprefix;
+        g_statscache >> "dprefix" << g_string_dprefix;
+    }
+    else
+    {
+        std::cout << "skipped" << std::endl;
+    }
 
     // print timing data out to results file
     StatsWriter(statsfile).append_stats(g_statscache);
@@ -514,6 +525,7 @@ void print_usage(const char* prog)
               << "  --allthreads                Run linear thread increase test from 1 to max_processors." << std::endl
               << "  -D, --datafork              Fork before running algorithm and load data within fork!" << std::endl
               << "  -i, --input <path>          Write unsorted input strings to file, usually for checking." << std::endl
+              << "      --nocheck               Skip checking of sorted order and distinguishing prefix calculation." << std::endl
               << "  -o, --output <path>         Write sorted strings to output file, terminate after first algorithm run." << std::endl
               << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
@@ -541,6 +553,7 @@ int main(int argc, char* argv[])
         { "sequential", no_argument,     0, 2 },
         { "threads", no_argument,        0, 3 },
         { "allthreads", no_argument,     0, 4 },
+        { "nocheck", no_argument,     0, 5 },
         { 0,0,0,0 },
     };
 
@@ -643,6 +656,11 @@ int main(int argc, char* argv[])
         case 4:
             gopt_allthreads = true;
             std::cout << "Option --allthreads: running test with linear increasing thread count." << std::endl;
+            break;
+
+        case 5:
+            gopt_nocheck = true;
+            std::cout << "Option --nocheck: skipping checking of sorted order and distinguishing prefix calculation." << std::endl;
             break;
 
         default:

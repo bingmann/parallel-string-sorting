@@ -68,6 +68,8 @@ size_t g_totalsize;             // total size of input
 size_t g_sequential_threshold;  // calculated threshold for sequential sorting
 size_t g_threadnum;             // number of threads overall
 
+size_t g_ss_steps, g_bs_steps;  // counters
+
 // ****************************************************************************
 // *** SampleSortStep out-of-place parallel sample sort with separate Jobs
 
@@ -601,10 +603,14 @@ struct SampleSortStep
 
     static void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
     {
-        if (n > g_sequential_threshold)
+        if (n > g_sequential_threshold) {
+            ++g_ss_steps;
             new SampleSortStep(jobqueue, strptr, n, depth);
-        else
+        }
+        else {
+            ++g_bs_steps;
             bingmann_parallel_radix_sort::EnqueueSmall(jobqueue, strptr, n, depth);
+        }
     }
 
     static inline void put_stats()
@@ -620,6 +626,7 @@ void parallel_sample_sortBTC(string* strings, size_t n)
     g_totalsize = n;
     g_threadnum = omp_get_max_threads();
     g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
+    g_ss_steps = g_bs_steps = 0;
 
     SampleSortStep<ClassifySimple>::put_stats();
 
@@ -630,6 +637,9 @@ void parallel_sample_sortBTC(string* strings, size_t n)
     jobqueue.loop();
 
     delete [] shadow;
+
+    g_statscache >> "steps_sample_sort" << g_ss_steps
+                 >> "steps_base_sort" << g_bs_steps;
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTC,
@@ -641,6 +651,7 @@ void parallel_sample_sortBTCU1(string* strings, size_t n)
     g_totalsize = n;
     g_threadnum = omp_get_max_threads();
     g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
+    g_ss_steps = g_bs_steps = 0;
 
     SampleSortStep<ClassifyUnrollTree>::put_stats();
 
@@ -651,6 +662,9 @@ void parallel_sample_sortBTCU1(string* strings, size_t n)
     jobqueue.loop();
 
     delete [] shadow;
+
+    g_statscache >> "steps_sample_sort" << g_ss_steps
+                 >> "steps_base_sort" << g_bs_steps;
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU1,
@@ -662,6 +676,7 @@ void parallel_sample_sortBTCU2(string* strings, size_t n)
     g_totalsize = n;
     g_threadnum = omp_get_max_threads();
     g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
+    g_ss_steps = g_bs_steps = 0;
 
     SampleSortStep<ClassifyUnrollBoth>::put_stats();
 
@@ -672,6 +687,9 @@ void parallel_sample_sortBTCU2(string* strings, size_t n)
     jobqueue.loop();
 
     delete [] shadow;
+
+    g_statscache >> "steps_sample_sort" << g_ss_steps
+                 >> "steps_base_sort" << g_bs_steps;
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU2,

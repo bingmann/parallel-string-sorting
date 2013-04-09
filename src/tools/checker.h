@@ -29,7 +29,9 @@ private:
     size_t iter;        // offset / iteration
 
 public:
-    PermutationCheck(const std::vector<unsigned char*>& stringptr)
+    PermutationCheck() : v(0), iter(0) {}
+
+    PermutationCheck(const membuffer<unsigned char*>& stringptr)
     {
         mpz_class p("18446744073709551557", 10); // largest prime < 2^64
 
@@ -54,7 +56,7 @@ public:
         }
     }
 
-    bool check(const std::vector<unsigned char*>& stringptr) const
+    bool check(const membuffer<unsigned char*>& stringptr) const
     {
         mpz_class p("18446744073709551557", 10); // largest prime < 2^64
 
@@ -83,7 +85,7 @@ private:
     size_t iter;        // offset / iteration
 
 public:
-    PermutationCheck64(const std::vector<unsigned char*>& stringptr)
+    PermutationCheck64(const membuffer<unsigned char*>& stringptr)
     {
         for (iter = 1; iter < 100000; ++iter)
         {
@@ -106,7 +108,7 @@ public:
         }
     }
 
-    bool check(const std::vector<unsigned char*>& stringptr) const
+    bool check(const membuffer<unsigned char*>& stringptr) const
     {
         // use address after end of string area as evalution point
         uint64_t z = (uint64_t)g_string_data + g_string_datasize + iter;
@@ -123,7 +125,7 @@ public:
     }
 };
 
-bool check_sorted_order(const std::vector<unsigned char*>& stringptr, const PermutationCheck& pc)
+bool check_sorted_order(const membuffer<unsigned char*>& stringptr, const PermutationCheck& pc)
 {
     // check permutation via polynomial evaluation
 
@@ -147,7 +149,7 @@ bool check_sorted_order(const std::vector<unsigned char*>& stringptr, const Perm
     return true;
 }
 
-size_t calc_distinguishing_prefix(const std::vector<unsigned char*>& stringptr, size_t n)
+size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr, size_t n)
 {
     size_t D = 0;
     size_t pdepth = 0;
