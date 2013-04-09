@@ -40,7 +40,7 @@ find_bkt_tree(const key_type& key, const key_type* splitter, const key_type* spl
 
     while ( i < numsplitters+1 )
     {
-        if (key <= splitter_tree[i]) // asdfasdf
+        if (key <= splitter_tree[i])
             i = 2*i + 0;
         else // (key > splitter_tree[i])
             i = 2*i + 1;

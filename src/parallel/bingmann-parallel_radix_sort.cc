@@ -47,6 +47,9 @@
 #include "../tools/stringtools.h"
 #include "../tools/jobqueue.h"
 
+#undef DBGX
+#define DBGX DBGX_OMP
+
 #include "../sequential/inssort.h"
 
 extern size_t g_smallsort;
@@ -62,9 +65,11 @@ static const bool use_work_sharing = true;
 
 typedef unsigned char* string;
 
-static size_t g_totalsize;
-
 static const size_t g_inssort_threshold = 64;
+
+size_t g_totalsize;             // total size of input
+size_t g_sequential_threshold;  // calculated threshold for sequential sorting
+size_t g_threadnum;             // number of threads overall
 
 /// Prototype called to schedule deeper sorts
 template <typename bigsort_key_type>
@@ -408,10 +413,12 @@ template <typename key_type>
 RadixStepCE<key_type>::RadixStepCE(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
     : strptr(_strptr), n(_n), depth(_depth)
 {
-    parts = omp_get_max_threads() * n / g_totalsize;
+    parts = g_threadnum * n / g_totalsize;
     if (parts == 0) parts = 1;
 
     psize = (n + parts-1) / parts;
+
+    DBG(1, "Area split into " << parts << " parts of size " << psize);
 
     bkt = new size_t[numbkts * parts + 1];
     charcache = new key_type[n];
@@ -591,8 +598,7 @@ void EnqueueSmall(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t 
 template <typename bigsort_key_type>
 void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
 {
-    // TODO: tune parameter
-    if (n > 128*1024)
+    if (n > g_sequential_threshold)
         new RadixStepCE<bigsort_key_type>(jobqueue, strptr, n, depth);
     else
         new SmallsortJob8(jobqueue, strptr, n, depth);
@@ -601,6 +607,8 @@ void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth
 static void parallel_radix_sort_8bit(string* strings, size_t n)
 {
     g_totalsize = n;
+    g_threadnum = omp_get_max_threads();
+    g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
 
     string* shadow = new string[n]; // allocate shadow pointer array
 
@@ -618,6 +626,8 @@ CONTESTANT_REGISTER_PARALLEL(parallel_radix_sort_8bit,
 static void parallel_radix_sort_16bit(string* strings, size_t n)
 {
     g_totalsize = n;
+    g_threadnum = omp_get_max_threads();
+    g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
 
     string* shadow = new string[n]; // allocate shadow pointer array
 

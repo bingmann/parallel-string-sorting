@@ -34,8 +34,6 @@
 #undef DBGX
 #define DBGX DBGX_OMP
 
-#include "../sequential/inssort.h"
-
 #include <tr1/memory>
 #include <tbb/concurrent_queue.h>
 
@@ -60,11 +58,9 @@ typedef uint64_t key_type;
 
 static const size_t g_inssort_threshold = 64;
 
-size_t g_totalsize; // total size of input
-
-size_t g_sequential_threshold; // calculated threshold for sequential sorting
-
-size_t g_threadnum;
+size_t g_totalsize;             // total size of input
+size_t g_sequential_threshold;  // calculated threshold for sequential sorting
+size_t g_threadnum;             // number of threads overall
 
 static const unsigned int block_size = 128*1024;
 

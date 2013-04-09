@@ -62,7 +62,11 @@ static const bool debug_splitter_tree = false;
 
 static const size_t MAXPROCS = 64;
 
-static size_t g_totalsize;
+static const size_t g_inssort_threshold = 64;
+
+size_t g_totalsize;             // total size of input
+size_t g_sequential_threshold;  // calculated threshold for sequential sorting
+size_t g_threadnum;             // number of threads overall
 
 /// Prototype called to schedule deeper sorts
 void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth);
@@ -141,7 +145,7 @@ typedef GenericJob<&SampleSortStep::distribute> DistributeJob;
 SampleSortStep::SampleSortStep(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
     : strptr(_strptr), n(_n), depth(_depth)
 {
-    parts = omp_get_max_threads() * n / g_totalsize;
+    parts = g_threadnum * n / g_totalsize;
     if (parts == 0) parts = 1;
 
     psize = (n + parts-1) / parts;
@@ -391,8 +395,7 @@ void SampleSortStep::distribute_finished(JobQueue& jobqueue)
 
 void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
 {
-    // TODO: tune parameter
-    if (n > 128*1024)
+    if (n > g_sequential_threshold)
         new SampleSortStep(jobqueue, strptr, n, depth);
     else
         bingmann_parallel_radix_sort::EnqueueSmall(jobqueue, strptr, n, depth);
@@ -400,9 +403,11 @@ void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth
 
 void parallel_sample_sortBTC(string* strings, size_t n)
 {
-    SampleSortStep::put_stats();
-
     g_totalsize = n;
+    g_threadnum = omp_get_max_threads();
+    g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
+
+    SampleSortStep::put_stats();
 
     string* shadow = new string[n]; // allocate shadow pointer array
 

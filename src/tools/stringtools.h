@@ -28,11 +28,10 @@ typedef unsigned char* string;
 /// hacky gcc synthesised 128-bit datatype
 typedef unsigned int uint128_t __attribute__((mode(TI)));
 
-/// represent hex octets of larger datatypes
+/// represent hex octets of large integer datatypes
 template <typename Type>
-std::string toHex(const Type& _v)
+static inline std::string toHex(Type v)
 {
-    Type v = _v;
     char out[2 * sizeof(v)+1];
     static const char hex[17] = "0123456789ABCDEF";
     for (unsigned int i = 1; i <= sizeof(v); ++i)
@@ -43,6 +42,20 @@ std::string toHex(const Type& _v)
     }
     out[2*sizeof(v)] = 0;
     return out;
+}
+
+/// represent binary digits of large integer datatypes
+template <typename Type>
+static inline std::string toBinary(Type v)
+{
+    static const int w = (1 << sizeof(v));
+    char binstr[w+1];
+    binstr[w] = 0;
+    for (int i = 0; i < w; i++) {
+        binstr[w-i-1] = (v & 1) ? '1' : '0';
+        v /= 2;
+    }
+    return binstr;
 }
 
 /// Return traits of key_type

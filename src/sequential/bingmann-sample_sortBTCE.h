@@ -30,32 +30,22 @@ using namespace bingmann_sample_sort;
 
 /// Variant of string sample-sort: use super-scalar binary search on splitters with equality check and index caching.
 
-static inline std::string binary(uint16_t v) {
-    char binstr[17];
-    binstr[16] = 0;
-    for (int i = 0; i < 16; i++) {
-        binstr[15-i] = (v & 1) ? '1' : '0';
-        v /= 2;
-    }
-    return binstr;
-}
-
 static inline unsigned int
 treeid_to_bkt(unsigned int id, size_t treebits, size_t numsplitters)
 {
     assert(id > 0);
-    //std::cout << "index: " << id << " = " << binary(id) << "\n";
+    //std::cout << "index: " << id << " = " << toBinary(id) << "\n";
 
     //int treebits = 4;
     //int bitmask = ((1 << treebits)-1);
     static const int bitmask = numsplitters;
 
-    int hi = treebits-32 + count_high_zero_bits<uint32_t>(id); // sdfsdf
+    int hi = treebits-32 + count_high_zero_bits<uint32_t>(id);
     //std::cout << "high zero: " << hi << "\n";
 
     unsigned int bkt = ((id << (hi+1)) & bitmask) | (1 << hi);
 
-    //std::cout << "bkt: " << bkt << " = " << binary(bkt) << "\n";
+    //std::cout << "bkt: " << bkt << " = " << toBinary(bkt) << "\n";
 
     return bkt;
 }
