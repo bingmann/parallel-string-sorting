@@ -413,12 +413,12 @@ template <typename key_type>
 RadixStepCE<key_type>::RadixStepCE(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
     : strptr(_strptr), n(_n), depth(_depth)
 {
-    parts = g_threadnum * n / g_totalsize;
+    parts = (n + g_sequential_threshold-1) / g_sequential_threshold;
     if (parts == 0) parts = 1;
 
     psize = (n + parts-1) / parts;
 
-    DBG(1, "Area split into " << parts << " parts of size " << psize);
+    DBG(debug_jobs, "Area split into " << parts << " parts of size " << psize);
 
     bkt = new size_t[numbkts * parts + 1];
     charcache = new key_type[n];
@@ -442,8 +442,9 @@ void RadixStepCE<key_type>::count(unsigned int p, JobQueue& jobqueue)
     key_type* mycacheE = mycache + (strE - strB);
 
     // DONE: check if processor-local stack + copy is faster. On 48-core AMD
-    // Opteron it is not faster to copy first.
-#if 1
+    // Opteron it is not faster to copy first. On 32-core Intel Xeon the second
+    // loop is slightly faster.
+#if 0
     for (string* str = strB; str != strE; ++str, ++mycache)
         *mycache = get_char<key_type>(*str, depth);
 
@@ -500,8 +501,9 @@ void RadixStepCE<key_type>::distribute(unsigned int p, JobQueue& jobqueue)
     key_type* mycache = charcache + p * psize;
 
     // DONE: check if processor-local stack + copy is faster. On 48-core AMD
-    // Opteron it is not faster to copy first.
-#if 1
+    // Opteron it is not faster to copy first. On 32-core Intel Xeon the second
+    // loop is slightly faster.
+#if 0
     size_t* mybkt = bkt + p * numbkts;
 
     for (string* str = strB; str != strE; ++str, ++mycache)

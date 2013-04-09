@@ -145,7 +145,7 @@ typedef GenericJob<&SampleSortStep::distribute> DistributeJob;
 SampleSortStep::SampleSortStep(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
     : strptr(_strptr), n(_n), depth(_depth)
 {
-    parts = g_threadnum * n / g_totalsize;
+    parts = (n + g_sequential_threshold-1) / g_sequential_threshold;
     if (parts == 0) parts = 1;
 
     psize = (n + parts-1) / parts;
