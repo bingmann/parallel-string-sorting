@@ -89,6 +89,37 @@ find_bkt_tree(const key_type& key, const key_type* splitter, const key_type* spl
     return b;
 }
 
+/// search in splitter tree for bucket number, unrolled for U keys at once.
+template <int U>
+__attribute__((optimize("unroll-all-loops"))) static inline void
+find_bkt_tree_unroll(const key_type key[U], const key_type* splitter, const key_type* splitter_tree0, const size_t treebits, const size_t numsplitters, uint16_t obkt[U])
+{
+    // binary tree traversal without left branch
+
+    const key_type* splitter_tree = splitter_tree0 - 1;
+    unsigned int i[U];
+    std::fill(i+0, i+U, 1);
+
+    for (size_t l = 0; l < treebits; ++l) // asdfasdf
+    {
+        for (int u = 0; u < U; ++u)
+        {
+            i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
+        }
+    }
+
+    for (int u = 0; u < U; ++u)
+        i[u] -= numsplitters+1;
+
+    for (int u = 0; u < U; ++u)
+        obkt[u] = i[u] * 2; // < bucket
+
+    for (int u = 0; u < U; ++u)
+    {
+        if (i[u] < numsplitters && splitter[i[u]] == key[u]) obkt[u] += 1; // equal bucket
+    }
+}
+
 /// binary search on splitter array for bucket number
 inline unsigned int
 find_bkt_tree_asm(const key_type& key, const key_type* splitter, const key_type* splitter_tree0, size_t /* treebits */, size_t numsplitters)
@@ -140,8 +171,6 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     static const size_t numsplitters = (1 << treebits) - 1;
 #endif
 
-    //std::cout << "l2cache : " << l2cache << " - numsplitter " << numsplitters << "\n";
-
     if (n < g_samplesort_smallsort)
     {
         g_rs_steps++;
@@ -152,8 +181,6 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
         return;
     }
     g_ss_steps++;
-
-    //std::cout << "numsplitters: " << numsplitters << "\n";
 
     // step 1: select splitters with oversampling
     g_timer.change(TM_MAKE_SAMPLE);
@@ -264,16 +291,34 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     static const size_t bktnum = 2*numsplitters+1;
 
-    for (size_t si = 0; si < n; ++si)
+    for (size_t si = 0; si < n; )
     {
+#if 1
         // binary search in splitter with equal check
-        key_type key = get_char<key_type>(strings[si], depth);
+        if (si+6 < n)
+        {
+            key_type key[6];
+            key[0] = get_char<key_type>(strings[si+0], depth);
+            key[1] = get_char<key_type>(strings[si+1], depth);
+            key[2] = get_char<key_type>(strings[si+2], depth);
+            key[3] = get_char<key_type>(strings[si+3], depth);
+            key[4] = get_char<key_type>(strings[si+4], depth);
+            key[5] = get_char<key_type>(strings[si+5], depth);
 
-        unsigned int b = find_bkt(key, splitter, splitter_tree, treebits, numsplitters);
+            find_bkt_tree_unroll<6>(key, splitter, splitter_tree, treebits, numsplitters, bktcache+si);
 
-        assert(b < bktnum);
+            si += 6;
+        }
+        else
+#endif
+        {
+            key_type key = get_char<key_type>(strings[si], depth);
 
-        bktcache[si] = b;
+            unsigned int b = find_bkt(key, splitter, splitter_tree, treebits, numsplitters);
+            assert(b < bktnum);
+
+            bktcache[si++] = b;
+        }
     }
 
     delete [] splitter_tree;
