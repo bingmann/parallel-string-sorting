@@ -408,7 +408,7 @@ msd_CI5_bktsize(string* strings, size_t n, size_t depth)
     return bktsize;
 }
 
-static void
+void
 msd_CI5(string* strings, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)

@@ -48,6 +48,14 @@ extern void EnqueueSmall(JobQueue& jobqueue, const StringPtr& strptr, size_t n, 
 
 }
 
+namespace bingmann_radix_sort {
+
+using namespace stringtools;
+
+extern void msd_CI5(string* strings, size_t n, size_t depth);
+
+}
+
 namespace bingmann_parallel_sample_sortBTC {
 
 using namespace stringtools;
@@ -62,7 +70,11 @@ static const bool debug_splitter_tree = false;
 
 static const size_t MAXPROCS = 64+1; // +1 due to round up of processor number
 
+static const size_t l2cache = 512*1024;
+
 static const size_t g_inssort_threshold = 64;
+
+static const size_t g_samplesort_smallsort = 32*1024;
 
 size_t g_totalsize;             // total size of input
 size_t g_sequential_threshold;  // calculated threshold for sequential sorting
@@ -70,12 +82,101 @@ size_t g_threadnum;             // number of threads overall
 
 size_t g_ss_steps, g_bs_steps;  // counters
 
-// ****************************************************************************
-// *** SampleSortStep out-of-place parallel sample sort with separate Jobs
-
 typedef uint64_t key_type;
 
-// *** rolled, and two unrolled classification subroutines
+// ****************************************************************************
+// *** Recursive TreeBuilder
+
+template <size_t numsplitters>
+struct TreeBuilder
+{
+    key_type*       m_splitter;
+    key_type*       m_tree;
+    unsigned char*  m_lcp_iter;
+    key_type*       m_samples;
+
+    TreeBuilder(key_type* splitter, key_type* splitter_tree, unsigned char* splitter_lcp, key_type* samples, size_t samplesize)
+        : m_splitter( splitter ),
+          m_tree( splitter_tree ),
+          m_lcp_iter( splitter_lcp ),
+          m_samples( samples )
+    {
+
+        key_type sentinel = 0;
+        recurse(samples, samples + samplesize, 1, sentinel);
+
+        assert(m_splitter == splitter + numsplitters);
+        assert(m_lcp_iter == splitter_lcp + numsplitters);
+        splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
+    }
+
+    ptrdiff_t snum(key_type* s) const
+    {
+        return (ptrdiff_t)(s - m_samples);
+    }
+
+    key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
+                     key_type& rec_prevkey)
+    {
+        DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
+            << ", treeidx=" << treeidx << ")");
+
+        // pick middle element as splitter
+        key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
+
+        DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
+            << toHex(*mid));
+
+        key_type mykey = m_tree[treeidx] = *mid;
+#if 1
+        key_type* midlo = mid;
+        while (lo < midlo && *(midlo-1) == mykey) midlo--;
+
+        key_type* midhi = mid+1;
+        while (midhi < hi && *midhi == mykey) midhi++;
+
+        if (midhi - midlo > 1)
+            DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
+#else
+        key_type *midlo = mid, *midhi = mid+1;
+#endif
+        if (2 * treeidx < numsplitters)
+        {
+            key_type prevkey = recurse(lo, midlo, 2 * treeidx + 0, rec_prevkey);
+
+            key_type xorSplit = prevkey ^ mykey;
+
+            DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
+                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+
+            *m_splitter++ = mykey;
+
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+
+            return recurse(midhi, hi, 2 * treeidx + 1, mykey);
+        }
+        else
+        {
+            key_type xorSplit = rec_prevkey ^ mykey;
+
+            DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
+                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+
+            *m_splitter++ = mykey;
+
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+
+            return mykey;
+        }
+    }
+};
+
+// ****************************************************************************
+// *** Classification Subroutines: rolled, and two unrolled variants
 
 struct ClassifySimple
 {
@@ -249,14 +350,216 @@ struct ClassifyUnrollBoth
     }
 };
 
+// ****************************************************************************
+// *** SampleSort non-recursive in-place sequential sample sort for small sorts
+
+template <typename Classify>
+struct SmallsortJobBTC : public Job
+{
+    StringPtr   strptr;
+    size_t      n, depth;
+
+    SmallsortJobBTC(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
+        : strptr(_strptr), n(_n), depth(_depth)
+    {
+        jobqueue.enqueue(this);
+    }
+
+    struct SeqSampleSortStep
+    {
+#if 0
+        static const size_t numsplitters = 2*16;
+#else
+        // bounding equation: 2*K+1 buckets when counting bkt occurances.
+        static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
+
+        static const size_t treebits = logfloor_<numsplitters2>::value;
+        static const size_t numsplitters = (1 << treebits) - 1;
+#endif
+
+        static const size_t bktnum = 2 * numsplitters + 1;
+
+        string* str;
+        size_t idx;
+        size_t depth;
+        size_t bktsize[bktnum];
+
+        unsigned char splitter_lcp[numsplitters];
+
+        SeqSampleSortStep(string* strings, size_t n, size_t depth, uint16_t* bktcache)
+        {
+            // step 1: select splitters with oversampling
+
+            const size_t oversample_factor = 1;
+            const size_t samplesize = oversample_factor * numsplitters;
+
+            key_type samples[ samplesize ];
+
+            LCGRandom rng(&strings);
+
+            for (unsigned int i = 0; i < samplesize; ++i)
+            {
+                samples[i] = get_char<key_type>(strings[ rng() % n ], depth);
+            }
+
+            std::sort(samples, samples + samplesize);
+
+            key_type splitter[numsplitters];
+            key_type splitter_tree[numsplitters+1];
+
+            TreeBuilder<numsplitters>(splitter, splitter_tree, splitter_lcp, samples, samplesize);
+
+            // step 2: classify all strings
+
+            Classify::classify(strings, strings+n, bktcache,
+                               splitter, splitter_tree, numsplitters,
+                               treebits, depth);
+
+            // step 2.5: count bucket sizes
+
+            memset(bktsize, 0, bktnum * sizeof(size_t));
+
+            for (size_t si = 0; si < n; ++si)
+                ++bktsize[ bktcache[si] ];
+
+            // step 3: prefix sum
+
+            size_t bktindex[bktnum];
+            bktindex[0] = bktsize[0];
+            size_t last_bkt_size = bktsize[0];
+            for (unsigned int i=1; i < bktnum; ++i) {
+                bktindex[i] = bktindex[i-1] + bktsize[i];
+                if (bktsize[i]) last_bkt_size = bktsize[i];
+            }
+            assert(bktindex[bktnum-1] == n);
+
+            // step 4: premute in-place
+
+            for (size_t i=0, j; i < n - last_bkt_size; )
+            {
+                string perm = strings[i];
+                uint16_t permbkt = bktcache[i];
+
+                while ( (j = --bktindex[ permbkt ]) > i )
+                {
+                    std::swap(perm, strings[j]);
+                    std::swap(permbkt, bktcache[j]);
+                }
+
+                strings[i] = perm;
+                i += bktsize[ permbkt ];
+            }
+
+            str = strings;
+            idx = 0;
+            this->depth = depth;
+        }
+    };
+
+    virtual void run(JobQueue& /* jobqueue */)
+    {
+        DBG(debug_jobs, "Process SmallsortJobBTC " << this << " of size " << n);
+
+        string* strings = strptr.to_original(n);
+
+        if (n < g_samplesort_smallsort) {
+            ++g_bs_steps;
+            return bingmann_radix_sort::msd_CI5(strings,n,0);
+        }
+
+        typedef SeqSampleSortStep Step;
+
+        uint16_t* bktcache = new uint16_t[n];
+
+        size_t pop_front = 0;
+        std::vector<Step> stack;
+        stack.push_back( Step(strings,n,0,bktcache) );
+
+        ++g_ss_steps;
+
+        // step 5: "recursion"
+
+        while ( stack.size() > pop_front )
+        {
+            while ( stack.back().idx < Step::bktnum )
+            {
+                Step& s = stack.back();
+                size_t i = s.idx++; // process the bucket s.idx
+
+                // i is even -> bkt[i] is less-than bucket
+                if ((i & 1) == 0)
+                {
+                    if (s.bktsize[i] == 0)
+                        ;
+                    else if (s.bktsize[i] < g_samplesort_smallsort)
+                    {
+                        if (i == Step::bktnum-1)
+                            DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << s.bktsize[i] << " no lcp");
+                        else
+                            DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
+
+                        ++g_bs_steps;
+                        bingmann_radix_sort::msd_CI5(s.str, s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F));
+                        s.str += s.bktsize[i];
+                    }
+                    else
+                    {
+                        if (i == Step::bktnum-1)
+                            DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << s.bktsize[i] << " no lcp");
+                        else
+                            DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
+
+                        ++g_ss_steps;
+                        s.str += s.bktsize[i];
+                        stack.push_back( Step(s.str - s.bktsize[i], s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F), bktcache) );
+                        // cannot add here, because s may have invalidated
+                    }
+                }
+                // i is odd -> bkt[i] is equal bucket
+                else
+                {
+                    if (s.bktsize[i] == 0)
+                        ;
+                    else if ( s.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " is done!");
+                        s.str += s.bktsize[i];
+                    }
+                    else if (s.bktsize[i] < g_samplesort_smallsort)
+                    {
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
+
+                        ++g_bs_steps;
+                        bingmann_radix_sort::msd_CI5(s.str, s.bktsize[i], s.depth + sizeof(key_type));
+                        s.str += s.bktsize[i];
+                    }
+                    else
+                    {
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
+
+                        ++g_ss_steps;
+                        s.str += s.bktsize[i];
+                        stack.push_back( Step(s.str - s.bktsize[i], s.bktsize[i], s.depth + sizeof(key_type), bktcache) );
+                        // cannot add here, because s may have invalidated
+                    }
+                }
+            }
+
+            stack.pop_back();
+        }
+
+        delete [] bktcache;
+    }
+};
+
+// ****************************************************************************
+// *** SampleSortStep out-of-place parallel sample sort with separate Jobs
+
 template <typename Classify>
 struct SampleSortStep
 {
 #if 0
     static const size_t numsplitters = 2*16;       // TODO: calculate to match L2 cache
 #else
-    static const size_t l2cache = 64*1024;
-
     // bounding equation: 2*K+1 buckets when counting bkt occurances.
     static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 
@@ -264,7 +567,7 @@ struct SampleSortStep
     static const size_t numsplitters = (1 << treebits) - 1;
 #endif
 
-    static const size_t bktnum = 2*numsplitters+1;
+    static const size_t bktnum = 2 * numsplitters + 1;
 
     StringPtr           strptr;
     size_t              n, depth;
@@ -337,93 +640,6 @@ struct SampleSortStep
 
     // *** Sample Step
 
-    struct TreeBuilder
-    {
-        key_type*       m_splitter;
-        key_type*       m_tree;
-        unsigned char*  m_lcp_iter;
-        key_type*       m_samples;
-
-        TreeBuilder(key_type* splitter, key_type* splitter_tree, unsigned char* splitter_lcp, key_type* samples, size_t samplesize)
-            : m_splitter( splitter ),
-              m_tree( splitter_tree ),
-              m_lcp_iter( splitter_lcp ),
-              m_samples( samples )
-        {
-
-            key_type sentinel = 0;
-            recurse(samples, samples + samplesize, 1, sentinel);
-
-            assert(m_splitter == splitter + numsplitters);
-            assert(m_lcp_iter == splitter_lcp + numsplitters);
-            splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
-        }
-
-        ptrdiff_t snum(key_type* s) const
-        {
-            return (ptrdiff_t)(s - m_samples);
-        }
-
-        key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                         key_type& rec_prevkey)
-        {
-            DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
-                << ", treeidx=" << treeidx << ")");
-
-            // pick middle element as splitter
-            key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
-
-            DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                << toHex(*mid));
-
-            key_type mykey = m_tree[treeidx] = *mid;
-#if 1
-            key_type* midlo = mid;
-            while (lo < midlo && *(midlo-1) == mykey) midlo--;
-
-            key_type* midhi = mid+1;
-            while (midhi < hi && *midhi == mykey) midhi++;
-
-            if (midhi - midlo > 1)
-                DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
-#else
-            key_type *midlo = mid, *midhi = mid+1;
-#endif
-            if (2 * treeidx < numsplitters)
-            {
-                key_type prevkey = recurse(lo, midlo, 2 * treeidx + 0, rec_prevkey);
-
-                key_type xorSplit = prevkey ^ mykey;
-
-                DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
-                    << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
-
-                *m_splitter++ = mykey;
-
-                *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                    | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
-
-                return recurse(midhi, hi, 2 * treeidx + 1, mykey);
-            }
-            else
-            {
-                key_type xorSplit = rec_prevkey ^ mykey;
-
-                DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
-                    << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
-
-                *m_splitter++ = mykey;
-
-                *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                    | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
-
-                return mykey;
-            }
-        }
-    };
-
     void sample(JobQueue& jobqueue)
     {
         DBG(debug_jobs, "Process SampleJob @ " << this);
@@ -443,7 +659,7 @@ struct SampleSortStep
 
         std::sort(samples, samples + samplesize);
 
-        TreeBuilder(splitter, splitter_tree, splitter_lcp, samples, samplesize);
+        TreeBuilder<numsplitters>(splitter, splitter_tree, splitter_lcp, samples, samplesize);
 
         if (debug_splitter_tree)
         {
@@ -607,9 +823,12 @@ struct SampleSortStep
             ++g_ss_steps;
             new SampleSortStep(jobqueue, strptr, n, depth);
         }
-        else {
+        else if (1) {
             ++g_bs_steps;
             bingmann_parallel_radix_sort::EnqueueSmall(jobqueue, strptr, n, depth);
+        }
+        else {
+            new SmallsortJobBTC<Classify>(jobqueue, strptr, n, depth);
         }
     }
 

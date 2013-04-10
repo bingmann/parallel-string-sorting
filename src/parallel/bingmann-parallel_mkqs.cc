@@ -857,10 +857,10 @@ struct ParallelMKQS
 
     void enqueue_jobs(JobQueue& jobqueue)
     {
-        DBG(debug_parajobs, "ParallelMKQS on area " << srange(blks.strings, blks.n) << " @ job " << this);
-
-        procs = g_threadnum * blks.n / g_totalsize;
+        procs = blks.n / g_sequential_threshold;
         if (procs == 0) procs = 1;
+
+        DBG(debug_parajobs, "ParallelMKQS on area " << srange(blks.strings, blks.n) << " with " << procs << " threads @ job " << this);
 
         // create partition jobs
         pwork = procs;

@@ -54,6 +54,7 @@ find_package_handle_standard_args(GMP DEFAULT_MSG GMP_INCLUDE_DIR GMP_LIBRARIES)
 
 # build subset of Intel TBB
 add_subdirectory(minitbb)
+add_subdirectory(liblfds)
 
 # descend into source
 add_subdirectory(src)
