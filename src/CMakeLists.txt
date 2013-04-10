@@ -1,7 +1,6 @@
 # Simple CMake file
 
 include_directories("${PROJECT_SOURCE_DIR}/minitbb/")
-include_directories("${PROJECT_SOURCE_DIR}/liblfds/inc/")
 include_directories("${PROJECT_BINARY_DIR}/")
 include_directories("${GMP_INCLUDE_DIR}")
 
@@ -20,7 +19,7 @@ set(SOURCES
   parallel/bingmann-parallel_sample_sortBTCE.cc
 )
 
-set(LIBS minitbb lfds ${GMP_LIBRARIES})
+set(LIBS minitbb ${GMP_LIBRARIES})
 
 if(WITH_MALLOC_COUNT)
 
