@@ -445,7 +445,7 @@ struct SequentialMKQS : public Job
         {
             while ( stack.back().idx < 3 )
             {
-                if (use_work_sharing && jobqueue.has_idle() && 1)
+                if (use_work_sharing && jobqueue.has_idle())
                 {
                     // convert top level of stack into independent jobs
 

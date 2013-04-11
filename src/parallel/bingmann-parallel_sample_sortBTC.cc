@@ -36,25 +36,12 @@
 #include "../tools/jobqueue.h"
 #include "../tools/logfloor.h"
 
+#undef DBGX
+#define DBGX DBGX_OMP
+
+#include "../sequential/inssort.h"
+
 extern size_t g_smallsort;
-
-namespace bingmann_parallel_radix_sort {
-
-using namespace stringtools;
-using namespace jobqueue;
-
-// prototype to call radix sort for small buckets
-extern void EnqueueSmall(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth);
-
-}
-
-namespace bingmann_radix_sort {
-
-using namespace stringtools;
-
-extern void msd_CI5(string* strings, size_t n, size_t depth);
-
-}
 
 namespace bingmann_parallel_sample_sortBTC {
 
@@ -68,19 +55,20 @@ static const bool debug_bucketsize = false;
 static const bool debug_recursion = false;
 static const bool debug_splitter_tree = false;
 
+static const bool use_work_sharing = true;
+
 static const size_t MAXPROCS = 64+1; // +1 due to round up of processor number
 
-static const size_t l2cache = 512*1024;
+static const size_t l2cache = 256*1024;
 
+static const size_t g_smallsort_threshold = 64*1024;
 static const size_t g_inssort_threshold = 64;
-
-static const size_t g_samplesort_smallsort = 32*1024;
 
 size_t g_totalsize;             // total size of input
 size_t g_sequential_threshold;  // calculated threshold for sequential sorting
 size_t g_threadnum;             // number of threads overall
 
-size_t g_ss_steps, g_bs_steps;  // counters
+size_t g_para_ss_steps, g_seq_ss_steps, g_bs_steps;  // counters
 
 typedef uint64_t key_type;
 
@@ -108,6 +96,7 @@ struct TreeBuilder
         assert(m_splitter == splitter + numsplitters);
         assert(m_lcp_iter == splitter_lcp + numsplitters);
         splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
+        splitter_lcp[numsplitters] = 0; // sentinel for > everything bucket
     }
 
     ptrdiff_t snum(key_type* s) const
@@ -132,8 +121,8 @@ struct TreeBuilder
         key_type* midlo = mid;
         while (lo < midlo && *(midlo-1) == mykey) midlo--;
 
-        key_type* midhi = mid+1;
-        while (midhi < hi && *midhi == mykey) midhi++;
+        key_type* midhi = mid;
+        while (midhi+1 < hi && *midhi == mykey) midhi++;
 
         if (midhi - midlo > 1)
             DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
@@ -190,7 +179,7 @@ struct ClassifySimple
 
         while ( i <= numsplitters )
         {
-#if 1
+#if 0
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
 #else
@@ -238,7 +227,7 @@ struct ClassifyUnrollTree
 
         for (size_t l = 0; l < treebits; ++l)
         {
-#if 1
+#if 0
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
 #else
@@ -291,7 +280,7 @@ struct ClassifyUnrollBoth
         {
             for (int u = 0; u < U; ++u)
             {
-#if 1
+#if 0
                 // in gcc-4.6.3 this produces a SETA, LEA sequence
                 i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
 #else
@@ -384,7 +373,7 @@ struct SmallsortJobBTC : public Job
         size_t depth;
         size_t bktsize[bktnum];
 
-        unsigned char splitter_lcp[numsplitters];
+        unsigned char splitter_lcp[numsplitters+1];
 
         SeqSampleSortStep(string* strings, size_t n, size_t depth, uint16_t* bktcache)
         {
@@ -453,37 +442,59 @@ struct SmallsortJobBTC : public Job
             str = strings;
             idx = 0;
             this->depth = depth;
+
+            ++g_seq_ss_steps;
         }
     };
 
-    virtual void run(JobQueue& /* jobqueue */)
+    // *** Stack of Recursive Sample Sort Steps
+
+    uint16_t* bktcache;
+    size_t bktcache_size;
+
+    size_t ss_pop_front;
+    std::vector<SeqSampleSortStep> ss_stack;
+
+    virtual void run(JobQueue& jobqueue)
     {
         DBG(debug_jobs, "Process SmallsortJobBTC " << this << " of size " << n);
+        assert(n >= g_smallsort_threshold);
 
-        string* strings = strptr.to_original(n);
+        bktcache = NULL;
+        bktcache_size = 0;
+        ss_pop_front = 0;
+        ms_pop_front = 0;
 
-        if (n < g_samplesort_smallsort) {
-            ++g_bs_steps;
-            return bingmann_radix_sort::msd_CI5(strings,n,0);
+        if (n >= g_smallsort_threshold)
+        {
+            bktcache = new uint16_t[n];
+            bktcache_size = n * sizeof(uint16_t);
+            sort_sample_sort(jobqueue);
         }
+        else
+        {
+            sort_mkqs_cache(jobqueue, strptr.to_original(n), n, depth);
+        }
+        delete [] bktcache;
+    }
+
+    void sort_sample_sort(JobQueue& jobqueue)
+    {
+        string* strings = strptr.to_original(n);
 
         typedef SeqSampleSortStep Step;
 
-        uint16_t* bktcache = new uint16_t[n];
-
-        size_t pop_front = 0;
-        std::vector<Step> stack;
-        stack.push_back( Step(strings,n,0,bktcache) );
-
-        ++g_ss_steps;
+        // sort first level
+        ss_pop_front = 0;
+        ss_stack.push_back( Step(strings,n,depth,bktcache) );
 
         // step 5: "recursion"
 
-        while ( stack.size() > pop_front )
+        while ( ss_stack.size() > ss_pop_front )
         {
-            while ( stack.back().idx < Step::bktnum )
+            while ( ss_stack.back().idx < Step::bktnum )
             {
-                Step& s = stack.back();
+                Step& s = ss_stack.back();
                 size_t i = s.idx++; // process the bucket s.idx
 
                 // i is even -> bkt[i] is less-than bucket
@@ -491,16 +502,16 @@ struct SmallsortJobBTC : public Job
                 {
                     if (s.bktsize[i] == 0)
                         ;
-                    else if (s.bktsize[i] < g_samplesort_smallsort)
+                    else if (s.bktsize[i] < g_smallsort_threshold)
                     {
+                        assert(i/2 <= Step::numsplitters);
                         if (i == Step::bktnum-1)
                             DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << s.bktsize[i] << " no lcp");
                         else
                             DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
-                        ++g_bs_steps;
-                        bingmann_radix_sort::msd_CI5(s.str, s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F));
                         s.str += s.bktsize[i];
+                        sort_mkqs_cache(jobqueue, s.str - s.bktsize[i], s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F));
                     }
                     else
                     {
@@ -509,9 +520,8 @@ struct SmallsortJobBTC : public Job
                         else
                             DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
-                        ++g_ss_steps;
                         s.str += s.bktsize[i];
-                        stack.push_back( Step(s.str - s.bktsize[i], s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F), bktcache) );
+                        ss_stack.push_back( Step(s.str - s.bktsize[i], s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F), bktcache) );
                         // cannot add here, because s may have invalidated
                     }
                 }
@@ -524,30 +534,493 @@ struct SmallsortJobBTC : public Job
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " is done!");
                         s.str += s.bktsize[i];
                     }
-                    else if (s.bktsize[i] < g_samplesort_smallsort)
+                    else if (s.bktsize[i] < g_smallsort_threshold)
                     {
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
 
-                        ++g_bs_steps;
-                        bingmann_radix_sort::msd_CI5(s.str, s.bktsize[i], s.depth + sizeof(key_type));
                         s.str += s.bktsize[i];
+                        sort_mkqs_cache(jobqueue, s.str - s.bktsize[i], s.bktsize[i], s.depth + sizeof(key_type));
                     }
                     else
                     {
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
 
-                        ++g_ss_steps;
                         s.str += s.bktsize[i];
-                        stack.push_back( Step(s.str - s.bktsize[i], s.bktsize[i], s.depth + sizeof(key_type), bktcache) );
+                        ss_stack.push_back( Step(s.str - s.bktsize[i], s.bktsize[i], s.depth + sizeof(key_type), bktcache) );
                         // cannot add here, because s may have invalidated
                     }
                 }
+
+                if (use_work_sharing && jobqueue.has_idle())
+                    sample_sort_free_work(jobqueue);
             }
 
-            stack.pop_back();
+            ss_stack.pop_back();
+        }
+    }
+
+    void sample_sort_free_work(JobQueue& jobqueue)
+    {
+        assert(ss_stack.size() >= ss_pop_front);
+
+        if (ss_stack.size() == ss_pop_front) {
+            // ss_stack is empty, check other stack
+            //return radix_sort_free_work(jobqueue);
+            return mkqs_free_work(jobqueue);
         }
 
-        delete [] bktcache;
+        // convert top level of stack into independent jobs
+        DBG(debug_jobs, "Freeing top level of SmallsortJobBTC's sample_sort stack");
+
+        typedef SeqSampleSortStep Step;
+        Step& s = ss_stack[ss_pop_front];
+
+        while ( s.idx < Step::bktnum )
+        {
+            size_t i = s.idx++; // process the bucket s.idx
+
+            // i is even -> bkt[i] is less-than bucket
+            if ((i & 1) == 0)
+            {
+                if (s.bktsize[i] == 0)
+                    ;
+                else
+                {
+                    if (i == Step::bktnum-1)
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << s.bktsize[i] << " no lcp");
+                    else
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
+
+                    new SmallsortJobBTC<Classify>( jobqueue, StringPtr(s.str), s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F) );
+                }
+                s.str += s.bktsize[i];
+            }
+            // i is odd -> bkt[i] is equal bucket
+            else
+            {
+                if (s.bktsize[i] == 0)
+                    ;
+                else if ( s.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
+                    DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " is done!");
+                }
+                else
+                {
+                    DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
+
+                    new SmallsortJobBTC<Classify>( jobqueue, StringPtr(s.str), s.bktsize[i], s.depth + sizeof(key_type) );
+                }
+                s.str += s.bktsize[i];
+            }
+        }
+
+        // shorten the current stack
+        ++ss_pop_front;
+    }
+
+#if 0
+    // *********************************************************************************
+    // *** Stack of Recursive Radix Sort Steps
+
+    struct RadixStep8_CI
+    {
+        string* str;
+        size_t idx;
+        size_t bktsize[256];
+
+        RadixStep8_CI(string* strings, size_t n, size_t depth, uint8_t* charcache)
+        {
+            // count character occurances
+#if 1
+            // DONE: first variant to first fill charcache and then count. This is
+            // 2x as fast as the second variant.
+            for (size_t i=0; i < n; ++i)
+                charcache[i] = strings[i][depth];
+
+            memset(bktsize, 0, sizeof(bktsize));
+            for (size_t i=0; i < n; ++i)
+                ++bktsize[ charcache[i] ];
+#else
+            memset(bktsize, 0, sizeof(bktsize));
+            for (size_t i=0; i < n; ++i) {
+                ++bktsize[ (charcache[i] = strings[i][depth]) ];
+            }
+#endif
+            // inclusive prefix sum
+            size_t bkt[256];
+            bkt[0] = bktsize[0];
+            size_t last_bkt_size = bktsize[0];
+            for (unsigned int i=1; i < 256; ++i) {
+                bkt[i] = bkt[i-1] + bktsize[i];
+                if (bktsize[i]) last_bkt_size = bktsize[i];
+            }
+
+            // premute in-place
+            for (size_t i=0, j; i < n - last_bkt_size; )
+            {
+                string perm = strings[i];
+                uint8_t permch = charcache[i];
+                while ( (j = --bkt[ permch ]) > i )
+                {
+                    std::swap(perm, strings[j]);
+                    std::swap(permch, charcache[j]);
+                }
+                strings[i] = perm;
+                i += bktsize[ permch ];
+            }
+
+            str = strings + bktsize[0];
+            idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
+
+            ++g_bs_steps;
+        }
+    };
+
+    size_t rs_pop_front;
+    size_t rs_depth; // radix sorting base depth
+    std::vector<RadixStep8_CI> radixstack;
+
+    void sort_radix_sort(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
+    {
+        uint8_t* charcache = (uint8_t*)bktcache;
+
+        // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
+        rs_pop_front = 0;
+        rs_depth = depth;
+        radixstack.clear();
+        radixstack.push_back( RadixStep8_CI(strings,n,rs_depth,charcache) );
+
+        while ( radixstack.size() > rs_pop_front )
+        {
+            while ( radixstack.back().idx < 255 )
+            {
+                RadixStep8_CI& rs = radixstack.back();
+                size_t i = ++rs.idx; // process the bucket rs.idx
+
+                if (rs.bktsize[i] == 0)
+                    continue;
+                else if (rs.bktsize[i] < g_inssort_threshold)
+                {
+                    inssort::inssort(rs.str, rs.bktsize[i], depth + radixstack.size());
+                    rs.str += rs.bktsize[i];
+                }
+                else
+                {
+                    rs.str += rs.bktsize[i];
+                    radixstack.push_back( RadixStep8_CI(rs.str - rs.bktsize[i],
+                                                        rs.bktsize[i],
+                                                        depth + radixstack.size(),
+                                                        charcache) );
+                    // cannot add to rs.str here, because rs may have invalidated
+                }
+
+                if (use_work_sharing && jobqueue.has_idle())
+                    sample_sort_free_work(jobqueue);
+            }
+            radixstack.pop_back();
+        }
+
+        rs_pop_front = 0; // clear stack
+        radixstack.clear();
+    }
+
+    void radix_sort_free_work(JobQueue& jobqueue)
+    {
+        assert(radixstack.size() >= rs_pop_front);
+
+        if (radixstack.size() == rs_pop_front) {
+            return;
+        }
+
+        // convert top level of stack into independent jobs
+        DBG(debug_jobs, "Freeing top level of SmallsortJobBTC's radixsort stack");
+
+        RadixStep8_CI& rt = radixstack[rs_pop_front];
+
+        while ( rt.idx < 255 )
+        {
+            ++rt.idx; // enqueue the bucket rt.idx
+
+            if (rt.bktsize[rt.idx] == 0) continue;
+            new SmallsortJobBTC<Classify>(jobqueue, StringPtr(rt.str), rt.bktsize[rt.idx], rs_depth + rs_pop_front);
+            rt.str += rt.bktsize[rt.idx];
+        }
+
+        // shorten the current stack
+        ++rs_pop_front;
+    }
+#endif
+
+    // *********************************************************************************
+    // *** Stack of Recursive MKQS Steps
+
+    static inline int cmp(const key_type& a, const key_type& b)
+    {
+        return (a > b) ? 1 : (a < b) ? -1 : 0;
+    }
+
+    template <typename Type>
+    static inline size_t
+    med3(Type* A, size_t i, size_t j, size_t k)
+    {
+        if (cmp(A[i], A[j]) == 0)                         return i;
+        if (cmp(A[k], A[i]) == 0 || cmp(A[k], A[j]) == 0) return k;
+        if (cmp(A[i], A[j]) < 0) {
+            if (cmp(A[j], A[k]) < 0) return j;
+            if (cmp(A[i], A[k]) < 0) return k;
+            return i;
+        }
+        if (cmp(A[j], A[k]) > 0) return j;
+        if (cmp(A[i], A[k]) < 0) return i;
+        return k;
+    }
+
+    // Insertion sort the strings only based on the cached characters.
+    static inline void
+    insertion_sort_cache_block(string* strings, key_type* cache, int n)
+    {
+        unsigned int pi, pj;
+        for (pi = 1; --n > 0; ++pi) {
+            string tmps = strings[pi];
+            key_type tmpc = cache[pi];
+            for (pj = pi; pj > 0; --pj) {
+                if (cmp(cache[pj-1], tmpc) <= 0)
+                    break;
+                strings[pj] = strings[pj-1];
+                cache[pj] = cache[pj-1];
+            }
+            strings[pj] = tmps;
+            cache[pj] = tmpc;
+        }
+    }
+
+    template <bool CacheDirty>
+    static inline void
+    insertion_sort(string* strings, key_type* cache, int n, size_t depth)
+    {
+        if (n == 0) return;
+        if (CacheDirty) return inssort::inssort(strings, n, depth);
+
+        insertion_sort_cache_block(strings, cache, n);
+
+        size_t start=0, cnt=1;
+        for (int i=0; i < n-1; ++i) {
+            if (cmp(cache[i], cache[i+1]) == 0) {
+                ++cnt;
+                continue;
+            }
+            if (cnt > 1 && cache[start] & 0xFF)
+                inssort::inssort(strings + start, cnt, depth + sizeof(key_type));
+            cnt = 1;
+            start = i+1;
+        }
+        if (cnt > 1 && cache[start] & 0xFF)
+            inssort::inssort(strings+start, cnt, depth + sizeof(key_type));
+    }
+
+    struct MKQSStep
+    {
+        string* strings;
+        key_type* cache;
+        size_t num_lt, num_eq, num_gt, n, depth;
+        size_t idx;
+        bool eq_recurse;
+
+        MKQSStep(string* strings, key_type* cache, size_t n, size_t depth, bool CacheDirty)
+        {
+            if (CacheDirty) {
+                for (size_t i=0; i < n; ++i) {
+                    cache[i] = get_char<key_type>(strings[i], depth);
+                }
+            }
+            // Move pivot to first position to avoid wrapping the unsigned values
+            // we are using in the main loop from zero to max.
+            size_t p = med3(cache,
+                            med3(cache, 0,       n/8,     n/4),
+                            med3(cache, n/2-n/8, n/2,     n/2+n/8),
+                            med3(cache, n-1-n/4, n-1-n/8, n-3)
+                );
+            std::swap(strings[0], strings[p]);
+            std::swap(cache[0], cache[p]);
+            key_type pivot = cache[0];
+            size_t first   = 1;
+            size_t last    = n-1;
+            size_t beg_ins = 1;
+            size_t end_ins = n-1;
+            while (true) {
+                while (first <= last) {
+                    const int res = cmp(cache[first], pivot);
+                    if (res > 0) {
+                        break;
+                    } else if (res == 0) {
+                        std::swap(strings[beg_ins], strings[first]);
+                        std::swap(cache[beg_ins], cache[first]);
+                        beg_ins++;
+                    }
+                    ++first;
+                }
+                while (first <= last) {
+                    const int res = cmp(cache[last], pivot);
+                    if (res < 0) {
+                        break;
+                    } else if (res == 0) {
+                        std::swap(strings[end_ins], strings[last]);
+                        std::swap(cache[end_ins], cache[last]);
+                        end_ins--;
+                    }
+                    --last;
+                }
+                if (first > last)
+                    break;
+                std::swap(strings[first], strings[last]);
+                std::swap(cache[first], cache[last]);
+                ++first;
+                --last;
+            }
+            // Some calculations to make the code more readable.
+            const size_t num_eq_beg = beg_ins;
+            const size_t num_eq_end = n-1-end_ins;
+            num_eq     = num_eq_beg+num_eq_end;
+            num_lt     = first-beg_ins;
+            num_gt     = end_ins-last;
+            assert(num_lt + num_eq + num_gt == n);
+
+            // Swap the equal pointers from the beginning to proper position.
+            const size_t size1 = std::min(num_eq_beg, num_lt);
+            std::swap_ranges(strings, strings+size1, strings+first-size1);
+            std::swap_ranges(cache, cache+size1, cache+first-size1);
+            // Swap the equal pointers from the end to proper position.
+            const size_t size2 = std::min(num_eq_end, num_gt);
+            std::swap_ranges(strings+first, strings+first+size2, strings+n-size2);
+            std::swap_ranges(cache+first, cache+first+size2, cache+n-size2);
+
+            // Save offsets for recursive sorting
+            this->strings = strings;
+            this->cache = cache;
+            this->n = n;
+            this->depth = depth;
+            this->idx = 0;
+            this->eq_recurse = (pivot & 0xFF);
+
+            ++g_bs_steps;
+        }
+    };
+
+    size_t ms_pop_front;
+    size_t ms_depth; // mkqs sorting base depth
+    std::vector<MKQSStep> ms_stack;
+
+    void sort_mkqs_cache(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
+    {
+        if (n < g_inssort_threshold)
+            return inssort::inssort(strings, n, depth);
+
+        if (bktcache_size < n * sizeof(key_type)) {
+            delete [] bktcache;
+            bktcache = (uint16_t*)new key_type[n];
+            bktcache_size = n * sizeof(key_type);
+        }
+
+        key_type* cache = (key_type*)bktcache;
+
+        // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
+        ms_pop_front = 0;
+        ms_depth = depth;
+        ms_stack.clear();
+        ms_stack.push_back( MKQSStep(strings,cache,n,ms_depth,true) );
+
+    jumpout:
+        while ( ms_stack.size() > ms_pop_front )
+        {
+            while ( ms_stack.back().idx < 3 )
+            {
+                if (use_work_sharing && jobqueue.has_idle()) {
+                    sample_sort_free_work(jobqueue);
+                    goto jumpout;
+                }
+
+                MKQSStep& ms = ms_stack.back();
+                ++ms.idx; // increment here, because stack may change
+
+                // process the lt-subsequence
+                if (ms.idx == 1)
+                {
+                    if (ms.num_lt == 0)
+                        ;
+                    else if (ms.num_lt < g_inssort_threshold)
+                        insertion_sort<false>(ms.strings, ms.cache, ms.num_lt, ms.depth);
+                    else
+                        ms_stack.push_back( MKQSStep(ms.strings, ms.cache, ms.num_lt, ms.depth, false) );
+                }
+                // process the eq-subsequence
+                else if (ms.idx == 2)
+                {
+                    if (!ms.eq_recurse || ms.num_eq == 0)
+                        ;
+                    else if (ms.num_eq < g_inssort_threshold)
+                        insertion_sort<true>(ms.strings + ms.num_lt,
+                                             ms.cache + ms.num_lt,
+                                             ms.num_eq, ms.depth + sizeof(key_type));
+                    else
+                        ms_stack.push_back( MKQSStep(ms.strings + ms.num_lt,
+                                                     ms.cache + ms.num_lt,
+                                                     ms.num_eq, ms.depth + sizeof(key_type), true) );
+                }
+                // process the gt-subsequence
+                else
+                {
+                    assert(ms.idx == 3);
+                    if (ms.num_gt == 0)
+                        ;
+                    else if (ms.num_gt < g_inssort_threshold)
+                        insertion_sort<false>(ms.strings + ms.num_lt + ms.num_eq,
+                                              ms.cache + ms.num_lt + ms.num_eq,
+                                              ms.num_gt,
+                                              ms.depth);
+                    else
+                        ms_stack.push_back( MKQSStep(ms.strings + ms.num_lt + ms.num_eq,
+                                                     ms.cache + ms.num_lt + ms.num_eq,
+                                                     ms.num_gt, ms.depth, false) );
+                }
+            }
+
+            ms_stack.pop_back();
+        }
+
+        ms_pop_front = 0; // clear stack
+        ms_stack.clear();
+    }
+
+    void mkqs_free_work(JobQueue& jobqueue)
+    {
+        assert(ms_stack.size() >= ms_pop_front);
+
+        if (ms_stack.size() == ms_pop_front) {
+            return;
+        }
+
+        DBG(debug_jobs, "Freeing top level of SmallsortJobBTC's mkqs stack");
+
+        // convert top level of stack into independent jobs
+
+        MKQSStep& st = ms_stack[ms_pop_front];
+
+        if (st.idx == 0 && st.num_lt != 0)
+        {
+            new SmallsortJobBTC(jobqueue, StringPtr(st.strings), st.num_lt, st.depth);
+        }
+        if (st.idx <= 1 && st.num_eq != 0 && st.eq_recurse)
+        {
+            new SmallsortJobBTC(jobqueue, StringPtr(st.strings + st.num_lt),
+                                st.num_eq, st.depth + sizeof(key_type));
+        }
+        if (st.idx <= 2 && st.num_gt != 0)
+        {
+            new SmallsortJobBTC(jobqueue, StringPtr(st.strings + st.num_lt + st.num_eq),
+                                st.num_gt, st.depth);
+        }
+
+        // shorten the current stack
+        ++ms_pop_front;
     }
 };
 
@@ -577,7 +1050,7 @@ struct SampleSortStep
     std::atomic<unsigned int> pwork;
     key_type            splitter[numsplitters];
     key_type            splitter_tree[numsplitters+1];
-    unsigned char       splitter_lcp[numsplitters];
+    unsigned char       splitter_lcp[numsplitters+1];
     size_t*             bkt;
 
     uint16_t*           bktcache[MAXPROCS];
@@ -636,6 +1109,7 @@ struct SampleSortStep
         psize = (n + parts-1) / parts;
 
         jobqueue.enqueue( new SampleJob(this) );
+        ++g_para_ss_steps;
     }
 
     // *** Sample Step
@@ -820,17 +1294,12 @@ struct SampleSortStep
     static void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
     {
         if (n > g_sequential_threshold) {
-            ++g_ss_steps;
             new SampleSortStep(jobqueue, strptr, n, depth);
-        }
-        else if (1) {
-            ++g_bs_steps;
-            bingmann_parallel_radix_sort::EnqueueSmall(jobqueue, strptr, n, depth);
         }
         else {
             new SmallsortJobBTC<Classify>(jobqueue, strptr, n, depth);
         }
-    }
+   }
 
     static inline void put_stats()
     {
@@ -845,7 +1314,7 @@ void parallel_sample_sortBTC(string* strings, size_t n)
     g_totalsize = n;
     g_threadnum = omp_get_max_threads();
     g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
-    g_ss_steps = g_bs_steps = 0;
+    g_para_ss_steps = g_seq_ss_steps = g_bs_steps = 0;
 
     SampleSortStep<ClassifySimple>::put_stats();
 
@@ -857,7 +1326,8 @@ void parallel_sample_sortBTC(string* strings, size_t n)
 
     delete [] shadow;
 
-    g_statscache >> "steps_sample_sort" << g_ss_steps
+    g_statscache >> "steps_para_sample_sort" << g_para_ss_steps
+                 >> "steps_seq_sample_sort" << g_seq_ss_steps
                  >> "steps_base_sort" << g_bs_steps;
 }
 
@@ -870,7 +1340,7 @@ void parallel_sample_sortBTCU1(string* strings, size_t n)
     g_totalsize = n;
     g_threadnum = omp_get_max_threads();
     g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
-    g_ss_steps = g_bs_steps = 0;
+    g_para_ss_steps = g_seq_ss_steps = g_bs_steps = 0;
 
     SampleSortStep<ClassifyUnrollTree>::put_stats();
 
@@ -882,7 +1352,8 @@ void parallel_sample_sortBTCU1(string* strings, size_t n)
 
     delete [] shadow;
 
-    g_statscache >> "steps_sample_sort" << g_ss_steps
+    g_statscache >> "steps_para_sample_sort" << g_para_ss_steps
+                 >> "steps_seq_sample_sort" << g_seq_ss_steps
                  >> "steps_base_sort" << g_bs_steps;
 }
 
@@ -895,7 +1366,7 @@ void parallel_sample_sortBTCU2(string* strings, size_t n)
     g_totalsize = n;
     g_threadnum = omp_get_max_threads();
     g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
-    g_ss_steps = g_bs_steps = 0;
+    g_para_ss_steps = g_seq_ss_steps = g_bs_steps = 0;
 
     SampleSortStep<ClassifyUnrollBoth>::put_stats();
 
@@ -907,7 +1378,8 @@ void parallel_sample_sortBTCU2(string* strings, size_t n)
 
     delete [] shadow;
 
-    g_statscache >> "steps_sample_sort" << g_ss_steps
+    g_statscache >> "steps_para_sample_sort" << g_para_ss_steps
+                 >> "steps_seq_sample_sort" << g_seq_ss_steps
                  >> "steps_base_sort" << g_bs_steps;
 }
 

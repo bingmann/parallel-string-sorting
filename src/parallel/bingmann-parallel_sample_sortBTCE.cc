@@ -266,9 +266,9 @@ struct ClassifyUnrollTree
             "3: \n"
             : "=&a" (i)
             : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
-              [numsplitters1] "i" (numsplitters+1),
-              [treebits] "i" (treebits),
-              [numsplitters] "i" (numsplitters)
+              [numsplitters1] "g" (numsplitters+1),
+              [treebits] "g" (treebits),
+              [numsplitters] "g" (numsplitters)
             : "rcx", "rdx");
 
         return i;
@@ -418,8 +418,8 @@ struct SampleSortStep
             key_type* midlo = mid;
             while (lo < midlo && *(midlo-1) == mykey) midlo--;
 
-            key_type* midhi = mid+1;
-            while (midhi < hi && *midhi == mykey) midhi++;
+            key_type* midhi = mid;
+            while (midhi+1 < hi && *midhi == mykey) midhi++;
 
             if (midhi - midlo > 1)
                 DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");

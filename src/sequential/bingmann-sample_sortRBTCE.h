@@ -161,8 +161,8 @@ struct SplitterTree
             samplepair_type* midlo = mid;
             while (lo < midlo && (midlo-1)->first == mykey) midlo--;
 
-            samplepair_type* midhi = mid+1;
-            while (midhi < hi && midhi->first == mykey) midhi++;
+            samplepair_type* midhi = mid;
+            while (midhi+1 < hi && midhi->first == mykey) midhi++;
 
             DBG(debug_splitter, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
 

@@ -104,7 +104,7 @@ find_bkt_tree_unroll(const key_type key[U], const key_type* splitter, const key_
     {
         for (int u = 0; u < U; ++u)
         {
-#if 1
+#if 0
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
 #else

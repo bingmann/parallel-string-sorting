@@ -487,8 +487,8 @@ public:
             key_type* midlo = mid;
             while (lo < midlo && *(midlo-1) == mykey) midlo--;
 
-            key_type* midhi = mid+1;
-            while (midhi < hi && *midhi == mykey) midhi++;
+            key_type* midhi = mid;
+            while (midhi+1 < hi && *midhi == mykey) midhi++;
 
             if (midhi - midlo > 1)
                 DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
