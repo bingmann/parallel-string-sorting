@@ -540,20 +540,20 @@ void print_usage(const char* prog)
 int main(int argc, char* argv[])
 {
     static const struct option longopts[] = {
-        { "algo",    required_argument,  0, 'a' },
         { "help",    no_argument,        0, 'h' },
-        { "maxsize", required_argument,  0, 'S' },
-        { "output",  required_argument,  0, 'o' },
+        { "algo",    required_argument,  0, 'a' },
+        { "datafork", no_argument,       0, 'D' },
         { "input",   required_argument,  0, 'i' },
+        { "nocheck", no_argument,        0, 'N' },
+        { "output",  required_argument,  0, 'o' },
         { "repeat",  required_argument,  0, 'r' },
         { "size",    required_argument,  0, 's' },
+        { "maxsize", required_argument,  0, 'S' },
         { "timeout", required_argument,  0, 'T' },
-        { "datafork", no_argument,       0, 'D' },
         { "suffix",  no_argument,        0, 1 },
         { "sequential", no_argument,     0, 2 },
         { "threads", no_argument,        0, 3 },
         { "allthreads", no_argument,     0, 4 },
-        { "nocheck", no_argument,     0, 5 },
         { 0,0,0,0 },
     };
 
@@ -577,7 +577,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:r:o:i:T:D", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:r:o:i:T:DN", longopts, &index);
 
         if (argi < 0) break;
 
@@ -602,6 +602,26 @@ int main(int argc, char* argv[])
             std::cout << "Option -D: forking before each algorithm run and loading data after fork." << std::endl;
             break;
 
+        case 'i':
+            gopt_inputwrite = optarg;
+            std::cout << "Option -i: will write input strings to \"" << gopt_inputwrite << "\"" << std::endl;
+            break;
+
+        case 'N':
+            gopt_nocheck = true;
+            std::cout << "Option --nocheck: skipping checking of sorted order and distinguishing prefix calculation." << std::endl;
+            break;
+
+        case 'o':
+            gopt_output = optarg;
+            std::cout << "Option -o: will write output strings to \"" << gopt_output << "\"" << std::endl;
+            break;
+
+        case 'r':
+            gopt_repeats = atoi(optarg);
+            std::cout << "Option -r: repeating string sorting algorithms " << gopt_repeats << std::endl;
+            break;
+
         case 's':
             if (!input::parse_filesize(optarg, gopt_inputsize_minlimit)) {
                 std::cout << "Option -s: invalid size parameter: " << optarg << std::endl;
@@ -618,49 +638,29 @@ int main(int argc, char* argv[])
             std::cout << "Option -S: limiting maximum input size to " << gopt_inputsize_maxlimit << std::endl;
             break;
 
-        case 'r':
-            gopt_repeats = atoi(optarg);
-            std::cout << "Option -r: repeating string sorting algorithms " << gopt_repeats << std::endl;
-            break;
-
-        case 'o':
-            gopt_output = optarg;
-            std::cout << "Option -o: will write output strings to \"" << gopt_output << "\"" << std::endl;
-            break;
-
-        case 'i':
-            gopt_inputwrite = optarg;
-            std::cout << "Option -i: will write input strings to \"" << gopt_inputwrite << "\"" << std::endl;
-            break;
-
         case 'T':
             gopt_timeout = atoi(optarg);
             std::cout << "Option -T: aborting algorithms after " << gopt_timeout << " seconds timeout." << std::endl;
             break;
 
-        case 1:
+        case 1: // --suffix
             gopt_suffixsort = true;
             std::cout << "Option --suffix: running as suffix sorter on input file." << std::endl;
             break;
 
-        case 2:
+        case 2: // --sequential
             gopt_sequential_only = true;
             std::cout << "Option --sequential: running only sequential algorithms." << std::endl;
             break;
 
-        case 3:
+        case 3: // --threads
             gopt_threads = true;
             std::cout << "Option --threads: running test with exponentially increasing thread count." << std::endl;
             break;
 
-        case 4:
+        case 4: // --allthreads
             gopt_allthreads = true;
             std::cout << "Option --allthreads: running test with linear increasing thread count." << std::endl;
-            break;
-
-        case 5:
-            gopt_nocheck = true;
-            std::cout << "Option --nocheck: skipping checking of sorted order and distinguishing prefix calculation." << std::endl;
             break;
 
         default:
