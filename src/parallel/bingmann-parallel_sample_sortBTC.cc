@@ -458,7 +458,6 @@ struct SmallsortJobBTC : public Job
     virtual void run(JobQueue& jobqueue)
     {
         DBG(debug_jobs, "Process SmallsortJobBTC " << this << " of size " << n);
-        assert(n >= g_smallsort_threshold);
 
         bktcache = NULL;
         bktcache_size = 0;
@@ -1134,16 +1133,6 @@ struct SampleSortStep
         std::sort(samples, samples + samplesize);
 
         TreeBuilder<numsplitters>(splitter, splitter_tree, splitter_lcp, samples, samplesize);
-
-        if (debug_splitter_tree)
-        {
-            DBG1(1, "splitter_tree: ");
-            for (size_t i = 0; i < numsplitters; ++i)
-            {
-                DBG2(1, splitter_tree[i] << " ");
-            }
-            DBG3(1, "");
-        }
 
         bkt = new size_t[bktnum * parts + 1];
 
