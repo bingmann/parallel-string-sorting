@@ -124,7 +124,7 @@ bool load_plain(const std::string& path)
         {
             for (size_t i = rpos; i < rpos + rb; ++i)
             {
-                if (stringdata[i] == '\n') {
+                if (stringdata[i] == '\n' || stringdata[i] == 0) {
                     stringdata[i] = 0;
                     if (i+1 < size) g_string_count++;
                 }
@@ -236,7 +236,7 @@ bool load_compressed(const std::string& path)
         {
             for (size_t i = rpos; i < rpos + rb; ++i)
             {
-                if (stringdata[i] == '\n') {
+                if (stringdata[i] == '\n' || stringdata[i] == 0) {
                     stringdata[i] = 0;
                     if (i+1 < size) g_string_count++;
                 }
