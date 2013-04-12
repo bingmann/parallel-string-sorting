@@ -72,7 +72,8 @@ size_t          gopt_repeats = 0;
 std::vector<const char*> gopt_algorithm;
 int             gopt_timeout = 0;
 
-const char*     g_dataname = NULL;      // input name
+const char*     g_datapath = NULL;      // path of input
+std::string     g_dataname;             // stripped name of input
 const char*     g_string_data = NULL;   // pointer to first string
 char*           g_string_databuff = NULL; // pointer to data buffer (with padding)
 size_t          g_string_datasize = 0;  // total size of string data (without padding)
@@ -213,12 +214,12 @@ static inline void maybe_inputwrite()
 
 void Contest::run_contest(const char* path)
 {
-    g_dataname = path;
+    g_datapath = path;
 
     if (!gopt_forkdataload)
     {
         // read input datafile
-        if (!input::load(g_dataname))
+        if (!input::load(g_datapath))
             return;
 
         g_string_dprefix = 0;
@@ -271,7 +272,7 @@ void Contestant_UCArray::run()
         if (gopt_forkdataload)
         {
             // read input datafile
-            if (!input::load(g_dataname))
+            if (!input::load(g_datapath))
                 return;
 
             g_string_dprefix = 0;

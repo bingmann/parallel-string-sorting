@@ -50,6 +50,26 @@ char* allocate_stringdata(size_t size, const std::string& path)
     return stringdata;
 }
 
+/// Strip data path to just a filename
+std::string strip_datapath(const std::string& path, bool compressed)
+{
+    std::string::size_type slashpos = path.rfind('/');
+    std::string name = (slashpos == std::string::npos ? path : path.substr(slashpos+1));
+
+    if (compressed) {
+        // remove compression suffix and size, both separated by dots
+        std::string::size_type dotpos = name.rfind('.');
+        name.erase(dotpos);
+        std::string::size_type dot2pos = name.rfind('.');
+        name.erase(dot2pos);
+    }
+
+    // check for problems
+    if (!name.size()) name = path;
+
+    return name;
+}
+
 /// Read a plain file containing newline terminated strings
 bool load_plain(const std::string& path)
 {
@@ -57,12 +77,12 @@ bool load_plain(const std::string& path)
     size_t size = 0;
 
     if (!(file = fopen(path.c_str(), "r"))) {
-        std::cout << "Cannot open file: " << strerror(errno) << "\n";
+        std::cout << "Cannot open " << path << ": " << strerror(errno) << "\n";
         return false;
     }
 
     if (fseek(file,0,SEEK_END)) {
-        std::cout << "Cannot seek in file: " << strerror(errno) << "\n";
+        std::cout << "Cannot seek in " << path << ": " << strerror(errno) << "\n";
         fclose(file);
         return false;
     }
@@ -94,7 +114,7 @@ bool load_plain(const std::string& path)
         ssize_t rb = fread(stringdata+rpos, sizeof(char), batch, file);
 
         if (rb < 0) {
-            std::cout << "Cannot read from file: " << strerror(errno) << "\n";
+            std::cout << "Cannot read from " << path << ": " << strerror(errno) << "\n";
             fclose(file);
             return false;
         }
@@ -124,6 +144,8 @@ bool load_plain(const std::string& path)
         stringdata[i] = 0;
   
     fclose(file);
+
+    g_dataname = strip_datapath(path, false);
 
     return true;
 }
@@ -240,6 +262,7 @@ bool load_compressed(const std::string& path)
     int status;
     wait(&status);
 
+    g_dataname = strip_datapath(path, true);
     return true;
 }
 
@@ -396,6 +419,7 @@ bool load(const std::string& path)
     double ts1 = omp_get_wtime();
 
     if (load_artifical(path)) {
+        g_dataname = path;
     }
     else if (load_compressed(path)) {
     }
