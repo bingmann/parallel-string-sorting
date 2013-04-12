@@ -99,6 +99,7 @@ bool            gopt_forkrun = false;
 bool            gopt_forkdataload = false;
 
 bool            gopt_sequential_only = false; // argument --sequential
+bool            gopt_parallel_only = false; // argument --parallel
 
 const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 
@@ -174,13 +175,16 @@ Contest* getContestSingleton()
     return c;
 }
 
-static inline bool gopt_algorithm_match(const char* algoname)
+static inline bool gopt_algorithm_select(const Contestant* c)
 {
+    if (gopt_sequential_only && c->is_parallel()) return false;
+    if (gopt_parallel_only && !c->is_parallel()) return false;
+
     if (!gopt_algorithm.size()) return true;
 
     // iterate over gopt_algorithm list as a filter
     for (size_t ai = 0; ai < gopt_algorithm.size(); ++ai) {
-        if (strstr(algoname, gopt_algorithm[ai]) != NULL)
+        if (strstr(c->m_algoname, gopt_algorithm[ai]) != NULL)
             return true;
     }
 
@@ -233,7 +237,7 @@ void Contest::run_contest(const char* path)
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (gopt_algorithm_match( (*c)->m_algoname )) {
+        if (gopt_algorithm_select(*c)) {
                 (*c)->run();
         }
     }
@@ -248,14 +252,14 @@ void Contest::list_contentants()
     size_t w_algoname = 0;
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (!gopt_algorithm_match( (*c)->m_algoname )) continue;
+        if (!gopt_algorithm_select(*c)) continue;
         w_algoname = std::max(w_algoname, strlen( (*c)->m_algoname ));
     }
 
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (!gopt_algorithm_match( (*c)->m_algoname )) continue;
+        if (!gopt_algorithm_select(*c)) continue;
         std::cout << std::left << std::setw(w_algoname) << (*c)->m_algoname << "  " << (*c)->m_description << std::endl;
     }
 }
@@ -478,8 +482,6 @@ void Contestant_UCArray::real_run()
 
 void Contestant_UCArray_Parallel::run()
 {
-    if (gopt_sequential_only) return;
-
     int p = (gopt_threads ? 1 : omp_get_num_procs());
 
     while (1)
@@ -522,19 +524,20 @@ void print_usage(const char* prog)
 {
     std::cout << "Usage: " << prog << " [options] filename" << std::endl
               << "Options:" << std::endl
-              << "  -a, --algo <match>          Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
-              << "  --allthreads                Run linear thread increase test from 1 to max_processors." << std::endl
-              << "  -D, --datafork              Fork before running algorithm and load data within fork!" << std::endl
-              << "  -i, --input <path>          Write unsorted input strings to file, usually for checking." << std::endl
-              << "      --nocheck               Skip checking of sorted order and distinguishing prefix calculation." << std::endl
-              << "  -o, --output <path>         Write sorted strings to output file, terminate after first algorithm run." << std::endl
-              << "  -r, --repeat <num>          Repeat experiment a number of times and divide by repetition count." << std::endl
-              << "  -s, --size <size>           Limit the input size to this number of characters." << std::endl
-              << "  -S, --maxsize <size>        Run through powers of two for input size limit." << std::endl
-              << "      --sequential            Run only sequential algorithms." << std::endl
-              << "      --suffix                Suffix sort the input file." << std::endl
-              << "  -T, --timeout <sec>         Abort algorithms after this timeout (default: disabled)." << std::endl
-              << "  --threads                   Run tests with doubling number of threads from 1 to max_processors." << std::endl
+              << "  -a, --algo <match>    Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
+              << "  --allthreads          Run linear thread increase test from 1 to max_processors." << std::endl
+              << "  -D, --datafork        Fork before running algorithm and load data within fork!" << std::endl
+              << "  -i, --input <path>    Write unsorted input strings to file, usually for checking." << std::endl
+              << "      --nocheck         Skip checking of sorted order and distinguishing prefix calculation." << std::endl
+              << "  -o, --output <path>   Write sorted strings to output file, terminate after first algorithm run." << std::endl
+              << "      --parallel        Run only parallelized algorithms." << std::endl
+              << "  -r, --repeat <num>    Repeat experiment a number of times and divide by repetition count." << std::endl
+              << "  -s, --size <size>     Limit the input size to this number of characters." << std::endl
+              << "  -S, --maxsize <size>  Run through powers of two for input size limit." << std::endl
+              << "      --sequential      Run only sequential algorithms." << std::endl
+              << "      --suffix          Suffix sort the input file." << std::endl
+              << "  -T, --timeout <sec>   Abort algorithms after this timeout (default: disabled)." << std::endl
+              << "  --threads             Run tests with doubling number of threads from 1 to max_processors." << std::endl
         ;
 }
 
@@ -553,8 +556,9 @@ int main(int argc, char* argv[])
         { "timeout", required_argument,  0, 'T' },
         { "suffix",  no_argument,        0, 1 },
         { "sequential", no_argument,     0, 2 },
-        { "threads", no_argument,        0, 3 },
-        { "allthreads", no_argument,     0, 4 },
+        { "parallel", no_argument,       0, 3 },
+        { "threads", no_argument,        0, 4 },
+        { "allthreads", no_argument,     0, 5 },
         { 0,0,0,0 },
     };
 
@@ -654,12 +658,17 @@ int main(int argc, char* argv[])
             std::cout << "Option --sequential: running only sequential algorithms." << std::endl;
             break;
 
-        case 3: // --threads
+        case 3: // --parallel
+            gopt_parallel_only = true;
+            std::cout << "Option --parallel: running only parallelized algorithms." << std::endl;
+            break;
+
+        case 4: // --threads
             gopt_threads = true;
             std::cout << "Option --threads: running test with exponentially increasing thread count." << std::endl;
             break;
 
-        case 4: // --allthreads
+        case 5: // --allthreads
             gopt_allthreads = true;
             std::cout << "Option --allthreads: running test with linear increasing thread count." << std::endl;
             break;

@@ -71,6 +71,8 @@ public:
 
     virtual void run() = 0; // depends on individual sorter's interface
 
+    virtual bool is_parallel() const = 0;
+
     inline bool operator< (const Contestant &b) const {
         return (strcmp(m_algoname, b.m_algoname) < 0);
     }
@@ -100,6 +102,8 @@ public:
 
     virtual void run();         // implemented in main.cc
     void         real_run();    // implemented in main.cc
+
+    virtual bool is_parallel() const { return false; }
 };
 
 #define CONTESTANT_REGISTER(func, algoname, desc)                       \
@@ -122,6 +126,8 @@ public:
     }
 
     virtual void run(); // implemented in main.cc
+
+    virtual bool is_parallel() const { return true; }
 };
 
 #define CONTESTANT_REGISTER_PARALLEL(func, algoname, desc)              \
