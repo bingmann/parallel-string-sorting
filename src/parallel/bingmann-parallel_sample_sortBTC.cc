@@ -348,6 +348,8 @@ struct SmallsortJobBTC : public Job
     StringPtr   strptr;
     size_t      n, depth;
 
+    typedef uint32_t bktsize_type;
+
     SmallsortJobBTC(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
         : strptr(_strptr), n(_n), depth(_depth)
     {
@@ -359,7 +361,9 @@ struct SmallsortJobBTC : public Job
 #if 0
         static const size_t numsplitters = 2*16;
 #else
-        // bounding equation: 2*K+1 buckets when counting bkt occurances.
+        // bounding equations:
+        // a) K * key_type splitter_tree size (and maybe K * key_type equal-cmp splitters)
+        // b) 2 * K + 1 buckets (bktsize_type) when counting bkt occurances.
         static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 
         static const size_t treebits = logfloor_<numsplitters2>::value;
@@ -371,7 +375,7 @@ struct SmallsortJobBTC : public Job
         string* str;
         size_t idx;
         size_t depth;
-        size_t bktsize[bktnum];
+        bktsize_type bktsize[bktnum];
 
         unsigned char splitter_lcp[numsplitters+1];
 
@@ -406,16 +410,16 @@ struct SmallsortJobBTC : public Job
 
             // step 2.5: count bucket sizes
 
-            memset(bktsize, 0, bktnum * sizeof(size_t));
+            memset(bktsize, 0, bktnum * sizeof(bktsize_type));
 
             for (size_t si = 0; si < n; ++si)
                 ++bktsize[ bktcache[si] ];
 
             // step 3: prefix sum
 
-            size_t bktindex[bktnum];
+            bktsize_type bktindex[bktnum];
             bktindex[0] = bktsize[0];
-            size_t last_bkt_size = bktsize[0];
+            bktsize_type last_bkt_size = bktsize[0];
             for (unsigned int i=1; i < bktnum; ++i) {
                 bktindex[i] = bktindex[i-1] + bktsize[i];
                 if (bktsize[i]) last_bkt_size = bktsize[i];
@@ -458,6 +462,8 @@ struct SmallsortJobBTC : public Job
     virtual void run(JobQueue& jobqueue)
     {
         DBG(debug_jobs, "Process SmallsortJobBTC " << this << " of size " << n);
+
+        ASSERT(n < (((uint64_t)1) << 32)); // must fit in uint32_t
 
         bktcache = NULL;
         bktcache_size = 0;
@@ -624,7 +630,7 @@ struct SmallsortJobBTC : public Job
     {
         string* str;
         size_t idx;
-        size_t bktsize[256];
+        bktsize_type bktsize[256];
 
         RadixStep8_CI(string* strings, size_t n, size_t depth, uint8_t* charcache)
         {

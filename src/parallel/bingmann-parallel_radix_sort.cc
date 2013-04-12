@@ -94,9 +94,11 @@ struct SmallsortJob8 : public Job
 
 struct RadixStep8_CI
 {
+    typedef uint32_t bktsize_type;
+
     string* str;
     size_t idx;
-    size_t bktsize[256];
+    bktsize_type bktsize[256];
 
     RadixStep8_CI(string* strings, size_t n, size_t depth, uint8_t* charcache)
     {
@@ -117,9 +119,9 @@ struct RadixStep8_CI
         }
 #endif
         // inclusive prefix sum
-        size_t bkt[256];
+        bktsize_type bkt[256];
         bkt[0] = bktsize[0];
-        size_t last_bkt_size = bktsize[0];
+        bktsize_type last_bkt_size = bktsize[0];
         for (unsigned int i=1; i < 256; ++i) {
             bkt[i] = bkt[i-1] + bktsize[i];
             if (bktsize[i]) last_bkt_size = bktsize[i];
@@ -147,6 +149,8 @@ struct RadixStep8_CI
 void SmallsortJob8::run(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Process SmallsortJob8 " << this << " of size " << n);
+
+    ASSERT(n < (((uint64_t)1) << 32)); // must fit in uint32_t
 
     string* strings = strptr.to_original(n);
 
@@ -232,9 +236,11 @@ struct RadixStep16_CI
     typedef uint16_t key_type;
     static const size_t numbkts = key_traits<key_type>::radix;
 
+    typedef uint32_t bktsize_type;
+
     string* str;
     size_t idx;
-    size_t bktsize[numbkts];
+    bktsize_type bktsize[numbkts];
 
     RadixStep16_CI(string* strings, size_t n, size_t depth, key_type* charcache)
     {
@@ -248,9 +254,9 @@ struct RadixStep16_CI
             ++bktsize[ charcache[i] ];
 
         // inclusive prefix sum
-        size_t bkt[numbkts];
+        bktsize_type bkt[numbkts];
         bkt[0] = bktsize[0];
-        size_t last_bkt_size = bktsize[0];
+        bktsize_type last_bkt_size = bktsize[0];
         for (unsigned int i=1; i < numbkts; ++i) {
             bkt[i] = bkt[i-1] + bktsize[i];
             if (bktsize[i]) last_bkt_size = bktsize[i];
@@ -278,6 +284,8 @@ struct RadixStep16_CI
 void SmallsortJob16::run(JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Process SmallsortJob16 " << this << " of size " << n);
+
+    ASSERT(n < (((uint64_t)1) << 32)); // must fit in uint32_t
 
     string* strings = strptr.to_original(n);
 

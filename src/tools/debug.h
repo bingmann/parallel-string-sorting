@@ -46,4 +46,8 @@ static inline void g_debug_output(const std::string& s)
     std::cout << s;
 }
 
+// *** an always-on ASSERT
+
+#define ASSERT(expr)  do { if (!(expr)) { fprintf(stderr, "%s:%u %s: Assertion '%s' failed!\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr); abort(); } } while(0)
+
 #endif // TOOLS_DEBUG_H
