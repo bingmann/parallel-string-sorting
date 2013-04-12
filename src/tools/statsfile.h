@@ -250,6 +250,7 @@ public:
 };
 
 /// Very simple class to measure runtime of function using clock_gettime.
+template <clockid_t clk_id>
 class MeasureTime
 {
 private:
@@ -257,13 +258,13 @@ private:
     struct timespec     m_tp1, m_tp2;
 
 public:
-    /// return the resolution of the CLOCK_MONOTONIC used
+    /// return the resolution of the clock used
     inline double resolution() const
     {
         struct timespec tp_res;
 
-        if (clock_getres(CLOCK_MONOTONIC, &tp_res)) {
-            perror("Could not clock_getres(CLOCK_MONOTONIC)");
+        if (clock_getres(clk_id, &tp_res)) {
+            perror("Could not clock_getres()");
             return -1;
         }
 
@@ -273,24 +274,24 @@ public:
     /// Start timing
     inline void start()
     {
-        if (clock_gettime(CLOCK_MONOTONIC, &m_tp1)) {
-            perror("Could not clock_gettime(CLOCK_MONOTONIC)");
+        if (clock_gettime(clk_id, &m_tp1)) {
+            perror("Could not clock_gettime()");
         }
     }
 
     /// End timing
     inline void stop()
     {
-        if (clock_gettime(CLOCK_MONOTONIC, &m_tp2)) {
-            perror("Could not clock_gettime(CLOCK_MONOTONIC)");
+        if (clock_gettime(clk_id, &m_tp2)) {
+            perror("Could not clock_gettime()");
         }
     }
 
     /// Return delta in seconds between start() and stop().
     inline double delta()
     {
-        return (m_tp2.tv_sec + m_tp2.tv_nsec / 1e9)
-            - (m_tp1.tv_sec + m_tp1.tv_nsec / 1e9);
+        return (m_tp2.tv_sec - m_tp1.tv_sec)
+            +  (m_tp2.tv_nsec - m_tp1.tv_nsec) / 1e9;
     }
 };
 

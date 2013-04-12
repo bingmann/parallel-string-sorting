@@ -415,9 +415,10 @@ void Contestant_UCArray::real_run()
     if (m_prepare_func)
         m_prepare_func(stringptr.data(), stringptr.size());
 
-    MeasureTime timer;
+    MeasureTime<CLOCK_MONOTONIC> timer;
+    MeasureTime<CLOCK_PROCESS_CPUTIME_ID> cpu_timer;
 
-    timer.start();
+    cpu_timer.start(), timer.start();
     do
     {
         m_run_func(stringptr.data(), stringptr.size());
@@ -426,7 +427,7 @@ void Contestant_UCArray::real_run()
             stringptr.copy(stringptr_copy);
 
     } while (--repeats);
-    timer.stop();
+    timer.stop(), cpu_timer.stop();
 
 #ifdef MALLOC_COUNT
     std::cout << "Max stack usage: " << stack_count_usage(stack) << std::endl;
@@ -442,7 +443,8 @@ void Contestant_UCArray::real_run()
     }
 #endif
 
-    g_statscache >> "time" << timer.delta();
+    g_statscache >> "time" << timer.delta()
+                 >> "cpu_time" << cpu_timer.delta();
     (std::cout << timer.delta() << "\tchecking ").flush();
 
     if (!gopt_nocheck)
@@ -687,7 +689,8 @@ int main(int argc, char* argv[])
 
     increase_stacklimit(g_stacklimit);
 
-    std::cout << "Using CLOCK_MONOTONIC with resolution: " << MeasureTime().resolution() << std::endl;
+    std::cout << "Using CLOCK_MONOTONIC with resolution: " << MeasureTime<CLOCK_MONOTONIC>().resolution() << std::endl;
+    std::cout << "Using CLOCK_PROCESS_CPUTIME_ID with resolution: " << MeasureTime<CLOCK_PROCESS_CPUTIME_ID>().resolution() << std::endl;
 
     if (gopt_inputsize_maxlimit < gopt_inputsize_minlimit)
         gopt_inputsize_maxlimit = gopt_inputsize_minlimit;
