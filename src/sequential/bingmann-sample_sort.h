@@ -32,7 +32,7 @@ using namespace stringtools;
 
 typedef uint64_t key_type;
 
-static const size_t l2cache = 64*1024;
+static const size_t l2cache = 256*1024;
 
 static const size_t g_samplesort_smallsort = 32*1024;
 
