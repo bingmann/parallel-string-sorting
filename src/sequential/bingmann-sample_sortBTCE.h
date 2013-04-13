@@ -711,7 +711,6 @@ public:
         // step 1: select splitters with oversampling
         g_timer.change(TM_MAKE_SAMPLE);
 
-        //const size_t oversample_factor = 1;
         const size_t samplesize = oversample_factor * numsplitters;
 
         static key_type samples[ samplesize ];

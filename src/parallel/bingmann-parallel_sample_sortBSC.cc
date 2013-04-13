@@ -175,7 +175,7 @@ void SampleSortStep::sample(unsigned int p, JobQueue& jobqueue)
 {
     DBG(debug_jobs, "Process SampleJob " << p << " @ " << this);
 
-    const size_t oversample_factor = 1;
+    const size_t oversample_factor = 2;
     size_t samplesize = oversample_factor * numsplitters;
 
     string* strings = strptr.active();

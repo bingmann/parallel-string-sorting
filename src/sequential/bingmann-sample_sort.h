@@ -36,7 +36,7 @@ static const size_t l2cache = 64*1024;
 
 static const size_t g_samplesort_smallsort = 32*1024;
 
-static const size_t oversample_factor = 1;
+static const size_t oversample_factor = 2;
 
 static size_t g_ss_steps, g_rs_steps;
 

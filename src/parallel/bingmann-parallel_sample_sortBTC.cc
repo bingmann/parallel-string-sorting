@@ -383,7 +383,7 @@ struct SmallsortJobBTC : public Job
         {
             // step 1: select splitters with oversampling
 
-            const size_t oversample_factor = 1;
+            const size_t oversample_factor = 2;
             const size_t samplesize = oversample_factor * numsplitters;
 
             key_type samples[ samplesize ];
@@ -1123,7 +1123,7 @@ struct SampleSortStep
     {
         DBG(debug_jobs, "Process SampleJob @ " << this);
 
-        const size_t oversample_factor = 1;
+        const size_t oversample_factor = 2;
         size_t samplesize = oversample_factor * numsplitters;
 
         string* strings = strptr.active();
