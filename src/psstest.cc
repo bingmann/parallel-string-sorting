@@ -83,10 +83,11 @@ size_t          g_string_dprefix = 0;   // calculated distinguishing prefix
 const char*     gopt_inputwrite = NULL; // argument -i, --input
 const char*     gopt_output = NULL; // argument -o, --output
 
-bool            gopt_suffixsort = false; // argument --suffix
-bool            gopt_threads = false; // argument --threads
-bool            gopt_allthreads = false; // argument --allthreads
-bool            gopt_nocheck = false;   // argument --nocheck
+bool            gopt_suffixsort = false;   // argument --suffix
+bool            gopt_threads = false;      // argument --threads
+bool            gopt_allthreads = false;   // argument --allthreads
+bool            gopt_no_check = false;     // argument --no-check
+bool            gopt_no_mlockall = false;  // argument --no-mlockall
 
 StatsCache      g_statscache;
 
@@ -353,7 +354,10 @@ void Contestant_UCArray::real_run()
     size_t repeats = gopt_repeats ? gopt_repeats : 1;
 
     // lock process into memory (on Linux)
-    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+    if (gopt_no_mlockall) {
+        // skip
+    }
+    else if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
         std::cout << "Error locking process into memory: " << strerror(errno) << std::endl;
     }
     else {
@@ -388,7 +392,7 @@ void Contestant_UCArray::real_run()
 
     // save permutation check evaluation result
     PermutationCheck pc;
-    if (!gopt_nocheck) pc = PermutationCheck(stringptr);
+    if (!gopt_no_check) pc = PermutationCheck(stringptr);
 
     std::cout << "Running " << m_algoname << " - " << m_description << std::endl;
 
@@ -447,7 +451,7 @@ void Contestant_UCArray::real_run()
                  >> "cpu_time" << cpu_timer.delta();
     (std::cout << timer.delta() << "\tchecking ").flush();
 
-    if (!gopt_nocheck)
+    if (!gopt_no_check)
     {
         if (check_sorted_order(stringptr, pc)) {
             std::cout << "ok" << std::endl;
@@ -530,7 +534,8 @@ void print_usage(const char* prog)
               << "  --allthreads          Run linear thread increase test from 1 to max_processors." << std::endl
               << "  -D, --datafork        Fork before running algorithm and load data within fork!" << std::endl
               << "  -i, --input <path>    Write unsorted input strings to file, usually for checking." << std::endl
-              << "      --nocheck         Skip checking of sorted order and distinguishing prefix calculation." << std::endl
+              << "  -N, --no-check        Skip checking of sorted order and distinguishing prefix calculation." << std::endl
+              << "      --no-mlockall     Skip call of mlockall(). Use if locked memory is scarce." << std::endl
               << "  -o, --output <path>   Write sorted strings to output file, terminate after first algorithm run." << std::endl
               << "      --parallel        Run only parallelized algorithms." << std::endl
               << "  -r, --repeat <num>    Repeat experiment a number of times and divide by repetition count." << std::endl
@@ -550,7 +555,7 @@ int main(int argc, char* argv[])
         { "algo",    required_argument,  0, 'a' },
         { "datafork", no_argument,       0, 'D' },
         { "input",   required_argument,  0, 'i' },
-        { "nocheck", no_argument,        0, 'N' },
+        { "no-check", no_argument,       0, 'N' },
         { "output",  required_argument,  0, 'o' },
         { "repeat",  required_argument,  0, 'r' },
         { "size",    required_argument,  0, 's' },
@@ -561,6 +566,7 @@ int main(int argc, char* argv[])
         { "parallel", no_argument,       0, 3 },
         { "threads", no_argument,        0, 4 },
         { "allthreads", no_argument,     0, 5 },
+        { "no-mlockall", no_argument,    0, 6 },
         { 0,0,0,0 },
     };
 
@@ -615,8 +621,8 @@ int main(int argc, char* argv[])
             break;
 
         case 'N':
-            gopt_nocheck = true;
-            std::cout << "Option --nocheck: skipping checking of sorted order and distinguishing prefix calculation." << std::endl;
+            gopt_no_check = true;
+            std::cout << "Option --no-check: skipping checking of sorted order and distinguishing prefix calculation." << std::endl;
             break;
 
         case 'o':
@@ -673,6 +679,11 @@ int main(int argc, char* argv[])
         case 5: // --allthreads
             gopt_allthreads = true;
             std::cout << "Option --allthreads: running test with linear increasing thread count." << std::endl;
+            break;
+
+        case 6: // --no-mlockall
+            gopt_no_mlockall = true;
+            std::cout << "Option --no-mlockall: skipping mlockall() to lock memory." << std::endl;
             break;
 
         default:
