@@ -663,7 +663,7 @@ void tb_sputtrie(NODE1 *nd, string pfx, int d)
 
 void tb_ssavetrie(NODE1 *rt, string* strout, char* chout)
 {
-	char pfx[4000];
+        char pfx[4000] = { 0 };
 
         sputtrie_strout = strout;
         sputtrie_chout = chout;
