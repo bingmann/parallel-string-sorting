@@ -63,7 +63,7 @@ int main()
         s = line_prev, line_prev = line, line = s;
 
         line_count++;
-        char_count += strlen(line); /* excludes newlines! */
+        char_count += strlen(line)+1; /* includes newlines! */
     }
 
     printf("line_count = %llu, char_count = %llu, average LCP %.3f\n",

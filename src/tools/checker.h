@@ -149,7 +149,7 @@ bool check_sorted_order(const membuffer<unsigned char*>& stringptr, const Permut
     return true;
 }
 
-size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr, size_t n)
+size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr)
 {
     size_t D = 0;
     size_t pdepth = 0;

@@ -51,12 +51,16 @@ char* allocate_stringdata(size_t size, const std::string& path)
 }
 
 /// Strip data path to just a filename
-std::string strip_datapath(const std::string& path, bool compressed)
+std::string strip_datapath(const std::string& path)
 {
     std::string::size_type slashpos = path.rfind('/');
     std::string name = (slashpos == std::string::npos ? path : path.substr(slashpos+1));
 
-    if (compressed) {
+    if ( name.substr(name.size()-3,3) == ".gz" ||
+         name.substr(name.size()-4,4) == ".bz2" ||
+         name.substr(name.size()-3,3) == ".xz" ||
+         name.substr(name.size()-4,4) == ".lzo" )
+    {
         // remove compression suffix and size, both separated by dots
         std::string::size_type dotpos = name.rfind('.');
         name.erase(dotpos);
@@ -145,7 +149,7 @@ bool load_plain(const std::string& path)
   
     fclose(file);
 
-    g_dataname = strip_datapath(path, false);
+    g_dataname = strip_datapath(path);
 
     return true;
 }
@@ -262,7 +266,7 @@ bool load_compressed(const std::string& path)
     int status;
     wait(&status);
 
-    g_dataname = strip_datapath(path, true);
+    g_dataname = strip_datapath(path);
     return true;
 }
 

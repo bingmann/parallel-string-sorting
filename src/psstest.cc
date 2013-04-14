@@ -68,7 +68,7 @@ static const char* memprofile_path = "memprofile.txt";
 size_t          gopt_inputsize = 0;
 size_t          gopt_inputsize_minlimit = 0;
 size_t          gopt_inputsize_maxlimit = 0;
-size_t          gopt_repeats = 0;
+size_t          gopt_repeats = 1;
 std::vector<const char*> gopt_algorithm;
 int             gopt_timeout = 0;
 
@@ -238,7 +238,9 @@ void Contest::run_contest(const char* path)
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
-        if (gopt_algorithm_select(*c)) {
+        if (gopt_algorithm_select(*c))
+        {
+            for (size_t r = 0; r < gopt_repeats; ++r)
                 (*c)->run();
         }
     }
@@ -305,11 +307,8 @@ void Contestant_UCArray::run()
         // write out exit status information to results file
 
         g_statscache >> "algo" << m_algoname
-                     >> "data" << g_dataname
+                     >> "data" << input::strip_datapath(g_datapath)
                      >> "char_count" << gopt_inputsize;
-
-        if (gopt_repeats > 1)
-            g_statscache >> "repeats" << gopt_repeats;
 
         if (WTERMSIG(status) == SIGALRM)
         {
@@ -351,8 +350,6 @@ void Contestant_UCArray::real_run()
 {
     typedef unsigned char* string;
 
-    size_t repeats = gopt_repeats ? gopt_repeats : 1;
-
     // lock process into memory (on Linux)
     if (gopt_no_mlockall) {
         // skip
@@ -387,9 +384,6 @@ void Contestant_UCArray::real_run()
             stringptr[i] = (string)g_string_data + i;
     }
 
-    membuffer<string> stringptr_copy;
-    if (repeats > 1) stringptr_copy.copy(stringptr);
-
     // save permutation check evaluation result
     PermutationCheck pc;
     if (!gopt_no_check) pc = PermutationCheck(stringptr);
@@ -403,9 +397,6 @@ void Contestant_UCArray::real_run()
 
     if (g_smallsort)
         g_statscache >> "smallsort" << g_smallsort;
-
-    if (repeats > 1)
-        g_statscache >> "repeats" << repeats;
 
     omp_set_num_threads(pss_num_threads);
 
@@ -423,14 +414,9 @@ void Contestant_UCArray::real_run()
     MeasureTime<CLOCK_PROCESS_CPUTIME_ID> cpu_timer;
 
     cpu_timer.start(), timer.start();
-    do
     {
         m_run_func(stringptr.data(), stringptr.size());
-
-        if (repeats > 1) // refill stringptr array for next repeat
-            stringptr.copy(stringptr_copy);
-
-    } while (--repeats);
+    }
     timer.stop(), cpu_timer.stop();
 
 #ifdef MALLOC_COUNT
@@ -462,7 +448,7 @@ void Contestant_UCArray::real_run()
         }
 
         if (!g_string_dprefix)
-            g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_datasize);
+            g_string_dprefix = calc_distinguishing_prefix(stringptr);
 
         g_statscache >> "dprefix" << g_string_dprefix
                      >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize);
@@ -633,7 +619,7 @@ int main(int argc, char* argv[])
 
         case 'r':
             gopt_repeats = atoi(optarg);
-            std::cout << "Option -r: repeating string sorting algorithms " << gopt_repeats << std::endl;
+            std::cout << "Option -r: repeat string sorting algorithms " << gopt_repeats << " times. " << std::endl;
             break;
 
         case 's':
