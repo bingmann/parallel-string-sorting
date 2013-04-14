@@ -120,7 +120,7 @@ void psample(string b0, NODE2 *rt, int n)
 
 	NODE2 *t; NODE2 *bn;
 	int ct;
-	char c;
+	unsigned char c;
 	string b, s, lim;
 
 	srand(clock());
@@ -168,7 +168,7 @@ void psample(string b0, NODE2 *rt, int n)
  */
 void psamburst(NODE2 *bn)
 {
-	string b0, b, s; NODE2 *rt; int c, ct, n;
+        string b0, b, s; NODE2 *rt; int ct, n; unsigned char c;
 
 	rt = GETNODE(NODE2); ++NODES;
 	
@@ -243,7 +243,7 @@ void pclear(NODE2 *nd)
  */
 void padd(string b, int n, NODE2 *rt) {
 	NODE2 *bn, *nd; string rp, s, bp, ap, t; 
-	int c, ct, lv, sz;
+	int ct, lv, sz; unsigned char c;
 	
 	while (n--) 
 	{

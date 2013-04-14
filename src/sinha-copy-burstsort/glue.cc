@@ -71,7 +71,7 @@ void sinha_C_burstsort(string *strings, size_t size)
     while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
 
     SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
-    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+    FREEBURSTS = 0;		/* number of low threshold bursts to allow */
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -149,7 +149,7 @@ void sinha_sC_burstsort(unsigned char **strings, size_t size)
     while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
 
     SAMPLERATE = 4000;		/* if >0, will sample 1/SAMPLERATE of data */
-    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+    FREEBURSTS = 0;		/* number of low threshold bursts to allow */
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -212,7 +212,7 @@ void sinha_CP_burstsort(unsigned char **strings, size_t size)
     while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
 
     SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
-    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+    FREEBURSTS = 0;		/* number of low threshold bursts to allow */
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -284,7 +284,7 @@ void sinha_sCP_burstsort(unsigned char **strings, size_t size)
     while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
 
     SAMPLERATE = 4000;		/* if >0, will sample 1/SAMPLERATE of data */
-    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+    FREEBURSTS = 0;		/* number of low threshold bursts to allow */
 
     NKEYS = size;
     NBYTES = g_string_datasize;
@@ -377,7 +377,7 @@ void sinha_CPL_burstsort(unsigned char **strings, size_t size)
     while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
 
     SAMPLERATE = 0;		/* if >0, will sample 1/SAMPLERATE of data */
-    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+    FREEBURSTS = 0;		/* number of low threshold bursts to allow */
     TAILSIZE0 = 12;             /* maximum tail size in CPL-burstsort */
     TAILRATE = 80;		/* used with TAILSIZE0 in CPL-burstsort */
 
@@ -457,7 +457,7 @@ void sinha_sCPL_burstsort(unsigned char **strings, size_t size)
     while (BINSIZE0 < MAXKEYLEN) BINSIZE0 *= 2; /* must fix at least one key */
 
     SAMPLERATE = 4000;		/* if >0, will sample 1/SAMPLERATE of data */
-    FREEBURSTS0 = 0;		/* number of low threshold bursts to allow */
+    FREEBURSTS = 0;		/* number of low threshold bursts to allow */
     TAILSIZE0 = 12;             /* maximum tail size in CPL-burstsort */
     TAILRATE = 80;		/* used with TAILSIZE0 in CPL-burstsort */
 

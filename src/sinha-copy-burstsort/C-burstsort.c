@@ -138,7 +138,7 @@ void ssample(string *seg, string *seglim, NODE1 *rt, int n)
 
 		 /* Use the first char of the key to index from the root node to the
 			 for keys that start with that char. */
-		 bn = rt + (c = (unsigned char)*b++);
+		 bn = rt + (c = *b++);
 
 		 /* A count field set to -1 indicates that the bin has previously burst
 			 and is now a branched node indexing a subtrie. */
@@ -151,7 +151,7 @@ void ssample(string *seg, string *seglim, NODE1 *rt, int n)
 			 /* and use the next char of the key to index to the appropriate
 				 bin of the subtrie, and so on ... until a terminal bin is
 				 found (and the count field has a value other than -1). */
-			 bn = nd + (c = (unsigned char)*b++);
+			 bn = nd + (c = *b++);
 		 }
 
 		 /* If c is a NULL, the key is exhausted; when this happens in ssample(), 
@@ -224,7 +224,7 @@ void samburst(NODE1 *bn)
 		see identical code in ssample() for comments. */
 	while (n--)
 	{
-		bn = rt +(c = (unsigned char)*b++);
+		bn = rt + (c = *b++);
 		if (c == 0) continue; ct = ++bn->ct;
 
 		if (ct == 1)
@@ -304,10 +304,10 @@ void sadd(string b, string blim, NODE1 *rt)
 	while (b < blim)
 	{
 		/* Traverse the trie until a terminal node (bin) is reached. */
-                bn = rt + (c = (unsigned char)*b++);
+                bn = rt + (c = *b++);
 		while (bn != NULL && bn->ct == -1) {
 			nd = (NODE1*) bn->bp; 
-			bn = nd + (c = (unsigned char)*b++);
+			bn = nd + (c = *b++);
 		} 
 		ct = ++bn->ct;
 
@@ -394,9 +394,9 @@ void sburst(NODE1 *bg) {
 		n=bg->ct; bg->ct=-1; 
 		rt=GETNODE(NODE1); ++NODES; bg->bp=(string)rt;
 		while (n--) {
-                        bg=rt + (c=(unsigned char)*b++);
+                        bg=rt + (c=*b++);
 			while (bg->ct==-1) {
-				t=(NODE1*)bg->bp; bg=t+(c=(unsigned char)*b++);
+				t=(NODE1*)bg->bp; bg=t+(c=*b++);
 			} 
 			ct=++bg->ct; 
 			if (c==0) {if (ct==1) ++NULLBINS; continue;}

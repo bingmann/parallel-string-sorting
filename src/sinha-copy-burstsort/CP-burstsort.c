@@ -79,7 +79,7 @@ void rsample(string b0, NODE1 *rt, int n)
 {
 	NODE1 *t; NODE1 *bn; 
 	int ct; 
-	char c; 
+	unsigned char c; 
 	string b, s, lim;
 
 	srand(clock()); 

@@ -136,7 +136,7 @@
 	typedef void (*test) (int nr, string fp);
 
 	/* globals */
-	int	
+	size_t	
                 MAXKEYS, 		/* maximum keys to read and sort (arg) */
 	        MAXBYTES, 		/* maximum bytes to read and sort (arg) */
 		NKEYS, 			/* number of keys sorted */
