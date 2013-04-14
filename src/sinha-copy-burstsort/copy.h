@@ -101,7 +101,7 @@
 	isaye(ALLOCATED,"ALLOCATED"); isaye(MAXALLOCATED,"MAXALLOCATED"); br();\
 }
 
-	typedef char *string;
+	typedef unsigned char *string;
 
 	/* object used by helper sorts to stack sort runs */
 	typedef struct {
@@ -182,13 +182,15 @@
 	double
 		TMIN, 			/* lowest time required by a repeat of a sort */
 		TNORM;			/* equals TMIN/(NKEYS * log10(NKEYS)) */
+        char
+		*INPUTDIR, 		/* directory containing input files */
+                *DATANAME, 		/* name of file to be sorted */
+		*FILETYPE, 		/* file extension */
+		*OUTPUTDIR, 		/* directory in which to create output files */
+		*SORTNAME, 		/* name of sort algorithm in use */
+                *HELPERNAME;	        /* name of helper sort in use */
+
         string
-		INPUTDIR, 		/* directory containing input files */
-                DATANAME, 		/* name of file to be sorted */
-		FILETYPE, 		/* file extension */
-		OUTPUTDIR, 		/* directory in which to create output files */
-		SORTNAME, 		/* name of sort algorithm in use */
-		HELPERNAME,		/* name of helper sort in use */
 		INBUF, 			/* input buffer used in CP- and CPL-burstsort */
 		*SEGMENTS, 		/* segmented input buffer used in C-burstsort */
 		*SEGLIMITS;		/* limits for the segments of SEGMENTS	 */
@@ -221,7 +223,7 @@
 	void straverse(NODE1 *t);
 	void scheck(NODE1 *t, int d);
 	void skill(NODE1 *t);
-	void ssavetrie(NODE1 *t, string path, string dset);
+	void ssavetrie(NODE1 *t, const char* path, const char* dset);
 	void sputtrie(NODE1 *t, FILE *f, string pfx, int d);
 	void inssort(string *a, int n, int d);
 	void mkqsort(string *a, int n, int d);
@@ -235,7 +237,7 @@
 	void rtraverse(NODE1 *t);
 	void rcheck(NODE1 *t, int d);
 	void rkill(NODE1 *t);
-	void savetrie(NODE1 *t, string path, string dset);
+	void savetrie(NODE1 *t, const char* path, const char* dset);
 	void puttrie(NODE1 *t, FILE *f);
 	void inssorts(string *a, int n, int d);
 	void stabilize(string *a, int n);
@@ -252,30 +254,30 @@
 	void ptraverse(NODE2 *t);
 	void pcheck(NODE2 *t, int d);
 	void pkill(NODE2 *t);
-	void psavetrie(NODE2 *t, string path, string dset);
+	void psavetrie(NODE2 *t, const char* path, const char* dset);
 	void pputtrie(NODE2 *t, FILE *f);
 	void inssortp(string *a, int n, int d);
 	void mkqsortp(string *a, int n, int d);
 
 	/* utility routines */
-	void vswap(char **a, char **b, int n);
-	char **med3(char **a, char **b, char **c, int d);
-	char **med3s(char **a, char **b, char **c);
+	void vswap(string *a, string *b, int n);
+	string *med3(string *a, string *b, string *c, int d);
+	string *med3s(string *a, string *b, string *c);
 	
 	void cr();
 	void dot();
 	void say(const char* s);
 	void sayln(const char* s);
-	void isay(int i);	  void isaye(int i, string s);
+	void isay(int i);	  void isaye(int i, const char* s);
 	void dsay(double d, int n);
-	void esay(string s);
+	void esay(const char* s);
 	void br();
-	void brp(string s);
+	void brp(const char* s);
 	
 	string allof(string s);
 	int tokenize(string s, string *tok, char d, char dd);
 	
-	string fp(string dir, string fn, const char* ft);
+	char* fp(const char* dir, const char* fn, const char* ft);
 	
 	void treset(int nt, int nr);
         static inline void ton(int x) {}

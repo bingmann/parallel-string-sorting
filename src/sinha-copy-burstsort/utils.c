@@ -1,16 +1,16 @@
 #include "copy.h"
 
-void vswap(char **a, char **b, int n)
+void vswap(string *a, string *b, int n)
 {
 	while (n-- > 0)
 	{
-		char *t = *a;
+		string t = *a;
 		*a++ = *b;
 		*b++ = t;
 	}
 }
 
-char **med3(char **a, char **b, char **c, int d)
+string *med3(string *a, string *b, string *c, int d)
 {
 	int i, j, k;
 
@@ -22,7 +22,7 @@ char **med3(char **a, char **b, char **c, int d)
 	return i < j ? (j < k ? b : (i < k ? c : a)) : (j > k ? b : (i < k ? a : c));
 }
 
-char **med3s(char **a, char **b, char **c)
+string *med3s(string *a, string *b, string *c)
 {
 	string s, t, u; s = *a; t = *b; u = *c;
 	return s < t ? (t < u ? b : (s < u ? c : a)) : (t > u ? b : (s < u ? a : c));
@@ -84,7 +84,7 @@ void dsay(double d, int n)
 	}
 }
 
-void esay(string s)
+void esay(const char* s)
 {
 	fprintf(ERRORLOG, "%s ", s);
 	fflush(ERRORLOG); say(s);
@@ -95,7 +95,7 @@ void br()
 	while (getchar() != '\n') ;
 }
 
-void brp(string s)
+void brp(const char* s)
 {
 	esay(s); br();
 }
@@ -121,9 +121,9 @@ int tokenize(string s, string *tok, char d, char dd)
 	return(n);
 }
 
-string fp(string dir, string fn, const char* ft)
+char* fp(const char* dir, const char* fn, const char* ft)
 {
-	string s = (string) malloc(100);
+	char* s = (char*) malloc(100);
 	strcpy(s, dir);
 	strcat(s, fn); strcat(s, "."); strcat(s, ft);
 	return(s);
@@ -253,4 +253,4 @@ void tnormsay()
 	dsay(TNORM * MSEC_PER_CLOCK, 6);
 }
 
-void isaye(int i,string s) {printf("%s=%d ",s,i); fflush(stdout);}
+void isaye(int i,const char* s) {printf("%s=%d ",s,i); fflush(stdout);}

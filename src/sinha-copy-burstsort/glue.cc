@@ -45,7 +45,7 @@ void getsegs(string) {}
 void getkeys(string) {}
 void listinputs() {}
 
-void sinha_C_burstsort_prepare(unsigned char **strings, size_t size)
+void sinha_C_burstsort_prepare(string *strings, size_t size)
 {
     char CHARCOUNT[256] = { 0 };
     MAXKEYLEN = 0;
@@ -59,11 +59,11 @@ void sinha_C_burstsort_prepare(unsigned char **strings, size_t size)
         }
         if (j > MAXKEYLEN) MAXKEYLEN = j;
     }
-    LOCHAR = 32; while (!CHARCOUNT[LOCHAR]) ++LOCHAR;
+    LOCHAR = 1; while (!CHARCOUNT[LOCHAR]) ++LOCHAR;
     HICHAR = 255; while (!CHARCOUNT[HICHAR]) --HICHAR;
 }
 
-void sinha_C_burstsort(unsigned char **strings, size_t size)
+void sinha_C_burstsort(string *strings, size_t size)
 {
     /* set default values for command line args. */
     CACHESIZE = 1<<19;
@@ -96,7 +96,7 @@ void sinha_C_burstsort(unsigned char **strings, size_t size)
     straverse(rt);
 
     /* Write out string characters and string pointers to psstest */
-    tb_ssavetrie(rt, (string*)strings, (char*)g_string_data);
+    tb_ssavetrie(rt, strings, (string)g_string_data);
 
     /* Deallocate the root node. */
     skill(rt);
@@ -135,7 +135,7 @@ void sinha_fbC_burstsort(unsigned char **strings, size_t size)
     straverse(rt);
 
     /* Write out string characters and string pointers to psstest */
-    tb_ssavetrie(rt, (string*)strings, (char*)g_string_data);
+    tb_ssavetrie(rt, strings, (string)g_string_data);
 
     /* Deallocate the root node. */
     skill(rt);
@@ -154,8 +154,8 @@ void sinha_sC_burstsort(unsigned char **strings, size_t size)
     NKEYS = size;
     NBYTES = g_string_datasize;
     NSEGS = 1;
-    string mySEGMENTS = { (char*)g_string_data };
-    string mySEGLIMITS = { (char*)g_string_data + g_string_datasize };
+    string mySEGMENTS = { (string)g_string_data };
+    string mySEGLIMITS = { (string)g_string_data + g_string_datasize };
 
     LIMSIZE0 = BINSIZE0 - MAXKEYLEN;
 
@@ -189,7 +189,7 @@ void sinha_sC_burstsort(unsigned char **strings, size_t size)
     straverse(rt);
 
     /* Write out string characters and string pointers to psstest */
-    tb_ssavetrie(rt, (string*)strings, (char*)g_string_data);
+    tb_ssavetrie(rt, strings, (string)g_string_data);
 
     /* Deallocate the root node. */
     skill(rt);

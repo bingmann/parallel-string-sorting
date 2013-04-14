@@ -144,7 +144,7 @@ void psample(string b0, NODE2 *rt, int n)
 		if (ct == 1)
 		{
 			++BINS;
-			s = bn->bp = (char*) MALLOC(BINSIZE0);
+			s = bn->bp = (string) MALLOC(BINSIZE0);
 			while ((*s++ = *b++) != 0) ;
 			bn->ap = s;
 		}
@@ -174,7 +174,7 @@ void psamburst(NODE2 *bn)
 	
 	b = b0 = bn->bp;
 	
-	bn->bp = (char*) rt;
+	bn->bp = (string) rt;
 
 	n = bn->ct;
 
@@ -189,7 +189,7 @@ void psamburst(NODE2 *bn)
 
 		if (ct == 1)
 		{
-			++BINS; s = bn->bp = (char*) MALLOC (BINSIZE0);
+			++BINS; s = bn->bp = (string) MALLOC (BINSIZE0);
 			while ((*s++ = *b++) != 0) ; bn->ap = s;
 		}
 		else
@@ -523,10 +523,10 @@ void pkill(NODE2 *nd)
  * Output a sorted file of records. 
  *
  */
-void psavetrie(NODE2 *nd, string path, string dset)
+void psavetrie(NODE2 *nd, const char* path, const char* dset)
 {
 	FILE *f;
-	string s;
+	char* s;
 
 	if ((f = fopen(s = fp(path, dset, "cpl-burstsort"), "w+")) == NULL)
 	{
@@ -553,7 +553,7 @@ void pputtrie(NODE2 *nd, FILE *f)
 	
 	while (ct--)
 	{
-		fputs(*tp++, f);
+                fputs((char*)*tp++, f);
 		fputc('\n', f);
 	}
 
@@ -567,7 +567,7 @@ void pputtrie(NODE2 *nd, FILE *f)
 			tp = (string*) bn->ap;
 			while (ct--)
 			{
-				fputs(*tp++, f);
+				fputs((char*)*tp++, f);
 				fputc('\n', f);
 			}
 		}
@@ -676,7 +676,7 @@ void inssortp(string *tp, int n, int d)
 void mkqsortp(string *tp, int n, int d)
 {
 	int k, nl, ne, nr, pv;
-	char **ol, **il, **ir, **_or, **l, **m, **r, *t, *s, *rp, **q;
+	string *ol, *il, *ir, *_or, *l, *m, *r, t, s, rp, *q;
 
 	if (d == TAILSIZE)
 	{

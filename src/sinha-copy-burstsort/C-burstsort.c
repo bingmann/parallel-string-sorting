@@ -117,7 +117,7 @@ void ssample(string *seg, string *seglim, NODE1 *rt, int n)
 {
 	NODE1 *nd; NODE1 *bn;
 	int ct, i;
-	char c; string b, s, lim;
+	unsigned char c; string b, s, lim;
 
 	srand(clock());
 	while (n--)
@@ -138,7 +138,7 @@ void ssample(string *seg, string *seglim, NODE1 *rt, int n)
 
 		 /* Use the first char of the key to index from the root node to the
 			 for keys that start with that char. */
-		 bn = rt + (c = *b++);
+		 bn = rt + (c = (unsigned char)*b++);
 
 		 /* A count field set to -1 indicates that the bin has previously burst
 			 and is now a branched node indexing a subtrie. */
@@ -151,7 +151,7 @@ void ssample(string *seg, string *seglim, NODE1 *rt, int n)
 			 /* and use the next char of the key to index to the appropriate
 				 bin of the subtrie, and so on ... until a terminal bin is
 				 found (and the count field has a value other than -1). */
-			 bn = nd + (c = *b++);
+			 bn = nd + (c = (unsigned char)*b++);
 		 }
 
 		 /* If c is a NULL, the key is exhausted; when this happens in ssample(), 
@@ -167,7 +167,7 @@ void ssample(string *seg, string *seglim, NODE1 *rt, int n)
 		 {
 			 /* Allocate a string buffer of size BINSIZE0 at the base pointer
 				 (bp) of the bin, and update the tally of bin objects. */
-			 s = bn->bp = (char*) MALLOC(BINSIZE0); ++BINS;
+			 s = bn->bp = (string) MALLOC(BINSIZE0); ++BINS;
 
 			 /* Set the bin's limit pointer to its base + LIMSIZE0, where
 				 LIMSIZE0 = BINSIZE0 - MAXKEYLEN; MAXKEYLEN is guaranteed to be >= to
@@ -203,7 +203,7 @@ void ssample(string *seg, string *seglim, NODE1 *rt, int n)
  */
 void samburst(NODE1 *bn)
 {
-	string b0, b, s; NODE1 *rt; int c, ct, n;
+        string b0, b, s; NODE1 *rt; int ct, n; unsigned char c;
 
 	/* Create a new branched node that will hold the bin being burst. */
 	rt = GETNODE(NODE1); ++NODES; 
@@ -212,7 +212,7 @@ void samburst(NODE1 *bn)
 	b = b0 = bn->bp; 
 	
 	/* Set the burst bin's base pointer to point to the new subtrie. */
-	bn->bp = (char*) rt;
+	bn->bp = (string) rt;
 	
 	/* Get the count of string tails from the burst bin. */
 	n = bn->ct; 
@@ -224,12 +224,12 @@ void samburst(NODE1 *bn)
 		see identical code in ssample() for comments. */
 	while (n--)
 	{
-		bn = rt +(c = *b++);
+		bn = rt +(c = (unsigned char)*b++);
 		if (c == 0) continue; ct = ++bn->ct;
 
 		if (ct == 1)
 		{
-			++BINS; s = bn->bp = (char*) MALLOC(BINSIZE0); 
+			++BINS; s = bn->bp = (string) MALLOC(BINSIZE0);
 			bn->lp = s+LIMSIZE0;
 			while ((*s++ = *b++) != 0) ; bn->ap = s;
 		}
@@ -297,16 +297,17 @@ void sadd(string b, string blim, NODE1 *rt)
 {
 	NODE1 *bn, *nd; 
 	string s, t, bp, ap, lp; 
-	int c, ct, sz, sz2;
+	int ct, sz, sz2;
+        unsigned char c;
 
 	/* sbs() ensures that b and blim coincide with key boundaries. */
 	while (b < blim)
 	{
 		/* Traverse the trie until a terminal node (bin) is reached. */
-		bn = rt + (c = *b++);
+                bn = rt + (c = (unsigned char)*b++);
 		while (bn != NULL && bn->ct == -1) {
 			nd = (NODE1*) bn->bp; 
-			bn = nd + (c = *b++);
+			bn = nd + (c = (unsigned char)*b++);
 		} 
 		ct = ++bn->ct;
 
@@ -385,16 +386,17 @@ void sadd(string b, string blim, NODE1 *rt)
 
 void sburst(NODE1 *bg) {
 	NODE1 *rt, *t; string b, b0, s, p, q, r; 
-	int c, ct, n, nc, nn, sz, sz0, sz2;
+	int ct, n, nc, nn, sz, sz0, sz2;
+        unsigned char c;
 	
 	nc=BINS; nn=NULLBINS; do {
 		b=b0=bg->bp; sz0=bg->lp+MAXKEYLEN-b; 
 		n=bg->ct; bg->ct=-1; 
-		rt=GETNODE(NODE1); ++NODES; bg->bp=(char*)rt;
+		rt=GETNODE(NODE1); ++NODES; bg->bp=(string)rt;
 		while (n--) {
-			bg=rt+(c=*b++); 
+                        bg=rt + (c=(unsigned char)*b++);
 			while (bg->ct==-1) {
-				t=(NODE1*)bg->bp; bg=t+(c=*b++);
+				t=(NODE1*)bg->bp; bg=t+(c=(unsigned char)*b++);
 			} 
 			ct=++bg->ct; 
 			if (c==0) {if (ct==1) ++NULLBINS; continue;}
@@ -523,11 +525,12 @@ void skill(NODE1 *nd)
  * Output sorted trie to a disk file of sorted string keys.
  *
  */
-void ssavetrie(NODE1 *nd, string path, string dset)
+void ssavetrie(NODE1 *nd, const char* path, const char* dset)
 {
 	FILE *f;
-	string s;
-	char pfx[400];
+	char* s;
+	unsigned char pfx[MAXKEYLEN];
+        pfx[0] = 0;
 
 	/* Open output file. */
 	f = fopen(s = fp(path, dset, "c-burstsort"), "w+");
@@ -560,7 +563,7 @@ void sputtrie(NODE1 *nd, FILE *f, string pfx, int d)
 	while (ct--)
 	{
 		/* Output only the shared prefix. */
-		fputs(pfx, f);
+                fputs((char*)pfx, f);
 		fputc('\n', f);
 	}
 
@@ -582,10 +585,10 @@ void sputtrie(NODE1 *nd, FILE *f, string pfx, int d)
 			while (ct--)
 			{
 				/* Output shared prefix. */
-				fputs(pfx, f);
+                                fputs((char*)pfx, f);
 				
 				/* Append tail and delimiter. */
-				fputs(*tp++, f);
+				fputs((char*)(*tp++), f);
 				fputc('\n', f);
 			}
 		}
@@ -596,7 +599,7 @@ void sputtrie(NODE1 *nd, FILE *f, string pfx, int d)
 /** Added by Timo Bingmann to output the trie to a string pointer array */
 
 string* sputtrie_strout;        /* string pointer output iterator */
-char* sputtrie_chout;           /* character output iterator */
+string sputtrie_chout;           /* character output iterator */
 
 void tb_sputtrie(NODE1 *nd, string pfx, int d)
 {
@@ -661,9 +664,10 @@ void tb_sputtrie(NODE1 *nd, string pfx, int d)
 	pfx[d] = 0;
 }
 
-void tb_ssavetrie(NODE1 *rt, string* strout, char* chout)
+void tb_ssavetrie(NODE1 *rt, string* strout, string chout)
 {
-        char pfx[4000] = { 0 };
+        unsigned char pfx[MAXKEYLEN];
+        pfx[0] = 0;
 
         sputtrie_strout = strout;
         sputtrie_chout = chout;
@@ -711,7 +715,7 @@ void inssort(string *tp, int n, int d)
 void mkqsort(string *tp, int n, int d)
 {
 	 int k, nl, ne, nr, pv;
-	 char **ol, **il, **ir, **_or, **l, **m, **r, *t;
+	 string *ol, *il, *ir, *_or, *l, *m, *r, t;
 
 	 if (n < 13)
 	 {

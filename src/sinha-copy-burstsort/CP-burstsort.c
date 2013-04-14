@@ -120,7 +120,7 @@ void rsample(string b0, NODE1 *rt, int n)
 		if (ct == 1)
 		{
 			++BINS;
-			s = bn->bp = (char*) MALLOC(BINSIZE0);
+			s = bn->bp = (string) MALLOC(BINSIZE0);
 			bn->lp = s + LIMSIZE0;
 
 			while ((*s++ = *b++) != 0) ;
@@ -277,7 +277,7 @@ void rburst(NODE1 *bn)
 		
 		bn->ct = -1;
 		rt = GETNODE(NODE1); ++NODES;
-		bn->bp = (char*) rt;
+		bn->bp = (string) rt;
 
 		while (n--)
 		{
@@ -449,10 +449,10 @@ void rkill(NODE1 *nd)
  * Output a sorted file of records.
  *
  */
-void savetrie(NODE1 *nd, string path, string dset)
+void savetrie(NODE1 *nd, const char* path, const char* dset)
 {
 	FILE *f;
-	string s;
+	char* s;
 
 	if ((f = fopen(s = fp(path, dset, "cp-burstsort"), "w+")) == NULL)
 	{
@@ -487,7 +487,7 @@ void puttrie(NODE1 *nd, FILE *f)
 	/* Output any exhausted keys. */
 	while (ct--)
 	{
-		fputs(*tp++, f);
+                fputs((char*)*tp++, f);
 		fputc('\n', f);
 	}
 
@@ -501,7 +501,7 @@ void puttrie(NODE1 *nd, FILE *f)
 			tp = (string*) bn->ap;
 			while (ct--)
 			{
-				fputs(*tp++, f);
+				fputs((char*)*tp++, f);
 				fputc('\n', f);
 			}
 		}
@@ -670,7 +670,7 @@ void stabilize(string *tp, int n)
 void mkqsorts(string *tp, int n, int d)
 {
 	int k, nl, ne, nr, pv;
-	char **ol, **il, **ir, **_or, **l, **m, **r, *t;
+	string *ol, *il, *ir, *_or, *l, *m, *r, t;
 
 	if (n < 13)
 	{
