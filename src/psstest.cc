@@ -464,7 +464,8 @@ void Contestant_UCArray::real_run()
         if (!g_string_dprefix)
             g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_datasize);
 
-        g_statscache >> "dprefix" << g_string_dprefix;
+        g_statscache >> "dprefix" << g_string_dprefix
+                     >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize);
     }
     else
     {

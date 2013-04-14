@@ -169,7 +169,5 @@ size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr, si
         pdepth = depth;
     }
 
-    std::cout << "percentage dprefix = " << (D * 100.0 / n) << "\n";
-
     return D;
 }
