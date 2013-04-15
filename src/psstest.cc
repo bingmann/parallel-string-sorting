@@ -85,7 +85,7 @@ const char*     gopt_output = NULL; // argument -o, --output
 
 bool            gopt_suffixsort = false;   // argument --suffix
 bool            gopt_threads = false;      // argument --threads
-bool            gopt_allthreads = false;   // argument --allthreads
+bool            gopt_all_threads = false;  // argument --all-threads
 bool            gopt_no_check = false;     // argument --no-check
 bool            gopt_no_mlockall = false;  // argument --no-mlockall
 
@@ -487,7 +487,7 @@ void Contestant_UCArray_Parallel::run()
 
         if (p == omp_get_num_procs()) break;
 
-        if (!gopt_allthreads)
+        if (!gopt_all_threads)
             p = std::min( omp_get_num_procs(), 2 * p );
         else
             p = std::min( omp_get_num_procs(), p+1 );
@@ -518,7 +518,7 @@ void print_usage(const char* prog)
     std::cout << "Usage: " << prog << " [options] filename" << std::endl
               << "Options:" << std::endl
               << "  -a, --algo <match>    Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
-              << "  --allthreads          Run linear thread increase test from 1 to max_processors." << std::endl
+              << "  --all-threads         Run linear thread increase test from 1 to max_processors." << std::endl
               << "  -D, --datafork        Fork before running algorithm and load data within fork!" << std::endl
               << "  -i, --input <path>    Write unsorted input strings to file, usually for checking." << std::endl
               << "  -N, --no-check        Skip checking of sorted order and distinguishing prefix calculation." << std::endl
@@ -552,7 +552,7 @@ int main(int argc, char* argv[])
         { "sequential", no_argument,     0, 2 },
         { "parallel", no_argument,       0, 3 },
         { "threads", no_argument,        0, 4 },
-        { "allthreads", no_argument,     0, 5 },
+        { "all-threads", no_argument,    0, 5 },
         { "no-mlockall", no_argument,    0, 6 },
         { 0,0,0,0 },
     };
@@ -663,9 +663,9 @@ int main(int argc, char* argv[])
             std::cout << "Option --threads: running test with exponentially increasing thread count." << std::endl;
             break;
 
-        case 5: // --allthreads
-            gopt_allthreads = true;
-            std::cout << "Option --allthreads: running test with linear increasing thread count." << std::endl;
+        case 5: // --all-threads
+            gopt_threads = gopt_all_threads = true;
+            std::cout << "Option --all-threads: running test with linear increasing thread count." << std::endl;
             break;
 
         case 6: // --no-mlockall
