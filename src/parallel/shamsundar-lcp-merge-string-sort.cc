@@ -37,9 +37,54 @@ http://dspace.wul.waseda.ac.jp/dspace/bitstream/2065/28672/4/Honbun-4624_01.pdf
 
     lcpsrtmt <input file> <output file>
 
+    * Added glue to attach Shamsundar's Parallel LCP Merge String Sort code to
+    * parallel-string-sort framework in 2013 Timo Bingmann <tb@panthema.net>.
 */
 
-#include "errwrt.h"
+#include "../tools/contest.h"
+
+extern int pss_num_threads;
+
+#define PTHREAD
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <pthread.h>
+#ifdef _WIN32
+#ifndef PTHREAD
+#include <windows.h>
+#endif
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+#include <sys/types.h>
+#include <fcntl.h>
+
+namespace shamsundar_lcp_merge_string_sort {
+
+/* Written by Shamsundar as a poor man's replacement for
+   the vararglist function error(status,errnum,fmt,...) */
+int error_message_count=0;
+#define ERR0(status,errnum,fmt) \
+   {fprintf(stderr,"Program %s, File %s, Line %d: ", \
+    argv[0],__FILE__,__LINE__); \
+   fprintf(stderr,fmt); \
+   if(errnum)fprintf(stderr,": Err.Num. %d\n",errnum); \
+   if(status)exit(status); \
+   error_message_count++; \
+   }
+#define ERR1(status,errnum,fmt,p1) \
+   {fprintf(stderr,"Program %s, File %s, Line %d: ", \
+    argv[0],__FILE__,__LINE__); \
+   fprintf(stderr,fmt,p1); \
+   if(errnum)fprintf(stderr,": Err.Num. %d\n",errnum); \
+   if(status)exit(status); \
+   error_message_count++; \
+   }
+
 #define FT '\0'
 //#define NCPU 2
 #define MAXCPU 65
@@ -52,6 +97,9 @@ typedef struct _AS {
 } AS, *pAS, *aAS; // annotated string sequence
 
 pAS *gpTMP,*gSP;
+
+// The assembler version uses i686 instructions, and cannot be used on modern
+// x86_64 bit architectures. -tb
 
 extern void  merge( pAS a[], int la, pAS B[], int lb, pAS C[], int lcol, int *ncomp ); //ASM version
 
@@ -337,3 +385,49 @@ int main(int argc,char *argv[]){
     return 0;
 }
 #endif
+
+// Glue to attach to string sorting test framework
+
+AS *sP;
+
+static void prepare(unsigned char **strings, size_t size)
+{
+    sP = new AS[size];
+    for (size_t i = 0; i < size; ++i) {
+        sP[i].str = (char*)strings[i];
+        sP[i].llcp = 0;
+    }
+
+    gSP = new AS*[size];
+    for (size_t i = 0; i < size; ++i)
+        gSP[i] = &sP[i];
+}
+
+static void string_sort(unsigned char **strings, size_t size)
+{
+    int cnts[4];
+    int fcol=1,lcol=1000000000;
+
+    NCPU = pss_num_threads;
+
+    cnts[0]=cnts[1]=cnts[2]=cnts[3]=0;
+
+    gpTMP = (pAS *)calloc((size+11)/2, sizeof(pAS)); 
+
+    merge_sortMT(gSP,size,cnts,gpTMP,fcol,lcol);
+
+    for (size_t i = 0; i < size; ++i) {
+        strings[i] = (unsigned char*)gSP[i]->str;
+    }
+
+    free(gpTMP);
+    delete [] sP;
+    delete [] gSP;
+}
+
+CONTESTANT_REGISTER_PARALLEL_PREPARE(
+    prepare, string_sort,
+    "shamsundar/lcp-merge-string-sort",
+    "Parallelized LCP Merge sort by N. Shamsundar");
+
+} // namespace shamsundar_lcp_merge_string_sort

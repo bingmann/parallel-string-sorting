@@ -17,7 +17,7 @@ set(SOURCES
   parallel/bingmann-parallel_sample_sortBSC.cc
   parallel/bingmann-parallel_sample_sortBTC.cc
   parallel/bingmann-parallel_sample_sortBTCE.cc
-  lcp-merge-string-sort/glue.cc
+  parallel/shamsundar-lcp-merge-string-sort.cc
 )
 
 set(LIBS minitbb ${GMP_LIBRARIES})
@@ -38,6 +38,7 @@ target_link_libraries(psstest ${LIBS})
 
 # silence some warnings from legacy code
 set_property(SOURCE sinha-copy-burstsort/glue.cc PROPERTY COMPILE_FLAGS "-Wno-write-strings -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-sign-compare -Wno-sequence-point -Wno-uninitialized")
+set_property(SOURCE parallel/shamsundar-lcp-merge-string-sort.cc PROPERTY COMPILE_FLAGS "-Wno-sign-compare")
 
 if(BUILD_ALL)
 
