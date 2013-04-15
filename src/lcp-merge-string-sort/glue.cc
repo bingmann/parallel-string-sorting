@@ -49,7 +49,7 @@ namespace shamsundar_lcp_merge_string_sort {
 
 AS *sP;
 
-void shamsundar_lcp_merge_string_sort_prepare(unsigned char **strings, size_t size)
+static void prepare(unsigned char **strings, size_t size)
 {
     sP = new AS[size];
     for (size_t i = 0; i < size; ++i) {
@@ -62,12 +62,12 @@ void shamsundar_lcp_merge_string_sort_prepare(unsigned char **strings, size_t si
         gSP[i] = &sP[i];
 }
 
-void shamsundar_lcp_merge_string_sort(unsigned char **strings, size_t size)
+static void string_sort(unsigned char **strings, size_t size)
 {
     int cnts[4];
     int fcol=1,lcol=1000000000;
 
-    //NCPU = pss_num_threads;
+    NCPU = pss_num_threads;
 
     cnts[0]=cnts[1]=cnts[2]=cnts[3]=0;
 
@@ -85,8 +85,11 @@ void shamsundar_lcp_merge_string_sort(unsigned char **strings, size_t size)
 }
 
 CONTESTANT_REGISTER_PARALLEL_PREPARE(
-    shamsundar_lcp_merge_string_sort_prepare,
-    shamsundar_lcp_merge_string_sort,
+    prepare, string_sort,
     "shamsundar/lcp-merge-string-sort",
     "Parallelized LCP Merge sort by N. Shamsundar");
-}
+
+// Note that the assembler version uses i686 instructions, and cannot be used
+// on modern x86_64 bit architectures.
+
+} // namespace shamsundar_lcp_merge_string_sort

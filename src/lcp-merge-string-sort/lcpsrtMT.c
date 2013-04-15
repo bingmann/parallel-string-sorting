@@ -43,7 +43,7 @@ http://dspace.wul.waseda.ac.jp/dspace/bitstream/2065/28672/4/Honbun-4624_01.pdf
 #define FT '\0'
 //#define NCPU 2
 #define MAXCPU 65
-size_t NCPU = 2;
+int NCPU = 1;
 #define MIN(x,y) (x) < (y) ? (x) : (y)
 
 typedef unsigned int UINT;
@@ -82,8 +82,6 @@ Merge( aAS a[], int m, aAS b[], int n, aAS c[], int lcol, int *ncomp )
             if(a[i]->llcp > b[j]->llcp)c[k++]=a[i++]; else c[k++]=b[j++];
         }
         else{
-            int retv,lnx,lny;
-
             char *x=a[i]->str+a[i]->llcp,
                 *y=b[j]->str+a[i]->llcp,
                 *xe=a[i]->str+lcol-1;
@@ -112,7 +110,7 @@ Merge( aAS a[], int m, aAS b[], int n, aAS c[], int lcol, int *ncomp )
 
 void merge_sort( pAS pX[], int n, int cnts[], pAS *lPTMP, int fcol, int lcol )       // Recursive!
 {
-    int i;
+    UINT i;
 // cnts[0..3] contain updated counts of comparisons, merges, copies and skips
     if (n>2) {
         UINT l=n/2;
@@ -179,7 +177,7 @@ void *worker( void *warg){
 #else
 DWORD WINAPI worker( LPVOID warg){
 #endif
-    msortargs *pStrct=(msortargs *)warg; void *vptr;
+    msortargs *pStrct=(msortargs *)warg;
     pAS *pX=pStrct->pX; int n=pStrct->n; pAS *lpTMP=pStrct->lPTMP;
     int *lcnts=pStrct->cnts; int fcol=pStrct->fcol; int lcol=pStrct->lcol;
     merge_sort(pX,n,lcnts,lpTMP,fcol,lcol);
@@ -192,7 +190,7 @@ DWORD WINAPI worker( LPVOID warg){
 
 void merge_sortMT( pAS pX[], int n, int cnts[], pAS *lPTMP, int fcol, int lcol ) // NOT Recursive!
 {
-    int i,ni,blksiz,blen;
+    int i,blksiz,blen;
 #ifdef PTHREAD
     pthread_t thrd[MAXCPU];
 #else
@@ -226,7 +224,7 @@ void merge_sortMT( pAS pX[], int n, int cnts[], pAS *lPTMP, int fcol, int lcol )
                 &dwThreadIdArray[i]);   // returns the thread identifier
 #endif
         if(DEBUG)
-            printf("Worker %d, %d to %d\n",i,margs[i].pX-gSP,margs[i].pX-gSP+blksiz-1);
+            printf("Worker %d, %ld to %ld\n",i,margs[i].pX-gSP,margs[i].pX-gSP+blksiz-1);
         // This line only when PThreads are not used :
         // worker(margs+i);
     }
@@ -235,7 +233,7 @@ void merge_sortMT( pAS pX[], int n, int cnts[], pAS *lPTMP, int fcol, int lcol )
     //
     //
     cnts[0]=cnts[1]=cnts[2]=cnts[3]=0; blen=MIN(n-(NCPU-1)*blksiz,blksiz);
-    if(DEBUG)printf("Boss 0, %d to %d\n",pX+(NCPU-1)*blksiz-gSP,pX-gSP+(NCPU-1)*blksiz+blen-1);
+    if(DEBUG)printf("Boss 0, %ld to %ld\n",pX+(NCPU-1)*blksiz-gSP,pX-gSP+(NCPU-1)*blksiz+blen-1);
     merge_sort(pX+(NCPU-1)*blksiz,blen,cnts,lPTMP+(NCPU-1)*blksiz/2,fcol,lcol);
 
     // Wait for the threads to complete; as each completes, merge its results with the part that
@@ -255,7 +253,7 @@ void merge_sortMT( pAS pX[], int n, int cnts[], pAS *lPTMP, int fcol, int lcol )
         cnts[0]+=margs[i].cnts[0]; cnts[1]+=margs[i].cnts[1];
         cnts[2]+=margs[i].cnts[2]; cnts[3]+=margs[i].cnts[3];
 
-        if(DEBUG)printf("Merge    %d to %d\n",margs[i].pX-gSP,margs[i].pX-gSP+blksiz-1);
+        if(DEBUG)printf("Merge    %ld to %ld\n",margs[i].pX-gSP,margs[i].pX-gSP+blksiz-1);
         cnts[0]++;
         if(strcmp(pX[(i+1)*blksiz-1]->str,pX[(i+1)*blksiz]->str) > 0){  // merge is needed
             memcpy(lPTMP+i*blksiz/2,margs[i].pX,blksiz*sizeof(pAS)); cnts[2]+=blksiz;
@@ -264,7 +262,7 @@ void merge_sortMT( pAS pX[], int n, int cnts[], pAS *lPTMP, int fcol, int lcol )
             cnts[1]++;
         }
         else cnts[3]++;  /* Skip count */
-        blen=blksiz;
+        blen+=blksiz;
     }
     return;
 }
