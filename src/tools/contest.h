@@ -134,4 +134,8 @@ public:
     static const class Contestant* _Contestant_##func##_register =      \
         new Contestant_UCArray_Parallel(NULL,func,algoname,desc);
 
+#define CONTESTANT_REGISTER_PARALLEL_PREPARE(pfunc, func, algoname, desc) \
+    static const class Contestant* _Contestant_##func##_register =      \
+        new Contestant_UCArray_Parallel(pfunc,func,algoname,desc);
+
 #endif // TOOLS_CONTEST_H
