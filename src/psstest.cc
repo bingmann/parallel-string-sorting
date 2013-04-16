@@ -86,6 +86,7 @@ const char*     gopt_output = NULL; // argument -o, --output
 bool            gopt_suffixsort = false;   // argument --suffix
 bool            gopt_threads = false;      // argument --threads
 bool            gopt_all_threads = false;  // argument --all-threads
+bool            gopt_some_threads = false; // argument --some-threads
 bool            gopt_no_check = false;     // argument --no-check
 bool            gopt_no_mlockall = false;  // argument --no-mlockall
 
@@ -477,6 +478,23 @@ void Contestant_UCArray_Parallel::run()
 {
     int p = (gopt_threads ? 1 : omp_get_num_procs());
 
+    static const int somethreads16[] = { 1, 2, 4, 6, 8, 12, 16, 0 };
+    static const int somethreads32[] = { 1, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 0 };
+    static const int somethreads48[] = { 1, 2, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48, 0 };
+    static const int somethreads64[] = { 1, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64, 0 };
+
+    const int* somethreads = NULL;
+
+    if (gopt_some_threads)
+    {
+        if (omp_get_num_procs() == 16) somethreads = somethreads16;
+        else if (omp_get_num_procs() == 32) somethreads = somethreads32;
+        else if (omp_get_num_procs() == 48) somethreads = somethreads48;
+        else if (omp_get_num_procs() == 64) somethreads = somethreads64;
+        else
+            gopt_all_threads = 1;
+    }
+
     while (1)
     {
         pss_num_threads = p;
@@ -487,7 +505,9 @@ void Contestant_UCArray_Parallel::run()
 
         if (p == omp_get_num_procs()) break;
 
-        if (!gopt_all_threads)
+        if (somethreads)
+            p = *somethreads++;
+        else if (!gopt_all_threads)
             p = std::min( omp_get_num_procs(), 2 * p );
         else
             p = std::min( omp_get_num_procs(), p+1 );
@@ -528,6 +548,7 @@ void print_usage(const char* prog)
               << "  -r, --repeat <num>    Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>     Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>  Run through powers of two for input size limit." << std::endl
+              << "  --some-threads        Run specific selected thread counts from 1 to max_processors." << std::endl
               << "      --sequential      Run only sequential algorithms." << std::endl
               << "      --suffix          Suffix sort the input file." << std::endl
               << "  -T, --timeout <sec>   Abort algorithms after this timeout (default: disabled)." << std::endl
@@ -553,7 +574,8 @@ int main(int argc, char* argv[])
         { "parallel", no_argument,       0, 3 },
         { "threads", no_argument,        0, 4 },
         { "all-threads", no_argument,    0, 5 },
-        { "no-mlockall", no_argument,    0, 6 },
+        { "some-threads", no_argument,   0, 6 },
+        { "no-mlockall", no_argument,    0, 7 },
         { 0,0,0,0 },
     };
 
@@ -668,7 +690,12 @@ int main(int argc, char* argv[])
             std::cout << "Option --all-threads: running test with linear increasing thread count." << std::endl;
             break;
 
-        case 6: // --no-mlockall
+        case 6: // --some-threads
+            gopt_threads = gopt_some_threads = true;
+            std::cout << "Option --some-threads: running test with specifically selected thread counts." << std::endl;
+            break;
+
+        case 7: // --no-mlockall
             gopt_no_mlockall = true;
             std::cout << "Option --no-mlockall: skipping mlockall() to lock memory." << std::endl;
             break;
