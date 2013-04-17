@@ -278,20 +278,22 @@ mergesort_lcp_2way_parallel(
 		return SortedInPlace;
 	}
 	const size_t split0 = n/2;
-	MergeResult ml, mr;
-#pragma omp parallel sections
-	{
-#pragma omp section
-	ml = mergesort_lcp_2way_parallel<true>(
-			strings_input, strings_output,
-			lcp_input,     lcp_output,
-			split0);
-#pragma omp section
-	mr = mergesort_lcp_2way_parallel<true>(
-			strings_input+split0, strings_output+split0,
-			lcp_input+split0,     lcp_output+split0,
-			n-split0);
-	}
+        MergeResult ml, mr;
+
+#pragma omp task shared(ml)
+        ml = mergesort_lcp_2way_parallel<true>(
+            strings_input, strings_output,
+            lcp_input,     lcp_output,
+            split0);
+
+#pragma omp task shared(mr)
+        mr = mergesort_lcp_2way_parallel<true>(
+            strings_input+split0, strings_output+split0,
+            lcp_input+split0,     lcp_output+split0,
+            n-split0);
+
+#pragma omp taskwait
+
 	if (ml != mr) {
 		if (ml == SortedInPlace) {
 			std::copy(strings_output+split0, strings_output+n,
@@ -325,11 +327,17 @@ mergesort_lcp_2way_parallel(unsigned char** strings, size_t n)
 	lcp_t* lcp_output = static_cast<lcp_t*>(malloc(n*sizeof(lcp_t)));
 	unsigned char** tmp = static_cast<unsigned char**>(
 			malloc(n*sizeof(unsigned char*)));
-	const MergeResult m = mergesort_lcp_2way_parallel<false>(strings, tmp,
-			lcp_input, lcp_output, n);
-	if (m == SortedInTemp) {
-		(void) memcpy(strings, tmp, n*sizeof(unsigned char*));
-	}
+#pragma omp parallel
+        {
+#pragma omp single
+            {
+                MergeResult m = mergesort_lcp_2way_parallel<false>(strings, tmp,
+                                                                   lcp_input, lcp_output, n);
+                if (m == SortedInTemp) {
+                    memcpy(strings, tmp, n*sizeof(unsigned char*));
+                }
+            }
+        }
 	free(lcp_input);
 	free(lcp_output);
 	free(tmp);
@@ -1751,20 +1759,20 @@ mergesort_lcp_2way_unstable_parallel(unsigned char** restrict strings_input,
 		return SortedInPlace;
 	}
 	const size_t split0 = n/2;
+
 	MergeResult ml, mr;
-#pragma omp parallel sections
-	{
-#pragma omp section
+#pragma omp task shared(ml)
 	ml = mergesort_lcp_2way_unstable_parallel<true>(
 			strings_input, strings_output,
 			lcp_input,     lcp_output,
 			split0);
-#pragma omp section
+#pragma omp task shared(mr)
 	mr = mergesort_lcp_2way_unstable_parallel<true>(
 			strings_input+split0, strings_output+split0,
 			lcp_input+split0,     lcp_output+split0,
 			n-split0);
-	}
+#pragma omp taskwait
+
 	if (ml != mr) {
 		if (ml == SortedInPlace) {
 			std::copy(strings_output+split0, strings_output+n,
@@ -1798,11 +1806,17 @@ mergesort_lcp_2way_unstable_parallel(unsigned char** strings, size_t n)
 	lcp_t* lcp_output = static_cast<lcp_t*>(malloc(n*sizeof(lcp_t)));
 	unsigned char** tmp = static_cast<unsigned char**>(
 			malloc(n*sizeof(unsigned char*)));
-	const MergeResult m = mergesort_lcp_2way_unstable_parallel<false>(strings, tmp,
-			lcp_input, lcp_output, n);
-	if (m == SortedInTemp) {
-		(void) memcpy(strings, tmp, n*sizeof(unsigned char*));
-	}
+#pragma omp parallel
+        {
+#pragma omp single
+            {
+                const MergeResult m = mergesort_lcp_2way_unstable_parallel<false>(strings, tmp,
+                             lcp_input, lcp_output, n);
+                if (m == SortedInTemp) {
+                    (void) memcpy(strings, tmp, n*sizeof(unsigned char*));
+                }
+            }
+        }
 	free(lcp_input);
 	free(lcp_output);
 	free(tmp);

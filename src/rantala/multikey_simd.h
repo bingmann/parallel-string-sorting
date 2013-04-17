@@ -320,15 +320,14 @@ multikey_simd_parallel(unsigned char** strings, size_t N, size_t depth)
 	bucketsize.assign(0);
 	size_t i=N-N%32;
 	if (N > 0x100000) {
-#pragma omp parallel sections
-		{
-#pragma omp section
+#pragma omp task
 		calculate_bucketsizes_sse(strings, i/2, oracle,
-				partval, depth);
-#pragma omp section
+                                          partval, depth);
+#pragma omp task
 		calculate_bucketsizes_sse(strings+i/2, i/2, oracle+i/2,
-				partval, depth);
-		}
+                                          partval, depth);
+#pragma omp taskwait
+
 	} else
 		calculate_bucketsizes_sse(strings, i, oracle, partval, depth);
 	for (; i < N; ++i)
@@ -350,28 +349,37 @@ multikey_simd_parallel(unsigned char** strings, size_t N, size_t depth)
 	std::copy(sorted, sorted+N, strings);
 	free(sorted);
 	_mm_free(oracle);
-#pragma omp parallel sections
 	{
-#pragma omp section
-	multikey_simd_parallel<CharT>(strings, bucketsize[0], depth);
-#pragma omp section
-	if (not is_end(partval))
+#pragma omp task untied
+            multikey_simd_parallel<CharT>(strings, bucketsize[0], depth);
+#pragma omp task untied
+            if (not is_end(partval))
 		multikey_simd_parallel<CharT>(strings+bucketsize[0],
-				bucketsize[1], depth+sizeof(CharT));
-#pragma omp section
-	multikey_simd_parallel<CharT>(strings+bucketsize[0]+bucketsize[1],
-			bucketsize[2], depth);
+                bucketsize[1], depth+sizeof(CharT));
+#pragma omp task untied
+            multikey_simd_parallel<CharT>(strings+bucketsize[0]+bucketsize[1],
+                                          bucketsize[2], depth);
 	}
 }
 
+template <typename CharT>
+static void multikey_simd_parallel_start(unsigned char** strings, size_t n)
+{
+#pragma omp parallel
+    {
+#pragma omp single
+        multikey_simd_parallel<CharT>(strings, n, 0);
+    }
+}
+
 void multikey_simd_parallel1(unsigned char** strings, size_t n)
-{ multikey_simd_parallel<unsigned char>(strings, n, 0); }
+{ multikey_simd_parallel_start<unsigned char>(strings, n); }
 
 void multikey_simd_parallel2(unsigned char** strings, size_t n)
-{ multikey_simd_parallel<uint16_t>(strings, n, 0); }
+{ multikey_simd_parallel_start<uint16_t>(strings, n); }
 
 void multikey_simd_parallel4(unsigned char** strings, size_t n)
-{ multikey_simd_parallel<uint32_t>(strings, n, 0); }
+{ multikey_simd_parallel_start<uint32_t>(strings, n); }
 
 CONTESTANT_REGISTER_PARALLEL(multikey_simd_parallel1,
                              "rantala/multikey_simd_parallel1",
