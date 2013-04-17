@@ -75,8 +75,9 @@ int             gopt_timeout = 0;
 const char*     g_datapath = NULL;      // path of input
 std::string     g_dataname;             // stripped name of input
 const char*     g_string_data = NULL;   // pointer to first string
-char*           g_string_databuff = NULL; // pointer to data buffer (with padding)
 size_t          g_string_datasize = 0;  // total size of string data (without padding)
+char*           g_string_databuff = NULL; // pointer to data buffer with padding
+size_t          g_string_buffsize = 0;  // total size of string data with padding
 size_t          g_string_count = 0;     // number of strings.
 size_t          g_string_dprefix = 0;   // calculated distinguishing prefix
 
@@ -104,6 +105,8 @@ bool            gopt_sequential_only = false; // argument --sequential
 bool            gopt_parallel_only = false; // argument --parallel
 
 const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
+
+const bool      gopt_use_shared_mmap = true;
 
 // *** Tools and Algorithms
 
@@ -292,7 +295,7 @@ void Contestant_UCArray::run()
         if (gopt_timeout) alarm(gopt_timeout); // terminate child program after gopt_timeout seconds
         real_run();
 
-        if (g_string_databuff) free(g_string_databuff);
+        input::free_stringdata();
         exit(0);
     }
 
@@ -478,10 +481,10 @@ void Contestant_UCArray_Parallel::run()
 {
     int p = (gopt_threads ? 1 : omp_get_num_procs());
 
-    static const int somethreads16[] = { 1, 2, 4, 6, 8, 12, 16, 0 };
-    static const int somethreads32[] = { 1, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 0 };
-    static const int somethreads48[] = { 1, 2, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48, 0 };
-    static const int somethreads64[] = { 1, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64, 0 };
+    static const int somethreads16[] = { 2, 4, 6, 8, 12, 16, 0 };
+    static const int somethreads32[] = { 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 0 };
+    static const int somethreads48[] = { 2, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48, 0 };
+    static const int somethreads64[] = { 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64, 0 };
 
     const int* somethreads = NULL;
 
@@ -538,8 +541,9 @@ void print_usage(const char* prog)
     std::cout << "Usage: " << prog << " [options] filename" << std::endl
               << "Options:" << std::endl
               << "  -a, --algo <match>    Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
-              << "  --all-threads         Run linear thread increase test from 1 to max_processors." << std::endl
+              << "      --all-threads     Run linear thread increase test from 1 to max_processors." << std::endl
               << "  -D, --datafork        Fork before running algorithm and load data within fork!" << std::endl
+              << "  -F, --fork            Fork before running algorithm, but load data before fork!" << std::endl
               << "  -i, --input <path>    Write unsorted input strings to file, usually for checking." << std::endl
               << "  -N, --no-check        Skip checking of sorted order and distinguishing prefix calculation." << std::endl
               << "      --no-mlockall     Skip call of mlockall(). Use if locked memory is scarce." << std::endl
@@ -548,11 +552,11 @@ void print_usage(const char* prog)
               << "  -r, --repeat <num>    Repeat experiment a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>     Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>  Run through powers of two for input size limit." << std::endl
-              << "  --some-threads        Run specific selected thread counts from 1 to max_processors." << std::endl
               << "      --sequential      Run only sequential algorithms." << std::endl
+              << "      --some-threads    Run specific selected thread counts from 1 to max_processors." << std::endl
               << "      --suffix          Suffix sort the input file." << std::endl
               << "  -T, --timeout <sec>   Abort algorithms after this timeout (default: disabled)." << std::endl
-              << "  --threads             Run tests with doubling number of threads from 1 to max_processors." << std::endl
+              << "      --threads         Run tests with doubling number of threads from 1 to max_processors." << std::endl
         ;
 }
 
@@ -561,6 +565,7 @@ int main(int argc, char* argv[])
     static const struct option longopts[] = {
         { "help",    no_argument,        0, 'h' },
         { "algo",    required_argument,  0, 'a' },
+        { "fork",    no_argument,        0, 'F' },
         { "datafork", no_argument,       0, 'D' },
         { "input",   required_argument,  0, 'i' },
         { "no-check", no_argument,       0, 'N' },
@@ -599,7 +604,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:r:o:i:T:DN", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:r:o:i:T:DFN", longopts, &index);
 
         if (argi < 0) break;
 
@@ -622,6 +627,11 @@ int main(int argc, char* argv[])
         case 'D':
             gopt_forkrun = gopt_forkdataload = true;
             std::cout << "Option -D: forking before each algorithm run and loading data after fork." << std::endl;
+            break;
+
+        case 'F':
+            gopt_forkrun = true;
+            std::cout << "Option -F: forking before each algorithm run, but load data before fork." << std::endl;
             break;
 
         case 'i':
@@ -736,7 +746,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (g_string_databuff) free(g_string_databuff);
+    input::free_stringdata();
 
     return 0;
 }

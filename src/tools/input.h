@@ -22,16 +22,44 @@
 
 namespace input {
 
+/// Free previous data file
+void free_stringdata()
+{
+    if (!g_string_databuff) return;
+
+    if (gopt_use_shared_mmap) {
+        if (munmap(g_string_databuff, g_string_buffsize)) {
+            std::cout << "Error unmapping string data memory: " << strerror(errno) << std::endl;
+        }
+    }
+    else {
+        free(g_string_databuff);
+    }
+
+    g_string_databuff = NULL;
+}
+
 /// Allocate space in g_string_data
 char* allocate_stringdata(size_t size, const std::string& path)
 {
     // free previous data file
-    if (g_string_databuff)
-        free(g_string_databuff);
+    free_stringdata();
 
     // allocate one continuous area of memory
-    std::cout << "Allocating " << size << " bytes in RAM, reading " << path << "\n";
-    char* stringdata = (char*)malloc(size + 2 + 8);
+    g_string_buffsize = size + 2 + 8;
+    std::cout << "Allocating " << size << " bytes in RAM, reading " << path << std::endl;
+
+    char* stringdata;
+    if (gopt_use_shared_mmap) {
+        stringdata = (char*)mmap(NULL, g_string_buffsize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
+        if (stringdata == MAP_FAILED) {
+            std::cout << "Error allocating memory: " << strerror(errno) << std::endl;
+            return NULL;
+        }
+    }
+    else {
+        stringdata = (char*)malloc(g_string_buffsize);
+    }
 
     // CPL-burstsort needs terminator immediately before and after stringdata
     g_string_databuff = stringdata;
@@ -42,12 +70,18 @@ char* allocate_stringdata(size_t size, const std::string& path)
     g_string_data = stringdata;
     g_string_datasize = size;
 
-    if (!stringdata) {
-        std::cout << "Error allocating memory: " << strerror(errno) << "\n";
-        return NULL;
-    }
-
     return stringdata;
+}
+
+void protect_stringdata()
+{
+    if (!g_string_databuff) return;
+
+    if (gopt_use_shared_mmap) {
+        if (mprotect(g_string_databuff, g_string_buffsize, PROT_READ)) {
+            std::cout << "Error protecting string data memory: " << strerror(errno) << std::endl;
+        }
+    }
 }
 
 /// Strip data path to just a filename
@@ -81,12 +115,12 @@ bool load_plain(const std::string& path)
     size_t size = 0;
 
     if (!(file = fopen(path.c_str(), "r"))) {
-        std::cout << "Cannot open " << path << ": " << strerror(errno) << "\n";
+        std::cout << "Cannot open " << path << ": " << strerror(errno) << std::endl;
         return false;
     }
 
     if (fseek(file,0,SEEK_END)) {
-        std::cout << "Cannot seek in " << path << ": " << strerror(errno) << "\n";
+        std::cout << "Cannot seek in " << path << ": " << strerror(errno) << std::endl;
         fclose(file);
         return false;
     }
@@ -118,7 +152,7 @@ bool load_plain(const std::string& path)
         ssize_t rb = fread(stringdata+rpos, sizeof(char), batch, file);
 
         if (rb < 0) {
-            std::cout << "Cannot read from " << path << ": " << strerror(errno) << "\n";
+            std::cout << "Cannot read from " << path << ": " << strerror(errno) << std::endl;
             fclose(file);
             return false;
         }
@@ -183,7 +217,7 @@ bool load_compressed(const std::string& path)
         v *= 10; --i;
     }
     if (size == 0 || path[i] != '.') {
-        std::cout << "Could not find decompressed size in filename " << path << "\n";
+        std::cout << "Could not find decompressed size in filename " << path << std::endl;
         return false;
     }
 
@@ -194,7 +228,7 @@ bool load_compressed(const std::string& path)
     // create pipe, fork and call decompressor as child
     int pipefd[2]; // pipe[0] = read, pipe[1] = write
     if (pipe(pipefd) != 0) {
-        std::cout << "Error creating pipe: " << strerror(errno) << "\n";
+        std::cout << "Error creating pipe: " << strerror(errno) << std::endl;
         exit(-1);
     }
 
@@ -230,7 +264,7 @@ bool load_compressed(const std::string& path)
         ssize_t rb = read(pipefd[0], stringdata+rpos, batch);
 
         if (rb <= 0) {
-            std::cout << "Error reading pipe: " << strerror(errno) << "\n";
+            std::cout << "Error reading pipe: " << strerror(errno) << std::endl;
             close(pipefd[1]);
             exit(-1);
         }
@@ -274,7 +308,7 @@ bool load_compressed(const std::string& path)
 bool generate_random(const std::string& path, const std::string& letters)
 {
     if (!gopt_inputsize) {
-        std::cout << "Random input size must be specified via '-s <size>'\n";
+        std::cout << "Random input size must be specified via '-s <size>'" << std::endl;
         return false;
     }
 
@@ -321,7 +355,7 @@ bool generate_random(const std::string& path, const std::string& letters)
 bool generate_sinha_randomASCII()
 {
     if (!gopt_inputsize) {
-        std::cout << "Random input size must be specified via '-s <size>'\n";
+        std::cout << "Random input size must be specified via '-s <size>'" << std::endl;
         return false;
     }
 
@@ -437,6 +471,8 @@ bool load(const std::string& path)
 
     std::cout << "Loaded input in " << ts2-ts1 << " sec with "
               << (g_string_datasize / (ts2-ts1) / 1024.0 / 1024.0) << " MiB/s" << std::endl;
+
+    protect_stringdata();
 
     return true;
 }
