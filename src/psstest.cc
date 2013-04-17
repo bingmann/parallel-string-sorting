@@ -244,8 +244,7 @@ void Contest::run_contest(const char* path)
     {
         if (gopt_algorithm_select(*c))
         {
-            for (size_t r = 0; r < gopt_repeats; ++r)
-                (*c)->run();
+            (*c)->run();
         }
     }
 }
@@ -271,7 +270,7 @@ void Contest::list_contentants()
     }
 }
 
-void Contestant_UCArray::run()
+void Contestant_UCArray::run_forked()
 {
     if (!gopt_forkrun) return real_run();
 
@@ -477,6 +476,12 @@ void Contestant_UCArray::real_run()
     }
 }
 
+void Contestant_UCArray::run()
+{
+    for (size_t r = 0; r < gopt_repeats; ++r)
+        run_forked();
+}
+
 void Contestant_UCArray_Parallel::run()
 {
     int p = (gopt_threads ? 1 : omp_get_num_procs());
@@ -500,11 +505,14 @@ void Contestant_UCArray_Parallel::run()
 
     while (1)
     {
-        pss_num_threads = p;
-        std::cout << "threads=" << p << std::endl;
-        g_statscache >> "threads" << p;
+        for (size_t r = 0; r < gopt_repeats; ++r)
+        {
+            pss_num_threads = p;
+            std::cout << "threads=" << p << std::endl;
+            g_statscache >> "threads" << p;
 
-        Contestant_UCArray::run();
+            Contestant_UCArray::run_forked();
+        }
 
         if (p == omp_get_num_procs()) break;
 

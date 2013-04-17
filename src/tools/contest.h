@@ -101,6 +101,7 @@ public:
     }
 
     virtual void run();         // implemented in main.cc
+    void         run_forked();  // implemented in main.cc
     void         real_run();    // implemented in main.cc
 
     virtual bool is_parallel() const { return false; }
