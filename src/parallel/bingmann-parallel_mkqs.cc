@@ -389,7 +389,7 @@ struct SequentialMKQS : public Job
             cache = new StrCache[n];
             cache_base = StrCachePtrType(cache, shared_ptr_array_deleter<StrCache>());
 
-            // extract all elements, any maybe update cache
+            // extract all elements, and maybe update cache
 
             StrCacheBlock* scb;
             size_t o = 0;

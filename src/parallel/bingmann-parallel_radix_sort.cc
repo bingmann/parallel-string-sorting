@@ -78,10 +78,15 @@ void Enqueue(JobQueue& jobqueue, const StringPtr& strings, size_t n, size_t dept
 // ****************************************************************************
 // *** SmallsortJob8 - sort 8-bit radix in-place with explicit stack-based recursion
 
+void EnqueueSmallsortJob8(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth);
+
+template <typename BktSizeType>
 struct SmallsortJob8 : public Job
 {
     StringPtr   strptr;
     size_t      n, depth;
+
+    typedef BktSizeType bktsize_type;
 
     SmallsortJob8(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
         : strptr(_strptr), n(_n), depth(_depth)
@@ -89,138 +94,145 @@ struct SmallsortJob8 : public Job
         jobqueue.enqueue(this);
     }
 
-    virtual void run(JobQueue& jobqueue);
-};
-
-struct RadixStep8_CI
-{
-    typedef uint32_t bktsize_type;
-
-    string* str;
-    size_t idx;
-    bktsize_type bktsize[256];
-
-    RadixStep8_CI(string* strings, size_t n, size_t depth, uint8_t* charcache)
+    struct RadixStep8_CI
     {
-        // count character occurances
+        string* str;
+        size_t idx;
+        bktsize_type bktsize[256];
+
+        RadixStep8_CI(string* strings, size_t n, size_t depth, uint8_t* charcache)
+        {
+            // count character occurances
 #if 1
-        // DONE: first variant to first fill charcache and then count. This is
-        // 2x as fast as the second variant.
-        for (size_t i=0; i < n; ++i)
-            charcache[i] = strings[i][depth];
+            // DONE: first variant to first fill charcache and then count. This is
+            // 2x as fast as the second variant.
+            for (size_t i=0; i < n; ++i)
+                charcache[i] = strings[i][depth];
 
-        memset(bktsize, 0, sizeof(bktsize));
-        for (size_t i=0; i < n; ++i)
-            ++bktsize[ charcache[i] ];
+            memset(bktsize, 0, sizeof(bktsize));
+            for (size_t i=0; i < n; ++i)
+                ++bktsize[ charcache[i] ];
 #else
-        memset(bktsize, 0, sizeof(bktsize));
-        for (size_t i=0; i < n; ++i) {
-            ++bktsize[ (charcache[i] = strings[i][depth]) ];
-        }
+            memset(bktsize, 0, sizeof(bktsize));
+            for (size_t i=0; i < n; ++i) {
+                ++bktsize[ (charcache[i] = strings[i][depth]) ];
+            }
 #endif
-        // inclusive prefix sum
-        bktsize_type bkt[256];
-        bkt[0] = bktsize[0];
-        bktsize_type last_bkt_size = bktsize[0];
-        for (unsigned int i=1; i < 256; ++i) {
-            bkt[i] = bkt[i-1] + bktsize[i];
-            if (bktsize[i]) last_bkt_size = bktsize[i];
-        }
-
-        // premute in-place
-        for (size_t i=0, j; i < n - last_bkt_size; )
-        {
-            string perm = strings[i];
-            uint8_t permch = charcache[i];
-            while ( (j = --bkt[ permch ]) > i )
-            {
-                std::swap(perm, strings[j]);
-                std::swap(permch, charcache[j]);
-            }
-            strings[i] = perm;
-            i += bktsize[ permch ];
-        }
-
-        str = strings + bktsize[0];
-        idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
-    }
-};
-
-void SmallsortJob8::run(JobQueue& jobqueue)
-{
-    DBG(debug_jobs, "Process SmallsortJob8 " << this << " of size " << n);
-
-    ASSERT(n < (((uint64_t)1) << 32)); // must fit in uint32_t
-
-    string* strings = strptr.to_original(n);
-
-    if (n < g_inssort_threshold)
-        return inssort::inssort(strings,n,depth);
-
-    uint8_t* charcache = new uint8_t[n];
-
-    // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
-    size_t pop_front = 0;
-    std::vector<RadixStep8_CI> radixstack;
-    radixstack.push_back( RadixStep8_CI(strings,n,depth,charcache) );
-
-    while ( radixstack.size() > pop_front )
-    {
-        while ( radixstack.back().idx < 255 )
-        {
-            RadixStep8_CI& rs = radixstack.back();
-            ++rs.idx; // process the bucket rs.idx
-
-            if (rs.bktsize[rs.idx] == 0)
-                continue;
-            else if (rs.bktsize[rs.idx] < g_inssort_threshold)
-            {
-                inssort::inssort(rs.str, rs.bktsize[rs.idx], depth + radixstack.size());
-                rs.str += rs.bktsize[ rs.idx ];
-            }
-            else
-            {
-                rs.str += rs.bktsize[rs.idx];
-                radixstack.push_back( RadixStep8_CI(rs.str - rs.bktsize[rs.idx],
-                                                    rs.bktsize[rs.idx],
-                                                    depth + radixstack.size(),
-                                                    charcache) );
-                // cannot add to rs.str here, because rs may have invalidated
+            // inclusive prefix sum
+            bktsize_type bkt[256];
+            bkt[0] = bktsize[0];
+            bktsize_type last_bkt_size = bktsize[0];
+            for (unsigned int i=1; i < 256; ++i) {
+                bkt[i] = bkt[i-1] + bktsize[i];
+                if (bktsize[i]) last_bkt_size = bktsize[i];
             }
 
-            if (use_work_sharing && jobqueue.has_idle())
+            // premute in-place
+            for (size_t i=0, j; i < n - last_bkt_size; )
             {
-                // convert top level of stack into independent jobs
-                DBG(debug_jobs, "Freeing top level of SmallsortJob8's radixsort stack");
-
-                RadixStep8_CI& rt = radixstack[pop_front];
-
-                while ( rt.idx < 255 )
+                string perm = strings[i];
+                uint8_t permch = charcache[i];
+                while ( (j = --bkt[ permch ]) > i )
                 {
-                    ++rt.idx; // enqueue the bucket rt.idx
+                    std::swap(perm, strings[j]);
+                    std::swap(permch, charcache[j]);
+                }
+                strings[i] = perm;
+                i += bktsize[ permch ];
+            }
 
-                    if (rt.bktsize[rt.idx] == 0) continue;
-                    new SmallsortJob8(jobqueue, StringPtr(rt.str), rt.bktsize[rt.idx], depth + pop_front);
-                    rt.str += rt.bktsize[rt.idx];
+            str = strings + bktsize[0];
+            idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
+        }
+    };
+
+    virtual void run(JobQueue& jobqueue)
+    {
+        DBG(debug_jobs, "Process SmallsortJob8 " << this << " of size " << n);
+
+        string* strings = strptr.to_original(n);
+
+        if (n < g_inssort_threshold)
+            return inssort::inssort(strings,n,depth);
+
+        uint8_t* charcache = new uint8_t[n];
+
+        // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
+        size_t pop_front = 0;
+        std::vector<RadixStep8_CI> radixstack;
+        radixstack.push_back( RadixStep8_CI(strings,n,depth,charcache) );
+
+        while ( radixstack.size() > pop_front )
+        {
+            while ( radixstack.back().idx < 255 )
+            {
+                RadixStep8_CI& rs = radixstack.back();
+                ++rs.idx; // process the bucket rs.idx
+
+                if (rs.bktsize[rs.idx] == 0)
+                    continue;
+                else if (rs.bktsize[rs.idx] < g_inssort_threshold)
+                {
+                    inssort::inssort(rs.str, rs.bktsize[rs.idx], depth + radixstack.size());
+                    rs.str += rs.bktsize[ rs.idx ];
+                }
+                else
+                {
+                    rs.str += rs.bktsize[rs.idx];
+                    radixstack.push_back( RadixStep8_CI(rs.str - rs.bktsize[rs.idx],
+                                                        rs.bktsize[rs.idx],
+                                                        depth + radixstack.size(),
+                                                        charcache) );
+                    // cannot add to rs.str here, because rs may have invalidated
                 }
 
-                // shorten the current stack
-                ++pop_front;
-            }
-        }
-        radixstack.pop_back();
-    }
+                if (use_work_sharing && jobqueue.has_idle())
+                {
+                    // convert top level of stack into independent jobs
+                    DBG(debug_jobs, "Freeing top level of SmallsortJob8's radixsort stack");
 
-    delete [] charcache;
+                    RadixStep8_CI& rt = radixstack[pop_front];
+
+                    while ( rt.idx < 255 )
+                    {
+                        ++rt.idx; // enqueue the bucket rt.idx
+
+                        if (rt.bktsize[rt.idx] == 0) continue;
+                        EnqueueSmallsortJob8(jobqueue, StringPtr(rt.str), rt.bktsize[rt.idx], depth + pop_front);
+                        rt.str += rt.bktsize[rt.idx];
+                    }
+
+                    // shorten the current stack
+                    ++pop_front;
+                }
+            }
+            radixstack.pop_back();
+        }
+
+        delete [] charcache;
+    }
+};
+
+void EnqueueSmallsortJob8(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
+{
+    if (n < ((uint64_t)1 << 32))
+        new SmallsortJob8<uint32_t>(jobqueue, strptr, n, depth);
+    else
+        new SmallsortJob8<uint64_t>(jobqueue, strptr, n, depth);
 }
 
 // ****************************************************************************
 // *** SmallsortJob16 - sort 16-bit radix in-place with explicit stack-based recursion
 
+void EnqueueSmallsortJob16(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth);
+
+template <typename BktSizeType>
 struct SmallsortJob16 : public Job
 {
     StringPtr   strptr;
     size_t      n, depth;
+
+    typedef BktSizeType bktsize_type;
 
     SmallsortJob16(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
         : strptr(_strptr), n(_n), depth(_depth)
@@ -228,134 +240,136 @@ struct SmallsortJob16 : public Job
         jobqueue.enqueue(this);
     }
 
-    virtual void run(JobQueue& jobqueue);
-};
-
-struct RadixStep16_CI
-{
-    typedef uint16_t key_type;
-    static const size_t numbkts = key_traits<key_type>::radix;
-
-    typedef uint32_t bktsize_type;
-
-    string* str;
-    size_t idx;
-    bktsize_type bktsize[numbkts];
-
-    RadixStep16_CI(string* strings, size_t n, size_t depth, key_type* charcache)
+    struct RadixStep16_CI
     {
-        // fill character cache
-        for (size_t i=0; i < n; ++i)
-            charcache[i] = get_char<key_type>(strings[i], depth);
+        typedef uint16_t key_type;
+        static const size_t numbkts = key_traits<key_type>::radix;
 
-        // count character occurances
-        memset(bktsize, 0, sizeof(bktsize));
-        for (size_t i=0; i < n; ++i)
-            ++bktsize[ charcache[i] ];
+        string* str;
+        size_t idx;
+        bktsize_type bktsize[numbkts];
 
-        // inclusive prefix sum
-        bktsize_type bkt[numbkts];
-        bkt[0] = bktsize[0];
-        bktsize_type last_bkt_size = bktsize[0];
-        for (unsigned int i=1; i < numbkts; ++i) {
-            bkt[i] = bkt[i-1] + bktsize[i];
-            if (bktsize[i]) last_bkt_size = bktsize[i];
-        }
-
-        // premute in-place
-        for (size_t i=0, j; i < n - last_bkt_size; )
+        RadixStep16_CI(string* strings, size_t n, size_t depth, key_type* charcache)
         {
-            string perm = strings[i];
-            key_type permch = charcache[i];
-            while ( (j = --bkt[ permch ]) > i )
-            {
-                std::swap(perm, strings[j]);
-                std::swap(permch, charcache[j]);
-            }
-            strings[i] = perm;
-            i += bktsize[ permch ];
-        }
+            // fill character cache
+            for (size_t i=0; i < n; ++i)
+                charcache[i] = get_char<key_type>(strings[i], depth);
 
-        idx = 0x0100; // will increment to 0x0101 on first process, bkt 0 is not sorted further
-        str = strings + bkt[idx+1];
-    }
-};
+            // count character occurances
+            memset(bktsize, 0, sizeof(bktsize));
+            for (size_t i=0; i < n; ++i)
+                ++bktsize[ charcache[i] ];
 
-void SmallsortJob16::run(JobQueue& jobqueue)
-{
-    DBG(debug_jobs, "Process SmallsortJob16 " << this << " of size " << n);
-
-    ASSERT(n < (((uint64_t)1) << 32)); // must fit in uint32_t
-
-    string* strings = strptr.to_original(n);
-
-    if (n < g_inssort_threshold)
-        return inssort::inssort(strings,n,depth);
-
-    typedef uint16_t key_type;
-
-    static const size_t numbkts = key_traits<key_type>::radix;
-
-    key_type* charcache = new key_type[n];
-
-    // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
-    size_t pop_front = 0;
-    std::vector<RadixStep16_CI> radixstack;
-    radixstack.push_back( RadixStep16_CI(strings,n,depth,charcache) );
-
-    while ( radixstack.size() > pop_front )
-    {
-        while ( radixstack.back().idx < numbkts-1 )
-        {
-            RadixStep16_CI& rs = radixstack.back();
-            ++rs.idx; // process the bucket rs.idx
-
-            if ( (rs.idx & 0xFF) == 0 ) { // skip over finished 0x??00 buckets
-                rs.str += rs.bktsize[rs.idx];
-                ++rs.idx;
+            // inclusive prefix sum
+            bktsize_type bkt[numbkts];
+            bkt[0] = bktsize[0];
+            bktsize_type last_bkt_size = bktsize[0];
+            for (unsigned int i=1; i < numbkts; ++i) {
+                bkt[i] = bkt[i-1] + bktsize[i];
+                if (bktsize[i]) last_bkt_size = bktsize[i];
             }
 
-            if (rs.bktsize[rs.idx] == 0)
-                continue;
-            else if (rs.bktsize[rs.idx] < g_inssort_threshold)
+            // premute in-place
+            for (size_t i=0, j; i < n - last_bkt_size; )
             {
-                inssort::inssort(rs.str, rs.bktsize[rs.idx], depth + 2*radixstack.size());
-                rs.str += rs.bktsize[rs.idx];
-            }
-            else
-            {
-                rs.str += rs.bktsize[rs.idx];
-                radixstack.push_back( RadixStep16_CI(rs.str - rs.bktsize[rs.idx],
-                                                     rs.bktsize[rs.idx],
-                                                     depth + 2*radixstack.size(),
-                                                     charcache) );
-                // cannot add to rs.str here, because rs may have invalidated
-            }
-
-            if (use_work_sharing && jobqueue.has_idle())
-            {
-                // convert top level of stack into independent jobs
-                DBG(debug_jobs, "Freeing top level of SmallsortJob16's radixsort stack");
-
-                RadixStep16_CI& rt = radixstack[pop_front];
-
-                while ( rt.idx < numbkts-1 )
+                string perm = strings[i];
+                key_type permch = charcache[i];
+                while ( (j = --bkt[ permch ]) > i )
                 {
-                    ++rt.idx; // enqueue the bucket rt.idx
+                    std::swap(perm, strings[j]);
+                    std::swap(permch, charcache[j]);
+                }
+                strings[i] = perm;
+                i += bktsize[ permch ];
+            }
 
-                    if (rt.bktsize[rt.idx] == 0) continue;
-                    new SmallsortJob16(jobqueue, StringPtr(rt.str), rt.bktsize[rt.idx], depth + 2*pop_front);
-                    rt.str += rt.bktsize[rt.idx];
+            idx = 0x0100; // will increment to 0x0101 on first process, bkt 0 is not sorted further
+            str = strings + bkt[idx+1];
+        }
+    };
+
+    virtual void run(JobQueue& jobqueue)
+    {
+        DBG(debug_jobs, "Process SmallsortJob16 " << this << " of size " << n);
+
+        string* strings = strptr.to_original(n);
+
+        if (n < g_inssort_threshold)
+            return inssort::inssort(strings,n,depth);
+
+        typedef uint16_t key_type;
+
+        static const size_t numbkts = key_traits<key_type>::radix;
+
+        key_type* charcache = new key_type[n];
+
+        // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
+        size_t pop_front = 0;
+        std::vector<RadixStep16_CI> radixstack;
+        radixstack.push_back( RadixStep16_CI(strings,n,depth,charcache) );
+
+        while ( radixstack.size() > pop_front )
+        {
+            while ( radixstack.back().idx < numbkts-1 )
+            {
+                RadixStep16_CI& rs = radixstack.back();
+                ++rs.idx; // process the bucket rs.idx
+
+                if ( (rs.idx & 0xFF) == 0 ) { // skip over finished 0x??00 buckets
+                    rs.str += rs.bktsize[rs.idx];
+                    ++rs.idx;
                 }
 
-                // shorten the current stack
-                ++pop_front;
-            }
-        }
-        radixstack.pop_back();
-    }
+                if (rs.bktsize[rs.idx] == 0)
+                    continue;
+                else if (rs.bktsize[rs.idx] < g_inssort_threshold)
+                {
+                    inssort::inssort(rs.str, rs.bktsize[rs.idx], depth + 2*radixstack.size());
+                    rs.str += rs.bktsize[rs.idx];
+                }
+                else
+                {
+                    rs.str += rs.bktsize[rs.idx];
+                    radixstack.push_back( RadixStep16_CI(rs.str - rs.bktsize[rs.idx],
+                                                         rs.bktsize[rs.idx],
+                                                         depth + 2*radixstack.size(),
+                                                         charcache) );
+                    // cannot add to rs.str here, because rs may have invalidated
+                }
 
-    delete [] charcache;
+                if (use_work_sharing && jobqueue.has_idle())
+                {
+                    // convert top level of stack into independent jobs
+                    DBG(debug_jobs, "Freeing top level of SmallsortJob16's radixsort stack");
+
+                    RadixStep16_CI& rt = radixstack[pop_front];
+
+                    while ( rt.idx < numbkts-1 )
+                    {
+                        ++rt.idx; // enqueue the bucket rt.idx
+
+                        if (rt.bktsize[rt.idx] == 0) continue;
+                        EnqueueSmallsortJob16(jobqueue, StringPtr(rt.str), rt.bktsize[rt.idx], depth + 2*pop_front);
+                        rt.str += rt.bktsize[rt.idx];
+                    }
+
+                    // shorten the current stack
+                    ++pop_front;
+                }
+            }
+            radixstack.pop_back();
+        }
+
+        delete [] charcache;
+    }
+};
+
+void EnqueueSmallsortJob16(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
+{
+    if (n < ((uint64_t)1 << 32))
+        new SmallsortJob16<uint32_t>(jobqueue, strptr, n, depth);
+    else
+        new SmallsortJob16<uint64_t>(jobqueue, strptr, n, depth);
 }
 
 // ****************************************************************************
@@ -602,7 +616,7 @@ void RadixStepCE<uint16_t>::distribute_finished(JobQueue& jobqueue)
 
 void EnqueueSmall(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
 {
-    new SmallsortJob8(jobqueue, strptr, n, depth);
+    EnqueueSmallsortJob8(jobqueue, strptr, n, depth);
 }
 
 template <typename bigsort_key_type>
@@ -611,7 +625,7 @@ void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth
     if (n > g_sequential_threshold)
         new RadixStepCE<bigsort_key_type>(jobqueue, strptr, n, depth);
     else
-        new SmallsortJob8(jobqueue, strptr, n, depth);
+        EnqueueSmallsortJob8(jobqueue, strptr, n, depth);
 }
 
 static void parallel_radix_sort_8bit(string* strings, size_t n)

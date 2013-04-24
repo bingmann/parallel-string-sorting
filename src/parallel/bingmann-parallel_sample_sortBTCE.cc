@@ -462,12 +462,15 @@ struct ClassifyUnrollTree<13>
 // *** SampleSort non-recursive in-place sequential sample sort for small sorts
 
 template <template <size_t> class Classify>
+void EnqueueSmallsortJobBTCE(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth);
+
+template <template <size_t> class Classify, typename BktSizeType>
 struct SmallsortJobBTCE : public Job
 {
     StringPtr   strptr;
     size_t      n, depth;
 
-    typedef uint32_t bktsize_type;
+    typedef BktSizeType bktsize_type;
 
     SmallsortJobBTCE(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
         : strptr(_strptr), n(_n), depth(_depth)
@@ -579,8 +582,6 @@ struct SmallsortJobBTCE : public Job
     virtual void run(JobQueue& jobqueue)
     {
         DBG(debug_jobs, "Process SmallsortJobBTCE " << this << " of size " << n);
-
-        ASSERT(n < (((uint64_t)1) << 32)); // must fit in uint32_t
 
         bktcache = NULL;
         bktcache_size = 0;
@@ -713,7 +714,7 @@ struct SmallsortJobBTCE : public Job
                     else
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
-                    new SmallsortJobBTCE<Classify>( jobqueue, StringPtr(s.str), s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F) );
+                    EnqueueSmallsortJobBTCE<Classify>( jobqueue, StringPtr(s.str), s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F) );
                 }
                 s.str += s.bktsize[i];
             }
@@ -729,7 +730,7 @@ struct SmallsortJobBTCE : public Job
                 {
                     DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
 
-                    new SmallsortJobBTCE<Classify>( jobqueue, StringPtr(s.str), s.bktsize[i], s.depth + sizeof(key_type) );
+                    EnqueueSmallsortJobBTCE<Classify>( jobqueue, StringPtr(s.str), s.bktsize[i], s.depth + sizeof(key_type) );
                 }
                 s.str += s.bktsize[i];
             }
@@ -863,7 +864,7 @@ struct SmallsortJobBTCE : public Job
             ++rt.idx; // enqueue the bucket rt.idx
 
             if (rt.bktsize[rt.idx] == 0) continue;
-            new SmallsortJobBTCE<Classify>(jobqueue, StringPtr(rt.str), rt.bktsize[rt.idx], rs_depth + rs_pop_front);
+            EnqueueSmallsortJobBTCE<Classify>(jobqueue, StringPtr(rt.str), rt.bktsize[rt.idx], rs_depth + rs_pop_front);
             rt.str += rt.bktsize[rt.idx];
         }
 
@@ -1128,23 +1129,32 @@ struct SmallsortJobBTCE : public Job
 
         if (st.idx == 0 && st.num_lt != 0)
         {
-            new SmallsortJobBTCE(jobqueue, StringPtr(st.strings), st.num_lt, st.depth);
+            EnqueueSmallsortJobBTCE<Classify>(jobqueue, StringPtr(st.strings), st.num_lt, st.depth);
         }
         if (st.idx <= 1 && st.num_eq != 0 && st.eq_recurse)
         {
-            new SmallsortJobBTCE(jobqueue, StringPtr(st.strings + st.num_lt),
-                                st.num_eq, st.depth + sizeof(key_type));
+            EnqueueSmallsortJobBTCE<Classify>(jobqueue, StringPtr(st.strings + st.num_lt),
+                                             st.num_eq, st.depth + sizeof(key_type));
         }
         if (st.idx <= 2 && st.num_gt != 0)
         {
-            new SmallsortJobBTCE(jobqueue, StringPtr(st.strings + st.num_lt + st.num_eq),
-                                st.num_gt, st.depth);
+            EnqueueSmallsortJobBTCE<Classify>(jobqueue, StringPtr(st.strings + st.num_lt + st.num_eq),
+                                             st.num_gt, st.depth);
         }
 
         // shorten the current stack
         ++ms_pop_front;
     }
 };
+
+template <template <size_t> class Classify>
+void EnqueueSmallsortJobBTCE(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
+{
+    if (n < ((uint64_t)1 << 32))
+        new SmallsortJobBTCE<Classify,uint32_t>(jobqueue, strptr, n, depth);
+    else
+        new SmallsortJobBTCE<Classify,uint64_t>(jobqueue, strptr, n, depth);
+}
 
 // ****************************************************************************
 // *** SampleSortStep out-of-place parallel sample sort with separate Jobs
@@ -1407,7 +1417,7 @@ struct SampleSortStep
             new SampleSortStep(jobqueue, strptr, n, depth);
         }
         else {
-            new SmallsortJobBTCE<Classify>(jobqueue, strptr, n, depth);
+            EnqueueSmallsortJobBTCE<Classify>(jobqueue, strptr, n, depth);
         }
    }
 
