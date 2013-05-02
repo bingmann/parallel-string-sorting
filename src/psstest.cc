@@ -91,6 +91,8 @@ bool            gopt_some_threads = false; // argument --some-threads
 bool            gopt_no_check = false;     // argument --no-check
 bool            gopt_no_mlockall = false;  // argument --no-mlockall
 
+std::vector<size_t> gopt_threadlist;       // argument --thread-list
+
 StatsCache      g_statscache;
 
 // file name of statistics output
@@ -484,44 +486,63 @@ void Contestant_UCArray::run()
 
 void Contestant_UCArray_Parallel::run()
 {
-    int p = (gopt_threads ? 1 : omp_get_num_procs());
-
-    static const int somethreads16[] = { 2, 4, 6, 8, 12, 16, 0 };
-    static const int somethreads32[] = { 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 0 };
-    static const int somethreads48[] = { 2, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48, 0 };
-    static const int somethreads64[] = { 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64, 0 };
-
-    const int* somethreads = NULL;
-
-    if (gopt_some_threads)
+    if (gopt_threadlist.size())
     {
-        if (omp_get_num_procs() == 16) somethreads = somethreads16;
-        else if (omp_get_num_procs() == 32) somethreads = somethreads32;
-        else if (omp_get_num_procs() == 48) somethreads = somethreads48;
-        else if (omp_get_num_procs() == 64) somethreads = somethreads64;
-        else
-            gopt_all_threads = 1;
-    }
-
-    while (1)
-    {
-        for (size_t r = 0; r < gopt_repeats; ++r)
+        for (size_t pi = 0; pi < gopt_threadlist.size(); ++pi)
         {
-            pss_num_threads = p;
-            std::cout << "threads=" << p << std::endl;
-            g_statscache >> "threads" << p;
+            size_t p = gopt_threadlist[pi];
 
-            Contestant_UCArray::run_forked();
+            for (size_t r = 0; r < gopt_repeats; ++r)
+            {
+                pss_num_threads = p;
+                std::cout << "threads=" << p << std::endl;
+                g_statscache >> "threads" << p;
+
+                Contestant_UCArray::run_forked();
+            }
+        }
+    }
+    else
+    {
+        int p = (gopt_threads ? 1 : omp_get_num_procs());
+
+        static const int somethreads16[] = { 2, 4, 6, 8, 12, 16, 0 };
+        static const int somethreads32[] = { 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 0 };
+        static const int somethreads48[] = { 2, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48, 0 };
+        static const int somethreads64[] = { 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64, 0 };
+
+        const int* somethreads = NULL;
+
+        if (gopt_some_threads)
+        {
+            if (omp_get_num_procs() == 16) somethreads = somethreads16;
+            else if (omp_get_num_procs() == 32) somethreads = somethreads32;
+            else if (omp_get_num_procs() == 48) somethreads = somethreads48;
+            else if (omp_get_num_procs() == 64) somethreads = somethreads64;
+            else
+                gopt_all_threads = 1;
         }
 
-        if (p == omp_get_num_procs()) break;
+        while (1)
+        {
+            for (size_t r = 0; r < gopt_repeats; ++r)
+            {
+                pss_num_threads = p;
+                std::cout << "threads=" << p << std::endl;
+                g_statscache >> "threads" << p;
 
-        if (somethreads)
-            p = *somethreads++;
-        else if (!gopt_all_threads)
-            p = std::min( omp_get_num_procs(), 2 * p );
-        else
-            p = std::min( omp_get_num_procs(), p+1 );
+                Contestant_UCArray::run_forked();
+            }
+
+            if (p == omp_get_num_procs()) break;
+
+            if (somethreads)
+                p = *somethreads++;
+            else if (!gopt_all_threads)
+                p = std::min( omp_get_num_procs(), 2 * p );
+            else
+                p = std::min( omp_get_num_procs(), p+1 );
+        }
     }
 }
 
@@ -548,23 +569,24 @@ void print_usage(const char* prog)
 {
     std::cout << "Usage: " << prog << " [options] filename" << std::endl
               << "Options:" << std::endl
-              << "  -a, --algo <match>    Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
-              << "      --all-threads     Run linear thread increase test from 1 to max_processors." << std::endl
-              << "  -D, --datafork        Fork before running algorithm and load data within fork!" << std::endl
-              << "  -F, --fork            Fork before running algorithm, but load data before fork!" << std::endl
-              << "  -i, --input <path>    Write unsorted input strings to file, usually for checking." << std::endl
-              << "  -N, --no-check        Skip checking of sorted order and distinguishing prefix calculation." << std::endl
-              << "      --no-mlockall     Skip call of mlockall(). Use if locked memory is scarce." << std::endl
-              << "  -o, --output <path>   Write sorted strings to output file, terminate after first algorithm run." << std::endl
-              << "      --parallel        Run only parallelized algorithms." << std::endl
-              << "  -r, --repeat <num>    Repeat experiment a number of times and divide by repetition count." << std::endl
-              << "  -s, --size <size>     Limit the input size to this number of characters." << std::endl
-              << "  -S, --maxsize <size>  Run through powers of two for input size limit." << std::endl
-              << "      --sequential      Run only sequential algorithms." << std::endl
-              << "      --some-threads    Run specific selected thread counts from 1 to max_processors." << std::endl
-              << "      --suffix          Suffix sort the input file." << std::endl
-              << "  -T, --timeout <sec>   Abort algorithms after this timeout (default: disabled)." << std::endl
-              << "      --threads         Run tests with doubling number of threads from 1 to max_processors." << std::endl
+              << "  -a, --algo <match>     Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
+              << "      --all-threads      Run linear thread increase test from 1 to max_processors." << std::endl
+              << "  -D, --datafork         Fork before running algorithm and load data within fork!" << std::endl
+              << "  -F, --fork             Fork before running algorithm, but load data before fork!" << std::endl
+              << "  -i, --input <path>     Write unsorted input strings to file, usually for checking." << std::endl
+              << "  -N, --no-check         Skip checking of sorted order and distinguishing prefix calculation." << std::endl
+              << "      --no-mlockall      Skip call of mlockall(). Use if locked memory is scarce." << std::endl
+              << "  -o, --output <path>    Write sorted strings to output file, terminate after first algorithm run." << std::endl
+              << "      --parallel         Run only parallelized algorithms." << std::endl
+              << "  -r, --repeat <num>     Repeat experiment a number of times and divide by repetition count." << std::endl
+              << "  -s, --size <size>      Limit the input size to this number of characters." << std::endl
+              << "  -S, --maxsize <size>   Run through powers of two for input size limit." << std::endl
+              << "      --sequential       Run only sequential algorithms." << std::endl
+              << "      --some-threads     Run specific selected thread counts from 1 to max_processors." << std::endl
+              << "      --suffix           Suffix sort the input file." << std::endl
+              << "  -T, --timeout <sec>    Abort algorithms after this timeout (default: disabled)." << std::endl
+              << "      --threads          Run tests with doubling number of threads from 1 to max_processors." << std::endl
+              << "      --thread-list <#>  Run tests with number of threads in list (comma or space separated)." << std::endl
         ;
 }
 
@@ -588,7 +610,8 @@ int main(int argc, char* argv[])
         { "threads", no_argument,        0, 4 },
         { "all-threads", no_argument,    0, 5 },
         { "some-threads", no_argument,   0, 6 },
-        { "no-mlockall", no_argument,    0, 7 },
+        { "thread-list", required_argument, 0, 7 },
+        { "no-mlockall", no_argument,    0, 8 },
         { 0,0,0,0 },
     };
 
@@ -713,7 +736,19 @@ int main(int argc, char* argv[])
             std::cout << "Option --some-threads: running test with specifically selected thread counts." << std::endl;
             break;
 
-        case 7: // --no-mlockall
+        case 7: // --thread-list
+        {
+            char* endptr = optarg;
+            while ( *endptr ) {
+                size_t p = strtoul(endptr,&endptr,10);
+                if (!endptr) break;
+                gopt_threadlist.push_back(p);
+                std::cout << "Option --thread-list: added p = " << p << " to list of thread counts." << std::endl;
+                if (!*endptr++) break;
+            }
+            break;
+        }
+        case 8: // --no-mlockall
             gopt_no_mlockall = true;
             std::cout << "Option --no-mlockall: skipping mlockall() to lock memory." << std::endl;
             break;

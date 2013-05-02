@@ -726,7 +726,7 @@ struct BlockSourceQueueEqual
         std::vector<key_type> pivots;
         pivots.reserve( n / block_size + 1 );
 
-        string s;
+        string s = NULL;
         while( pivot_queue->try_pop(s) ) {
             pivots.push_back( get_char<key_type>(s, depth) );
         }

@@ -84,7 +84,7 @@ public:
     {
 #pragma omp parallel
         {
-            Job* job;
+            Job* job = NULL;
 
             while(1)
             {

@@ -28,6 +28,7 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <unistd.h>
 
 #include <assert.h>
 #include <omp.h>
