@@ -102,6 +102,7 @@ inline uint16_t get_char<uint16_t>(string str, size_t depth)
 template <>
 inline uint32_t get_char<uint32_t>(string str, size_t depth)
 {
+#if 0
     uint32_t v = 0;
     if (str[depth] == 0) return v;
     v |= (uint32_t(str[depth]) << 24); ++str;
@@ -111,6 +112,16 @@ inline uint32_t get_char<uint32_t>(string str, size_t depth)
     v |= (uint32_t(str[depth]) << 8); ++str;
     v |= (uint32_t(str[depth]) << 0);
     return v;
+#else
+    uint32_t v = __builtin_bswap32( *(uint32_t*)(str+depth) );
+    if ( (v & 0xFF000000LU) == 0 )
+        return 0;
+    else if (  (v & 0x00FF0000LU) == 0 )
+        return (v & 0xFFFF0000LU);
+    else if (  (v & 0x0000FF00LU) == 0 )
+        return (v & 0xFFFFFF00LU);
+    return v;
+#endif
 }
 
 template <>

@@ -9,6 +9,7 @@ set(SOURCES
   sequential/nilsson-adaptive.cc
   sequential/nilsson-forward8.cc
   sequential/nilsson-forward16.cc
+  sequential/bingmann-qsort.cc
   rantala/funnelsort.cc
   sinha-copy-burstsort/glue.cc
   parallel/akiba-parallel_string_radix_sort.cc
