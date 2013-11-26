@@ -30,7 +30,7 @@ int main()
 
     // allocate and clear linemark
     ull_type* linemark = malloc( (max_linemark+1) * sizeof(ull_type) );
-    memset(linemark, 0, sizeof(linemark));
+    memset(linemark, 0, (max_linemark+1) * sizeof(ull_type));
 
     ln = 0; /* line start */
     while ( (c = getc(stdin)) != EOF )
