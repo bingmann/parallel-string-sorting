@@ -75,7 +75,7 @@ public:
 
     inline void copy(const membuffer& b)
     {
-        if (m_ptr) delete m_ptr;
+        if (m_ptr) delete [] m_ptr;
         m_ptr = new Type[b.m_size];
         m_size = b.m_size;
         memcpy(m_ptr, b.m_ptr, b.m_size * sizeof(Type));
