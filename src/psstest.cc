@@ -141,6 +141,8 @@ const bool      gopt_use_shared_mmap = true;
 
 #include "eberle/sequential/eberle-lcp-losertree-mergesort.h"
 #include "eberle/sequential/eberle-lcp-mergesort.h"
+#include "eberle/sequential/eberle-mergesort.h"
+#include "eberle/sequential/eberle-losertree-mergesort.h"
 
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"
