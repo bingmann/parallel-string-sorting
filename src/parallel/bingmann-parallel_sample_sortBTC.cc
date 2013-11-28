@@ -796,7 +796,7 @@ struct SmallsortJobBTC : public Job
         if (n < g_inssort_threshold) {
             inssort::inssort(strptr.active(), n, depth);
             g_restsize -= n;
-            StringPtr(strptr).to_original(n);
+            strptr.to_original(n);
             return;
         }
 
@@ -1012,7 +1012,7 @@ struct SampleSortStep
     SampleSortStep(JobQueue& jobqueue, const StringPtr& _strptr, size_t _n, size_t _depth)
         : strptr(_strptr), n(_n), depth(_depth)
     {
-        const size_t sequential_threshold = std::max(g_inssort_threshold, g_restsize / g_threadnum);
+        const size_t sequential_threshold = std::max(g_smallsort_threshold, g_restsize / g_threadnum);
 
         parts = (n + sequential_threshold-1) / sequential_threshold;
         if (parts == 0) parts = 1;
@@ -1208,7 +1208,7 @@ struct SampleSortStep
 template <typename Classify>
 void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth)
 {
-    size_t sequential_threshold = std::max(g_inssort_threshold, g_restsize / g_threadnum);
+    size_t sequential_threshold = std::max(g_smallsort_threshold, g_restsize / g_threadnum);
 
     if (n > sequential_threshold) {
         new SampleSortStep<Classify>(jobqueue, strptr, n, depth);

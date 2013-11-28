@@ -292,12 +292,12 @@ public:
 
     /// return subarray pointer to n strings in original array, might copy from
     /// shadow before returning.
-    inline string* to_original(size_t n)
+    inline string* to_original(size_t n) const
     {
         if (m_flip) {
             assert(m_back);
             memcpy(m_front, m_back, n * sizeof(string));
-            m_flip = false;
+            //m_flip = false;
         }
         return m_front;
     }
