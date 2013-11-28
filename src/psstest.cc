@@ -139,6 +139,9 @@ const bool      gopt_use_shared_mmap = true;
 #include "sequential/bingmann-sample_sortBTCE.h"
 #include "sequential/bingmann-sample_sortRBTCE.h"
 
+#include "eberle/sequential/eberle-lcp-losertree-mergesort.h"
+#include "eberle/sequential/eberle-lcp-mergesort.h"
+
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"
 #include "rantala/tools/median.h"
