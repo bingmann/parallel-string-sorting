@@ -3,6 +3,7 @@
 include_directories("${PROJECT_SOURCE_DIR}/minitbb/")
 include_directories("${PROJECT_BINARY_DIR}/")
 include_directories("${GMP_INCLUDE_DIR}")
+include_directories("${NUMA_INCLUDE_DIR}")
 
 set(SOURCES
   psstest.cc
@@ -21,7 +22,7 @@ set(SOURCES
   parallel/shamsundar-lcp-merge-string-sort.cc
 )
 
-set(LIBS minitbb ${GMP_LIBRARIES})
+set(LIBS minitbb ${GMP_LIBRARIES} ${NUMA_LIBRARIES})
 
 if(WITH_MALLOC_COUNT)
 
