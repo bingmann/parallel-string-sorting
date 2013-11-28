@@ -238,14 +238,14 @@ inline int count_high_zero_bits<uint128_t>(const uint128_t& t)
 /// swapping of pointers.
 class StringPtr
 {
-public:
-
+private:
     /// strings (front) and temporary shadow (back) array
     string      *m_front, *m_back;
 
     /// true if back array is active
     bool        m_flip;
 
+public:
     /// constructor specifying all attributes
     inline StringPtr(string* front, string* back = NULL, bool flip = false)
         : m_front(front), m_back(back), m_flip(flip)
@@ -259,15 +259,28 @@ public:
     }
 
     /// return currently active array
-    inline string* active()
+    inline string* active() const
     {
         return (m_flip ? m_back : m_front);
     }
 
     /// return current shadow array
-    inline string* shadow()
+    inline string* shadow() const
     {
         return (m_flip ? m_front : m_back);
+    }
+
+    /// Advance (both) pointers by given offset
+    inline StringPtr& operator += (size_t offset)
+    {
+        m_front += offset, m_back += offset;
+        return *this;
+    }
+
+    /// Advance (both) pointers by given offset
+    inline StringPtr operator + (size_t offset) const
+    {
+        return StringPtr(m_front + offset, m_back + offset, m_flip);
     }
 
     /// construct a StringPtr object specifying a subarray with flipping to
