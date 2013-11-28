@@ -23,6 +23,7 @@
 #include <iostream>
 #include <assert.h>
 #include <omp.h>
+#include <numa.h>
 
 #include "src/config.h"
 
@@ -43,78 +44,80 @@ static const bool debug_queue = false;
 // ****************************************************************************
 // *** Job and JobQueue system with lock-free queue and OpenMP threads
 
-class Job
-{
+class Job {
 public:
-    virtual ~Job() {};
+	virtual ~Job() {
+	}
+	;
 
-    /// virtual function that is called by the JobQueue
-    virtual void run(class JobQueue& jobqueue) = 0;
+	/// virtual function that is called by the JobQueue
+	virtual void run(class JobQueue& jobqueue) = 0;
 };
 
-class JobQueue
-{
+class JobQueue {
 private:
 
-    /// lock-free data structure containing pointers to Job objects.
-    tbb::concurrent_queue<Job*>   m_queue;
+	/// lock-free data structure containing pointers to Job objects.
+	tbb::concurrent_queue<Job*> m_queue;
 
-    /// number of threads idle
-    std::atomic<int>            m_idle_count;
+	/// number of threads idle
+	std::atomic<int> m_idle_count;
 
 public:
 
-    JobQueue()
-        : m_queue(),
-          m_idle_count( 0 )
-    {
-    }
+	JobQueue() :
+			m_queue(), m_idle_count(0) {
+	}
 
-    bool has_idle() const
-    {
-        return (m_idle_count != 0);
-    }
+	bool has_idle() const {
+		return (m_idle_count != 0);
+	}
 
-    void enqueue(class Job* job)
-    {
-        m_queue.push(job);
-    }
+	void enqueue(class Job* job) {
+		m_queue.push(job);
+	}
 
-    void loop()
-    {
+	inline void executeThreadWork() {
+		Job* job = NULL;
+
+		while (1) {
+			if (m_queue.try_pop(job)) {
+				RUNJOB: job->run(*this);
+				delete job;
+			} else {
+				DBG(debug_queue, "Queue is empty");
+				++m_idle_count;
+
+				while (m_idle_count != omp_get_num_threads()) {
+					DBG(debug_queue,
+							"Idle thread - m_idle_count: " << m_idle_count);
+					if (m_queue.try_pop(job)) {
+						--m_idle_count;
+						goto RUNJOB;
+					}
+				}
+
+				assert(m_idle_count == omp_get_num_threads());
+				break;
+			}
+		}
+	}
+
+	void loop() {
 #pragma omp parallel
-        {
-            Job* job = NULL;
+		{
+			executeThreadWork();
+		} // end omp parallel
+	}
 
-            while(1)
-            {
-                if (m_queue.try_pop(job))
-                {
-                RUNJOB:
-                    job->run(*this);
-                    delete job;
-                }
-                else
-                {
-                    DBG(debug_queue, "Queue is empty");
-                    ++m_idle_count;
+	void numaLoop(int numaNode, int numberOfThreads) {
+#pragma omp parallel num_threads(numberOfThreads)
+		{
+			numa_run_on_node(numaNode);
 
-                    while (m_idle_count != omp_get_num_threads())
-                    {
-                        DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
-                        if (m_queue.try_pop(job))
-                        {
-                            --m_idle_count;
-                            goto RUNJOB;
-                        }
-                    }
-
-                    assert(m_idle_count == omp_get_num_threads());
-                    break;
-                }
-            }
-        } // end omp parallel
-    }
+			executeThreadWork();
+		} // end omp parallel
+	}
 };
 
 } // namespace jobqueue
