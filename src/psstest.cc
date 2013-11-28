@@ -139,6 +139,7 @@ const bool      gopt_use_shared_mmap = true;
 #include "sequential/bingmann-sample_sortBTCE.h"
 #include "sequential/bingmann-sample_sortRBTCE.h"
 
+#include "eberle/parallel/eberle-parallel-lcp-loosertree-mergesort.h"
 #include "eberle/sequential/eberle-lcp-losertree-mergesort.h"
 #include "eberle/sequential/eberle-lcp-mergesort.h"
 #include "eberle/sequential/eberle-mergesort.h"
