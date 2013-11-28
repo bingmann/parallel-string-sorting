@@ -22,17 +22,77 @@
 
 namespace input {
 
+/// Returns true for a valid memory type
+bool check_memory_type(const std::string& memtype)
+{
+    if (memtype == "malloc") return true;
+    if (memtype == "mmap") return true;
+    if (memtype == "interleaved") return true;
+    if (memtype == "node0") return true;
+    if (memtype == "segment") return true;
+    if (memtype == "mmap_interleaved") return true;
+    if (memtype == "mmap_node0") return true;
+    if (memtype == "mmap_segment") return true;
+
+    std::cout << "Following --memory types are available:" << std::endl
+              << "  malloc        use plain malloc() call (default)" << std::endl
+              << "  mmap          use mmap() to allocate private memory" << std::endl
+              << "  interleaved   use libnuma to interleave onto nodes" << std::endl
+              << "  node0         pin memory to numa node 0" << std::endl
+              << "  segment       segment characters equally onto all numa nodes" << std::endl
+              << "  mmap_{interleaved,node0,segment} combination of mmap and numa allocation" << std::endl
+        ;
+
+    return false;
+}
+
+void do_numa_segment(char* buff, size_t buffsize)
+{
+    int numnodes = numa_num_configured_nodes();
+    size_t segsize = (buffsize + numnodes-1) / numnodes;
+
+    std::cout << "Segmenting string characters onto " << numnodes << " NUMA nodes, "
+              << segsize << " characters each." << std::endl;
+
+    int pagesize = sysconf(_SC_PAGE_SIZE);
+
+    segsize += pagesize - (segsize % pagesize);
+    assert(segsize % pagesize == 0);
+
+    for (int n = 0; n < numnodes; ++n)
+    {
+        char* p = buff + n * segsize;
+
+        // round p down to pagesize
+        p -= (uintptr_t)p % pagesize;
+
+        // segsize need not be page aligned
+        numa_tonode_memory(p, segsize, n);
+    }
+}
+
 /// Free previous data file
 void free_stringdata()
 {
     if (!g_string_databuff) return;
 
-    if (gopt_use_shared_mmap) {
+    if (gopt_memory_type == "mmap" ||
+        gopt_memory_type == "mmap_interleaved" ||
+        gopt_memory_type == "mmap_node0" ||
+        gopt_memory_type == "mmap_segment")
+    {
         if (munmap(g_string_databuff, g_string_buffsize)) {
             std::cout << "Error unmapping string data memory: " << strerror(errno) << std::endl;
         }
     }
-    else {
+    else if (gopt_memory_type == "interleaved" ||
+             gopt_memory_type == "node0" ||
+             gopt_memory_type == "segment")
+    {
+        numa_free(g_string_databuff, g_string_buffsize);
+    }
+    else // use plain malloc()/free()
+    {
         free(g_string_databuff);
     }
 
@@ -50,14 +110,39 @@ char* allocate_stringdata(size_t size, const std::string& path)
     std::cout << "Allocating " << size << " bytes in RAM, reading " << path << std::endl;
 
     char* stringdata;
-    if (gopt_use_shared_mmap) {
+    if (gopt_memory_type == "mmap" ||
+        gopt_memory_type == "mmap_interleaved" ||
+        gopt_memory_type == "mmap_node0" ||
+        gopt_memory_type == "mmap_segment")
+    {
         stringdata = (char*)mmap(NULL, g_string_buffsize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
         if (stringdata == MAP_FAILED) {
             std::cout << "Error allocating memory: " << strerror(errno) << std::endl;
             return NULL;
         }
+
+        if (gopt_memory_type == "mmap_interleaved")
+            numa_interleave_memory(stringdata, g_string_buffsize, numa_all_cpus_ptr);
+        if (gopt_memory_type == "mmap_node0")
+            numa_tonode_memory(stringdata, g_string_buffsize, 0);
+        if (gopt_memory_type == "mmap_segment")
+            do_numa_segment(stringdata, g_string_buffsize);
     }
-    else {
+    else if (gopt_memory_type == "interleaved")
+    {
+        stringdata = (char*)numa_alloc_interleaved(g_string_buffsize);
+    }
+    else if (gopt_memory_type == "node0")
+    {
+        stringdata = (char*)numa_alloc_onnode(g_string_buffsize, 0);
+    }
+    else if (gopt_memory_type == "segment")
+    {
+        stringdata = (char*)numa_alloc(g_string_buffsize);
+        do_numa_segment(stringdata, g_string_buffsize);
+    }
+    else // use plain malloc()/free()
+    {
         stringdata = (char*)malloc(g_string_buffsize);
     }
 
@@ -77,7 +162,9 @@ void protect_stringdata()
 {
     if (!g_string_databuff) return;
 
-    if (gopt_use_shared_mmap) {
+    if (gopt_memory_type == "mmap")
+    {
+        // protect inherited mmap() area from writes by the algorithms.
         if (mprotect(g_string_databuff, g_string_buffsize, PROT_READ)) {
             std::cout << "Error protecting string data memory: " << strerror(errno) << std::endl;
         }
@@ -180,7 +267,7 @@ bool load_plain(const std::string& path)
     // add more termination
     for (size_t i = size; i < size+9; ++i)
         stringdata[i] = 0;
-  
+
     fclose(file);
 
     g_dataname = strip_datapath(path);
@@ -237,7 +324,7 @@ bool load_compressed(const std::string& path)
     {
         close(pipefd[0]); // close read end
         dup2(pipefd[1], STDOUT_FILENO); // replace stdout with pipe
-        
+
         execlp(decompressor, decompressor, "-dc", path.c_str(), NULL);
 
         std::cout << "Pipe execution failed: " << strerror(errno) << std::endl;
@@ -288,7 +375,7 @@ bool load_compressed(const std::string& path)
 
     // force terminatation of last string
     stringdata[ size-1 ] = 0;
-  
+
     // add more termination
     for (size_t i = size; i < size+9; ++i)
         stringdata[i] = 0;

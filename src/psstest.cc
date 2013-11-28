@@ -109,7 +109,7 @@ bool            gopt_parallel_only = false; // argument --parallel
 
 const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 
-const bool      gopt_use_shared_mmap = true;
+std::string     gopt_memory_type; // argument -M, --memory, see tools/input.h
 
 // *** Tools and Algorithms
 
@@ -578,6 +578,7 @@ void print_usage(const char* prog)
               << "  -D, --datafork         Fork before running algorithm and load data within fork!" << std::endl
               << "  -F, --fork             Fork before running algorithm, but load data before fork!" << std::endl
               << "  -i, --input <path>     Write unsorted input strings to file, usually for checking." << std::endl
+              << "  -M, --memory <type>    Load string data into <type> memory, see -M list for details." << std::endl
               << "  -N, --no-check         Skip checking of sorted order and distinguishing prefix calculation." << std::endl
               << "      --no-mlockall      Skip call of mlockall(). Use if locked memory is scarce." << std::endl
               << "  -o, --output <path>    Write sorted strings to output file, terminate after first algorithm run." << std::endl
@@ -602,6 +603,7 @@ int main(int argc, char* argv[])
         { "fork",    no_argument,        0, 'F' },
         { "datafork", no_argument,       0, 'D' },
         { "input",   required_argument,  0, 'i' },
+        { "memory",  required_argument,  0, 'M' },
         { "no-check", no_argument,       0, 'N' },
         { "output",  required_argument,  0, 'o' },
         { "repeat",  required_argument,  0, 'r' },
@@ -639,7 +641,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:r:o:i:T:DFN", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:r:o:i:T:DFNM:", longopts, &index);
 
         if (argi < 0) break;
 
@@ -672,6 +674,13 @@ int main(int argc, char* argv[])
         case 'i':
             gopt_inputwrite = optarg;
             std::cout << "Option -i: will write input strings to \"" << gopt_inputwrite << "\"" << std::endl;
+            break;
+
+        case 'M':
+            gopt_memory_type = optarg;
+            if (!input::check_memory_type(gopt_memory_type))
+                return 0;
+            std::cout << "Option -M: loading input strings into \"" << gopt_memory_type << "\" memory" << std::endl;
             break;
 
         case 'N':
@@ -776,6 +785,8 @@ int main(int argc, char* argv[])
 
     if (gopt_inputsize_maxlimit < gopt_inputsize_minlimit)
         gopt_inputsize_maxlimit = gopt_inputsize_minlimit;
+
+    numa_set_strict(1);
 
     for (; optind < argc; ++optind)
     {
