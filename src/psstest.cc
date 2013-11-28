@@ -45,6 +45,7 @@
 #include <omp.h>
 #include <getopt.h>
 #include <gmpxx.h>
+#include <numa.h>
 
 #include <boost/static_assert.hpp>
 #include <boost/array.hpp>

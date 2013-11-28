@@ -44,13 +44,29 @@ check_include_file_cxx(cstdatomic HAVE_CSTDATOMIC_H)
 # Find GMP libraries and header
 
 find_path(GMP_INCLUDE_DIR NAMES gmpxx.h)
-find_library(GMP_LIBRARIES NAMES gmp libgmp)
-find_library(GMPXX_LIBRARIES NAMES gmpxx libgmpxx)
+find_library(GMP_LIBRARIES NAMES gmp gmp)
+find_library(GMPXX_LIBRARIES NAMES gmpxx gmpxx)
+if(NOT GMP_LIBRARIES)
+  message(FATAL_ERROR "gmpxx library not found!")
+endif()
+
 message(STATUS "GMP library: " ${GMP_LIBRARIES} " " ${GMPXX_LIBRARIES})
 set(GMP_LIBRARIES ${GMPXX_LIBRARIES} ${GMP_LIBRARIES})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GMP DEFAULT_MSG GMP_INCLUDE_DIR GMP_LIBRARIES)
+
+# check for libnuma
+
+find_path(NUMA_INCLUDE_DIR NAMES numa.h)
+find_library(NUMA_LIBRARIES NAMES numa_available numa)
+if(NOT NUMA_LIBRARIES)
+  message(FATAL_ERROR "libnuma library not found!")
+endif()
+message(STATUS "libnuma library: " ${NUMA_LIBRARIES})
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(NUMA DEFAULT_MSG NUMA_INCLUDE_DIR NUMA_LIBRARIES)
 
 # build subset of Intel TBB
 add_subdirectory(minitbb)
