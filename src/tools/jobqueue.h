@@ -79,10 +79,17 @@ private:
     /// number of threads idle
     std::atomic<int> m_idle_count;
 
+    //! SizeLogger or a dummy class
+    //typedef SizeLoggerLocking logger_type;
+    typedef SizeLoggerDummy logger_type;
+
+    logger_type m_logger;
+
 public:
 
     JobQueueT()
-        : m_queue(), m_idle_count(0)
+        : m_queue(), m_idle_count(0),
+          m_logger("jobqueue")
     {
     }
 
@@ -94,6 +101,7 @@ public:
     void enqueue(job_type* job)
     {
         m_queue.push(job);
+        m_logger << m_queue.unsafe_size();
     }
 
     inline void executeThreadWork(cookie_type& cookie)
@@ -104,6 +112,8 @@ public:
         {
             if (m_queue.try_pop(job))
             {
+                m_logger << m_queue.unsafe_size();
+
                 job->run(cookie);
                 delete job;
             }
@@ -119,6 +129,8 @@ public:
                     {
                         // got a new job -> not idle anymore
                         --m_idle_count;
+
+                        m_logger << m_queue.unsafe_size();
 
                         job->run(cookie);
                         delete job;

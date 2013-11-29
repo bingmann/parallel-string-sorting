@@ -4,7 +4,7 @@
  * Class to output statistics in a flexible text file as key=value pairs.
  *
  ******************************************************************************
- * Copyright (C) 2012 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -179,52 +179,74 @@ public:
     }
 };
 
+/**
+ * Collect statistics of a measured size over a program run. This class is used
+ * to output averaged values if the size changes very frequently, as often in
+ * working queues.
+ */
 class SizeLogger
 {
 private:
 
-    /// log output file
+    //! log output file
     std::ofstream       m_logfile;
 
-    /// begin timestamp of current averaging
+    //! begin timestamp of current averaging
     double              m_begintime;
 
-    /// end timestamp of current averaging
+    //! end timestamp of current averaging
     double              m_endtime;
 
-    /// count of current averaging
+    //! count of current averaging
     double              m_avgcount;
 
-    /// sum of current averaging
+    //! sum of current averaging
     double              m_avgsum;
 
-    /// timestamp function
+    //! maximum duration between two outputted values
+    double              m_max_interval;
+
+    //! maximum number of values over which an output averages
+    double              m_max_count;
+
+    //! timestamp function
     static inline double timestamp() {
         return omp_get_wtime();
     }
 
+    //! output average value
+    inline void output()
+    {
+        m_logfile << std::setprecision(16) << ((m_begintime + m_endtime) / 2.0) << " "
+                  << std::setprecision(16) << (m_avgsum / m_avgcount) << " " << m_avgcount << "\n";
+    }
+
 public:
 
-    SizeLogger(const char* logname)
+    SizeLogger(const char* logname, double max_interval = 0.01, double max_count = 1000)
         : m_logfile(logname, std::ios::app),
-          m_begintime(0)
+          m_begintime(0),
+          m_max_interval(max_interval),
+          m_max_count(max_count)
     {
     }
 
-    SizeLogger& operator<< (unsigned long value)
+    //! Put a value into the logger
+    SizeLogger& operator << (unsigned long value)
     {
         double thistime = timestamp();
 
-        if (m_begintime == 0)
+        if (m_begintime == 0) // first value
         {
             m_begintime = m_endtime = thistime;
             m_avgcount = 1;
             m_avgsum = value;
         }
-        else if (m_begintime - thistime > 0.01 || m_avgcount >= 1000)
+        else if (m_begintime - thistime > m_max_interval ||
+                 m_avgcount >= m_max_count)
         {
-            m_logfile << std::setprecision(16) << ((m_begintime + m_endtime) / 2.0) << " "
-                      << std::setprecision(16) << (m_avgsum / m_avgcount) << " " << m_avgcount << "\n";
+            // output an average value
+            output();
 
             m_begintime = m_endtime = thistime;
             m_avgcount = 1;
@@ -232,6 +254,7 @@ public:
         }
         else
         {
+            // add to running average
             m_endtime = thistime;
             m_avgcount++;
             m_avgsum += value;
@@ -243,10 +266,40 @@ public:
     ~SizeLogger()
     {
         if (m_begintime != 0)
-        {
-            m_logfile << std::setprecision(16) << ((m_begintime + m_endtime) / 2.0) << " "
-                      << std::setprecision(16) << (m_avgsum / m_avgcount) << " " << m_avgcount << "\n";
-        }
+            output();
+    }
+};
+
+//! Thread-safe facade class for SizeLogger
+class SizeLoggerLocking : protected SizeLogger
+{
+public:
+
+    SizeLoggerLocking(const char* logname, double max_interval = 0.01, double max_count = 1000)
+        : SizeLogger(logname, max_interval, max_count)
+    {
+    }
+
+    SizeLoggerLocking& operator << (unsigned long value)
+    {
+#pragma omp critical
+        SizeLogger::operator << (value);
+        return *this;
+    }
+};
+
+//! Class to replace SizeLogger with no-ops
+class SizeLoggerDummy
+{
+public:
+
+    SizeLoggerDummy(const char* /* logname */, double /* max_interval */ = 0, double /* max_count */ = 0)
+    {
+    }
+
+    SizeLoggerDummy& operator<< (unsigned long /* value */)
+    {
+        return *this;
     }
 };
 
