@@ -91,7 +91,8 @@ public:
         return (m_idle_count != 0);
     }
 
-    void enqueue(job_type* job) {
+    void enqueue(job_type* job)
+    {
         m_queue.push(job);
     }
 
@@ -99,11 +100,10 @@ public:
     {
         job_type* job = NULL;
 
-        while (1)
+        while (m_idle_count != omp_get_num_threads())
         {
             if (m_queue.try_pop(job))
             {
-            RUNJOB:
                 job->run(cookie);
                 delete job;
             }
@@ -117,13 +117,14 @@ public:
                     DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
                     if (m_queue.try_pop(job))
                     {
+                        // got a new job -> not idle anymore
                         --m_idle_count;
-                        goto RUNJOB;
+
+                        job->run(cookie);
+                        delete job;
+                        break;
                     }
                 }
-
-                assert(m_idle_count == omp_get_num_threads());
-                break;
             }
         }
     }
@@ -134,6 +135,8 @@ public:
         {
             executeThreadWork(cookie);
         } // end omp parallel
+
+        assert(m_queue.unsafe_size() == 0);
     }
 
     void numaLoop(int numaNode, int numberOfThreads, cookie_type& cookie)
@@ -145,6 +148,8 @@ public:
 
             executeThreadWork(cookie);
         } // end omp parallel
+
+        assert(m_queue.unsafe_size() == 0);
     }
 };
 
