@@ -1242,18 +1242,19 @@ void Enqueue(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
     }
 }
 
-void parallel_sample_sortBTC(string* strings, size_t n)
+template <typename Classify>
+void parallel_sample_sortBTC_base(string* strings, size_t n, size_t depth)
 {
     Context ctx;
     ctx.totalsize = ctx.restsize = n;
     ctx.threadnum = omp_get_max_threads();
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    SampleSortStep<ClassifySimple>::put_stats();
+    SampleSortStep<Classify>::put_stats();
 
     string* shadow = new string[n]; // allocate shadow pointer array
 
-    Enqueue<ClassifySimple>(ctx, StringPtr(strings, shadow), n, 0);
+    Enqueue<Classify>(ctx, StringPtr(strings, shadow), n, depth);
     ctx.jobqueue.loop(ctx);
 
     delete [] shadow;
@@ -1263,6 +1264,11 @@ void parallel_sample_sortBTC(string* strings, size_t n)
     g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
                  >> "steps_base_sort" << ctx.bs_steps;
+}
+
+void parallel_sample_sortBTC(string* strings, size_t n)
+{
+    parallel_sample_sortBTC_base<ClassifySimple>(strings, n, 0);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTC,
@@ -1271,25 +1277,7 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTC,
 
 void parallel_sample_sortBTCU1(string* strings, size_t n)
 {
-    Context ctx;
-    ctx.totalsize = ctx.restsize = n;
-    ctx.threadnum = omp_get_max_threads();
-    ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
-
-    SampleSortStep<ClassifyUnrollTree>::put_stats();
-
-    string* shadow = new string[n]; // allocate shadow pointer array
-
-    Enqueue<ClassifyUnrollTree>(ctx, StringPtr(strings, shadow), n, 0);
-    ctx.jobqueue.loop(ctx);
-
-    delete [] shadow;
-
-    assert(ctx.restsize == 0);
-
-    g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
-                 >> "steps_seq_sample_sort" << ctx.seq_ss_steps
-                 >> "steps_base_sort" << ctx.bs_steps;
+    parallel_sample_sortBTC_base<ClassifyUnrollTree>(strings, n, 0);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU1,
@@ -1298,25 +1286,7 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU1,
 
 void parallel_sample_sortBTCU2(string* strings, size_t n)
 {
-    Context ctx;
-    ctx.totalsize = ctx.restsize = n;
-    ctx.threadnum = omp_get_max_threads();
-    ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
-
-    SampleSortStep<ClassifyUnrollBoth>::put_stats();
-
-    string* shadow = new string[n]; // allocate shadow pointer array
-
-    Enqueue<ClassifyUnrollBoth>(ctx, StringPtr(strings, shadow), n, 0);
-    ctx.jobqueue.loop(ctx);
-
-    delete [] shadow;
-
-    assert(ctx.restsize == 0);
-
-    g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
-                 >> "steps_seq_sample_sort" << ctx.seq_ss_steps
-                 >> "steps_base_sort" << ctx.bs_steps;
+    parallel_sample_sortBTC_base<ClassifyUnrollBoth>(strings, n, 0);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU2,
