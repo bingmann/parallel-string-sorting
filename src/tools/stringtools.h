@@ -20,6 +20,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef STRINGTOOLS_H_
+#define STRINGTOOLS_H_
+
+#include <assert.h>
+
 namespace stringtools {
 
 /// zero-terminated character strings
@@ -304,3 +309,5 @@ public:
 };
 
 } // namespace stringtools
+
+#endif // STRINGTOOLS_H_

@@ -10,7 +10,10 @@
 #include "../utils/utility-functions.h"
 #include "../utils/lcp-string-losertree.h"
 #include "../sequential/eberle-lcp-mergesort.h"
+
 #include "../../tools/jobqueue.h"
+
+#include "../../parallel/bingmann-parallel_sample_sortBTCE.h"
 
 #define PARALLEL_LCP_MERGE_DEBUG_MINIMA_DETECTION
 //#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
@@ -20,11 +23,13 @@ namespace eberle_parallel_mergesort_lcp_loosertree {
 
 using namespace std;
 
+using namespace types;
+using namespace eberle_lcp_utils;
+using namespace eberle_mergesort_lcp;
+
 using namespace jobqueue;
 
-using namespace eberle_mergesort_lcp;
-using namespace eberle_lcp_utils;
-using namespace types;
+using namespace bingmann_parallel_sample_sortBTCE;
 
 //typedefs
 typedef unsigned char* string;
@@ -320,23 +325,43 @@ void parallelMerge(AS* input, AS* output,
 	jobQueue.loop();
 }
 
+static inline unsigned calculateLcp(string s1, string s2) {
+	unsigned lcp = 0;
+	while (*s1 != '\0' && *s1 == *s2)
+		s1++, s2++, lcp++;
+
+	return lcp;
+}
+
 void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
-//allocate memory for annotated strings
+	const unsigned K = 4;
+
+	int numNumaNodes = numa_num_configured_nodes();
+	int numThreadsPerPart = numa_num_configured_cpus() / K;
+
+	//allocate memory for annotated strings
 	AS *tmp = static_cast<AS *>(malloc(n * sizeof(AS)));
 	AS *output = static_cast<AS *>(malloc(n * sizeof(AS)));
 
-	const unsigned K = 4;
-
-//create ranges of the parts
-	boost::array<pair<size_t, size_t>, K> ranges;
+	boost::array<std::pair<size_t, size_t>, K> ranges;
 	eberle_utils::calculateRanges<K>(ranges, n);
 
-// execute mergesorts for parts in parallel
 //#pragma omp parallel for
-	for (unsigned i = 0; i < K; i++) {
-		const size_t offset = ranges[i].first;
-		eberle_lcp_mergesort(strings + offset, output + offset, tmp + offset,
-				ranges[i].second);
+	for (unsigned k = 0; k < K; k++) {
+		size_t start = ranges[k].first;
+		size_t length = ranges[k].second;
+
+		parallel_sample_sortBTCEU_numa(strings + start, length,
+				k % numNumaNodes, numThreadsPerPart);
+
+		//calculate lcps
+		size_t end = start + length;
+		tmp[start].text = strings[start];
+		tmp[start].lcp = 0;
+		for (size_t pos = start + 1; pos < end; pos++) {
+			tmp[pos].text = strings[pos];
+			tmp[pos].lcp = calculateLcp(strings[pos - 1], strings[pos]);
+		}
 	}
 
 	parallelMerge<K>(tmp, output, ranges);

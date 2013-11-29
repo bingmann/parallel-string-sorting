@@ -29,6 +29,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "bingmann-parallel_sample_sortBTCE.h"
+
 #include "../tools/debug.h"
 #include "../tools/lcgrandom.h"
 #include "../tools/contest.h"
@@ -1336,58 +1338,67 @@ void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t n, size_t depth
     }
 }
 
-void parallel_sample_sortBTCE(string* strings, size_t n)
-{
-    g_totalsize = g_restsize = n;
-    g_threadnum = omp_get_max_threads();
-    g_para_ss_steps = g_seq_ss_steps = g_bs_steps = 0;
+template<template<size_t> class Classify>
+inline void parallel_sample_sortBTCE_generic(string * strings, size_t n) {
+	g_totalsize = g_restsize = n;
+	g_threadnum = omp_get_max_threads();
+	g_para_ss_steps = g_seq_ss_steps = g_bs_steps = 0;
 
-    SampleSortStep<ClassifySimple>::put_stats();
+	SampleSortStep<Classify>::put_stats();
 
-    string* shadow = new string[n]; // allocate shadow pointer array
+	string* shadow = new string[n]; // allocate shadow pointer array
 
-    JobQueue jobqueue;
-    Enqueue<ClassifySimple>(jobqueue, StringPtr(strings, shadow), n, 0);
-    jobqueue.loop();
+	JobQueue jobqueue;
+	Enqueue<Classify>(jobqueue, StringPtr(strings, shadow), n, 0);
+	jobqueue.loop();
 
-    delete [] shadow;
+	delete[] shadow;
 
-    assert(g_restsize == 0);
+	assert(g_restsize == 0);
 
-    g_statscache >> "steps_para_sample_sort" << g_para_ss_steps
-                 >> "steps_seq_sample_sort" << g_seq_ss_steps
-                 >> "steps_base_sort" << g_bs_steps;
+	g_statscache >> "steps_para_sample_sort" << g_para_ss_steps
+			     >> "steps_seq_sample_sort"	 << g_seq_ss_steps
+			     >> "steps_base_sort"  		 << g_bs_steps;
+}
+
+void parallel_sample_sortBTCEU_numa(string * strings, size_t n, int numaNode,
+		int numberOfThreads) {
+	g_totalsize = g_restsize = n;
+	g_threadnum = numberOfThreads;
+	g_para_ss_steps = g_seq_ss_steps = g_bs_steps = 0;
+
+	SampleSortStep<ClassifyUnrollTree>::put_stats();
+
+	string* shadow = new string[n]; // allocate shadow pointer array
+
+	JobQueue jobqueue;
+	Enqueue<ClassifyUnrollTree>(jobqueue, StringPtr(strings, shadow), n, 0);
+	jobqueue.numaLoop(numaNode, numberOfThreads);
+
+	delete[] shadow;
+
+	assert(g_restsize == 0);
+
+	g_statscache >> "steps_para_sample_sort" << g_para_ss_steps
+			     >> "steps_seq_sample_sort"  << g_seq_ss_steps
+			     >> "steps_base_sort"		 << g_bs_steps;
+}
+
+void parallel_sample_sortBTCE(string* strings, size_t n) {
+	parallel_sample_sortBTCE_generic<ClassifySimple>(strings, n);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCE,
-                             "bingmann/parallel_sample_sortBTCE",
-                             "bingmann/parallel_sample_sortBTCE: binary tree, equality, bktcache")
+		"bingmann/parallel_sample_sortBTCE",
+		"bingmann/parallel_sample_sortBTCE: binary tree, equality, bktcache")
 
-void parallel_sample_sortBTCEU1(string* strings, size_t n)
-{
-    g_totalsize = g_restsize = n;
-    g_threadnum = omp_get_max_threads();
-    g_para_ss_steps = g_seq_ss_steps = g_bs_steps = 0;
-
-    SampleSortStep<ClassifyUnrollTree>::put_stats();
-
-    string* shadow = new string[n]; // allocate shadow pointer array
-
-    JobQueue jobqueue;
-    Enqueue<ClassifyUnrollTree>(jobqueue, StringPtr(strings, shadow), n, 0);
-    jobqueue.loop();
-
-    delete [] shadow;
-
-    assert(g_restsize == 0);
-
-    g_statscache >> "steps_para_sample_sort" << g_para_ss_steps
-                 >> "steps_seq_sample_sort" << g_seq_ss_steps
-                 >> "steps_base_sort" << g_bs_steps;
+void parallel_sample_sortBTCEU1(string* strings, size_t n) {
+	parallel_sample_sortBTCE_generic<ClassifyUnrollTree>(strings, n);
 }
 
+
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCEU1,
-                             "bingmann/parallel_sample_sortBTCEU1",
-                             "bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree")
+        "bingmann/parallel_sample_sortBTCEU1",
+        "bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree")
 
 } // namespace bingmann_parallel_sample_sortBTCE

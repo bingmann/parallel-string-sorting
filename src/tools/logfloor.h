@@ -22,6 +22,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef LOGFLOOT_H_
+#define LOGFLOOT_H_
+
 template <size_t N, size_t base=2>
 struct logfloor_ {
     enum { value = 1 + logfloor_<N/base, base>::value };
@@ -36,3 +39,5 @@ template <size_t base>
 struct logfloor_<0, base> {
     enum { value = 0 };
 };
+
+#endif // LOGFLOOT_H_

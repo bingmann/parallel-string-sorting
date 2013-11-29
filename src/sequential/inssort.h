@@ -18,6 +18,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef INSSORT_H_
+#define INSSORT_H_
+
 namespace inssort {
 
 typedef unsigned char* string;
@@ -56,3 +59,5 @@ void insertion_sort(string* a, size_t n)
 //CONTESTANT_REGISTER_UCARRAY(insertion_sort, "String Insertion-Sort")
 
 } // namespace  inssort
+
+#endif // INSSORT_H_

@@ -1,5 +1,5 @@
 /******************************************************************************
- * src/tools/contest.h
+ * src/tools/lcgrandom.h
  *
  * Simple linear congruential random generator for 64-bit pseudo-random numbers.
  *
@@ -20,6 +20,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef LCGRANDOM_H_
+#define LCGRANDOM_H_
+
 /// Simple 64-bit linear congruential random generator
 class LCGRandom
 {
@@ -33,3 +36,5 @@ public:
         return xn;
     }
 };
+
+#endif // LCGRANDOM_H_

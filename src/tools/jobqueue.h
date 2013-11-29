@@ -20,6 +20,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef JOBQUEUE_H_
+#define JOBQUEUE_H_
+
 #include <iostream>
 #include <assert.h>
 #include <omp.h>
@@ -114,6 +117,7 @@ public:
 #pragma omp parallel num_threads(numberOfThreads)
 		{
 			numa_run_on_node(numaNode);
+			numa_set_preferred(numaNode);
 
 			executeThreadWork();
 		} // end omp parallel
@@ -121,3 +125,5 @@ public:
 };
 
 } // namespace jobqueue
+
+#endif // JOBQUEUE_H_
