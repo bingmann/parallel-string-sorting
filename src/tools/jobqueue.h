@@ -47,29 +47,41 @@ static const bool debug_queue = false;
 // ****************************************************************************
 // *** Job and JobQueue system with lock-free queue and OpenMP threads
 
-class Job
+template <typename CookieType>
+class JobT
 {
 public:
-    virtual ~Job()
+    virtual ~JobT()
     { }
 
+    /// local typedef of cookie
+    typedef CookieType cookie_type;
+
     /// virtual function that is called by the JobQueue
-    virtual void run(class JobQueue& jobqueue) = 0;
+    virtual void run(cookie_type& cookie) = 0;
 };
 
-class JobQueue
+template <typename CookieType>
+class JobQueueT
 {
+public:
+    /// local typedef of cookie
+    typedef CookieType cookie_type;
+
+    /// typedef of compatible Job
+    typedef JobT<CookieType> job_type;
+
 private:
 
     /// lock-free data structure containing pointers to Job objects.
-    tbb::concurrent_queue<Job*> m_queue;
+    tbb::concurrent_queue<job_type*> m_queue;
 
     /// number of threads idle
     std::atomic<int> m_idle_count;
 
 public:
 
-    JobQueue()
+    JobQueueT()
         : m_queue(), m_idle_count(0)
     {
     }
@@ -79,20 +91,20 @@ public:
         return (m_idle_count != 0);
     }
 
-    void enqueue(class Job* job) {
+    void enqueue(job_type* job) {
         m_queue.push(job);
     }
 
-    inline void executeThreadWork()
+    inline void executeThreadWork(cookie_type& cookie)
     {
-        Job* job = NULL;
+        job_type* job = NULL;
 
         while (1)
         {
             if (m_queue.try_pop(job))
             {
             RUNJOB:
-                job->run(*this);
+                job->run(cookie);
                 delete job;
             }
             else
@@ -116,25 +128,43 @@ public:
         }
     }
 
-    void loop()
+    void loop(cookie_type& cookie)
     {
 #pragma omp parallel
         {
-            executeThreadWork();
+            executeThreadWork(cookie);
         } // end omp parallel
     }
 
-    void numaLoop(int numaNode, int numberOfThreads)
+    void numaLoop(int numaNode, int numberOfThreads, cookie_type& cookie)
     {
 #pragma omp parallel num_threads(numberOfThreads)
         {
             numa_run_on_node(numaNode);
             numa_set_preferred(numaNode);
 
-            executeThreadWork();
+            executeThreadWork(cookie);
         } // end omp parallel
     }
 };
+
+class JobQueue : public JobQueueT<JobQueue>
+{
+public:
+    typedef JobQueueT<JobQueue> super_type;
+
+    void loop()
+    {
+        return super_type::loop(*this);
+    }
+
+    void numaLoop(int numaNode, int numberOfThreads)
+    {
+        return super_type::numaLoop(numaNode, numberOfThreads, *this);
+    }
+};
+
+typedef JobT<JobQueue> Job;
 
 } // namespace jobqueue
 
