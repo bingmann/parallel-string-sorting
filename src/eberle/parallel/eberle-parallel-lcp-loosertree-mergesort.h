@@ -13,7 +13,7 @@
 
 #include "../../tools/jobqueue.h"
 
-#include "../../parallel/bingmann-parallel_sample_sortBTCE.h"
+#include "../../parallel/bingmann-parallel_sample_sortBTC.h"
 
 #define PARALLEL_LCP_MERGE_DEBUG_MINIMA_DETECTION
 //#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
@@ -29,7 +29,7 @@ using namespace eberle_mergesort_lcp;
 
 using namespace jobqueue;
 
-using namespace bingmann_parallel_sample_sortBTCE;
+using namespace bingmann_parallel_sample_sortBTC;
 
 //typedefs
 typedef unsigned char* string;
@@ -351,8 +351,8 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 		size_t start = ranges[k].first;
 		size_t length = ranges[k].second;
 
-		parallel_sample_sortBTCEU_numa(strings + start, length,
-				k % numNumaNodes, numThreadsPerPart);
+		parallel_sample_sortBTC_numa(strings + start, length,
+                                             k % numNumaNodes, numThreadsPerPart, 0);
 
 		//calculate lcps
 		size_t end = start + length;
