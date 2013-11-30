@@ -423,7 +423,7 @@ struct SmallsortJob : public Job
         // bounding equations:
         // a) K * key_type splitter_tree size (and maybe K * key_type equal-cmp splitters)
         // b) 2 * K + 1 buckets (bktsize_type) when counting bkt occurances.
-        static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
+        static const size_t numsplitters2 = (l2cache - sizeof(BktSizeType)) / (2 * sizeof(BktSizeType));
 
         static const size_t treebits = logfloor_<numsplitters2>::value;
         static const size_t numsplitters = (1 << treebits) - 1;
@@ -1330,6 +1330,9 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU2,
 template <size_t treebits>
 struct ClassifyBinarySearch
 {
+    // NOTE: for binary search numsplitters need not be 2^k-1, any size will
+    // do, but the tree implementations are always faster, so we keep this only
+    // for historical reasons.
     static const size_t numsplitters = (1 << treebits) - 1;
 
     key_type splitter[numsplitters];
