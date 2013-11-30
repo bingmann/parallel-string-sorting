@@ -1,8 +1,8 @@
 /******************************************************************************
- * src/parallel/bingmann-parallel_sample_sortBTC.h
+ * src/parallel/bingmann-parallel_sample_sort.h
  *
- * Parallel Super Scalar String Sample-Sort with work-balancing, variant BTC:
- * with binary splitter tree and cache.
+ * Parallel Super Scalar String Sample-Sort, many variant via different
+ * Classifier templates.
  *
  ******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
@@ -41,7 +41,7 @@
 
 #include "../sequential/inssort.h"
 
-namespace bingmann_parallel_sample_sortBTC {
+namespace bingmann_parallel_sample_sort {
 
 using namespace stringtools;
 using namespace jobqueue;
@@ -400,17 +400,17 @@ template <template <size_t> class Classify>
 void Enqueue(Context& ctx, const StringPtr& strptr, size_t n, size_t depth);
 
 template <template <size_t> class Classify, typename BktSizeType>
-struct SmallsortJobBTC : public Job
+struct SmallsortJob : public Job
 {
     StringPtr   strptr;
     size_t      n, depth;
 
     typedef BktSizeType bktsize_type;
 
-    SmallsortJobBTC(Context& ctx, const StringPtr& _strptr, size_t _n, size_t _depth)
+    SmallsortJob(Context& ctx, const StringPtr& _strptr, size_t _n, size_t _depth)
         : strptr(_strptr), n(_n), depth(_depth)
     {
-        DBG(debug_jobs, "enqueue SmallsortJobBTC n=" << n << " depth=" << depth);
+        DBG(debug_jobs, "enqueue SmallsortJob n=" << n << " depth=" << depth);
 
         ctx.jobqueue.enqueue(this);
     }
@@ -515,7 +515,7 @@ struct SmallsortJobBTC : public Job
 
     virtual void run(Context& ctx)
     {
-        DBG(debug_jobs, "Process SmallsortJobBTC " << this << " of size " << n);
+        DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
         bktcache = NULL;
         bktcache_size = 0;
@@ -631,7 +631,7 @@ struct SmallsortJobBTC : public Job
         }
 
         // convert top level of stack into independent jobs
-        DBG(debug_jobs, "Freeing top level of SmallsortJobBTC's sample_sort stack");
+        DBG(debug_jobs, "Freeing top level of SmallsortJob's sample_sort stack");
 
         typedef SeqSampleSortStep Step;
         Step& s = ss_stack[ss_pop_front];
@@ -956,7 +956,7 @@ struct SmallsortJobBTC : public Job
             return;
         }
 
-        DBG(debug_jobs, "Freeing top level of SmallsortJobBTC's mkqs stack");
+        DBG(debug_jobs, "Freeing top level of SmallsortJob's mkqs stack");
 
         // convert top level of stack into independent jobs
 
@@ -1265,14 +1265,14 @@ void Enqueue(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
     }
     else {
         if (n < ((uint64_t)1 << 32))
-            new SmallsortJobBTC<Classify,uint32_t>(ctx, strptr, n, depth);
+            new SmallsortJob<Classify,uint32_t>(ctx, strptr, n, depth);
         else
-            new SmallsortJobBTC<Classify,uint64_t>(ctx, strptr, n, depth);
+            new SmallsortJob<Classify,uint64_t>(ctx, strptr, n, depth);
     }
 }
 
 template <template <size_t> class Classify>
-void parallel_sample_sortBTC_base(string* strings, size_t n, size_t depth)
+void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 {
     Context ctx;
     ctx.totalsize = ctx.restsize = n;
@@ -1297,7 +1297,7 @@ void parallel_sample_sortBTC_base(string* strings, size_t n, size_t depth)
 
 void parallel_sample_sortBTC(string* strings, size_t n)
 {
-    parallel_sample_sortBTC_base<ClassifySimple>(strings, n, 0);
+    parallel_sample_sort_base<ClassifySimple>(strings, n, 0);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTC,
@@ -1306,7 +1306,7 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTC,
 
 void parallel_sample_sortBTCU1(string* strings, size_t n)
 {
-    parallel_sample_sortBTC_base<ClassifyUnrollTree>(strings, n, 0);
+    parallel_sample_sort_base<ClassifyUnrollTree>(strings, n, 0);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU1,
@@ -1315,7 +1315,7 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU1,
 
 void parallel_sample_sortBTCU2(string* strings, size_t n)
 {
-    parallel_sample_sortBTC_base<ClassifyUnrollBoth>(strings, n, 0);
+    parallel_sample_sort_base<ClassifyUnrollBoth>(strings, n, 0);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU2,
@@ -1402,7 +1402,7 @@ struct ClassifyBinarySearch
 
 void parallel_sample_sortBSC(string* strings, size_t n)
 {
-    parallel_sample_sortBTC_base<ClassifyBinarySearch>(strings, n, 0);
+    parallel_sample_sort_base<ClassifyBinarySearch>(strings, n, 0);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBSC,
@@ -1813,7 +1813,7 @@ ClassifyEqualUnrollTree<14>::find_bkt_tree(const key_type& key) const
 
 void parallel_sample_sortBTCE(string* strings, size_t n)
 {
-    parallel_sample_sortBTC_base<ClassifyEqual>(strings, n, 0);
+    parallel_sample_sort_base<ClassifyEqual>(strings, n, 0);
 
 }
 
@@ -1823,7 +1823,7 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCE,
 
 void parallel_sample_sortBTCEU1(string* strings, size_t n)
 {
-    parallel_sample_sortBTC_base<ClassifyEqualUnrollTree>(strings, n, 0);
+    parallel_sample_sort_base<ClassifyEqualUnrollTree>(strings, n, 0);
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCEU1,
@@ -1831,8 +1831,8 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCEU1,
         "bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree")
 
 //! Call for NUMA aware parallel sorting
-void parallel_sample_sortBTC_numa(string * strings, size_t n, size_t depth,
-                                  int numaNode, int numberOfThreads)
+void parallel_sample_sort_numa(string * strings, size_t n, size_t depth,
+                               int numaNode, int numberOfThreads)
 {
     Context ctx;
     ctx.totalsize = ctx.restsize = n;
@@ -1855,4 +1855,4 @@ void parallel_sample_sortBTC_numa(string * strings, size_t n, size_t depth,
                  >> "steps_base_sort" << ctx.bs_steps;
 }
 
-} // namespace bingmann_parallel_sample_sortBTC
+} // namespace bingmann_parallel_sample_sort

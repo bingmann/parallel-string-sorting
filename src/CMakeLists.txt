@@ -16,7 +16,7 @@ set(SOURCES
   parallel/akiba-parallel_string_radix_sort.cc
   parallel/bingmann-parallel_radix_sort.cc
   parallel/bingmann-parallel_mkqs.cc
-  parallel/bingmann-parallel_sample_sortBTC.cc
+  parallel/bingmann-parallel_sample_sort.cc
   parallel/shamsundar-lcp-merge-string-sort.cc
 )
 
