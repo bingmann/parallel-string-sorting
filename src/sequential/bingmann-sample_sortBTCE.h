@@ -56,26 +56,6 @@ struct ClassifySimple
 {
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    static inline unsigned int
-    treeid_to_bkt(unsigned int id)
-    {
-        assert(id > 0);
-        //std::cout << "index: " << id << " = " << toBinary(id) << "\n";
-
-        //int treebits = 4;
-        //int bitmask = ((1 << treebits)-1);
-        static const int bitmask = numsplitters;
-
-        int hi = treebits-32 + count_high_zero_bits<uint32_t>(id);
-        //std::cout << "high zero: " << hi << "\n";
-
-        unsigned int bkt = ((id << (hi+1)) & bitmask) | (1 << hi);
-
-        //std::cout << "bkt: " << bkt << " = " << toBinary(bkt) << "\n";
-
-        return bkt;
-    }
-
     // search in splitter tree for bucket number
     static inline unsigned int
     find_bkt(const key_type& key, const key_type* splitter_tree0)
@@ -88,7 +68,7 @@ struct ClassifySimple
         while ( i <= numsplitters )
         {
             if (key == splitter_tree[i])
-                return 2 * treeid_to_bkt(i) - 1;
+                return 2 * TreeCalculations<treebits>::level_to_inorder(i) - 1;
             else if (key < splitter_tree[i])
                 i = 2*i + 0;
             else // (key > splitter_tree[i])

@@ -24,6 +24,7 @@
 #define STRINGTOOLS_H_
 
 #include <assert.h>
+#include "debug.h"
 
 namespace stringtools {
 
@@ -51,13 +52,12 @@ static inline std::string toHex(Type v)
 
 /// represent binary digits of large integer datatypes
 template <typename Type>
-static inline std::string toBinary(Type v)
+static inline std::string toBinary(Type v, const int width = (1 << sizeof(Type)))
 {
-    static const int w = (1 << sizeof(v));
-    char binstr[w+1];
-    binstr[w] = 0;
-    for (int i = 0; i < w; i++) {
-        binstr[w-i-1] = (v & 1) ? '1' : '0';
+    char binstr[width+1];
+    binstr[width] = 0;
+    for (int i = 0; i < width; i++) {
+        binstr[width-i-1] = (v & 1) ? '1' : '0';
         v /= 2;
     }
     return binstr;
@@ -237,6 +237,98 @@ inline int count_high_zero_bits<uint128_t>(const uint128_t& t)
         return b;
     else
         return 64 + __builtin_clzll( (uint64_t)t );
+}
+
+/// Templated hardware operation to get the number of zero bits, starting from
+/// the least significant.
+template <typename T>
+inline int count_low_zero_bits(const T& t);
+
+template <>
+inline int count_low_zero_bits<uint32_t>(const uint32_t& t)
+{
+    if (t == 0) return sizeof(t) * 8;
+    return __builtin_ctz(t);
+}
+
+template <>
+inline int count_low_zero_bits<uint64_t>(const uint64_t& t)
+{
+    if (t == 0) return sizeof(t) * 8;
+    return __builtin_ctzll(t);
+}
+
+//! Class to transform in-order to level-order indexes in a perfect binary tree
+template <size_t treebits>
+struct TreeCalculations
+{
+    static const bool debug = false;
+
+    static const size_t numnodes = (1 << treebits) - 1;
+
+    static inline unsigned int
+    level_to_inorder(unsigned int id)
+    {
+        assert(id > 0);
+        DBG(debug, "index: " << id << " = " << toBinary(id));
+
+        static const int bitmask = numnodes;
+
+        int hi = treebits-32 + count_high_zero_bits<uint32_t>(id);
+        DBG(debug, "high zero: " << hi);
+
+        unsigned int bkt = ((id << (hi+1)) & bitmask) | (1 << hi);
+
+        DBG(debug,"bkt: " << bkt << " = " << toBinary(bkt));
+        return bkt;
+    }
+
+    static inline unsigned int
+    in_to_levelorder(unsigned int id)
+    {
+        assert(id > 0);
+        DBG(debug, "index: " << id << " = " << toBinary(id));
+
+        static const int bitmask = numnodes;
+
+        int lo = count_low_zero_bits<uint32_t>(id) + 1;
+        DBG(debug, "low zero: " << lo);
+
+        unsigned int bkt = ((id >> lo) & bitmask) | (1 << (treebits-lo));
+
+        DBG(debug,"bkt: " << bkt << " = " << toBinary(bkt));
+        return bkt;
+    }
+
+    static inline void self_verify()
+    {
+        for (size_t i = 1; i <= numnodes; ++i)
+        {
+            std::cout << toBinary(i, treebits) << " -> " << std::endl;
+
+            size_t id = level_to_inorder(i);
+            std::cout << toBinary(id, treebits) << " -> " << std::endl;
+
+            id = in_to_levelorder(id);
+            std::cout << toBinary(id, treebits) << std::endl;
+
+            std::cout << std::endl;
+            assert(id == i);
+        }
+    }
+};
+
+static inline void self_verify_tree_calculations()
+{
+    TreeCalculations<4>::self_verify();
+    TreeCalculations<5>::self_verify();
+    TreeCalculations<6>::self_verify();
+    TreeCalculations<11>::self_verify();
+    TreeCalculations<12>::self_verify();
+    TreeCalculations<13>::self_verify();
+    TreeCalculations<14>::self_verify();
+    TreeCalculations<15>::self_verify();
+    TreeCalculations<16>::self_verify();
 }
 
 /// Objectified string array pointer and shadow pointer array for out-of-place
