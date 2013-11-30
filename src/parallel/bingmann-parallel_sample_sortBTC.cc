@@ -246,7 +246,7 @@ struct ClassifySimple
 
     /// build tree and splitter array from sample
     inline void
-    build_tree(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         TreeBuilderFullDescent<numsplitters>(splitter, splitter_tree, splitter_lcp,
                                              samples, samplesize);
@@ -307,7 +307,7 @@ struct ClassifyUnrollTree
 
     /// build tree and splitter array from sample
     inline void
-    build_tree(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         TreeBuilderFullDescent<numsplitters>(splitter, splitter_tree, splitter_lcp,
                                              samples, samplesize);
@@ -460,7 +460,7 @@ struct SmallsortJobBTC : public Job
 
             Classify<treebits> classifier;
 
-            classifier.build_tree(samples, samplesize, splitter_lcp);
+            classifier.build(samples, samplesize, splitter_lcp);
 
             // step 2: classify all strings
 
@@ -1099,7 +1099,7 @@ struct SampleSortStep
 
         std::sort(samples, samples + samplesize);
 
-        classifier.build_tree(samples, samplesize, splitter_lcp);
+        classifier.build(samples, samplesize, splitter_lcp);
 
         bkt = new size_t[bktnum * parts + 1];
 
@@ -1325,6 +1325,93 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU2,
 ////////////////////////////////////////////////////////////////////////////////
 
 // ****************************************************************************
+// *** Classification with Binary Search in Splitter Array (old BSC variant)
+
+template <size_t treebits>
+struct ClassifyBinarySearch
+{
+    static const size_t numsplitters = (1 << treebits) - 1;
+
+    key_type splitter[numsplitters];
+
+    /// binary search on splitter array for bucket number
+    inline unsigned int
+    find_bkt_tree(const key_type& key) const
+    {
+        unsigned int lo = 0, hi = numsplitters;
+
+        while ( lo < hi )
+        {
+            unsigned int mid = (lo + hi) >> 1;
+            assert(mid < numsplitters);
+
+            if (key <= splitter[mid])
+                hi = mid;
+            else // (key > splitter[mid])
+                lo = mid + 1;
+        }
+
+        size_t b = lo * 2;                                    // < bucket
+        if (lo < numsplitters && splitter[lo] == key) b += 1; // equal bucket
+
+        return b;
+    }
+
+    /// classify all strings in area by walking tree and saving bucket id
+    inline void
+    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    {
+        for (string* str = strB; str != strE; )
+        {
+            key_type key = get_char<key_type>(*str++, depth);
+
+            unsigned int b = find_bkt_tree(key);
+            *bktout++ = b;
+        }
+    }
+
+    /// build tree and splitter array from sample
+    inline void
+    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    {
+        const size_t oversample_factor = samplesize / numsplitters;
+        DBG(debug_splitter, "oversample_factor: " << oversample_factor);
+
+        DBG(debug_splitter, "splitter:");
+        splitter_lcp[0] = 0; // sentinel for first < everything bucket
+        for (size_t i = 0, j = oversample_factor/2; i < numsplitters; ++i)
+        {
+            splitter[i] = samples[j];
+            DBG(debug_splitter, "key " << toHex(splitter[i]));
+
+            if (i != 0) {
+                key_type xorSplit = splitter[i-1] ^ splitter[i];
+
+                DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
+
+                DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
+                     << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+
+                splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
+            }
+
+            j += oversample_factor;
+        }
+    }
+};
+
+void parallel_sample_sortBSC(string* strings, size_t n)
+{
+    parallel_sample_sortBTC_base<ClassifyBinarySearch>(strings, n, 0);
+}
+
+CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBSC,
+                             "bingmann/parallel_sample_sortBSC",
+                             "bingmann/parallel_sample_sortBSC: binary search, bktcache")
+
+////////////////////////////////////////////////////////////////////////////////
+
+// ****************************************************************************
 // *** Classification with Equality Checking at Each Node
 
 template <size_t numsplitters>
@@ -1512,7 +1599,7 @@ struct ClassifyEqual
 
     /// build tree and splitter array from sample
     inline void
-    build_tree(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         TreeBuilderEqual<numsplitters>(splitter_tree, splitter_lcp,
                                        samples, samplesize);
@@ -1546,7 +1633,7 @@ struct ClassifyEqualUnrollTree
 
     /// build tree and splitter array from sample
     inline void
-    build_tree(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         TreeBuilderEqual<numsplitters>(splitter_tree, splitter_lcp,
                                        samples, samplesize);
