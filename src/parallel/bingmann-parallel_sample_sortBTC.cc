@@ -95,17 +95,20 @@ public:
 typedef JobT<Context> Job;
 
 // ****************************************************************************
-// *** Recursive TreeBuilder
+// *** Classification Variants
 
+//! Recursive TreeBuilder for full-descent and unrolled variants, constructs a
+//! binary tree and the plain splitter array.
 template <size_t numsplitters>
-struct TreeBuilder
+struct TreeBuilderFullDescent
 {
     key_type*       m_splitter;
     key_type*       m_tree;
     unsigned char*  m_lcp_iter;
     key_type*       m_samples;
 
-    TreeBuilder(key_type* splitter, key_type* splitter_tree, unsigned char* splitter_lcp, key_type* samples, size_t samplesize)
+    TreeBuilderFullDescent(key_type* splitter, key_type* splitter_tree, unsigned char* splitter_lcp,
+                           key_type* samples, size_t samplesize)
         : m_splitter( splitter ),
           m_tree( splitter_tree ),
           m_lcp_iter( splitter_lcp ),
@@ -187,13 +190,20 @@ struct TreeBuilder
 };
 
 // ****************************************************************************
-// *** Classification Subroutines: rolled, and two unrolled variants
+// * Classification Subroutines for TreeBuilderFd: rolled, and two unrolled
+// * variants
 
+template <size_t treebits>
 struct ClassifySimple
 {
+    static const size_t numsplitters = (1 << treebits) - 1;
+
+    key_type splitter[numsplitters];
+    key_type splitter_tree[numsplitters+1];
+
     /// binary search on splitter array for bucket number
-    static inline unsigned int
-    find_bkt_tree(const key_type& key, const key_type* splitter, const key_type* splitter_tree, size_t numsplitters)
+    inline unsigned int
+    find_bkt_tree(const key_type& key) const
     {
         // binary tree traversal without left branch
 
@@ -222,26 +232,39 @@ struct ClassifySimple
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    static inline void
-    classify(string* strB, string* strE, uint16_t* bktout,
-             const key_type* splitter, const key_type* splitter_tree, size_t numsplitters,
-             size_t /* treebits */, size_t depth)
+    inline void
+    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
 
-            unsigned int b = find_bkt_tree(key, splitter, splitter_tree, numsplitters);
+            unsigned int b = find_bkt_tree(key);
             *bktout++ = b;
         }
     }
+
+    /// build tree and splitter array from sample
+    inline void
+    build_tree(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    {
+        TreeBuilderFullDescent<numsplitters>(splitter, splitter_tree, splitter_lcp,
+                                             samples, samplesize);
+    }
 };
 
+template <size_t treebits>
 struct ClassifyUnrollTree
 {
+    static const size_t numsplitters = (1 << treebits) - 1;
+
+    key_type splitter[numsplitters];
+    key_type splitter_tree[numsplitters+1];
+
     /// binary search on splitter array for bucket number
-    __attribute__((optimize("unroll-all-loops"))) static inline unsigned int
-    find_bkt_tree(const key_type& key, const key_type* splitter, const key_type* splitter_tree, const size_t treebits, const size_t numsplitters)
+    __attribute__((optimize("unroll-all-loops")))
+    inline unsigned int
+    find_bkt_tree(const key_type& key) const
     {
         // binary tree traversal without left branch
 
@@ -270,30 +293,41 @@ struct ClassifyUnrollTree
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    static inline void
-    classify(string* strB, string* strE, uint16_t* bktout,
-             const key_type* splitter, const key_type* splitter_tree, const size_t numsplitters,
-             const size_t treebits, size_t depth)
+    inline void
+    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
 
-            unsigned int b = find_bkt_tree(key, splitter, splitter_tree, treebits, numsplitters);
+            unsigned int b = find_bkt_tree(key);
             *bktout++ = b;
         }
     }
+
+    /// build tree and splitter array from sample
+    inline void
+    build_tree(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    {
+        TreeBuilderFullDescent<numsplitters>(splitter, splitter_tree, splitter_lcp,
+                                             samples, samplesize);
+    }
 };
 
-struct ClassifyUnrollBoth
+template <size_t treebits>
+struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
 {
-    /// search in splitter tree for bucket number, unrolled for U keys at once.
+   /// search in splitter tree for bucket number, unrolled for U keys at once.
     template <int U>
-    __attribute__((optimize("unroll-all-loops"))) static inline void
-    find_bkt_tree_unroll(const key_type key[U], const key_type* splitter, const key_type* splitter_tree,
-                         const size_t treebits, const size_t numsplitters, uint16_t obkt[U])
+    __attribute__((optimize("unroll-all-loops")))
+    inline void
+    find_bkt_tree_unroll(const key_type key[U], uint16_t obkt[U]) const
     {
         // binary tree traversal without left branch
+
+        static const size_t numsplitters = this->numsplitters;
+        const key_type* splitter = this->splitter;
+        const key_type* splitter_tree = this->splitter_tree;
 
         unsigned int i[U];
         std::fill(i+0, i+U, 1);
@@ -328,10 +362,8 @@ struct ClassifyUnrollBoth
     }
 
     /// classify all strings in area by walking tree and saving bucket id, unrolled loops
-    static inline void
-    classify(string* strB, string* strE, uint16_t* bktout,
-             const key_type* splitter, const key_type* splitter_tree, size_t numsplitters,
-             const size_t treebits, size_t depth)
+    inline void
+    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
@@ -344,7 +376,7 @@ struct ClassifyUnrollBoth
                 key[2] = get_char<key_type>(str[2], depth);
                 key[3] = get_char<key_type>(str[3], depth);
 
-                find_bkt_tree_unroll<rollout>(key, splitter, splitter_tree, treebits, numsplitters, bktout);
+                find_bkt_tree_unroll<rollout>(key, bktout);
 
                 str += rollout;
                 bktout += rollout;
@@ -354,7 +386,7 @@ struct ClassifyUnrollBoth
                 // binary search in splitter with equal check
                 key_type key = get_char<key_type>(*str++, depth);
 
-                unsigned int b = ClassifySimple::find_bkt_tree(key, splitter, splitter_tree, numsplitters);
+                unsigned int b = this->find_bkt_tree(key);
                 *bktout++ = b;
             }
         }
@@ -364,10 +396,10 @@ struct ClassifyUnrollBoth
 // ****************************************************************************
 // *** SampleSort non-recursive in-place sequential sample sort for small sorts
 
-template <typename Classify>
+template <template <size_t> class Classify>
 void Enqueue(Context& ctx, const StringPtr& strptr, size_t n, size_t depth);
 
-template <typename Classify, typename BktSizeType>
+template <template <size_t> class Classify, typename BktSizeType>
 struct SmallsortJobBTC : public Job
 {
     StringPtr   strptr;
@@ -426,16 +458,13 @@ struct SmallsortJobBTC : public Job
 
             std::sort(samples, samples + samplesize);
 
-            key_type splitter[numsplitters];
-            key_type splitter_tree[numsplitters+1];
+            Classify<treebits> classifier;
 
-            TreeBuilder<numsplitters>(splitter, splitter_tree, splitter_lcp, samples, samplesize);
+            classifier.build_tree(samples, samplesize, splitter_lcp);
 
             // step 2: classify all strings
 
-            Classify::classify(strings, strings+n, bktcache,
-                               splitter, splitter_tree, numsplitters,
-                               treebits, depth);
+            classifier.classify(strings, strings+n, bktcache, depth);
 
             // step 2.5: count bucket sizes
 
@@ -962,7 +991,7 @@ struct SmallsortJobBTC : public Job
 // ****************************************************************************
 // *** SampleSortStep out-of-place parallel sample sort with separate Jobs
 
-template <typename Classify>
+template <template <size_t> class Classify>
 struct SampleSortStep
 {
 #if 0
@@ -983,9 +1012,10 @@ struct SampleSortStep
     unsigned int        parts;
     size_t              psize;
     std::atomic<unsigned int> pwork;
-    key_type            splitter[numsplitters];
-    key_type            splitter_tree[numsplitters+1];
+
+    Classify<treebits>  classifier;
     unsigned char       splitter_lcp[numsplitters+1];
+
     size_t*             bkt;
 
     uint16_t*           bktcache[MAXPROCS];
@@ -1069,7 +1099,7 @@ struct SampleSortStep
 
         std::sort(samples, samples + samplesize);
 
-        TreeBuilder<numsplitters>(splitter, splitter_tree, splitter_lcp, samples, samplesize);
+        classifier.build_tree(samples, samplesize, splitter_lcp);
 
         bkt = new size_t[bktnum * parts + 1];
 
@@ -1092,9 +1122,7 @@ struct SampleSortStep
         uint16_t* mybktcache = bktcache[p] = new uint16_t[strE-strB];
         uint16_t* bktout = mybktcache;
 
-        Classify::classify(strB, strE, bktout,
-                           splitter, splitter_tree, numsplitters,
-                           treebits, depth);
+        classifier.classify(strB, strE, bktout, depth);
 
         size_t* mybkt = bkt + p * bktnum;
         memset(mybkt, 0, bktnum * sizeof(size_t));
@@ -1229,7 +1257,7 @@ struct SampleSortStep
     }
 };
 
-template <typename Classify>
+template <template <size_t> class Classify>
 void Enqueue(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
 {
     if (n > ctx.sequential_threshold()) {
@@ -1243,7 +1271,7 @@ void Enqueue(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
     }
 }
 
-template <typename Classify>
+template <template <size_t> class Classify>
 void parallel_sample_sortBTC_base(string* strings, size_t n, size_t depth)
 {
     Context ctx;
