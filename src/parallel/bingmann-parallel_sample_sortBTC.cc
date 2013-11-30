@@ -663,16 +663,18 @@ struct SmallsortJobBTC : public Job
     static inline size_t
     med3(Type* A, size_t i, size_t j, size_t k)
     {
-        if (cmp(A[i], A[j]) == 0)                         return i;
-        if (cmp(A[k], A[i]) == 0 || cmp(A[k], A[j]) == 0) return k;
-        if (cmp(A[i], A[j]) < 0) {
-            if (cmp(A[j], A[k]) < 0) return j;
-            if (cmp(A[i], A[k]) < 0) return k;
+        if (A[i] == A[j])                 return i;
+        if (A[k] == A[i] || A[k] == A[j]) return k;
+        if (A[i] < A[j]) {
+            if (A[j] < A[k]) return j;
+            if (A[i] < A[k]) return k;
             return i;
         }
-        if (cmp(A[j], A[k]) > 0) return j;
-        if (cmp(A[i], A[k]) < 0) return i;
-        return k;
+        else {
+            if (A[j] > A[k]) return j;
+            if (A[i] < A[k]) return i;
+            return k;
+        }
     }
 
     // Insertion sort the strings only based on the cached characters.
@@ -726,83 +728,82 @@ struct SmallsortJobBTC : public Job
         size_t idx;
         bool eq_recurse;
 
-        MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* cache, size_t n, size_t depth, bool CacheDirty)
-            : strptr(_strptr)
+        MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* _cache, size_t _n, size_t _depth, bool CacheDirty)
+            : strptr(_strptr), cache(_cache), n(_n), depth(_depth), idx(0)
         {
             string* strings = _strptr.active();
 
             if (CacheDirty) {
-                for (size_t i=0; i < n; ++i) {
+                for (size_t i = 0; i < n; ++i) {
                     cache[i] = get_char<key_type>(strings[i], depth);
                 }
             }
-            // Move pivot to first position to avoid wrapping the unsigned values
-            // we are using in the main loop from zero to max.
+            // select median of 9
             size_t p = med3(cache,
                             med3(cache, 0,       n/8,     n/4),
                             med3(cache, n/2-n/8, n/2,     n/2+n/8),
                             med3(cache, n-1-n/4, n-1-n/8, n-3)
                 );
+            // swap pivot to first position
             std::swap(strings[0], strings[p]);
             std::swap(cache[0], cache[p]);
+            // save the pivot value
             key_type pivot = cache[0];
-            size_t first   = 1;
-            size_t last    = n-1;
-            size_t beg_ins = 1;
-            size_t end_ins = n-1;
-            while (true) {
-                while (first <= last) {
-                    const int res = cmp(cache[first], pivot);
-                    if (res > 0) {
+            // indexes into array: 1 [===] leq [<<<] llt [???] rgt [>>>] req [===] n-1
+            size_t leq = 1, llt = 1, rgt = n-1, req = n-1;
+            while (true)
+            {
+                while (llt <= rgt)
+                {
+                    int r = cmp(cache[llt], pivot);
+                    if (r > 0) {
                         break;
-                    } else if (res == 0) {
-                        std::swap(strings[beg_ins], strings[first]);
-                        std::swap(cache[beg_ins], cache[first]);
-                        beg_ins++;
                     }
-                    ++first;
+                    else if (r == 0) {
+                        std::swap(strings[leq], strings[llt]);
+                        std::swap(cache[leq], cache[llt]);
+                        leq++;
+                    }
+                    ++llt;
                 }
-                while (first <= last) {
-                    const int res = cmp(cache[last], pivot);
-                    if (res < 0) {
+                while (llt <= rgt)
+                {
+                    int r = cmp(cache[rgt], pivot);
+                    if (r < 0) {
                         break;
-                    } else if (res == 0) {
-                        std::swap(strings[end_ins], strings[last]);
-                        std::swap(cache[end_ins], cache[last]);
-                        end_ins--;
                     }
-                    --last;
+                    else if (r == 0) {
+                        std::swap(strings[req], strings[rgt]);
+                        std::swap(cache[req], cache[rgt]);
+                        req--;
+                    }
+                    --rgt;
                 }
-                if (first > last)
+                if (llt > rgt)
                     break;
-                std::swap(strings[first], strings[last]);
-                std::swap(cache[first], cache[last]);
-                ++first;
-                --last;
+                std::swap(strings[llt], strings[rgt]);
+                std::swap(cache[llt], cache[rgt]);
+                ++llt;
+                --rgt;
             }
-            // Some calculations to make the code more readable.
-            const size_t num_eq_beg = beg_ins;
-            const size_t num_eq_end = n-1-end_ins;
-            num_eq     = num_eq_beg+num_eq_end;
-            num_lt     = first-beg_ins;
-            num_gt     = end_ins-last;
+            // calculate size of areas = < and >, save into struct
+            size_t num_leq = leq, num_req = n-1-req;
+            num_eq = num_leq + num_req;
+            num_lt = llt - leq;
+            num_gt = req - rgt;
             assert(num_lt + num_eq + num_gt == n);
 
-            // Swap the equal pointers from the beginning to proper position.
-            const size_t size1 = std::min(num_eq_beg, num_lt);
-            std::swap_ranges(strings, strings+size1, strings+first-size1);
-            std::swap_ranges(cache, cache+size1, cache+first-size1);
-            // Swap the equal pointers from the end to proper position.
-            const size_t size2 = std::min(num_eq_end, num_gt);
-            std::swap_ranges(strings+first, strings+first+size2, strings+n-size2);
-            std::swap_ranges(cache+first, cache+first+size2, cache+n-size2);
+            // swap equal values from left to center
+            const size_t size1 = std::min(num_leq, num_lt);
+            std::swap_ranges(strings, strings+size1, strings+llt-size1);
+            std::swap_ranges(cache, cache+size1, cache+llt-size1);
+
+            // swap equal values from right to center
+            const size_t size2 = std::min(num_req, num_gt);
+            std::swap_ranges(strings+llt, strings+llt+size2, strings+n-size2);
+            std::swap_ranges(cache+llt, cache+llt+size2, cache+n-size2);
 
             // Save offsets for recursive sorting
-            //this->strptr = _strptr;
-            this->cache = cache;
-            this->n = n;
-            this->depth = depth;
-            this->idx = 0;
             this->eq_recurse = (pivot & 0xFF);
 
             ++ctx.bs_steps;
