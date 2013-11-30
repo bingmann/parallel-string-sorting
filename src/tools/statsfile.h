@@ -356,14 +356,22 @@ class TimerArray
 {
 private:
 
-    // clock time of last call
+    //! clock time of last call
     struct timespec     m_tplast;
 
-    // currently running timer
+    //! currently running timer
     unsigned int        m_tmcurr;
 
-    // array of timers (usually preallocated)
+    //! array of timers (usually preallocated)
     std::vector<struct timespec> m_tpvector;
+
+    //! add ts2 to ts1
+    void ts_fixcarray(struct timespec& ts)
+    {
+        if (ts.tv_nsec >= 1000000000L) {
+            ts.tv_sec++, ts.tv_nsec -= 1000000000L;
+        }
+    }
 
 public:
 
@@ -401,6 +409,7 @@ public:
         // add difference to current timer
         m_tpvector[ m_tmcurr ].tv_sec += tpnow.tv_sec - m_tplast.tv_sec;
         m_tpvector[ m_tmcurr ].tv_nsec += tpnow.tv_nsec - m_tplast.tv_nsec;
+        ts_fixcarray(m_tpvector[ m_tmcurr ]);
 
         m_tplast = tpnow;
         m_tmcurr = tm;
