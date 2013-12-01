@@ -401,9 +401,94 @@ public:
     }
 
     /// Return i-th string pointer from m_front
-    inline string str(size_t i) const
+    inline string& str(size_t i) const
     {
         return m_front[i];
+    }
+};
+
+/// Objectified string array pointer and shadow pointer array for out-of-place
+/// swapping of pointers.
+class StringPtrLcp
+{
+private:
+    /// strings (front) and temporary shadow (back) array
+    string      *m_front, *m_back;
+
+    /// false if m_front is original, true if m_back is original
+    bool        m_flipped;
+
+    //! separate LCP array
+    size_t*     m_lcp;
+
+public:
+    /// constructor specifying all attributes
+    inline StringPtrLcp(string* original, string* shadow = NULL, bool flipped = false, size_t* lcp = NULL)
+        : m_front(original), m_back(shadow), m_flipped(flipped), m_lcp(lcp)
+    {
+    }
+
+    /// true if flipped to back array
+    inline bool flipped() const
+    {
+        return m_flipped;
+    }
+
+    /// return currently active array
+    inline string* active() const
+    {
+        return m_front;
+    }
+
+    /// return current shadow array
+    inline string* shadow() const
+    {
+        return m_back;
+    }
+
+    /// Advance (both) pointers by given offset
+    inline StringPtrLcp& operator += (size_t offset)
+    {
+        m_front += offset, m_back += offset, m_lcp += offset;
+        return *this;
+    }
+
+    /// Advance (both) pointers by given offset
+    inline StringPtrLcp operator + (size_t offset) const
+    {
+        return StringPtrLcp(m_front + offset, m_back + offset, m_flipped, m_lcp + offset);
+    }
+
+    /// construct a StringPtrLcp object specifying a subarray with flipping to
+    /// other array.
+    inline StringPtrLcp flip(size_t offset) const
+    {
+        return StringPtrLcp(m_back + offset, m_front + offset, !m_flipped, m_lcp + offset);
+    }
+
+    /// return subarray pointer to n strings in original array, might copy from
+    /// shadow before returning.
+    inline string* copy_back(size_t n) const
+    {
+        if (!m_flipped) {
+            return m_front;
+        }
+        else {
+            memcpy(m_back, m_front, n * sizeof(string));
+            return m_back;
+        }
+    }
+
+    /// Return i-th string pointer from m_front
+    inline string& str(size_t i) const
+    {
+        return m_front[i];
+    }
+
+    /// return reference to the i-th lcp
+    inline size_t& lcp(size_t i) const
+    {
+        return m_lcp[i];
     }
 };
 
