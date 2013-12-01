@@ -351,8 +351,8 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 		size_t start = ranges[k].first;
 		size_t length = ranges[k].second;
 
-		parallel_sample_sort_numa(strings + start, length,
-                                          k % numNumaNodes, numThreadsPerPart);
+		parallel_sample_sort_numa(strings + start, length, k % numNumaNodes,
+				numThreadsPerPart);
 
 		//calculate lcps
 		size_t end = start + length;
@@ -364,7 +364,13 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 		}
 	}
 
+	MeasureTime < 0 > timer;
+	timer.start();
+
 	parallelMerge<K>(tmp, output, ranges);
+
+	timer.stop();
+	cout << "top level merge needed: " << timer.delta() << "s" << endl;
 
 	for (size_t i = 0; i < n; i++) {
 		strings[i] = output[i].text;
