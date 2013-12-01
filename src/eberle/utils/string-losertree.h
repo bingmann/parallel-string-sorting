@@ -9,12 +9,11 @@
 #define STRING_LOSERTREE_H_
 
 #include <stdlib.h>
-#include <math.h>
 #include "types.h"
 
-using namespace std;
-
 namespace eberle_utils {
+
+using namespace std;
 
 //typedefs
 typedef unsigned char* string;
@@ -52,7 +51,8 @@ private:
 
 				const unsigned streamIdxAtParent = nodes[parentIdx];
 
-				if (scmp(streams[streamIdxAtParent].stream[0], streams[streamIdx].stream[0]) < 0) {
+				if (scmp(streams[streamIdxAtParent].stream[0],
+						streams[streamIdx].stream[0]) < 0) {
 					nodes[parentIdx] = streamIdx;
 					streamIdx = streamIdxAtParent;
 				}
@@ -73,12 +73,12 @@ private:
 	}
 
 public:
-	StringLoserTree(string * strings, boost::array<std::pair<size_t, size_t>, NUMBER_OF_STREAMS> ranges) {
+	StringLoserTree(string * strings, pair<size_t, size_t>* ranges) {
 
 		remainingElements = 0;
 
 		for (unsigned i = 0; i < NUMBER_OF_STREAMS; i++) {
-			const std::pair<size_t, size_t> currRange = ranges[i];
+			pair < size_t, size_t > currRange = ranges[i];
 			STREAM* curr = &(this->streams[i]);
 			curr->stream = strings + currRange.first;
 			curr->length = currRange.second;
@@ -131,7 +131,9 @@ public:
 			STREAM lastLoserStream = streams[lastLoserIdx];
 
 			if (winnerStream.isEmpty
-					|| (!lastLoserStream.isEmpty && scmp(lastLoserStream.stream[0], winnerStream.stream[0]) < 0)) {
+					|| (!lastLoserStream.isEmpty
+							&& scmp(lastLoserStream.stream[0],
+									winnerStream.stream[0]) < 0)) {
 				// last loser won this time
 				nodes[nodeIdx] = winnerIdx;
 				winnerIdx = lastLoserIdx;

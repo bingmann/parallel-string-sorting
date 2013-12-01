@@ -18,7 +18,8 @@ typedef unsigned int UINT;
 
 template<unsigned K>
 static inline
-void eberle_mergesort_losertree_lcp_kway(string* strings, AS* tmp, AS* output, size_t length) {
+void eberle_mergesort_losertree_lcp_kway(string* strings, AS* tmp, AS* output,
+		size_t length) {
 
 	if (length <= 2 * K) {
 		//	return eberle_mergesort_lcp::eberle_lcp_mergesort(strings, tmp, output, length);
@@ -26,17 +27,18 @@ void eberle_mergesort_losertree_lcp_kway(string* strings, AS* tmp, AS* output, s
 	}
 
 	//create ranges of the parts
-	boost::array<std::pair<size_t, size_t>, K> ranges;
-	eberle_utils::calculateRanges<K>(ranges, length);
+	pair < size_t, size_t > ranges[K];
+	eberle_utils::calculateRanges(ranges, K, length);
 
 	// execute mergesorts for parts
 	for (unsigned i = 0; i < K; i++) {
 		const size_t offset = ranges[i].first;
-		eberle_mergesort_losertree_lcp_kway<K>(strings + offset, output + offset, tmp + offset, ranges[i].second);
+		eberle_mergesort_losertree_lcp_kway<K>(strings + offset,
+				output + offset, tmp + offset, ranges[i].second);
 	}
 
 	//merge
-	LcpStringLoserTree<K> *loserTree = new LcpStringLoserTree<K>(tmp, &ranges);
+	LcpStringLoserTree<K> *loserTree = new LcpStringLoserTree<K>(tmp, ranges);
 	loserTree->writeElementsToStream(output, length);
 	delete loserTree;
 }

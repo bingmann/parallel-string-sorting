@@ -1,16 +1,19 @@
 #ifndef UTILITY_FUNCTIONS_H_
 #define UTILITY_FUNCTIONS_H_
 
+#include <stdlib.h>
+
 namespace eberle_utils {
 
-template<unsigned K>
 static inline
-void calculateRanges(boost::array<std::pair<size_t, size_t>, K> &ranges, size_t length) {
-	const size_t split = length / K;
-	for (unsigned i = 0; i < K - 1; ++i) {
+void calculateRanges(std::pair<size_t, size_t>* ranges, unsigned numberOfSplits,
+		size_t lengthToSplit) {
+	const size_t split = lengthToSplit / numberOfSplits;
+	for (unsigned i = 0; i < numberOfSplits - 1; ++i) {
 		ranges[i] = std::make_pair(i * split, split);
 	}
-	ranges[K - 1] = std::make_pair((K - 1) * split, length - (K - 1) * split);
+	ranges[numberOfSplits - 1] = std::make_pair((numberOfSplits - 1) * split,
+			lengthToSplit - (numberOfSplits - 1) * split);
 }
 
 }

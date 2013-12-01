@@ -13,7 +13,8 @@ int scmp(string s1, string s2) {
 }
 
 static inline
-void eberle_merge(string *strings, string *tmp, size_t length1, size_t length2) {
+void eberle_merge(string *strings, string *tmp, size_t length1,
+		size_t length2) {
 
 	size_t idx1 = 0;
 	const size_t end1 = length1;
@@ -33,7 +34,8 @@ void eberle_merge(string *strings, string *tmp, size_t length1, size_t length2) 
 	}
 
 	if (idx1 < end1) { // add the rest of part 1 to the end.
-		memcpy(strings + mergedIdx, strings + idx1, (end1 - idx1) * sizeof(string));
+		memcpy(strings + mergedIdx, strings + idx1,
+				(end1 - idx1) * sizeof(string));
 	}
 
 	// copy the merged part from tmp to strings
@@ -73,12 +75,8 @@ void eberle_mergesort_kway(string *strings, string *tmp, size_t length) {
 	}
 
 	//create ranges of the parts
-	const size_t split = size_t(double(length) / double(K));
-	boost::array<std::pair<size_t, size_t>, K> ranges;
-	for (unsigned i = 0; i < K - 1; ++i) {
-		ranges[i] = std::make_pair(i * split, split);
-	}
-	ranges[K - 1] = std::make_pair((K - 1) * split, length - (K - 1) * split);
+	pair < size_t, size_t > ranges[K];
+	calculateRanges(ranges, K, length);
 
 	// execute mergesorts for parts
 	for (unsigned i = 0; i < K; i++) {

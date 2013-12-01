@@ -10,8 +10,6 @@
 
 #include <stdlib.h>
 #include <math.h>
-#include <boost/array.hpp>
-#include <boost/tuple/tuple.hpp>
 
 #include "types.h"
 
@@ -100,11 +98,10 @@ private:
 	}
 
 public:
-	LcpStringLoserTree(AS* input,
-			boost::array<std::pair<size_t, size_t>, NUMBER_OF_STREAMS>* ranges) {
+	LcpStringLoserTree(AS* input, pair<size_t, size_t>* ranges) {
 
 		for (unsigned i = 0; i < NUMBER_OF_STREAMS; i++) {
-			const std::pair<size_t, size_t> currRange = (*ranges)[i];
+			const std::pair<size_t, size_t> currRange = ranges[i];
 			STREAM* curr = &(this->streams[i]);
 			curr->elements = input + currRange.first;
 			curr->length = currRange.second;
@@ -171,8 +168,7 @@ public:
 		nodes[0] = contenderIdx;
 	}
 
-	inline void getRangesOfRemaining(
-			boost::array<std::pair<size_t, size_t>, NUMBER_OF_STREAMS>& ranges,
+	inline void getRangesOfRemaining(pair<size_t, size_t>* ranges,
 			AS* inputBase) {
 		for (unsigned k = 0; k < NUMBER_OF_STREAMS; k++) {
 			ranges[k] = make_pair(size_t(streams[k].elements - inputBase),

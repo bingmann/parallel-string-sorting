@@ -1,9 +1,13 @@
 #include <iostream>
 #include "../utils/string-losertree.h"
+#include "../utils/utility-functions.h"
 
 using namespace eberle_utils;
 
 namespace eberle_mergesort {
+
+using namespace std;
+using namespace eberle_utils;
 
 typedef unsigned char* string;
 
@@ -17,12 +21,8 @@ void eberle_mergesort_losertree_kway(string *strings, string *tmp,
 	}
 
 	//create ranges of the parts
-	const size_t split = size_t(double(length) / double(K));
-	boost::array<std::pair<size_t, size_t>, K> ranges;
-	for (unsigned i = 0; i < K - 1; ++i) {
-		ranges[i] = std::make_pair(i * split, split);
-	}
-	ranges[K - 1] = std::make_pair((K - 1) * split, length - (K - 1) * split);
+	pair < size_t, size_t > ranges[K];
+	calculateRanges(ranges, K, length);
 
 	// execute mergesorts for parts
 	for (unsigned i = 0; i < K; i++) {
@@ -77,13 +77,13 @@ void eberle_mergesort_losertree_1024way(string *strings, size_t n) {
 	eberle_mergesort_losertree_kway<1024>(strings, n);
 }
 
-CONTESTANT_REGISTER(eberle_mergesort_losertree_4way, "eberle/mergesort_losertree_4way", "Mergesort with Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_16way, "eberle/mergesort_losertree_16way", "Mergesort with Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_32way, "eberle/mergesort_losertree_32way", "Mergesort with Losertree by Andreas Eberle")
+//CONTESTANT_REGISTER(eberle_mergesort_losertree_4way, "eberle/mergesort_losertree_4way", "Mergesort with Losertree by Andreas Eberle")
+//CONTESTANT_REGISTER(eberle_mergesort_losertree_16way, "eberle/mergesort_losertree_16way", "Mergesort with Losertree by Andreas Eberle")
+//CONTESTANT_REGISTER(eberle_mergesort_losertree_32way, "eberle/mergesort_losertree_32way", "Mergesort with Losertree by Andreas Eberle")
 CONTESTANT_REGISTER(eberle_mergesort_losertree_64way, "eberle/mergesort_losertree_64way", "Mergesort with Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_128way, "eberle/mergesort_losertree_128way", "Mergesort with Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_512way, "eberle/mergesort_losertree_512way", "Mergesort with Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_1024way, "eberle/mergesort_losertree_1024way", "Mergesort with Losertree by Andreas Eberle")
+//CONTESTANT_REGISTER(eberle_mergesort_losertree_128way, "eberle/mergesort_losertree_128way", "Mergesort with Losertree by Andreas Eberle")
+//CONTESTANT_REGISTER(eberle_mergesort_losertree_512way, "eberle/mergesort_losertree_512way", "Mergesort with Losertree by Andreas Eberle")
+//CONTESTANT_REGISTER(eberle_mergesort_losertree_1024way, "eberle/mergesort_losertree_1024way", "Mergesort with Losertree by Andreas Eberle")
 
 }
  // namespace eberle_mergesort

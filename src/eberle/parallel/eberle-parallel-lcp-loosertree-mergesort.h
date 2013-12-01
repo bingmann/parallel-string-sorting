@@ -43,8 +43,7 @@ static const int SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
 //method definitionstemplate<unsigned K>
 template<unsigned K>
 static inline
-void parallelMerge(AS* input, AS* output,
-		boost::array<std::pair<size_t, size_t>, K> &ranges);
+void parallelMerge(AS* input, AS* output, pair<size_t, size_t>* ranges);
 
 struct CopyDataJob: public Job {
 	AS* input;
@@ -91,11 +90,10 @@ template<unsigned K>
 struct MergeJob: public Job {
 	AS* input;
 	AS* output;
-	boost::array<pair<size_t, size_t>, K>* ranges;
+	pair<size_t, size_t>* ranges;
 	size_t length;
 
-	MergeJob(AS* input, AS* output,
-			boost::array<pair<size_t, size_t>, K>* ranges, size_t length) :
+	MergeJob(AS* input, AS* output, pair<size_t, size_t>* ranges, size_t length) :
 			input(input), output(output), ranges(ranges), length(length) {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 		cout << "MergeJob<" << K << "> (length: " << length << ")" << endl;
@@ -105,8 +103,8 @@ struct MergeJob: public Job {
 		cout << "MergeJob: in: " << input << "  out: " << output << "  length: "
 		<< length << endl;
 		for (unsigned k = 0; k < K; ++k) {
-			cout << k << ": " << (*ranges)[k].first << " length: "
-			<< (*ranges)[k].second << endl;
+			cout << k << ": " << ranges[k].first << " length: "
+			<< ranges[k].second << endl;
 		}
 		cout << endl;
 #endif
@@ -137,7 +135,7 @@ struct MergeJob: public Job {
 
 	virtual void run(JobQueue& jobQueue) {
 		for (unsigned k = 0; k < K; k++) {
-			input[(*ranges)[k].first].lcp = 0;
+			input[ranges[k].first].lcp = 0;
 		}
 
 		//merge
@@ -146,7 +144,7 @@ struct MergeJob: public Job {
 
 		if (!mergeToOutput(jobQueue, loserTree)) {
 			// share work
-			boost::array<pair<size_t, size_t>, K> newRanges;
+			pair < size_t, size_t > newRanges[K];
 			loserTree->getRangesOfRemaining(newRanges, input);
 			parallelMerge<K>(input, output, newRanges);
 		}
@@ -163,9 +161,8 @@ struct MergeJob: public Job {
 
 template<unsigned K>
 static inline list<pair<size_t, char> > ** findMinimas(AS* input,
-		boost::array<std::pair<size_t, size_t>, K> &ranges) {
-	//find minimas in first stream
-
+		pair<size_t, size_t>* ranges) {
+	//create list to store the minimas in the streams
 	list < pair<size_t, char> > **minimas = new list<pair<size_t, char> >*[4];
 	unsigned minimaHeights[K];
 	unsigned currMinimaHeight = input[ranges[0].first + 1].lcp;
@@ -224,7 +221,7 @@ static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 template<unsigned K>
 static inline
 void createJobs(JobQueue& jobQueue, AS* input, AS* output,
-		boost::array<pair<size_t, size_t>, K> &ranges) {
+		pair<size_t, size_t>* ranges) {
 	list < pair<size_t, char> > **minimas = findMinimas<K>(input, ranges);
 
 	list<pair<size_t, char> >::iterator iterators[K]; // get iterators of minimas of each streams
@@ -237,7 +234,7 @@ void createJobs(JobQueue& jobQueue, AS* input, AS* output,
 		// find all matching buckets with the smallest character
 		char currBucket = CHAR_MAX;
 		unsigned numberOfFoundBuckets = 0;
-		boost::array<unsigned, K> indexesOfFound;
+		unsigned indexesOfFound[K];
 
 		for (unsigned k = 0; k < K; ++k) {
 			if (iterators[k] != minimas[k]->end()
@@ -289,8 +286,7 @@ void createJobs(JobQueue& jobQueue, AS* input, AS* output,
 			length = length1 + length2;
 
 		} else { // default case: use a loosertree to merge the streams.
-			boost::array<pair<size_t, size_t>, K> *newRange = new boost::array<
-					std::pair<size_t, size_t>, K>;
+			pair < size_t, size_t > *newRange = new pair<size_t, size_t> [K];
 
 			for (unsigned k = 0; k < K; ++k) {
 				if (iterators[k] != minimas[k]->end()
@@ -298,11 +294,11 @@ void createJobs(JobQueue& jobQueue, AS* input, AS* output,
 					size_t start = iterators[k]->first;
 					iterators[k]++;
 					size_t currLength = iterators[k]->first - start;
-					(*newRange)[k] = make_pair(ranges[k].first + start,
+					newRange[k] = make_pair(ranges[k].first + start,
 							currLength);
 					length += currLength;
 				} else {
-					(*newRange)[k] = make_pair(0, 0); // this stream is not used
+					newRange[k] = make_pair(0, 0); // this stream is not used
 				}
 			}
 
@@ -317,11 +313,9 @@ void createJobs(JobQueue& jobQueue, AS* input, AS* output,
 
 template<unsigned K>
 static inline
-void parallelMerge(AS* input, AS* output,
-		boost::array<std::pair<size_t, size_t>, K> &ranges) {
+void parallelMerge(AS* input, AS* output, pair<size_t, size_t>* ranges) {
 	JobQueue jobQueue;
 	createJobs<K>(jobQueue, input, output, ranges);
-
 	jobQueue.loop();
 }
 
@@ -343,8 +337,8 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 	AS *tmp = static_cast<AS *>(malloc(n * sizeof(AS)));
 	AS *output = static_cast<AS *>(malloc(n * sizeof(AS)));
 
-	boost::array<std::pair<size_t, size_t>, K> ranges;
-	eberle_utils::calculateRanges<K>(ranges, n);
+	std::pair < size_t, size_t > ranges[K];
+	eberle_utils::calculateRanges(ranges, K, n);
 
 #pragma omp parallel for
 	for (unsigned k = 0; k < K; k++) {
