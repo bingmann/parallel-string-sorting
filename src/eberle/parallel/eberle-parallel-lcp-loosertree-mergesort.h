@@ -346,13 +346,13 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 	boost::array<std::pair<size_t, size_t>, K> ranges;
 	eberle_utils::calculateRanges<K>(ranges, n);
 
-//#pragma omp parallel for
+#pragma omp parallel for
 	for (unsigned k = 0; k < K; k++) {
 		size_t start = ranges[k].first;
 		size_t length = ranges[k].second;
 
 		parallel_sample_sort_numa(strings + start, length,
-                                          k % numNumaNodes, numThreadsPerPart, 0);
+                                          k % numNumaNodes, numThreadsPerPart);
 
 		//calculate lcps
 		size_t end = start + length;
