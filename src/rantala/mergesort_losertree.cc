@@ -23,6 +23,20 @@
 /* Implements a multi-way mergesort based on the loser tree.
  */
 
+#include <stdlib.h>
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include <iostream>
+
+#include <boost/array.hpp>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+#include "tools/insertion_sort.h"
+#include "tools/losertree.h"
+#include "../tools/contest.h"
+
 namespace rantala {
 
 void mergesort_4way(unsigned char**, size_t, unsigned char**);

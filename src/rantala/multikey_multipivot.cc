@@ -53,6 +53,22 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
+#include <stdint.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <algorithm>
+#include <vector>
+#include <set>
+
+#include <boost/array.hpp>
+#include <boost/static_assert.hpp>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+
+#include "../tools/contest.h"
+#include "../sequential/bs-mkqs.h"
+
 namespace rantala {
 
 // These values are used with variables and they need to be proper constants

@@ -32,7 +32,6 @@
 #include <sys/resource.h>
 
 #include <string>
-#include <bitset>
 #include <vector>
 #include <list>
 #include <deque>
@@ -51,7 +50,6 @@
 
 #include <boost/static_assert.hpp>
 #include <boost/array.hpp>
-#include <boost/tuple/tuple.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 
 #include "src/config.h"
@@ -158,27 +156,12 @@ std::string     gopt_memory_type; // argument -M, --memory, see tools/input.h
 #include "rantala/tools/vector_brodnik.h"
 #include "rantala/tools/insertion_sort.h"
 
-#include "rantala/multikey_block.h"
-#include "rantala/multikey_cache.h"
-#include "rantala/multikey_dynamic.h"
-#include "rantala/multikey_multipivot.h"
-#include "rantala/multikey_simd.h"
-
 #include "rantala/msd_a.h"
 #include "rantala/msd_a2.h"
 #include "rantala/msd_ce.h"
 #include "rantala/msd_ci.h"
 #include "rantala/msd_dyn_block.h"
 #include "rantala/msd_dyn_vector.h"
-
-#include "rantala/burstsort.h"
-#include "rantala/burstsort2.h"
-#include "rantala/burstsort_mkq.h"
-#include "rantala/mergesort.h"
-#include "rantala/mergesort_unstable.h"
-#include "rantala/tools/losertree.h"
-#include "rantala/mergesort_losertree.h"
-#include "rantala/mergesort_lcp.h"
 
 #undef debug
 

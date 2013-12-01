@@ -94,14 +94,6 @@
 
 namespace rantala {
 
-static inline int
-cmp(const unsigned char* a, const unsigned char* b)
-{
-	assert(a != 0);	assert(b != 0);
-	return strcmp(reinterpret_cast<const char*>(a),
-	              reinterpret_cast<const char*>(b));
-}
-
 struct Stream { unsigned char** restrict stream; size_t n; };
 
 static void

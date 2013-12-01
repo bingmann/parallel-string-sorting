@@ -36,7 +36,33 @@
 
 #include <xmmintrin.h>
 
+#include <xmmintrin.h>
+#include <emmintrin.h>
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
+#include <vector>
+#include <set>
+
+#include <boost/array.hpp>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+#include "tools/median.h"
+#include "tools/insertion_sort.h"
+
+#include "../tools/contest.h"
+
 namespace rantala {
+
+template <typename CharT>
+static inline unsigned
+get_bucket(CharT c, CharT pivot)
+{
+        return ((c > pivot) << 1) | (c == pivot);
+}
 
 static void
 calculate_bucketsizes_sse(

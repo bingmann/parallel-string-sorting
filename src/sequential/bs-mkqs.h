@@ -22,6 +22,8 @@
    Updated with std::swap and std::min by Timo Bingmann in 2012.
 */
 
+#include "inssort.h"
+
 namespace bs_mkqs {
 
 typedef unsigned char* string;
@@ -37,7 +39,7 @@ static void vecswap(int i, int j, int n, string x[])
     }
 }
 
-static void ssort1(string x[], int n, int depth)
+static inline void ssort1(string x[], int n, int depth)
 {
     int    a, b, c, d, r, v;
     if (n <= 1)
@@ -69,13 +71,13 @@ static void ssort1(string x[], int n, int depth)
     r = d-c; ssort1(x + n-r, r, depth);
 }
 
-void multikey1(string x[], int n)
+static inline void multikey1(string x[], int n)
 { ssort1(x, n, 0); }
 
 
 /* ssort2 -- Faster Version of Multikey Quicksort */
 
-static void vecswap2(string *a, string *b, int n)
+static inline void vecswap2(string *a, string *b, int n)
 {
     while (n-- > 0) {
         string t = *a;
@@ -86,7 +88,7 @@ static void vecswap2(string *a, string *b, int n)
 
 #define ptr2char(i) (*(*(i) + depth))
 
-static string *med3func(string *a, string *b, string *c, int depth)
+static inline string *med3func(string *a, string *b, string *c, int depth)
 {
     int va, vb, vc;
     if ((va=ptr2char(a)) == (vb=ptr2char(b)))
@@ -98,7 +100,7 @@ static string *med3func(string *a, string *b, string *c, int depth)
         : (vb > vc ? b : (va < vc ? a : c ) );
 }
 
-static void ssort2(string a[], size_t n, int depth)
+static inline void ssort2(string a[], size_t n, int depth)
 {
     int d, r, partval;
     string *pa, *pb, *pc, *pd, *pl, *pm, *pn;
@@ -142,9 +144,10 @@ static void ssort2(string a[], size_t n, int depth)
         ssort2(a + n-r, r, depth);
 }
 
-void multikey2(string a[], size_t n) { ssort2(a, n, 0); }
+static inline void multikey2(string a[], size_t n)
+{ ssort2(a, n, 0); }
 
-void bs_mkqsort(unsigned char **strings, size_t n)
+static void bs_mkqsort(unsigned char **strings, size_t n)
 {
     return multikey2(strings, n);
 }
@@ -159,7 +162,7 @@ CONTESTANT_REGISTER(bs_mkqsort,
 } // namespace bs_mkqs
 
 // global procedure for base sorting
-void mkqsort(unsigned char **strings, size_t n, int depth)
+static inline void mkqsort(unsigned char **strings, size_t n, int depth)
 {
     return bs_mkqs::ssort2(strings, n, depth);
 }

@@ -39,6 +39,8 @@
  * wasted space: O(n)
  */
 
+#include <boost/static_assert.hpp>
+
 namespace rantala {
 
 // Initial: Size of the initial memory allocation. Has to be a power of two.

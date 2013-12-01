@@ -37,6 +37,25 @@
  * }
  */
 
+#include <stdlib.h>
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include <iostream>
+#include <bitset>
+
+#include <boost/array.hpp>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+#include "tools/vector_malloc.h"
+#include "tools/vector_realloc.h"
+#include "tools/vector_block.h"
+#include "tools/vector_bagwell.h"
+#include "tools/vector_brodnik.h"
+#include "../tools/contest.h"
+#include "../sequential/bs-mkqs.h"
+
 namespace rantala_burstsort {
 
 using namespace rantala;

@@ -29,6 +29,17 @@
  * paper, but they mainly focus on the radix sort variant.
  */
 
+#include <stdint.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <algorithm>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+#include "tools/median.h"
+#include "../tools/contest.h"
+#include "../sequential/bs-mkqs.h"
+
 namespace rantala {
 
 template <unsigned CachedChars>

@@ -26,6 +26,22 @@
  * based on subinputs.
  */
 
+#include <stdlib.h>
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include <iostream>
+#include <bitset>
+
+#include <boost/static_assert.hpp>
+#include <boost/array.hpp>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+#include "tools/median.h"
+#include "../tools/contest.h"
+#include "../sequential/bs-mkqs.h"
+
 namespace rantala_burstsort_mkq {
 
 using namespace rantala;

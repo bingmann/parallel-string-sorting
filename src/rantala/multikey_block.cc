@@ -25,6 +25,21 @@
  * See also msd_DB.
  */
 
+#include <stdlib.h>
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include <iostream>
+#include <list>
+
+#include <boost/array.hpp>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+#include "tools/median.h"
+#include "../tools/contest.h"
+#include "../sequential/bs-mkqs.h"
+
 namespace rantala_multikey_block {
 
 using namespace rantala;

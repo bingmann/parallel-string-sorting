@@ -22,6 +22,15 @@
 
 namespace rantala {
 
+static inline int
+cmp(const unsigned char* a, const unsigned char* b)
+{
+	assert(a != 0);
+	assert(b != 0);
+	return strcmp(reinterpret_cast<const char*>(a),
+	              reinterpret_cast<const char*>(b));
+}
+
 static inline void
 insertion_sort(unsigned char** strings, int n, size_t depth)
 {

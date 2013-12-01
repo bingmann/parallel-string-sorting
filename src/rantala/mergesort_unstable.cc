@@ -40,6 +40,19 @@
  * }
  */
 
+#include <stdlib.h>
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include <iostream>
+
+#include <boost/tuple/tuple.hpp>
+
+#include "tools/debug.h"
+#include "tools/get_char.h"
+#include "tools/insertion_sort.h"
+#include "../tools/contest.h"
+
 namespace rantala {
 
 /*******************************************************************************

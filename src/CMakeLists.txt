@@ -11,7 +11,19 @@ set(SOURCES
   sequential/nilsson-forward8.cc
   sequential/nilsson-forward16.cc
   sequential/bingmann-qsort.cc
+  rantala/burstsort.cc
+  rantala/burstsort2.cc
+  rantala/burstsort_mkq.cc
   rantala/funnelsort.cc
+  rantala/mergesort.cc
+  rantala/mergesort_lcp.cc
+  rantala/mergesort_losertree.cc
+  rantala/mergesort_unstable.cc
+  rantala/multikey_block.cc
+  rantala/multikey_cache.cc
+  rantala/multikey_dynamic.cc
+  rantala/multikey_multipivot.cc
+  rantala/multikey_simd.cc
   sinha-copy-burstsort/glue.cc
   parallel/akiba-parallel_string_radix_sort.cc
   parallel/bingmann-parallel_radix_sort.cc
