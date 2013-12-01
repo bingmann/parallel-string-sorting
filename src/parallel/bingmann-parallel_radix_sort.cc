@@ -150,7 +150,7 @@ struct SmallsortJob8 : public Job
     {
         DBG(debug_jobs, "Process SmallsortJob8 " << this << " of size " << n);
 
-        string* strings = strptr.to_original(n);
+        string* strings = strptr.copy_back(n);
 
         if (n < g_inssort_threshold)
             return inssort::inssort(strings,n,depth);
@@ -292,7 +292,7 @@ struct SmallsortJob16 : public Job
     {
         DBG(debug_jobs, "Process SmallsortJob16 " << this << " of size " << n);
 
-        string* strings = strptr.to_original(n);
+        string* strings = strptr.copy_back(n);
 
         if (n < g_inssort_threshold)
             return inssort::inssort(strings,n,depth);
@@ -561,14 +561,14 @@ void RadixStepCE<uint8_t>::distribute_finished(JobQueue& jobqueue)
         if (bkt[i] == bkt[i+1])
             continue;
         else if (bkt[i] + 1 == bkt[i+1]) // just one string pointer, copyback
-            strptr.flip_ptr(bkt[i]).to_original(1);
+            strptr.flip(bkt[i]).copy_back(1);
         else
-            Enqueue<key_type>(jobqueue, strptr.flip_ptr(bkt[i]), bkt[i+1] - bkt[i],
+            Enqueue<key_type>(jobqueue, strptr.flip(bkt[i]), bkt[i+1] - bkt[i],
                               depth + key_traits<key_type>::add_depth);
     }
 
     // maybe copy back finished pointers from shadow
-    strptr.flip_ptr(0).to_original(bkt[1] - bkt[0]);
+    strptr.flip(0).copy_back(bkt[1] - bkt[0]);
 
     delete [] bkt;
     delete this;
@@ -592,21 +592,21 @@ void RadixStepCE<uint16_t>::distribute_finished(JobQueue& jobqueue)
         if (bkt[i] == bkt[i+1])
             continue;
         else if (bkt[i] + 1 == bkt[i+1]) // just one string pointer, copyback
-            strptr.flip_ptr(bkt[i]).to_original(1);
+            strptr.flip(bkt[i]).copy_back(1);
         else
-            Enqueue<key_type>(jobqueue, strptr.flip_ptr(bkt[i]), bkt[i+1] - bkt[i],
+            Enqueue<key_type>(jobqueue, strptr.flip(bkt[i]), bkt[i+1] - bkt[i],
                               depth + key_traits<key_type>::add_depth);
     }
 
     // maybe copy back finished pointers from shadow
     if (!strptr.flipped()) // if sorted[] = shadow
     {
-        strptr.flip_ptr(0).to_original(bkt[0x0100] - bkt[0]);
+        strptr.flip(0).copy_back(bkt[0x0100] - bkt[0]);
 
         for (unsigned int i = 0x0100; i < numbkts; i += 0x0100)
         {
             if (bkt[i] == bkt[i+1]) continue;
-            strptr.flip_ptr(bkt[i]).to_original(bkt[i+1] - bkt[i]);
+            strptr.flip(bkt[i]).copy_back(bkt[i+1] - bkt[i]);
         }
     }
 

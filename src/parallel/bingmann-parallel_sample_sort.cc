@@ -589,7 +589,7 @@ struct SmallsortJob : public Job
                         ;
                     else if ( s.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " is done!");
-                        s.strptr.to_original(s.bktsize[i]);
+                        s.strptr.copy_back(s.bktsize[i]);
                         s.strptr += s.bktsize[i];
                         ctx.restsize -= s.bktsize[i];
                     }
@@ -663,7 +663,7 @@ struct SmallsortJob : public Job
                     ;
                 else if ( s.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
                     DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " is done!");
-                    s.strptr.to_original(s.bktsize[i]);
+                    s.strptr.copy_back(s.bktsize[i]);
                     ctx.restsize -= s.bktsize[i];
                 }
                 else
@@ -848,7 +848,7 @@ struct SmallsortJob : public Job
         if (n < g_inssort_threshold) {
             inssort::inssort(strptr.active(), n, depth);
             ctx.restsize -= n;
-            strptr.to_original(n);
+            strptr.copy_back(n);
             return;
         }
 
@@ -888,7 +888,7 @@ struct SmallsortJob : public Job
                         insertion_sort<false>(ms.strptr.active(), ms.cache,
                                               ms.num_lt, ms.depth);
                         ctx.restsize -= ms.num_lt;
-                        ms.strptr.to_original(ms.num_lt);
+                        ms.strptr.copy_back(ms.num_lt);
                     }
                     else {
                         ms_stack.push_back( MKQSStep(ctx,
@@ -902,7 +902,7 @@ struct SmallsortJob : public Job
                     if (ms.num_eq == 0)
                         ;
                     else if (!ms.eq_recurse) {
-                        (ms.strptr + ms.num_lt).to_original(ms.num_eq);
+                        (ms.strptr + ms.num_lt).copy_back(ms.num_eq);
                         ctx.restsize -= ms.num_eq;
                     }
                     else if (ms.num_eq < g_inssort_threshold) {
@@ -910,7 +910,7 @@ struct SmallsortJob : public Job
                         insertion_sort<true>(sp.active(), ms.cache + ms.num_lt,
                                              ms.num_eq, ms.depth + sizeof(key_type));
                         ctx.restsize -= ms.num_eq;
-                        sp.to_original(ms.num_eq);
+                        sp.copy_back(ms.num_eq);
                     }
                     else {
                         ms_stack.push_back( MKQSStep(ctx,
@@ -930,7 +930,7 @@ struct SmallsortJob : public Job
                         insertion_sort<false>(sp.active(), ms.cache + ms.num_lt + ms.num_eq,
                                               ms.num_gt, ms.depth);
                         ctx.restsize -= ms.num_gt;
-                        sp.to_original(ms.num_gt);
+                        sp.copy_back(ms.num_gt);
                     }
                     else {
                         ms_stack.push_back( MKQSStep(ctx,
@@ -973,7 +973,7 @@ struct SmallsortJob : public Job
                                   st.num_eq, st.depth + sizeof(key_type));
             }
             else {
-                (st.strptr + st.num_lt).to_original(st.num_eq);
+                (st.strptr + st.num_lt).copy_back(st.num_eq);
                 ctx.restsize -= st.num_eq;
              }
         }
@@ -1199,13 +1199,13 @@ struct SampleSortStep
             if (bktsize == 0)
                 ;
             else if (bktsize == 1) { // just one string pointer, copyback
-                strptr.flip_ptr(bkt[i]).to_original(1);
+                strptr.flip(bkt[i]).copy_back(1);
                 ctx.restsize -= 1;
             }
             else
             {
                 DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bkt[i] << " size " << bktsize << " lcp " << int(splitter_lcp[i/2] & 0x7F));
-                Enqueue<Classify>(ctx, strptr.flip_ptr(bkt[i]), bktsize, depth + (splitter_lcp[i/2] & 0x7F));
+                Enqueue<Classify>(ctx, strptr.flip(bkt[i]), bktsize, depth + (splitter_lcp[i/2] & 0x7F));
             }
             ++i;
             // i is odd -> bkt[i] is equal bucket
@@ -1213,19 +1213,19 @@ struct SampleSortStep
             if (bktsize == 0)
                 ;
             else if (bktsize == 1) { // just one string pointer, copyback
-                strptr.flip_ptr(bkt[i]).to_original(1);
+                strptr.flip(bkt[i]).copy_back(1);
                 ctx.restsize -= 1;
             }
             else
             {
                 if ( splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " is done!");
-                    strptr.flip_ptr(bkt[i]).to_original(bktsize);
+                    strptr.flip(bkt[i]).copy_back(bktsize);
                     ctx.restsize -= bktsize;
                 }
                 else {
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " lcp keydepth!");
-                    Enqueue<Classify>(ctx, strptr.flip_ptr(bkt[i]), bktsize, depth + sizeof(key_type));
+                    Enqueue<Classify>(ctx, strptr.flip(bkt[i]), bktsize, depth + sizeof(key_type));
                 }
             }
             ++i;
@@ -1236,13 +1236,13 @@ struct SampleSortStep
         if (bktsize == 0)
             ;
         else if (bktsize == 1) { // just one string pointer, copyback
-            strptr.flip_ptr(bkt[i]).to_original(1);
+            strptr.flip(bkt[i]).copy_back(1);
             ctx.restsize -= 1;
         }
         else
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bkt[i] << " size " << bktsize << " no lcp");
-            Enqueue<Classify>(ctx, strptr.flip_ptr(bkt[i]), bktsize, depth);
+            Enqueue<Classify>(ctx, strptr.flip(bkt[i]), bktsize, depth);
         }
 
         delete [] bkt;
