@@ -57,7 +57,7 @@ void lcp_insertion_sort(const StringPtrLcp& strptr, size_t n, size_t depth)
                 // CASE 1: lcp goes down -> insert string
                 break;
             }
-            else // (cur_lcp >= new_lcp)
+            else if (cur_lcp == new_lcp)
             {
                 // CASE 2: compare more characters
 
@@ -77,6 +77,7 @@ void lcp_insertion_sort(const StringPtrLcp& strptr, size_t n, size_t depth)
                     break;
                 }
             }
+            // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
             strptr.str(i) = cur_str;
             strptr.lcp(i + 1) = cur_lcp;
@@ -110,7 +111,7 @@ void lcp_insertion_sort(const StringPtrLcp& strptr, size_t n, size_t depth)
                 // CASE 1: lcp goes down -> insert string
                 break;
             }
-            else // (cur_lcp >= new_lcp)
+            else if (cur_lcp == new_lcp)
             {
                 // CASE 2: compare more characters
 
@@ -130,6 +131,7 @@ void lcp_insertion_sort(const StringPtrLcp& strptr, size_t n, size_t depth)
                     break;
                 }
             }
+            // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
             strptr.str(i) = cur_str;
 

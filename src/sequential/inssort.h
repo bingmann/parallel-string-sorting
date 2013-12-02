@@ -56,7 +56,7 @@ static inline
 void insertion_sort(string* a, size_t n)
 { inssort(a, n, 0); }
 
-//CONTESTANT_REGISTER_UCARRAY(insertion_sort, "String Insertion-Sort")
+CONTESTANT_REGISTER(insertion_sort, "insertion_sort", "String Insertion-Sort")
 
 } // namespace  inssort
 
