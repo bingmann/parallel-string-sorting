@@ -43,10 +43,7 @@ public:
 
     list_type           m_list;
 
-    void register_contestant(Contestant* c)
-    {
-        m_list.push_back(c);
-    }
+    void register_contestant(Contestant* c); // implemented in main.cc
 
     void run_contest(const char* path); // implemented in main.cc
 

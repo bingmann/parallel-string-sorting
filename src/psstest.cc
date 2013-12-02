@@ -244,6 +244,18 @@ void Contest::run_contest(const char* path)
     }
 }
 
+void Contest::register_contestant(Contestant* c)
+{
+    for (size_t i = 0; i < m_list.size(); ++i) {
+        if (strcmp(m_list[i]->m_algoname, c->m_algoname) == 0) {
+            // duplicate registeration
+            return;
+        }
+    }
+
+    m_list.push_back(c);
+}
+
 void Contest::list_contentants()
 {
     std::cout << "Available string sorting algorithms:" << std::endl;
