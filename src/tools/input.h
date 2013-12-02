@@ -422,7 +422,7 @@ bool generate_random(const std::string& path, const std::string& letters)
         if (i+1 == slen) // end of string
             stringdata[i] = 0;
         else
-            stringdata[i] = letters[ rng() % letters.size() ];
+            stringdata[i] = letters[ (rng() / 100) % letters.size() ];
     }
 
     if (gopt_suffixsort) g_string_count = size;
