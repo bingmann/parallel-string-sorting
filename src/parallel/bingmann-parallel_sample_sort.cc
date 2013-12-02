@@ -820,6 +820,7 @@ struct SmallsortJob : public Job
             num_eq = num_leq + num_req;
             num_lt = llt - leq;
             num_gt = req - rgt;
+            assert(num_eq > 0);
             assert(num_lt + num_eq + num_gt == n);
 
             // swap equal values from left to center
@@ -899,9 +900,7 @@ struct SmallsortJob : public Job
                 // process the eq-subsequence
                 else if (ms.idx == 2)
                 {
-                    if (ms.num_eq == 0)
-                        ;
-                    else if (!ms.eq_recurse) {
+                    if (!ms.eq_recurse) {
                         (ms.strptr + ms.num_lt).copy_back(ms.num_eq);
                         ctx.restsize -= ms.num_eq;
                     }
@@ -966,7 +965,7 @@ struct SmallsortJob : public Job
         {
             Enqueue<Classify>(ctx, st.strptr, st.num_lt, st.depth);
         }
-        if (st.idx <= 1 && st.num_eq != 0)
+        if (st.idx <= 1) // st.num_eq > 0 always
         {
             if (st.eq_recurse) {
                 Enqueue<Classify>(ctx, st.strptr + st.num_lt,
