@@ -40,6 +40,7 @@
 #define DBGX DBGX_OMP
 
 #include "../sequential/inssort.h"
+#include "../sequential/bingmann-lcp_inssort.h"
 
 namespace bingmann_parallel_sample_sort {
 
@@ -63,6 +64,7 @@ static const size_t g_smallsort_threshold = 64*1024;
 static const size_t g_inssort_threshold = 64;
 
 typedef uint64_t key_type;
+typedef stringtools::StringPtrLcp StringPtr;
 
 // ****************************************************************************
 // *** Global Parallel Super Scalar String Sample Sort Context
@@ -96,6 +98,12 @@ typedef JobT<Context> Job;
 
 // ****************************************************************************
 // *** Classification Variants
+
+unsigned char lcpKeyType(const key_type& a, const key_type& b)
+{
+    // XOR both values and count the number of zero bytes
+    return count_high_zero_bits(a ^ b) / 8;
+}
 
 //! Recursive TreeBuilder for full-descent and unrolled variants, constructs a
 //! binary tree and the plain splitter array.
@@ -190,8 +198,8 @@ struct TreeBuilderFullDescent
 };
 
 // ****************************************************************************
-// * Classification Subroutines for TreeBuilderFd: rolled, and two unrolled
-// * variants
+// * Classification Subroutines for TreeBuilderFullDescent: rolled, and two
+// * unrolled variants
 
 template <size_t treebits>
 struct ClassifySimple
@@ -394,6 +402,24 @@ struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
 };
 
 // ****************************************************************************
+// *** Insertion Sort Template-switch
+
+template <typename StringPtrType>
+void insertion_sort(const StringPtrType& strptr, size_t n, size_t depth);
+
+template <>
+void insertion_sort<stringtools::StringPtr>(const stringtools::StringPtr& strptr, size_t n, size_t depth)
+{
+    inssort::inssort(strptr.active(), n, depth);
+}
+
+template <>
+void insertion_sort<stringtools::StringPtrLcp>(const stringtools::StringPtrLcp& strptr, size_t n, size_t depth)
+{
+    bingmann_lcp_inssort::lcp_insertion_sort(strptr, n, depth);
+}
+
+// ****************************************************************************
 // *** SampleSort non-recursive in-place sequential sample sort for small sorts
 
 template <template <size_t> class Classify>
@@ -522,7 +548,7 @@ struct SmallsortJob : public Job
         ss_pop_front = 0;
         ms_pop_front = 0;
 
-        if (n >= g_smallsort_threshold)
+        if (n >= g_smallsort_threshold && 0) // TODO
         {
             bktcache = new uint16_t[n];
             bktcache_size = n * sizeof(uint16_t);
@@ -708,8 +734,9 @@ struct SmallsortJob : public Job
 
     // Insertion sort the strings only based on the cached characters.
     static inline void
-    insertion_sort_cache_block(string* strings, key_type* cache, int n)
+    insertion_sort_cache_block(const StringPtr& strptr, key_type* cache, int n)
     {
+        string* strings = strptr.active();
         unsigned int pi, pj;
         for (pi = 1; --n > 0; ++pi) {
             string tmps = strings[pi];
@@ -725,28 +752,33 @@ struct SmallsortJob : public Job
         }
     }
 
+    // Insertion sort, but use cached characters if possible.
     template <bool CacheDirty>
     static inline void
-    insertion_sort(string* strings, key_type* cache, int n, size_t depth)
+    insertion_sort_cache(const StringPtr& strptr, key_type* cache, int n, size_t depth)
     {
-        if (n == 0) return;
-        if (CacheDirty) return inssort::inssort(strings, n, depth);
+        if (n <= 1) return;
+        if (CacheDirty) return insertion_sort(strptr, n, depth);
 
-        insertion_sort_cache_block(strings, cache, n);
+        insertion_sort_cache_block(strptr, cache, n);
 
-        size_t start=0, cnt=1;
-        for (int i=0; i < n-1; ++i) {
-            if (cmp(cache[i], cache[i+1]) == 0) {
-                ++cnt;
+        size_t start = 0, bktsize = 1;
+        for (int i = 0; i < n - 1; ++i) {
+            if (cache[i] == cache[i+1]) {
+                ++bktsize;
                 continue;
             }
-            if (cnt > 1 && cache[start] & 0xFF)
-                inssort::inssort(strings + start, cnt, depth + sizeof(key_type));
-            cnt = 1;
+            if (bktsize > 1 && cache[start] & 0xFF)
+                insertion_sort(strptr + start, bktsize, depth + sizeof(key_type));
+            if (start != 0)
+                strptr.lcp(start) = depth + lcpKeyType(cache[start-1], cache[start]);
+            bktsize = 1;
             start = i+1;
         }
-        if (cnt > 1 && cache[start] & 0xFF)
-            inssort::inssort(strings+start, cnt, depth + sizeof(key_type));
+        if (bktsize > 1 && cache[start] & 0xFF)
+            insertion_sort(strptr + start, bktsize, depth + sizeof(key_type));
+        if (start != 0)
+            strptr.lcp(start) = depth + lcpKeyType(cache[start-1], cache[start]);
     }
 
     struct MKQSStep
@@ -760,7 +792,7 @@ struct SmallsortJob : public Job
         MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* _cache, size_t _n, size_t _depth, bool CacheDirty)
             : strptr(_strptr), cache(_cache), n(_n), depth(_depth), idx(0)
         {
-            string* strings = _strptr.active();
+            string* strings = strptr.active();
 
             if (CacheDirty) {
                 for (size_t i = 0; i < n; ++i) {
@@ -778,7 +810,9 @@ struct SmallsortJob : public Job
             std::swap(cache[0], cache[p]);
             // save the pivot value
             key_type pivot = cache[0];
-            // indexes into array: 1 [===] leq [<<<] llt [???] rgt [>>>] req [===] n-1
+            // for immediate LCP calculation
+            key_type max_lt = 0, min_gt = std::numeric_limits<key_type>::max();
+            // indexes into array: 0 [pivot] 1 [===] leq [<<<] llt [???] rgt [>>>] req [===] n-1
             size_t leq = 1, llt = 1, rgt = n-1, req = n-1;
             while (true)
             {
@@ -786,6 +820,7 @@ struct SmallsortJob : public Job
                 {
                     int r = cmp(cache[llt], pivot);
                     if (r > 0) {
+                        min_gt = std::min(min_gt, cache[llt]);
                         break;
                     }
                     else if (r == 0) {
@@ -793,18 +828,25 @@ struct SmallsortJob : public Job
                         std::swap(cache[leq], cache[llt]);
                         leq++;
                     }
+                    else {
+                        max_lt = std::max(max_lt, cache[llt]);
+                    }
                     ++llt;
                 }
                 while (llt <= rgt)
                 {
                     int r = cmp(cache[rgt], pivot);
                     if (r < 0) {
+                        max_lt = std::max(max_lt, cache[rgt]);
                         break;
                     }
                     else if (r == 0) {
                         std::swap(strings[req], strings[rgt]);
                         std::swap(cache[req], cache[rgt]);
                         req--;
+                    }
+                    else {
+                        min_gt = std::min(min_gt, cache[rgt]);
                     }
                     --rgt;
                 }
@@ -833,8 +875,31 @@ struct SmallsortJob : public Job
             std::swap_ranges(strings+llt, strings+llt+size2, strings+n-size2);
             std::swap_ranges(cache+llt, cache+llt+size2, cache+n-size2);
 
-            // Save offsets for recursive sorting
+            // No recursive sorting if pivot has a zero byte
             this->eq_recurse = (pivot & 0xFF);
+
+            // for immediate LCP calculation, max and min could also be
+            // calculated in the loop above.
+            if (num_lt > 0)
+            {
+                //key_type _max_lt = *std::max_element(cache + 0, cache + num_lt);
+                //assert(max_lt == _max_lt);
+
+                unsigned int lcp = depth + lcpKeyType(max_lt, pivot);
+                //std::cout << "lcp with pivot: " << lcp << "\n";
+
+                strptr.lcp(num_lt) = lcp;
+            }
+            if (num_gt > 0)
+            {
+                //key_type _min_gt = *std::min_element(cache + num_lt + num_eq, cache + n);
+                //assert(min_gt == _min_gt);
+
+                unsigned int lcp = depth + lcpKeyType(pivot, min_gt);
+                //std::cout << "lcp with pivot: " << lcp << "\n";
+
+                strptr.lcp(num_lt + num_eq) = lcp;
+            }
 
             ++ctx.bs_steps;
         }
@@ -847,7 +912,7 @@ struct SmallsortJob : public Job
     void sort_mkqs_cache(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
     {
         if (n < g_inssort_threshold) {
-            inssort::inssort(strptr.active(), n, depth);
+            insertion_sort(strptr, n, depth);
             ctx.restsize -= n;
             strptr.copy_back(n);
             return;
@@ -872,7 +937,7 @@ struct SmallsortJob : public Job
         {
             while ( ms_stack.back().idx < 3 )
             {
-                if (use_work_sharing && ctx.jobqueue.has_idle()) {
+                if (use_work_sharing && ctx.jobqueue.has_idle() && 0) { // TODO
                     sample_sort_free_work(ctx);
                     goto jumpout;
                 }
@@ -886,56 +951,59 @@ struct SmallsortJob : public Job
                     if (ms.num_lt == 0)
                         ;
                     else if (ms.num_lt < g_inssort_threshold) {
-                        insertion_sort<false>(ms.strptr.active(), ms.cache,
-                                              ms.num_lt, ms.depth);
+                        insertion_sort_cache<false>(ms.strptr, ms.cache,
+                                                    ms.num_lt, ms.depth);
                         ctx.restsize -= ms.num_lt;
                         ms.strptr.copy_back(ms.num_lt);
                     }
                     else {
-                        ms_stack.push_back( MKQSStep(ctx,
-                                                     ms.strptr, ms.cache,
-                                                     ms.num_lt, ms.depth, false) );
+                        ms_stack.push_back(
+                            MKQSStep(ctx,
+                                     ms.strptr, ms.cache,
+                                     ms.num_lt, ms.depth, false) );
                     }
                 }
                 // process the eq-subsequence
                 else if (ms.idx == 2)
                 {
+                    StringPtr sp = ms.strptr + ms.num_lt;
+
                     if (!ms.eq_recurse) {
-                        (ms.strptr + ms.num_lt).copy_back(ms.num_eq);
+                        sp.copy_back(ms.num_eq);
                         ctx.restsize -= ms.num_eq;
                     }
                     else if (ms.num_eq < g_inssort_threshold) {
-                        StringPtr sp = ms.strptr + ms.num_lt;
-                        insertion_sort<true>(sp.active(), ms.cache + ms.num_lt,
-                                             ms.num_eq, ms.depth + sizeof(key_type));
+                        insertion_sort_cache<true>(sp, ms.cache + ms.num_lt,
+                                                   ms.num_eq, ms.depth + sizeof(key_type));
                         ctx.restsize -= ms.num_eq;
                         sp.copy_back(ms.num_eq);
                     }
                     else {
-                        ms_stack.push_back( MKQSStep(ctx,
-                                                     ms.strptr + ms.num_lt,
-                                                     ms.cache + ms.num_lt,
-                                                     ms.num_eq, ms.depth + sizeof(key_type), true) );
+                        ms_stack.push_back(
+                            MKQSStep(ctx, sp,
+                                     ms.cache + ms.num_lt,
+                                     ms.num_eq, ms.depth + sizeof(key_type), true) );
                     }
                 }
                 // process the gt-subsequence
                 else
                 {
+                    StringPtr sp = ms.strptr + ms.num_lt + ms.num_eq;
+
                     assert(ms.idx == 3);
                     if (ms.num_gt == 0)
                         ;
                     else if (ms.num_gt < g_inssort_threshold) {
-                        StringPtr sp = ms.strptr + ms.num_lt + ms.num_eq;
-                        insertion_sort<false>(sp.active(), ms.cache + ms.num_lt + ms.num_eq,
-                                              ms.num_gt, ms.depth);
+                        insertion_sort_cache<false>(sp, ms.cache + ms.num_lt + ms.num_eq,
+                                                    ms.num_gt, ms.depth);
                         ctx.restsize -= ms.num_gt;
                         sp.copy_back(ms.num_gt);
                     }
                     else {
-                        ms_stack.push_back( MKQSStep(ctx,
-                                                     ms.strptr + ms.num_lt + ms.num_eq,
-                                                     ms.cache + ms.num_lt + ms.num_eq,
-                                                     ms.num_gt, ms.depth, false) );
+                        ms_stack.push_back(
+                            MKQSStep(ctx, sp,
+                                     ms.cache + ms.num_lt + ms.num_eq,
+                                     ms.num_gt, ms.depth, false) );
                     }
                 }
             }
@@ -974,7 +1042,7 @@ struct SmallsortJob : public Job
             else {
                 (st.strptr + st.num_lt).copy_back(st.num_eq);
                 ctx.restsize -= st.num_eq;
-             }
+            }
         }
         if (st.idx <= 2 && st.num_gt != 0)
         {
@@ -1005,18 +1073,25 @@ struct SampleSortStep
 
     static const size_t bktnum = 2 * numsplitters + 1;
 
+    //! string pointers, size, and current sorting depth
     StringPtr           strptr;
     size_t              n, depth;
 
+    //! number of parts into which the strings were split
     unsigned int        parts;
+    //! size of all parts except the last
     size_t              psize;
+    //! number of threads still working
     std::atomic<unsigned int> pwork;
 
+    //! classifier instance and variables (contains splitter tree
     Classify<treebits>  classifier;
+    //! LCPs of splitters, needed for recursive calls
     unsigned char       splitter_lcp[numsplitters+1];
 
+    //! bucket array, of size (bktnum * parts + 1)
     size_t*             bkt;
-
+    //! bucket ids cache, created by classifier and later counted
     uint16_t*           bktcache[MAXPROCS];
 
     // *** Classes for JobQueue
@@ -1259,7 +1334,7 @@ struct SampleSortStep
 template <template <size_t> class Classify>
 void Enqueue(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
 {
-    if (n > ctx.sequential_threshold()) {
+    if (n > ctx.sequential_threshold() && 0) { // TODO
         new SampleSortStep<Classify>(ctx, strptr, n, depth);
     }
     else {
@@ -1281,13 +1356,29 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
     SampleSortStep<Classify>::put_stats();
 
     string* shadow = new string[n]; // allocate shadow pointer array
+    size_t* lcp = new size_t[n];
+    lcp[0] = -1;
 
-    Enqueue<Classify>(ctx, StringPtr(strings, shadow), n, depth);
+    Enqueue<Classify>(ctx, StringPtr(strings, shadow, false, lcp), n, depth);
     ctx.jobqueue.loop(ctx);
 
     delete [] shadow;
 
-    assert(ctx.restsize == 0);
+    for (size_t i = 1; i < n; ++i)
+    {
+        string s1 = strings[i-1], s2 = strings[i];
+        size_t h = 0;
+        while (*s1 != 0 && *s1 == *s2)
+            ++h, ++s1, ++s2;
+
+        if (h != lcp[i]) {
+            std::cout << "lcp[" << i << "] mismatch " << h << " != " << lcp[i] << std::endl;
+        }
+    }
+
+    delete [] lcp;
+
+    //assert(ctx.restsize == 0);
 
     g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
