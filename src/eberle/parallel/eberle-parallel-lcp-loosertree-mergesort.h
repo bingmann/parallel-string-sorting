@@ -42,10 +42,20 @@ static const int SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
 
 //method definitions
 
+AS* outputBase;
+
 template<unsigned K>
 static inline
 void createJobs(JobQueue& jobQueue, AS* input, AS* output,
 		pair<size_t, size_t>* ranges);
+
+static inline unsigned calculateLcp(string s1, string s2) {
+	unsigned lcp = 0;
+	while (*s1 != '\0' && *s1 == *s2)
+		s1++, s2++, lcp++;
+
+	return lcp;
+}
 
 static inline int scmp(string s1, string s2) {
 	while (*s1 != '\0' && *s1 == *s2)
@@ -57,7 +67,9 @@ static inline void checkSorting(AS* stream, size_t length) {
 	for (size_t i = 1; i < length; i++) {
 		if (scmp(stream[i - 1].text, stream[i].text) > 0) {
 			cout << "SORT ERROR! ( " << stream[i - 1].text << " | "
-					<< stream[i].text << " )-----------------------------------------------------------" << endl;
+					<< stream[i].text
+					<< " )-----------------------------------------------------------"
+					<< endl;
 		}
 	}
 }
@@ -74,7 +86,8 @@ struct CopyDataJob: public Job {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
 		{
-			cout << "CopyDataJob (length: " << length << ")" << endl;
+			cout << "CopyDataJob (output: " << (output - outputBase)
+					<< ", length: " << length << ")" << endl;
 		}
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 	}
@@ -99,8 +112,9 @@ struct BinaryMergeJob: public Job {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
 		{
-			cout << "BinaryMergeJob (length1: " << length1 << ", length2: "
-					<< length2 << ")" << endl;
+			cout << "BinaryMergeJob (output: " << (output - outputBase)
+					<< ", length1: " << length1 << ", length2: " << length2
+					<< ")" << endl;
 		}
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 	}
@@ -127,7 +141,7 @@ struct MergeJob: public Job {
 #ifndef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
 #pragma omp critical (OUTPUT)
 		{
-			cout << "MergeJob<" << K << "> (length: " << length << ")" << endl;
+			cout << "MergeJob<" << K << "> (output: "<<(output-outputBase)<< ", length: " << length << ")" << endl;
 		}
 #endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
@@ -135,11 +149,11 @@ struct MergeJob: public Job {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
 #pragma omp critical (OUTPUT)
 		{
-			cout << "MergeJob: in: " << input << "  out: " << output
-			<< "  length: " << length << endl;
+			cout << "MergeJob<" << K << "> (output: " << (output - outputBase)
+					<< ",  length: " << length << endl;
 			for (unsigned k = 0; k < K; ++k) {
 				cout << k << ": " << ranges[k].first << " length: "
-				<< ranges[k].second << endl;
+						<< ranges[k].second << endl;
 			}
 			cout << endl;
 		}
@@ -194,6 +208,7 @@ struct MergeJob: public Job {
 };
 
 //implementations follow
+bool happened = false;
 
 template<unsigned K>
 static inline list<pair<size_t, char> > ** findMinimas(AS* input,
@@ -207,20 +222,35 @@ static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 	for (unsigned k = 0; k < K; ++k) {
 		list<pair<size_t, char>> * currList = new list<pair<size_t, char>>();
 		size_t currLength = ranges[k].second;
+		AS* currInput = input + ranges[k].first;
 
 		if (currLength <= 1) { // the stream has no or just one element => no splitters can be found => skip it.
+			if (currLength == 1) { // Important special case! We need to check if minLcp needs to be decreased!
+				for (unsigned o = 1; o < K; ++o) {
+					unsigned idx = (k + o) % K;
+					if (ranges[idx].second > 0) {
+						string otherString = input[ranges[idx].first].text;
+						unsigned lcp = calculateLcp(otherString,
+								currInput->text);
+						if (lcp < minLcp) {
+							minLcp = lcp;
+
+							happened = true;
+						}
+						break;
+					}
+				}
+			}
 			minimas[k] = currList;
 			continue;
 		}
-
-		AS* currInput = input + ranges[k].first;
 
 		if (currInput[1].lcp < minLcp) {
 			minLcp = currInput[1].lcp;
 		}
 		char lastCharacter = currInput[0].text[minLcp];
 
-		for (size_t i = 1; i < currLength; i++) {
+		for (size_t i = 1; i < currLength; ++i) {
 			unsigned lcp = currInput[i].lcp;
 
 			if (lcp <= minLcp) {
@@ -392,14 +422,6 @@ void parallelMerge(AS* input, AS* output, pair<size_t, size_t>* ranges) {
 	jobQueue.loop();
 }
 
-static inline unsigned calculateLcp(string s1, string s2) {
-	unsigned lcp = 0;
-	while (*s1 != '\0' && *s1 == *s2)
-		s1++, s2++, lcp++;
-
-	return lcp;
-}
-
 void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 	const unsigned K = 4;
 
@@ -412,6 +434,8 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 
 	std::pair < size_t, size_t > ranges[K];
 	eberle_utils::calculateRanges(ranges, K, n);
+
+	outputBase = output;
 
 #pragma omp parallel for
 	for (unsigned k = 0; k < K; k++) {
@@ -446,6 +470,12 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 
 	free(tmp);
 	free(output);
+
+	if (happened) {
+		cout << "IT HAPPENED" << endl << endl;
+	} else {
+		cout << "nothing" << endl << endl;
+	}
 }
 
 CONTESTANT_REGISTER_PARALLEL(eberle_parallel_mergesort_lcp_loosertree,
