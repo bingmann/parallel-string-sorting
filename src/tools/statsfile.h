@@ -28,6 +28,7 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <vector>
 #include <unistd.h>
 
 #include <assert.h>
@@ -45,9 +46,32 @@ private:
 
     statsvec_type               m_statsvec;
 
-    std::string                 m_thiskey;
+protected:
 
-    std::ostringstream          m_curritem;
+    class Entry
+    {
+    public:
+        class StatsCache& m_sc;
+        std::string m_key;
+
+        Entry(StatsCache& sc, const std::string& key)
+            : m_sc(sc), m_key(key)
+        {
+        }
+
+        StatsCache& operator << (const std::string& v)
+        {
+            return m_sc.put(m_key, v);
+        }
+
+        template <typename ValueType>
+        StatsCache& operator << (const ValueType& v)
+        {
+            std::ostringstream vstr;
+            vstr << v;
+            return operator << (vstr.str());
+        }
+    };
 
 public:
 
@@ -55,50 +79,43 @@ public:
     void clear()
     {
         m_statsvec.clear();
-        m_thiskey.clear();
-        m_curritem.str("");
     }
 
-    /// Append a substring to the current or new key.
-    template <typename Type>
-    StatsCache& operator>> (const Type& t)
+    // Append a (key,value) pair
+    StatsCache& put(const std::string& k, const std::string& v)
     {
-        if (m_thiskey.size())
-        {
-            m_statsvec.push_back( strpair_type(m_thiskey, m_curritem.str()) );
-            m_thiskey.clear();
-            m_curritem.str("");
-        }
-
-        m_curritem << t;
+#pragma omp critical
+        m_statsvec.push_back( strpair_type(k, v) );
         return *this;
     }
 
-    /// Append the value to a previously >>-ed key.
-    template <typename Type>
-    StatsCache& operator<< (const Type& t)
+    // Append a (key,value) pair
+    template <typename KeyType, typename ValueType>
+    StatsCache& put(const KeyType& k, const ValueType& v)
     {
-        if (m_thiskey.size() == 0)
-        {
-            m_thiskey = m_curritem.str();
-            assert(m_thiskey.size() && "Key is empty!");
-            m_curritem.str("");
-        }
+        std::ostringstream kstr, vstr;
+        kstr << k; vstr << v;
+        return put(kstr.str(), vstr.str());
+    }
 
-        m_curritem << t;
-        return *this;
+    // Append a (key,value) pair as ">> key << value"
+    Entry operator >> (const std::string& k)
+    {
+        return Entry(*this, k);
+    }
+
+    // Append a (key,value) pair as ">> key << value"
+    template <typename KeyType>
+    Entry operator >> (const KeyType& k)
+    {
+        std::ostringstream kstr;
+        kstr << k;
+        return operator >> (kstr.str());
     }
 
     /// Return vector for inclusion in a StatsWriter.
-    const statsvec_type& get_statsvec()
+    const statsvec_type& get_statsvec() const
     {
-        if (m_thiskey.size())
-        {
-            m_statsvec.push_back( strpair_type(m_thiskey, m_curritem.str()) );
-            m_thiskey.clear();
-            m_curritem.str("");
-        }
-
         return m_statsvec;
     }
 };
@@ -147,7 +164,7 @@ public:
     StatsWriter& operator>> (const Type& t)
     {
         m_firstfield = 1;
-        m_line << "\t" << t;
+        m_line << '\t' << t;
 
         return *this;
     }
@@ -157,13 +174,21 @@ public:
     StatsWriter& operator<< (const Type& t)
     {
         if (m_firstfield) {
-            m_line << "=";
+            m_line << '=';
             m_firstfield = 0;
         }
 
         m_line << t;
 
         return *this;
+    }
+
+    // Append a (key,value) pair
+    template <typename KeyType, typename ValueType>
+    StatsWriter& put(const KeyType& k, const ValueType& v)
+    {
+        assert(m_firstfield == 0);
+        m_line << '\t' << k << '=' << v;
     }
 
     // Append a stats map
@@ -174,7 +199,7 @@ public:
         for (StatsCache::statsvec_type::const_iterator si = sm.begin();
              si != sm.end(); ++si)
         {
-            m_line << "\t" << si->first << "=" << si->second;
+            m_line << '\t' << si->first << '=' << si->second;
         }
     }
 };

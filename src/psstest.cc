@@ -335,7 +335,9 @@ void Contestant_UCArray::run_forked()
         }
         else
         {
-            g_statscache >> "status" << "SIG" << WTERMSIG(status);
+            std::ostringstream oss;
+            oss << "SIG" << WTERMSIG(status);
+            g_statscache >> "status" << oss.str();
         }
 
         StatsWriter(statsfile).append_stats(g_statscache);
