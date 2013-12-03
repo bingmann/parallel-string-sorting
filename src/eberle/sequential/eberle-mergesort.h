@@ -1,7 +1,11 @@
 #ifndef EBERLE_MERGESORT_H_
 #define EBERLE_MERGESORT_H_
 
+#include "../utils/utility-functions.h"
+
 namespace eberle_mergesort {
+
+using namespace eberle_utils;
 
 typedef unsigned char* string;
 
