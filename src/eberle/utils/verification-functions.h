@@ -2,6 +2,7 @@
 #define VERIFICATION_FUNCTIONS_H_
 
 #include "types.h"
+#include "utility-functions.h"
 
 namespace eberle_utils {
 
@@ -37,6 +38,15 @@ bool checkLcps(AS* output, size_t n, unsigned expectedFirstLcp) {
 	}
 
 	return allValid;
+}
+
+static inline void checkSorting(AS* stream, size_t length) {
+	for (size_t i = 1; i < length; i++) {
+		if (scmp(stream[i - 1].text, stream[i].text) > 0) {
+			std::cout << "SORT ERROR! ( " << stream[i - 1].text << " | "
+					<< stream[i].text << " )" << std::endl;
+		}
+	}
 }
 
 } // namespace eberle_utils

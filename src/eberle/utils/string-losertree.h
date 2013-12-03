@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include "types.h"
+#include "utility-functions.h"
 
 namespace eberle_utils {
 
@@ -20,13 +21,6 @@ typedef unsigned char* string;
 typedef unsigned int UINT;
 
 //implementation follows
-
-static inline
-int scmp(string s1, string s2) {
-	while (*s1 != '\0' && *s1 == *s2)
-		s1++, s2++;
-	return (*s1 - *s2);
-}
 
 template<unsigned NUMBER_OF_STREAMS>
 class StringLoserTree {

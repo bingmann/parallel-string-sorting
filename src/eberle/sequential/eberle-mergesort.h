@@ -10,13 +10,6 @@ using namespace eberle_utils;
 typedef unsigned char* string;
 
 static inline
-int scmp(string s1, string s2) {
-	while (*s1 != '\0' && *s1 == *s2)
-		s1++, s2++;
-	return (*s1 - *s2);
-}
-
-static inline
 void eberle_merge(string *strings, string *tmp, size_t length1,
 		size_t length2) {
 
