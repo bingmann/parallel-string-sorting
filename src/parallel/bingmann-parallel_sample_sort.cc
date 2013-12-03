@@ -1089,8 +1089,8 @@ struct SampleSortStep
     //! LCPs of splitters, needed for recursive calls
     unsigned char       splitter_lcp[numsplitters+1];
 
-    //! bucket array, of size (bktnum * parts + 1)
-    size_t*             bkt;
+    //! individual bucket array of threads, keep bkt[0] for DistributeJob
+    size_t*             bkt[MAXPROCS];
     //! bucket ids cache, created by classifier and later counted
     uint16_t*           bktcache[MAXPROCS];
 
@@ -1175,8 +1175,6 @@ struct SampleSortStep
 
         classifier.build(samples, samplesize, splitter_lcp);
 
-        bkt = new size_t[bktnum * parts + 1];
-
         // create new jobs
         pwork = parts;
         for (unsigned int p = 0; p < parts; ++p)
@@ -1194,11 +1192,9 @@ struct SampleSortStep
         if (strE < strB) strE = strB;
 
         uint16_t* mybktcache = bktcache[p] = new uint16_t[strE-strB];
-        uint16_t* bktout = mybktcache;
+        classifier.classify(strB, strE, mybktcache, depth);
 
-        classifier.classify(strB, strE, bktout, depth);
-
-        size_t* mybkt = bkt + p * bktnum;
+        size_t* mybkt = bkt[p] = new size_t[bktnum + (p == 0 ? 1 : 0)];
         memset(mybkt, 0, bktnum * sizeof(size_t));
 
         for (uint16_t* bc = mybktcache; bc != mybktcache + (strE-strB); ++bc)
@@ -1218,7 +1214,7 @@ struct SampleSortStep
         {
             for (unsigned int p = 0; p < parts; ++p)
             {
-                bkt[p * bktnum + i] = (sum += bkt[p * bktnum + i]);
+                bkt[p][i] = (sum += bkt[p][i]);
             }
         }
         assert(sum == n);
@@ -1242,14 +1238,13 @@ struct SampleSortStep
         string* sorted = strptr.shadow(); // get alternative shadow pointer array
 
         uint16_t* mybktcache = bktcache[p];
-        size_t mybkt[bktnum]; // copy bkt array to local stack
-        memcpy(mybkt, bkt + p * bktnum, sizeof(mybkt));
+        size_t* mybkt = bkt[p];
 
         for (string* str = strB; str != strE; ++str, ++mybktcache)
             sorted[ --mybkt[ *mybktcache ] ] = *str;
 
-        if (p == 0) // these are needed for recursion into bkts
-            memcpy(bkt, mybkt, sizeof(mybkt));
+        if (p != 0) // p = 0 is needed for recursion into bkts
+            delete [] bkt[p];
 
         delete [] bktcache[p];
 
@@ -1260,6 +1255,9 @@ struct SampleSortStep
     void distribute_finished(Context& ctx)
     {
         //DBG(debug_jobs, "Finishing DistributeJob " << this << " with enqueuing subjobs");
+
+        size_t* bkt = this->bkt[0];
+        assert(bkt);
 
         // first processor's bkt pointers are boundaries between bkts, just add sentinel:
         assert(bkt[0] == 0);
