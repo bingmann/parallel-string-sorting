@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include "types.h"
+#include "verification-functions.h"
 
 namespace eberle_inssort_lcp {
 
@@ -47,7 +48,7 @@ void inssort_lcp(string* strings, AS* output, size_t length) {
 
 			} //  CASE 3: candidate > curr => nothing to do
 		}
-	
+
 		// move the tail one back
 		for (size_t i = n; i > insIdx; i--) {
 			output[i] = output[i - 1];
@@ -66,22 +67,7 @@ void eberle_lcp_inssort(string *strings, size_t n) {
 	inssort_lcp(strings, output, n);
 
 	//check lcps
-
-	if(output[0].lcp != 0){
-		std::cout << "output[0].lcp " << output[0].lcp << " but should be 0\n";
-	}
-
-	for (size_t i = 1; i < n; ++i) {
-		string s1 = output[i - 1].text, s2 = output[i].text;
-		size_t lcp = 0;
-		while (*s1 != 0 && *s1 == *s2)
-			++lcp, ++s1, ++s2;
-
-		if (lcp != output[i].lcp) {
-			std::cout << "output[" << i << "].lcp mismatch " << lcp << " != " << output[i].lcp
-					<< std::endl;
-		}
-	}
+	eberle_utils::checkLcps(output, n, 0);
 
 	for (size_t i = 0; i < n; i++) {
 		strings[i] = output[i].text;

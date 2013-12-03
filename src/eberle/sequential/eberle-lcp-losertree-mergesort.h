@@ -6,6 +6,7 @@
 #include "../utils/utility-functions.h"
 #include "../utils/lcp-string-losertree.h"
 #include "../utils/eberle-inssort-lcp.h"
+#include "../utils/verification-functions.h"
 #include "eberle-lcp-mergesort.h"
 
 namespace eberle_mergesort {
@@ -50,6 +51,9 @@ void eberle_mergesort_losertree_lcp_kway(string *strings, size_t n) {
 	AS *output = static_cast<AS *>(malloc(n * sizeof(AS)));
 
 	eberle_mergesort_losertree_lcp_kway<K>(strings, tmp, output, n);
+
+	//check lcps
+	eberle_utils::checkLcps(output, n, 0);
 
 	for (size_t i = 0; i < n; i++) {
 		strings[i] = output[i].text;

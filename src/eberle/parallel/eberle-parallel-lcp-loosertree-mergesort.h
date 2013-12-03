@@ -36,14 +36,33 @@ typedef unsigned char* string;
 typedef unsigned int UINT;
 
 //constants
-static const size_t MERGE_BULK_SIZE = 50;
 static const bool USE_WORK_SHARING = true;
+static const size_t MERGE_BULK_SIZE = 50;
 static const int SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
 
-//method definitionstemplate<unsigned K>
+//method definitions
+
 template<unsigned K>
 static inline
-void parallelMerge(AS* input, AS* output, pair<size_t, size_t>* ranges);
+void createJobs(JobQueue& jobQueue, AS* input, AS* output,
+		pair<size_t, size_t>* ranges);
+
+static inline int scmp(string s1, string s2) {
+	while (*s1 != '\0' && *s1 == *s2)
+		s1++, s2++;
+	return (*s1 - *s2);
+}
+
+static inline void checkSorting(AS* stream, size_t length) {
+	for (size_t i = 1; i < length; i++) {
+		if (scmp(stream[i - 1].text, stream[i].text) > 0) {
+			cout << "SORT ERROR! ( " << stream[i - 1].text << " | "
+					<< stream[i].text << " )-----------------------------------------------------------" << endl;
+		}
+	}
+}
+
+//structs defining the jobs
 
 struct CopyDataJob: public Job {
 	AS* input;
@@ -53,8 +72,11 @@ struct CopyDataJob: public Job {
 	CopyDataJob(AS* input, AS* output, size_t length) :
 			input(input), output(output), length(length) {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-		cout << "CopyDataJob (length: " << length << ")" << endl;
-#endif
+#pragma omp critical (OUTPUT)
+		{
+			cout << "CopyDataJob (length: " << length << ")" << endl;
+		}
+#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 	}
 
 	virtual void run(JobQueue& jobQueue) {
@@ -75,16 +97,22 @@ struct BinaryMergeJob: public Job {
 			input1(input1), length1(length1), input2(input2), length2(length2), output(
 					output) {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-		cout << "BinaryMergeJob (length1: " << length1 << ", length2: "
-				<< length2 << ")" << endl;
-#endif
+#pragma omp critical (OUTPUT)
+		{
+			cout << "BinaryMergeJob (length1: " << length1 << ", length2: "
+					<< length2 << ")" << endl;
+		}
+#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 	}
 
 	virtual void run(JobQueue& jobQueue) {
 		(void) jobQueue;
+		input1->lcp = 0;
+		input2->lcp = 0;
 		eberle_lcp_merge(input1, length1, input2, length2, output);
 	}
-};
+}
+;
 
 template<unsigned K>
 struct MergeJob: public Job {
@@ -96,18 +124,26 @@ struct MergeJob: public Job {
 	MergeJob(AS* input, AS* output, pair<size_t, size_t>* ranges, size_t length) :
 			input(input), output(output), ranges(ranges), length(length) {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-		cout << "MergeJob<" << K << "> (length: " << length << ")" << endl;
-#endif
+#ifndef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
+#pragma omp critical (OUTPUT)
+		{
+			cout << "MergeJob<" << K << "> (length: " << length << ")" << endl;
+		}
+#endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
+#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
-		cout << "MergeJob: in: " << input << "  out: " << output << "  length: "
-		<< length << endl;
-		for (unsigned k = 0; k < K; ++k) {
-			cout << k << ": " << ranges[k].first << " length: "
-			<< ranges[k].second << endl;
+#pragma omp critical (OUTPUT)
+		{
+			cout << "MergeJob: in: " << input << "  out: " << output
+			<< "  length: " << length << endl;
+			for (unsigned k = 0; k < K; ++k) {
+				cout << k << ": " << ranges[k].first << " length: "
+				<< ranges[k].second << endl;
+			}
+			cout << endl;
 		}
-		cout << endl;
-#endif
+#endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
 	}
 
 	/*
@@ -134,7 +170,7 @@ struct MergeJob: public Job {
 	}
 
 	virtual void run(JobQueue& jobQueue) {
-		for (unsigned k = 0; k < K; k++) {
+		for (unsigned k = 0; k < K; k++) { // this is a temporary fix, because the losertree modifies the lcps.
 			input[ranges[k].first].lcp = 0;
 		}
 
@@ -146,7 +182,7 @@ struct MergeJob: public Job {
 			// share work
 			pair < size_t, size_t > newRanges[K];
 			loserTree->getRangesOfRemaining(newRanges, input);
-			parallelMerge<K>(input, output, newRanges);
+			createJobs<K>(jobQueue, input, output, newRanges);
 		}
 
 		delete loserTree;
@@ -162,58 +198,85 @@ struct MergeJob: public Job {
 template<unsigned K>
 static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 		pair<size_t, size_t>* ranges) {
-	//create list to store the minimas in the streams
+//create list to store the minimas in the streams
 	list < pair<size_t, char> > **minimas = new list<pair<size_t, char> >*[4];
 	unsigned minimaHeights[K];
-	unsigned currMinimaHeight = input[ranges[0].first + 1].lcp;
+	unsigned minLcp = UINT_MAX;
 
-	// find minimas in each stream
-	for (unsigned k = 0; k < K; k++) {
-		list < pair<size_t, char> > *currList = new list<pair<size_t, char> >();
+// find minimas in each stream
+	for (unsigned k = 0; k < K; ++k) {
+		list<pair<size_t, char>> * currList = new list<pair<size_t, char>>();
+		size_t currLength = ranges[k].second;
+
+		if (currLength <= 1) { // the stream has no or just one element => no splitters can be found => skip it.
+			minimas[k] = currList;
+			continue;
+		}
+
 		AS* currInput = input + ranges[k].first;
-		const size_t currLength = ranges[k].second;
+
+		if (currInput[1].lcp < minLcp) {
+			minLcp = currInput[1].lcp;
+		}
+		char lastCharacter = currInput[0].text[minLcp];
 
 		for (size_t i = 1; i < currLength; i++) {
 			unsigned lcp = currInput[i].lcp;
-			if (lcp <= currMinimaHeight) {
-				if (lcp < currMinimaHeight) {
-					currList->clear();
-					currMinimaHeight = lcp;
-				}
 
-				currList->push_back(make_pair(i, currInput[i].text[lcp]));
+			if (lcp <= minLcp) {
+				char character = currInput[i].text[lcp];
+
+				if (lcp < minLcp) {
+					currList->clear();
+					minLcp = lcp;
+
+					currList->push_back(make_pair(i, character)); // minLcp has been reduced => insert split point
+					lastCharacter = character;
+
+				} else if (character != lastCharacter) { // prevents multiple insertions for equal strings at start
+
+					currList->push_back(make_pair(i, character));
+					lastCharacter = character;
+				}
 			}
 		}
 
-		minimaHeights[k] = currMinimaHeight;
+		minimaHeights[k] = minLcp;
 		minimas[k] = currList;
 	}
 
-	// ensure that all minimas of the different streams are of the same lcp-height and add start and end
-	for (unsigned k = 0; k < K; k++) {
-		if (minimaHeights[k] > currMinimaHeight) { // remove higher minimas
+// ensure that all minimas of the different streams are of the same lcp-height and add start and end
+	for (unsigned k = 0; k < K; ++k) {
+		if (ranges[k].second <= 0) {
+			continue;
+		}
+
+		if (minimaHeights[k] > minLcp) {
 			minimas[k]->clear();
 		}
-		//add start and end to the lists
+
 		minimas[k]->push_front(
-				make_pair(0, input[ranges[k].first].text[currMinimaHeight]));
+				make_pair(0, input[ranges[k].first].text[minLcp]));
 		minimas[k]->push_back(make_pair(ranges[k].second, CHAR_MAX));
 	}
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_MINIMA_DETECTION
-	// now we have all minimas of minimaHeight.
-	cout << endl << "minimaHeight: " << currMinimaHeight << " at positions:"
-			<< endl;
-	for (unsigned k = 0; k < K; k++) {
-		list < pair<size_t, char> > *v = minimas[k];
-		for (list<pair<size_t, char> >::iterator it = v->begin();
-				it != v->end(); ++it) {
-			cout << it->first << ":" << it->second << "(" << "), ";
+
+#pragma omp critical (OUTPUT)
+	{
+		// now we have all minimas of minimaHeight.
+		cout << endl << "minLcp: " << minLcp << " at positions:" << endl;
+		for (unsigned k = 0; k < K; k++) {
+			list < pair<size_t, char> > *v = minimas[k];
+			for (list<pair<size_t, char> >::iterator it = v->begin();
+					it != v->end(); ++it) {
+				cout << it->first << ":" << it->second << ", ";
+			}
+			cout << endl;
 		}
 		cout << endl;
 	}
-	cout << endl;
-#endif
+#endif // PARALLEL_LCP_MERGE_DEBUG_MINIMA_DETECTION
 
 	return minimas;
 }
@@ -227,9 +290,19 @@ void createJobs(JobQueue& jobQueue, AS* input, AS* output,
 	list<pair<size_t, char> >::iterator iterators[K]; // get iterators of minimas of each streams
 	for (unsigned k = 0; k < K; ++k) {
 		iterators[k] = minimas[k]->begin();
+
+		if (iterators[k]->second == 0) {
+			size_t start = iterators[k]->first;
+			iterators[k]++;
+			size_t length = iterators[k]->first - start;
+
+			AS* newInput = input + ranges[k].first + start;
+			jobQueue.enqueue(new CopyDataJob(newInput, output, length));
+			output += length;
+		}
 	}
 
-	//Go through all found minimas, find the matching buckets and create jobs for them
+//Go through all found minimas, find the matching buckets and create jobs for them
 	while (true) {
 		// find all matching buckets with the smallest character
 		char currBucket = CHAR_MAX;
@@ -333,7 +406,7 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 	int numNumaNodes = numa_num_configured_nodes();
 	int numThreadsPerPart = numa_num_configured_cpus() / K;
 
-	//allocate memory for annotated strings
+//allocate memory for annotated strings
 	AS *tmp = static_cast<AS *>(malloc(n * sizeof(AS)));
 	AS *output = static_cast<AS *>(malloc(n * sizeof(AS)));
 
@@ -364,7 +437,8 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 	parallelMerge<K>(tmp, output, ranges);
 
 	timer.stop();
-	cout << "top level merge needed: " << timer.delta() << "s" << endl;
+	cout << endl << "top level merge needed: " << timer.delta() << " s" << endl
+			<< endl;
 
 	for (size_t i = 0; i < n; i++) {
 		strings[i] = output[i].text;
