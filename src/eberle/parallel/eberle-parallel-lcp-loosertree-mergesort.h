@@ -38,7 +38,7 @@ typedef unsigned int UINT;
 //constants
 static const bool USE_WORK_SHARING = true;
 static const size_t MERGE_BULK_SIZE = 50;
-static const int SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
+static const int SHARE_WORK_THRESHOLD = 5 * MERGE_BULK_SIZE;
 
 //method definitions
 
@@ -141,7 +141,8 @@ struct MergeJob: public Job {
 #ifndef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
 #pragma omp critical (OUTPUT)
 		{
-			cout << "MergeJob<" << K << "> (output: "<<(output-outputBase)<< ", length: " << length << ")" << endl;
+			cout << "MergeJob<" << K << "> (output: " << (output - outputBase)
+					<< ", length: " << length << ")" << endl;
 		}
 #endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
@@ -150,10 +151,10 @@ struct MergeJob: public Job {
 #pragma omp critical (OUTPUT)
 		{
 			cout << "MergeJob<" << K << "> (output: " << (output - outputBase)
-					<< ",  length: " << length << endl;
+			<< ",  length: " << length << endl;
 			for (unsigned k = 0; k < K; ++k) {
 				cout << k << ": " << ranges[k].first << " length: "
-						<< ranges[k].second << endl;
+				<< ranges[k].second << endl;
 			}
 			cout << endl;
 		}
@@ -225,22 +226,6 @@ static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 		AS* currInput = input + ranges[k].first;
 
 		if (currLength <= 1) { // the stream has no or just one element => no splitters can be found => skip it.
-			if (currLength == 1) { // Important special case! We need to check if minLcp needs to be decreased!
-				for (unsigned o = 1; o < K; ++o) {
-					unsigned idx = (k + o) % K;
-					if (ranges[idx].second > 0) {
-						string otherString = input[ranges[idx].first].text;
-						unsigned lcp = calculateLcp(otherString,
-								currInput->text);
-						if (lcp < minLcp) {
-							minLcp = lcp;
-
-							happened = true;
-						}
-						break;
-					}
-				}
-			}
 			minimas[k] = currList;
 			continue;
 		}
@@ -273,6 +258,23 @@ static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 
 		minimaHeights[k] = minLcp;
 		minimas[k] = currList;
+	}
+
+	string lastText = NULL;
+	for (unsigned k = 0; k < K; ++k) {
+		if (ranges[k].second > 0) {
+			string text = input[ranges[k].first].text;
+
+			if (lastText != NULL) {
+				unsigned lcp = calculateLcp(lastText, text);
+				if (lcp < minLcp) {
+					happened = true;
+					minLcp = lcp;
+				}
+			}
+
+			lastText = text;
+		}
 	}
 
 // ensure that all minimas of the different streams are of the same lcp-height and add start and end
