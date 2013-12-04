@@ -674,7 +674,7 @@ struct SmallsortJob : public Job
         ms_pop_front = 0;
 
         //if (n >= g_smallsort_threshold) // TODO
-        if (n >= g_inssort_threshold) // TODO
+        if (n >= g_inssort_threshold && 0) // TODO
         {
             bktcache = new uint16_t[n];
             bktcache_size = n * sizeof(uint16_t);
@@ -913,6 +913,7 @@ struct SmallsortJob : public Job
         size_t num_lt, num_eq, num_gt, n, depth;
         size_t idx;
         bool eq_recurse;
+        unsigned int lcp_lt, lcp_gt;
 
         MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* _cache, size_t _n, size_t _depth, bool CacheDirty)
             : strptr(_strptr), cache(_cache), n(_n), depth(_depth), idx(0)
@@ -1003,30 +1004,60 @@ struct SmallsortJob : public Job
             // No recursive sorting if pivot has a zero byte
             this->eq_recurse = (pivot & 0xFF);
 
-            // for immediate LCP calculation, max and min could also be
-            // calculated in the loop above.
             if (num_lt > 0)
             {
                 //key_type _max_lt = *std::max_element(cache + 0, cache + num_lt);
                 //assert(max_lt == _max_lt);
 
-                unsigned int lcp = depth + lcpKeyType(max_lt, pivot);
-                //std::cout << "lcp with pivot: " << lcp << "\n";
-
-                strptr.lcp(num_lt) = lcp;
+                lcp_lt = depth + lcpKeyType(max_lt, pivot);
+                DBG(debug_lcp, "LCP lt with pivot: " << lcp_lt);
             }
             if (num_gt > 0)
             {
                 //key_type _min_gt = *std::min_element(cache + num_lt + num_eq, cache + n);
                 //assert(min_gt == _min_gt);
 
+                lcp_gt = depth + lcpKeyType(pivot, min_gt);
+                DBG(debug_lcp, "LCP pivot with gt: " << lcp_gt);
+             }
+
+            ++ctx.bs_steps;
+        }
+
+        void calculate_lcp()
+        {
+#if 1
+            if (num_lt > 0)
+                strptr.lcp(num_lt) = lcp_lt;
+
+            if (num_gt > 0)
+                strptr.lcp(num_lt + num_eq) = lcp_gt;
+#else
+            key_type pivot = get_char<key_type>(strptr.str(num_lt), depth);
+
+            if (num_lt > 0)
+            {
+                key_type max_lt = get_char<key_type>(strptr.str(num_lt-1), depth);
+
+                unsigned int lcp = depth + lcpKeyType(max_lt, pivot);
+                DBG(debug_lcp, "LCP lt with pivot: " << lcp);
+
+                assert(lcp == lcp_lt);
+
+                strptr.lcp(num_lt) = lcp;
+            }
+            if (num_gt > 0)
+            {
+                key_type min_gt = get_char<key_type>(strptr.str(num_lt + num_eq), depth);
+
                 unsigned int lcp = depth + lcpKeyType(pivot, min_gt);
-                //std::cout << "lcp with pivot: " << lcp << "\n";
+                DBG(debug_lcp, "LCP pivot with gt: " << lcp);
+
+                assert(lcp == lcp_gt);
 
                 strptr.lcp(num_lt + num_eq) = lcp;
             }
-
-            ++ctx.bs_steps;
+#endif
         }
     };
 
@@ -1036,7 +1067,7 @@ struct SmallsortJob : public Job
 
     void sort_mkqs_cache(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
     {
-        if (n < g_inssort_threshold || 1) { // TODO
+        if (n < g_inssort_threshold) { // TODO
             insertion_sort(strptr, n, depth);
             ctx.restsize -= n;
             strptr.copy_back(n);
@@ -1132,6 +1163,9 @@ struct SmallsortJob : public Job
                     }
                 }
             }
+
+            // calculate LCP after the three parts are sorted
+            ms_stack.back().calculate_lcp();
 
             ms_stack.pop_back();
         }
