@@ -16,8 +16,8 @@
 #include "../../parallel/bingmann-parallel_sample_sort.h"
 
 //#define PARALLEL_LCP_MERGE_DEBUG_MINIMA_DETECTION
-//#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
 //#define PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
+//#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
 #define PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
 
 namespace eberle_parallel_mergesort_lcp_loosertree {
@@ -61,8 +61,7 @@ struct CopyDataJob: public Job {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
 		{
-			cout << "CopyDataJob (output: " << output
-			<< ", length: " << length << ")" << endl;
+			cout << "CopyDataJob (output: " << output << ", length: " << length << ")" << endl;
 		}
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 	}
@@ -87,9 +86,7 @@ struct BinaryMergeJob: public Job {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
 		{
-			cout << "BinaryMergeJob (output: " << output
-			<< ", length1: " << length1 << ", length2: " << length2
-			<< ")" << endl;
+			cout << "BinaryMergeJob (output: " << output << ", length1: " << length1 << ", length2: " << length2 << ")" << endl;
 		}
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 	}
@@ -113,25 +110,18 @@ struct MergeJob: public Job {
 	MergeJob(AS* input, AS* output, pair<size_t, size_t>* ranges, size_t length) :
 			input(input), output(output), ranges(ranges), length(length) {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-#ifndef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
 #pragma omp critical (OUTPUT)
 		{
 			cout << "MergeJob<" << K << "> (output: " << output << ", length: " << length << ")" << endl;
-		}
-#endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
-#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-
-#ifdef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
-#pragma omp critical (OUTPUT)
-		{
-			cout << "MergeJob<" << K << "> (output: " << output << ",  length: " << length << endl;
+#ifdef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
 			for (unsigned k = 0; k < K; ++k) {
-				cout << k << ": " << ranges[k].first << " length: "
-				<< ranges[k].second << endl;
+				cout << k << ": " << ranges[k].first << " length: " << ranges[k].second << endl;
 			}
 			cout << endl;
+#endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
 		}
-#endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS
+#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
+
 	}
 
 	/*
@@ -186,12 +176,30 @@ struct MergeJob: public Job {
 template<unsigned K>
 static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 		pair<size_t, size_t>* ranges) {
-//create list to store the minimas in the streams
+
+	//create list to store the minimas in the streams
 	list < pair<size_t, char> > **minimas = new list<pair<size_t, char> >*[4];
 	unsigned minimaHeights[K];
 	unsigned minLcp = UINT_MAX;
 
-// find minimas in each stream
+	//calculate the minimum lcp between the leading elements
+	string lastText = NULL;
+	for (unsigned k = 0; k < K; ++k) {
+		if (ranges[k].second > 0) {
+			string text = input[ranges[k].first].text;
+
+			if (lastText != NULL) {
+				unsigned lcp = calculateLcp(lastText, text);
+				if (lcp < minLcp) {
+					minLcp = lcp;
+				}
+			}
+
+			lastText = text;
+		}
+	}
+
+	// find minimas in each stream
 	for (unsigned k = 0; k < K; ++k) {
 		list<pair<size_t, char>> * currList = new list<pair<size_t, char>>();
 		size_t currLength = ranges[k].second;
@@ -232,23 +240,7 @@ static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 		minimas[k] = currList;
 	}
 
-	string lastText = NULL;
-	for (unsigned k = 0; k < K; ++k) {
-		if (ranges[k].second > 0) {
-			string text = input[ranges[k].first].text;
-
-			if (lastText != NULL) {
-				unsigned lcp = calculateLcp(lastText, text);
-				if (lcp < minLcp) {
-					minLcp = lcp;
-				}
-			}
-
-			lastText = text;
-		}
-	}
-
-// ensure that all minimas of the different streams are of the same lcp-height and add start and end
+	// ensure that all minimas of the different streams are of the same lcp-height and add start and end
 	for (unsigned k = 0; k < K; ++k) {
 		if (ranges[k].second <= 0) {
 			continue;
@@ -264,7 +256,6 @@ static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 	}
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_MINIMA_DETECTION
-
 #pragma omp critical (OUTPUT)
 	{
 		// now we have all minimas of minimaHeight.
