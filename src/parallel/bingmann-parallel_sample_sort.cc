@@ -502,6 +502,14 @@ struct SmallsortJob : public Job
                 i += bktsize[ permbkt ];
             }
 
+            // fix prefix sum??? TODO
+
+            bkt[0] = 0;
+            for (unsigned int i=1; i <= bktnum; ++i) {
+                bkt[i] = bkt[i-1] + bktsize[i-1];
+            }
+            assert(bkt[bktnum] == n);
+
             ++ctx.seq_ss_steps;
         }
     };
