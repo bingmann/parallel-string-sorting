@@ -460,7 +460,8 @@ struct SmallsortJob : public Job
         StringPtr strptr;
         size_t idx;
         size_t depth;
-        bktsize_type bktsize[bktnum];
+
+        bktsize_type bkt[bktnum+1];
 
         unsigned char splitter_lcp[numsplitters+1];
 
@@ -494,6 +495,7 @@ struct SmallsortJob : public Job
 
             // step 2.5: count bucket sizes
 
+            bktsize_type bktsize[bktnum];
             memset(bktsize, 0, bktnum * sizeof(bktsize_type));
 
             for (size_t si = 0; si < n; ++si)
@@ -501,14 +503,13 @@ struct SmallsortJob : public Job
 
             // step 3: prefix sum
 
-            bktsize_type bktindex[bktnum];
-            bktindex[0] = bktsize[0];
+            bkt[0] = bktsize[0];
             bktsize_type last_bkt_size = bktsize[0];
             for (unsigned int i=1; i < bktnum; ++i) {
-                bktindex[i] = bktindex[i-1] + bktsize[i];
+                bkt[i] = bkt[i-1] + bktsize[i];
                 if (bktsize[i]) last_bkt_size = bktsize[i];
             }
-            assert(bktindex[bktnum-1] == n);
+            assert(bkt[bktnum-1] == n);
 
             // step 4: premute in-place
 
@@ -517,7 +518,7 @@ struct SmallsortJob : public Job
                 string perm = strings[i];
                 uint16_t permbkt = bktcache[i];
 
-                while ( (j = --bktindex[ permbkt ]) > i )
+                while ( (j = --bkt[ permbkt ]) > i )
                 {
                     std::swap(perm, strings[j]);
                     std::swap(permbkt, bktcache[j]);
@@ -578,63 +579,54 @@ struct SmallsortJob : public Job
                 Step& s = ss_stack.back();
                 size_t i = s.idx++; // process the bucket s.idx
 
+                size_t bktsize = s.bkt[i+1] - s.bkt[i];
+
                 // i is even -> bkt[i] is less-than bucket
                 if ((i & 1) == 0)
                 {
-                    if (s.bktsize[i] == 0)
+                    if (bktsize == 0)
                         ;
-                    else if (s.bktsize[i] < g_smallsort_threshold)
+                    else if (bktsize < g_smallsort_threshold)
                     {
                         assert(i/2 <= Step::numsplitters);
                         if (i == Step::bktnum-1)
-                            DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << s.bktsize[i] << " no lcp");
+                            DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << bktsize << " no lcp");
                         else
-                            DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
+                            DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
-                        StringPtr sp = s.strptr;
-                        s.strptr += s.bktsize[i];
-                        sort_mkqs_cache(ctx, sp, s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F));
+                        sort_mkqs_cache(ctx, s.strptr + s.bkt[i], bktsize, s.depth + (s.splitter_lcp[i/2] & 0x7F));
                     }
                     else
                     {
                         if (i == Step::bktnum-1)
-                            DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << s.bktsize[i] << " no lcp");
+                            DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << bktsize << " no lcp");
                         else
-                            DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
+                            DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
-                        StringPtr sp = s.strptr;
-                        s.strptr += s.bktsize[i];
-                        ss_stack.push_back( Step(ctx, sp, s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F), bktcache) );
-                        // cannot add here, because s may have invalidated
+                        ss_stack.push_back( Step(ctx, s.strptr + s.bkt[i], bktsize, s.depth + (s.splitter_lcp[i/2] & 0x7F), bktcache) );
                     }
                 }
                 // i is odd -> bkt[i] is equal bucket
                 else
                 {
-                    if (s.bktsize[i] == 0)
+                    if (bktsize == 0)
                         ;
                     else if ( s.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " is done!");
-                        s.strptr.copy_back(s.bktsize[i]);
-                        s.strptr += s.bktsize[i];
-                        ctx.restsize -= s.bktsize[i];
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " is done!");
+                        (s.strptr + s.bkt[i]).copy_back(bktsize);
+                        ctx.restsize -= bktsize;
                     }
-                    else if (s.bktsize[i] < g_smallsort_threshold)
+                    else if (bktsize < g_smallsort_threshold)
                     {
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
 
-                        StringPtr sp = s.strptr;
-                        s.strptr += s.bktsize[i];
-                        sort_mkqs_cache(ctx, sp, s.bktsize[i], s.depth + sizeof(key_type));
+                        sort_mkqs_cache(ctx, s.strptr + s.bkt[i], bktsize, s.depth + sizeof(key_type));
                     }
                     else
                     {
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
 
-                        StringPtr sp = s.strptr;
-                        s.strptr += s.bktsize[i];
-                        ss_stack.push_back( Step(ctx, sp, s.bktsize[i], s.depth + sizeof(key_type), bktcache) );
-                        // cannot add here, because s may have invalidated
+                        ss_stack.push_back( Step(ctx, s.strptr + s.bkt[i], bktsize, s.depth + sizeof(key_type), bktcache) );
                     }
                 }
 
@@ -666,39 +658,39 @@ struct SmallsortJob : public Job
         {
             size_t i = s.idx++; // process the bucket s.idx
 
+            size_t bktsize = s.bkt[i+1] - s.bkt[i];
+
             // i is even -> bkt[i] is less-than bucket
             if ((i & 1) == 0)
             {
-                if (s.bktsize[i] == 0)
+                if (bktsize == 0)
                     ;
                 else
                 {
                     if (i == Step::bktnum-1)
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << s.bktsize[i] << " no lcp");
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << bktsize << " no lcp");
                     else
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << s.bktsize[i] << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
+                        DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
-                    Enqueue<Classify>( ctx, s.strptr, s.bktsize[i], s.depth + (s.splitter_lcp[i/2] & 0x7F) );
+                    Enqueue<Classify>( ctx, s.strptr + s.bkt[i], bktsize, s.depth + (s.splitter_lcp[i/2] & 0x7F) );
                 }
-                s.strptr += s.bktsize[i];
             }
             // i is odd -> bkt[i] is equal bucket
             else
             {
-                if (s.bktsize[i] == 0)
+                if (bktsize == 0)
                     ;
                 else if ( s.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
-                    DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " is done!");
-                    s.strptr.copy_back(s.bktsize[i]);
-                    ctx.restsize -= s.bktsize[i];
+                    DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " is done!");
+                    (s.strptr + s.bkt[i]).copy_back(bktsize);
+                    ctx.restsize -= bktsize;
                 }
                 else
                 {
-                    DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << s.bktsize[i] << " lcp keydepth!");
+                    DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
 
-                    Enqueue<Classify>( ctx, s.strptr, s.bktsize[i], s.depth + sizeof(key_type) );
+                    Enqueue<Classify>( ctx, s.strptr + s.bkt[i], bktsize, s.depth + sizeof(key_type) );
                 }
-                s.strptr += s.bktsize[i];
             }
         }
 
