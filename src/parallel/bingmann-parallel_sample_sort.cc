@@ -252,6 +252,10 @@ struct ClassifySimple
         }
     }
 
+    //! return a splitter
+    inline key_type get_splitter(unsigned int i) const
+    { return splitter[i]; }
+
     /// build tree and splitter array from sample
     inline void
     build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
@@ -312,6 +316,10 @@ struct ClassifyUnrollTree
             *bktout++ = b;
         }
     }
+
+    //! return a splitter
+    inline key_type get_splitter(unsigned int i) const
+    { return splitter[i]; }
 
     /// build tree and splitter array from sample
     inline void
@@ -1453,6 +1461,10 @@ struct ClassifyBinarySearch
         }
     }
 
+    //! return a splitter
+    inline key_type get_splitter(unsigned int i) const
+    { return splitter[i]; }
+
     /// build tree and splitter array from sample
     inline void
     build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
@@ -1680,6 +1692,12 @@ struct ClassifyEqual
         }
     }
 
+    //! return a splitter
+    inline key_type get_splitter(unsigned int i) const
+    {
+        return splitter_tree[ TreeCalculations<treebits>::in_to_levelorder(i) ];
+    }
+
     /// build tree and splitter array from sample
     inline void
     build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
@@ -1712,6 +1730,12 @@ struct ClassifyEqualUnrollTree
             unsigned int b = find_bkt_tree(key);
             *bktout++ = b;
         }
+    }
+
+    //! return a splitter
+    inline key_type get_splitter(unsigned int i) const
+    {
+        return splitter_tree[ TreeCalculations<treebits>::in_to_levelorder(i) ];
     }
 
     /// build tree and splitter array from sample
@@ -1783,7 +1807,6 @@ ClassifyEqualUnrollTree<11>::find_bkt_tree(const key_type& key) const
     return i;
 }
 
-/// binary search on splitter array for bucket number
 template <> inline unsigned int
 ClassifyEqualUnrollTree<12>::find_bkt_tree(const key_type& key) const
 {
@@ -1818,7 +1841,6 @@ ClassifyEqualUnrollTree<12>::find_bkt_tree(const key_type& key) const
     return i;
 }
 
-/// binary search on splitter array for bucket number
 template <> inline unsigned int
 ClassifyEqualUnrollTree<13>::find_bkt_tree(const key_type& key) const
 {
@@ -1854,7 +1876,6 @@ ClassifyEqualUnrollTree<13>::find_bkt_tree(const key_type& key) const
     return i;
 }
 
-/// binary search on splitter array for bucket number
 template <> inline unsigned int
 ClassifyEqualUnrollTree<14>::find_bkt_tree(const key_type& key) const
 {
