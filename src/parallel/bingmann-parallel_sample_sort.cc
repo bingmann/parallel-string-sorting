@@ -664,7 +664,7 @@ struct SmallsortJob : public Job
     size_t ss_pop_front;
     std::vector<SeqSampleSortStep> ss_stack;
 
-    virtual void run(Context& ctx)
+    virtual bool run(Context& ctx)
     {
         DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
@@ -688,6 +688,8 @@ struct SmallsortJob : public Job
         delete [] bktcache;
 
         if (pstep) pstep->substep_notify_done();
+
+        return true;
     }
 
     void sort_sample_sort(Context& ctx)
@@ -1264,9 +1266,10 @@ struct SampleSortStep : public SortStep
         SampleJob(SampleSortStep* _step)
             : step(_step) { }
 
-        virtual void run(Context& ctx)
+        virtual bool run(Context& ctx)
         {
             step->sample(ctx);
+            return true;
         }
     };
 
@@ -1278,9 +1281,10 @@ struct SampleSortStep : public SortStep
         CountJob(SampleSortStep* _step, unsigned int _p)
             : step(_step), p(_p) { }
 
-        virtual void run(Context& ctx)
+        virtual bool run(Context& ctx)
         {
             step->count(p, ctx);
+            return true;
         }
     };
 
@@ -1292,9 +1296,10 @@ struct SampleSortStep : public SortStep
         DistributeJob(SampleSortStep* _step, unsigned int _p)
             : step(_step), p(_p) { }
 
-        virtual void run(Context& ctx)
+        virtual bool run(Context& ctx)
         {
             step->distribute(p, ctx);
+            return true;
         }
     };
 

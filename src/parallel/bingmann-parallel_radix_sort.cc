@@ -146,14 +146,16 @@ struct SmallsortJob8 : public Job
         }
     };
 
-    virtual void run(JobQueue& jobqueue)
+    virtual bool run(JobQueue& jobqueue)
     {
         DBG(debug_jobs, "Process SmallsortJob8 " << this << " of size " << n);
 
         string* strings = strptr.copy_back(n);
 
-        if (n < g_inssort_threshold)
-            return inssort::inssort(strings,n,depth);
+        if (n < g_inssort_threshold) {
+            inssort::inssort(strings,n,depth);
+            return true;
+        }
 
         uint8_t* charcache = new uint8_t[n];
 
@@ -210,6 +212,8 @@ struct SmallsortJob8 : public Job
         }
 
         delete [] charcache;
+
+        return true;
     }
 };
 
@@ -288,14 +292,16 @@ struct SmallsortJob16 : public Job
         }
     };
 
-    virtual void run(JobQueue& jobqueue)
+    virtual bool run(JobQueue& jobqueue)
     {
         DBG(debug_jobs, "Process SmallsortJob16 " << this << " of size " << n);
 
         string* strings = strptr.copy_back(n);
 
-        if (n < g_inssort_threshold)
-            return inssort::inssort(strings,n,depth);
+        if (n < g_inssort_threshold) {
+            inssort::inssort(strings,n,depth);
+            return true;
+        }
 
         typedef uint16_t key_type;
 
@@ -361,6 +367,8 @@ struct SmallsortJob16 : public Job
         }
 
         delete [] charcache;
+
+        return true;
     }
 };
 
@@ -410,9 +418,10 @@ struct CountJob : public Job
     CountJob(RadixStepCE<key_type>* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
-    virtual void run(JobQueue& jobqueue)
+    virtual bool run(JobQueue& jobqueue)
     {
         step->count(p, jobqueue);
+        return true;
     }
 };
 
@@ -425,9 +434,10 @@ struct DistributeJob : public Job
     DistributeJob(RadixStepCE<key_type>* _step, unsigned int _p)
         : step(_step), p(_p) { }
 
-    virtual void run(JobQueue& jobqueue)
+    virtual bool run(JobQueue& jobqueue)
     {
         step->distribute(p, jobqueue);
+        return true;
     }
 };
 

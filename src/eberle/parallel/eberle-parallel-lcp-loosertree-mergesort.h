@@ -67,9 +67,10 @@ struct CopyDataJob: public Job {
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 	}
 
-	virtual void run(JobQueue& jobQueue) {
+	virtual bool run(JobQueue& jobQueue) {
 		(void) jobQueue;
 		memcpy(output, input, length * sizeof(AS));
+                return true;
 	}
 };
 
@@ -94,11 +95,12 @@ struct BinaryMergeJob: public Job {
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 	}
 
-	virtual void run(JobQueue& jobQueue) {
+	virtual bool run(JobQueue& jobQueue) {
 		(void) jobQueue;
 		input1->lcp = 0;
 		input2->lcp = 0;
 		eberle_lcp_merge(input1, length1, input2, length2, output);
+                return true;
 	}
 }
 ;
@@ -157,7 +159,7 @@ struct MergeJob: public Job {
 		return true;
 	}
 
-	virtual void run(JobQueue& jobQueue) {
+	virtual bool run(JobQueue& jobQueue) {
 		for (unsigned k = 0; k < K; k++) { // this is a temporary fix, because the losertree modifies the lcps.
 			input[ranges[k].first].lcp = 0;
 		}
@@ -174,6 +176,8 @@ struct MergeJob: public Job {
 		}
 
 		delete loserTree;
+
+                return true;
 	}
 
 	~MergeJob() {
