@@ -437,8 +437,8 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 }
 
 CONTESTANT_REGISTER_PARALLEL(eberle_parallel_mergesort_lcp_loosertree,
-		"eberle/parallel_mergesort_lcp_loosertree",
-		"Parallel Mergesort with LCP-usage by Andreas Eberle")
+		"eberle/parallel_mergesort_lcp_losertree",
+		"Parallel Mergesort with LCP-Losertree-usage by Andreas Eberle")
 
 }
 // namespace eberle_parallel_mergesort_lcp_loosertree

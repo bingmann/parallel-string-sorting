@@ -35,39 +35,40 @@ class LcpStringLoserTree {
 private:
 	STREAM streams[NUMBER_OF_STREAMS];
 	unsigned nodes[NUMBER_OF_STREAMS];
+	unsigned lcps[NUMBER_OF_STREAMS] = { };
 
 	/*
 	 * Returns the winner of all games.
 	 */
 	inline unsigned updateNode(unsigned &defenderIdx, unsigned contenderIdx) {
-		const STREAM* currStream = streams + defenderIdx;
+		const STREAM* defenderStream = streams + defenderIdx;
 
-		if (currStream->isEmpty) {
+		if (defenderStream->isEmpty) {
 			return contenderIdx;
 		}
 
 		const STREAM* contenderStream = streams + contenderIdx;
-		AS* contender = contenderStream->elements;
-		AS* curr = currStream->elements;
 
-		if (contenderStream->isEmpty || curr->lcp > contender->lcp) { // CASE 2: curr->lcp > contender->lcp => curr < contender
+		unsigned* contenderLcp = lcps + contenderIdx;
+		unsigned* defenderLcp = lcps + defenderIdx;
+
+		if (contenderStream->isEmpty || *defenderLcp > *contenderLcp) { // CASE 2: curr->lcp > contender->lcp => curr < contender
 			std::swap(defenderIdx, contenderIdx);
 
-		} else if (curr->lcp == contender->lcp) { // CASE 1: curr.lcp == contender.lcp
-			string s1 = curr->text + curr->lcp;
-			string s2 = contender->text + curr->lcp;
+		} else if (*defenderLcp == *contenderLcp) { // CASE 1: curr.lcp == contender.lcp
+			unsigned lcp = *defenderLcp;
+			string s1 = defenderStream->elements->text + lcp;
+			string s2 = contenderStream->elements->text + lcp;
 
 			// check the strings starting after lcp and calculate new lcp
 			while (*s1 != '\0' && *s1 == *s2)
-				s1++, s2++;
-
-			const unsigned lcp = s1 - curr->text;
+				s1++, s2++, lcp++;
 
 			if (*s1 < *s2) { 	// CASE 1.1: curr < contender
-				contender->lcp = lcp;
+				*contenderLcp = lcp;
 				std::swap(defenderIdx, contenderIdx);
 			} else {	// CASE 1.2: curr >= contender
-				curr->lcp = lcp;
+				*defenderLcp = lcp;
 			}
 		} // else // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
 
@@ -90,9 +91,15 @@ private:
 	inline AS* removeTopFromStream(unsigned streamIdx) {
 		STREAM* stream = &(streams[streamIdx]);
 		AS* top = stream->elements;
+		top->lcp = lcps[streamIdx];
+
 		stream->length--;
 		stream->elements++;
 		stream->isEmpty = stream->length <= 0;
+
+		if (!stream->isEmpty) {
+			lcps[streamIdx] = stream->elements->lcp;
+		}
 
 		return top;
 	}
@@ -126,8 +133,7 @@ public:
 		for (unsigned i = 0; i < NUMBER_OF_STREAMS; ++i) {
 			STREAM stream = streams[i];
 			if (stream.length > 0) {
-				cout << stream.elements[0].lcp << "|"
-						<< stream.elements[0].text;
+				cout << lcps[i] << "|" << stream.elements[0].text;
 			} else {
 				cout << -1;
 			}

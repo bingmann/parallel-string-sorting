@@ -9,6 +9,8 @@
 #include "../utils/verification-functions.h"
 #include "eberle-lcp-mergesort.h"
 
+//#define EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
+
 namespace eberle_mergesort {
 
 using namespace eberle_lcp_utils;
@@ -52,8 +54,10 @@ void eberle_mergesort_losertree_lcp_kway(string *strings, size_t n) {
 
 	eberle_mergesort_losertree_lcp_kway<K>(strings, tmp, output, n);
 
+#ifdef EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 	//check lcps
 	eberle_utils::checkLcps(output, n, 0);
+#endif //EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 
 	for (size_t i = 0; i < n; i++) {
 		strings[i] = output[i].text;
