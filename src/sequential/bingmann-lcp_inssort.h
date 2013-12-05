@@ -33,7 +33,7 @@ namespace bingmann_lcp_inssort {
 using namespace stringtools;
 
 static inline
-void lcp_insertion_sort(const StringPtrLcp& strptr, size_t n, size_t depth)
+void lcp_insertion_sort(const StringPtr& strptr, size_t n, size_t depth)
 {
     if (n <= 1) return;
 
@@ -151,26 +151,28 @@ void lcp_insertion_sort(const StringPtrLcp& strptr, size_t n, size_t depth)
 static inline
 void do_lcp_insertion_sort(string* strings, size_t n)
 {
-    size_t* lcp = new size_t[n];
-    lcp[0] = 42; // must keep lcp[0] unchanged
+    string* shadow = new string[n]; // allocate shadow pointer array
+    StringPtr strptr(strings, shadow, false);
 
-    lcp_insertion_sort(StringPtrLcp(strings, NULL, false, lcp), n, 0);
+    strptr.lcp(0) = 42; // must keep lcp[0] unchanged
 
-    std::cout << "lcp[0] " << lcp[0] << "\n";
+    lcp_insertion_sort(strptr, n, 0);
+
+    std::cout << "lcp[0] " << strptr.lcp(0) << "\n";
 
     for (size_t j = 1; j < n; ++j)
     {
-        string s1 = strings[j-1], s2 = strings[j];
+        string s1 = strptr.str(j-1), s2 = strptr.str(j);
         size_t h = 0;
         while (*s1 != 0 && *s1 == *s2)
             ++h, ++s1, ++s2;
 
-        if (h != lcp[j]) {
-            std::cout << "lcp[" << j << "] mismatch " << h << " != " << lcp[j] << std::endl;
+        if (h != strptr.lcp(j)) {
+            std::cout << "lcp[" << j << "] mismatch " << h << " != " << strptr.lcp(j) << std::endl;
         }
     }
 
-    delete [] lcp;
+    delete [] shadow;
 }
 
 CONTESTANT_REGISTER(do_lcp_insertion_sort, "bingmann/lcp_insertion_sort",

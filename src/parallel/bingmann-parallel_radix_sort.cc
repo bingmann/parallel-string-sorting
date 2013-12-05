@@ -150,7 +150,7 @@ struct SmallsortJob8 : public Job
     {
         DBG(debug_jobs, "Process SmallsortJob8 " << this << " of size " << n);
 
-        string* strings = strptr.copy_back(n);
+        string* strings = strptr.copy_back(n).active();
 
         if (n < g_inssort_threshold) {
             inssort::inssort(strings,n,depth);
@@ -296,7 +296,7 @@ struct SmallsortJob16 : public Job
     {
         DBG(debug_jobs, "Process SmallsortJob16 " << this << " of size " << n);
 
-        string* strings = strptr.copy_back(n);
+        string* strings = strptr.copy_back(n).active();
 
         if (n < g_inssort_threshold) {
             inssort::inssort(strings,n,depth);
