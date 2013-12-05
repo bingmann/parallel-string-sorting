@@ -40,15 +40,14 @@ typedef unsigned int UINT;
 
 //constants
 static const bool USE_WORK_SHARING = true;
-static const size_t MERGE_BULK_SIZE = 50;
-static const int SHARE_WORK_THRESHOLD = 5 * MERGE_BULK_SIZE;
+static const size_t MERGE_BULK_SIZE = 200;
+static const int SHARE_WORK_THRESHOLD = 7 * MERGE_BULK_SIZE;
 
 //method definitions
 
-template<unsigned K>
-    static inline
-    void
-    createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges);
+static inline
+void
+createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams);
 
 //structs defining the jobs
 
@@ -179,7 +178,7 @@ template<unsigned K>
                 // share work
                 pair < size_t, size_t > newRanges[K];
                 loserTree->getRangesOfRemaining(newRanges, input);
-                createJobs<K>(jobQueue, input, output, newRanges);
+                createJobs(jobQueue, input, output, newRanges, K);
             }
 
             delete loserTree;
@@ -193,273 +192,284 @@ template<unsigned K>
 
 //implementations follow
 
-template<unsigned K>
-    static inline list<pair<size_t, char> > **
-    findMinimas(AS* input, pair<size_t, size_t>* ranges)
+static inline list<pair<size_t, char> > **
+findMinimas(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
+{
+
+    //create list to store the minimas in the streams
+    list < pair<size_t, char> > **minimas = new list<pair<size_t, char> >*[numStreams];
+    unsigned minimaHeights[numStreams];
+    unsigned minLcp = UINT_MAX;
+
+    //calculate the minimum lcp between the leading elements
+    string lastText = NULL;
+    for (unsigned k = 0; k < numStreams; ++k)
     {
-
-        //create list to store the minimas in the streams
-        list < pair<size_t, char> > **minimas = new list<pair<size_t, char> >*[4];
-        unsigned minimaHeights[K];
-        unsigned minLcp = UINT_MAX;
-
-        //calculate the minimum lcp between the leading elements
-        string lastText = NULL;
-        for (unsigned k = 0; k < K; ++k)
+        if (ranges[k].second > 0)
         {
-            if (ranges[k].second > 0)
+            string text = input[ranges[k].first].text;
+
+            if (lastText != NULL)
             {
-                string text = input[ranges[k].first].text;
-
-                if (lastText != NULL)
+                unsigned lcp = calculateLcp(lastText, text);
+                if (lcp < minLcp)
                 {
-                    unsigned lcp = calculateLcp(lastText, text);
-                    if (lcp < minLcp)
-                    {
-                        minLcp = lcp;
-                    }
+                    minLcp = lcp;
                 }
-
-                lastText = text;
             }
+
+            lastText = text;
         }
+    }
 
-        // find minimas in each stream
-        for (unsigned k = 0; k < K; ++k)
-        {
-            list<pair<size_t, char>> * currList = new list<pair<size_t, char>>();
-            size_t currLength = ranges[k].second;
-            AS* currInput = input + ranges[k].first;
+    // find minimas in each stream
+    for (unsigned k = 0; k < numStreams; ++k)
+    {
+        list<pair<size_t, char>> * currList = new list<pair<size_t, char>>();
+        size_t currLength = ranges[k].second;
 
-            if (currLength <= 1)
-            { // the stream has no or just one element => no splitters can be found => skip it.
-                minimas[k] = currList;
-                continue;
-            }
-
-            if (currInput[1].lcp < minLcp)
-            {
-                minLcp = currInput[1].lcp;
-            }
-            char lastCharacter = currInput[0].text[minLcp];
-
-            for (size_t i = 1; i < currLength; ++i)
-            {
-                unsigned lcp = currInput[i].lcp;
-
-                if (lcp <= minLcp)
-                {
-                    char character = currInput[i].text[lcp];
-
-                    if (lcp < minLcp)
-                    {
-                        currList->clear();
-                        minLcp = lcp;
-
-                        currList->push_back(make_pair(i, character)); // minLcp has been reduced => insert split point
-                        lastCharacter = character;
-
-                    }
-                    else if (character != lastCharacter)
-                    { // prevents multiple insertions for equal strings at start
-
-                        currList->push_back(make_pair(i, character));
-                        lastCharacter = character;
-                    }
-                }
-            }
-
-            minimaHeights[k] = minLcp;
+        if (currLength <= 1)
+        { // the stream has no or just one element => no splitters can be found => skip it.
             minimas[k] = currList;
+            continue;
         }
 
-        // ensure that all minimas of the different streams are of the same lcp-height and add start and end
-        for (unsigned k = 0; k < K; ++k)
+        AS* currInput = input + ranges[k].first;
+        if (currInput[1].lcp < minLcp)
         {
-            if (ranges[k].second <= 0)
-            {
-                continue;
-            }
-
-            if (minimaHeights[k] > minLcp)
-            {
-                minimas[k]->clear();
-            }
-
-            minimas[k]->push_front(make_pair(0, input[ranges[k].first].text[minLcp]));
-            minimas[k]->push_back(make_pair(ranges[k].second, CHAR_MAX));
+            minLcp = currInput[1].lcp;
         }
+        char lastCharacter = currInput[0].text[minLcp];
+
+        for (size_t i = 1; i < currLength; ++i)
+        {
+            unsigned lcp = currInput[i].lcp;
+
+            if (lcp <= minLcp)
+            {
+                char character = currInput[i].text[lcp];
+
+                if (lcp < minLcp)
+                {
+                    currList->clear();
+                    minLcp = lcp;
+
+                    currList->push_back(make_pair(i, character)); // minLcp has been reduced => insert split point
+                    lastCharacter = character;
+
+                }
+                else if (character != lastCharacter)
+                { // prevents multiple insertions for equal strings at start
+
+                    currList->push_back(make_pair(i, character));
+                    lastCharacter = character;
+                }
+            }
+        }
+
+        minimaHeights[k] = minLcp;
+        minimas[k] = currList;
+    }
+
+    // ensure that all minimas of the different streams are of the same lcp-height and add start and end
+    for (unsigned k = 0; k < numStreams; ++k)
+    {
+        if (ranges[k].second <= 0)
+        {
+            continue;
+        }
+
+        if (minimaHeights[k] > minLcp)
+        {
+            minimas[k]->clear();
+        }
+
+        minimas[k]->push_front(make_pair(0, input[ranges[k].first].text[minLcp]));
+        minimas[k]->push_back(make_pair(ranges[k].second, CHAR_MAX));
+    }
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_MINIMA_DETECTION
 #pragma omp critical (OUTPUT)
+    {
+        // now we have all minimas of minimaHeight.
+        cout << endl << "minLcp: " << minLcp << " at positions:" << endl;
+        for (unsigned k = 0; k < numStreams; k++)
         {
-            // now we have all minimas of minimaHeight.
-            cout << endl << "minLcp: " << minLcp << " at positions:" << endl;
-            for (unsigned k = 0; k < K; k++)
+            list < pair<size_t, char> > *v = minimas[k];
+            for (list<pair<size_t, char> >::iterator it = v->begin(); it != v->end(); ++it)
             {
-                list < pair<size_t, char> > *v = minimas[k];
-                for (list<pair<size_t, char> >::iterator it = v->begin();
-                        it != v->end(); ++it)
-                {
-                    cout << it->first << ":" << it->second << ", ";
-                }
-                cout << endl;
+                cout << it->first << ":" << it->second << ", ";
             }
             cout << endl;
         }
+        cout << endl;
+    }
 #endif // PARALLEL_LCP_MERGE_DEBUG_MINIMA_DETECTION
 
-        return minimas;
+    return minimas;
+}
+
+static inline
+void
+createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams)
+{
+    list < pair<size_t, char> > **minimas = findMinimas(input, ranges, numStreams);
+
+    list<pair<size_t, char> >::iterator iterators[numStreams]; // get iterators of minimas of each streams
+    for (unsigned k = 0; k < numStreams; ++k)
+    {
+        iterators[k] = minimas[k]->begin();
+
+        if (iterators[k]->second == 0)
+        {
+            size_t start = iterators[k]->first;
+            iterators[k]++;
+            size_t length = iterators[k]->first - start;
+
+            AS* newInput = input + ranges[k].first + start;
+            jobQueue.enqueue(new CopyDataJob(newInput, output, length));
+            output += length;
+        }
     }
 
-template<unsigned K>
-    static inline
-    void
-    createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges)
+//Go through all found minimas, find the matching buckets and create jobs for them
+    while (true)
     {
-        list < pair<size_t, char> > **minimas = findMinimas<K>(input, ranges);
+        // find all matching buckets with the smallest character
+        char currBucket = CHAR_MAX;
+        unsigned numberOfFoundBuckets = 0;
+        unsigned indexesOfFound[numStreams];
 
-        list<pair<size_t, char> >::iterator iterators[K]; // get iterators of minimas of each streams
-        for (unsigned k = 0; k < K; ++k)
+        for (unsigned k = 0; k < numStreams; ++k)
         {
-            iterators[k] = minimas[k]->begin();
-
-            if (iterators[k]->second == 0)
+            if (iterators[k] != minimas[k]->end() && iterators[k]->second <= currBucket)
             {
-                size_t start = iterators[k]->first;
-                iterators[k]++;
-                size_t length = iterators[k]->first - start;
+                if (iterators[k]->second < currBucket)
+                {
+                    currBucket = iterators[k]->second;
 
-                AS* newInput = input + ranges[k].first + start;
-                jobQueue.enqueue(new CopyDataJob(newInput, output, length));
-                output += length;
+                    indexesOfFound[0] = k;
+                    numberOfFoundBuckets = 1;
+                }
+                else
+                {
+                    indexesOfFound[numberOfFoundBuckets] = k;
+                    numberOfFoundBuckets++;
+                }
             }
         }
 
-//Go through all found minimas, find the matching buckets and create jobs for them
-        while (true)
-        {
-            // find all matching buckets with the smallest character
-            char currBucket = CHAR_MAX;
-            unsigned numberOfFoundBuckets = 0;
-            unsigned indexesOfFound[K];
+        if (currBucket == CHAR_MAX)
+        { // no bucket < CHAR_MAX found => we reached the end
+            break;
+        }
 
-            for (unsigned k = 0; k < K; ++k)
+        size_t length = 0; // length of the current job (needed to increase output)
+
+        if (numberOfFoundBuckets == 1)
+        { // only one stream => copy instead of merge
+            unsigned index = indexesOfFound[0];
+            size_t start = iterators[index]->first;
+            iterators[index]++;
+            length = iterators[index]->first - start;
+
+            AS* newInput = input + ranges[index].first + start;
+            jobQueue.enqueue(new CopyDataJob(newInput, output, length));
+
+        }
+        else if (numberOfFoundBuckets == 2)
+        { // only two steams => binary merge
+            unsigned index1 = indexesOfFound[0];
+            size_t start1 = iterators[index1]->first;
+            iterators[index1]++;
+            size_t length1 = iterators[index1]->first - start1;
+            AS* newInput1 = input + ranges[index1].first + start1;
+
+            unsigned index2 = indexesOfFound[1];
+            size_t start2 = iterators[index2]->first;
+            iterators[index2]++;
+            size_t length2 = iterators[index2]->first - start2;
+            AS* newInput2 = input + ranges[index2].first + start2;
+
+            jobQueue.enqueue(new BinaryMergeJob(newInput1, length1, newInput2, length2, output));
+
+            length = length1 + length2;
+
+        }
+        else
+        { // default case: use a loosertree to merge the streams.
+            unsigned numStreams = getNextHigherPowerOfTwo(numberOfFoundBuckets);
+            pair < size_t, size_t > *newRange = new pair<size_t, size_t> [numStreams];
+
+            unsigned k = 0;
+            for (; k < numberOfFoundBuckets; ++k)
             {
-                if (iterators[k] != minimas[k]->end() && iterators[k]->second <= currBucket)
-                {
-                    if (iterators[k]->second < currBucket)
-                    {
-                        currBucket = iterators[k]->second;
-
-                        indexesOfFound[0] = k;
-                        numberOfFoundBuckets = 1;
-                    }
-                    else
-                    {
-                        indexesOfFound[numberOfFoundBuckets] = k;
-                        numberOfFoundBuckets++;
-                    }
-                }
+                unsigned idx = indexesOfFound[k];
+                size_t start = iterators[idx]->first;
+                iterators[idx]++;
+                size_t currLength = iterators[idx]->first - start;
+                newRange[k] = make_pair(ranges[idx].first + start, currLength);
+                length += currLength;
+            }
+            for (; k < numStreams; k++)
+            {
+                newRange[k] = make_pair(0, 0); // this stream is not used
             }
 
-            if (currBucket == CHAR_MAX)
-            { // no bucket < CHAR_MAX found => we reached the end
+            switch (numStreams)
+            {
+            case 4:
+                jobQueue.enqueue(new MergeJob<4>(input, output, newRange, length));
+                break;
+            case 8:
+                jobQueue.enqueue(new MergeJob<8>(input, output, newRange, length));
+                break;
+            case 16:
+                jobQueue.enqueue(new MergeJob<16>(input, output, newRange, length));
+                break;
+            case 32:
+                jobQueue.enqueue(new MergeJob<32>(input, output, newRange, length));
                 break;
             }
 
-            size_t length = 0; // length of the current job (needed to increase output)
-
-            if (numberOfFoundBuckets == 1)
-            { // only one stream => copy instead of merge
-                unsigned index = indexesOfFound[0];
-                size_t start = iterators[index]->first;
-                iterators[index]++;
-                length = iterators[index]->first - start;
-
-                AS* newInput = input + ranges[index].first + start;
-                jobQueue.enqueue(new CopyDataJob(newInput, output, length));
-
-            }
-            else if (numberOfFoundBuckets == 2)
-            { // only two steams => binary merge
-                unsigned index1 = indexesOfFound[0];
-                size_t start1 = iterators[index1]->first;
-                iterators[index1]++;
-                size_t length1 = iterators[index1]->first - start1;
-                AS* newInput1 = input + ranges[index1].first + start1;
-
-                unsigned index2 = indexesOfFound[1];
-                size_t start2 = iterators[index2]->first;
-                iterators[index2]++;
-                size_t length2 = iterators[index2]->first - start2;
-                AS* newInput2 = input + ranges[index2].first + start2;
-
-                jobQueue.enqueue(new BinaryMergeJob(newInput1, length1, newInput2, length2, output));
-
-                length = length1 + length2;
-
-            }
-            else
-            { // default case: use a loosertree to merge the streams.
-                pair < size_t, size_t > *newRange = new pair<size_t, size_t> [K];
-
-                for (unsigned k = 0; k < K; ++k)
-                {
-                    if (iterators[k] != minimas[k]->end() && iterators[k]->second == currBucket)
-                    {
-                        size_t start = iterators[k]->first;
-                        iterators[k]++;
-                        size_t currLength = iterators[k]->first - start;
-                        newRange[k] = make_pair(ranges[k].first + start, currLength);
-                        length += currLength;
-                    }
-                    else
-                    {
-                        newRange[k] = make_pair(0, 0); // this stream is not used
-                    }
-                }
-
-                jobQueue.enqueue(new MergeJob<K>(input, output, newRange, length));
-            }
-
-            output += length;
         }
 
-        delete[] minimas;
+        output += length;
     }
 
-template<unsigned K>
-    static inline
-    void
-    parallelMerge(AS* input, string* output, pair<size_t, size_t>* ranges)
-    {
-        JobQueue jobQueue;
-        createJobs<K>(jobQueue, input, output, ranges);
-        jobQueue.loop();
-    }
+    delete[] minimas;
+}
+
+static inline
+void
+parallelMerge(AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams)
+{
+    JobQueue jobQueue;
+    cout << "doing parallel merge for " << numStreams << " streams" << endl;
+    createJobs(jobQueue, input, output, ranges, numStreams);
+    jobQueue.loop();
+}
 
 void
 eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
 {
-    const unsigned K = 4;
-
-    int numNumaNodes = numa_num_configured_nodes();
-    int numThreadsPerPart = numa_num_configured_cpus() / K;
+    int realNumaNodes = numa_num_configured_nodes();
+    unsigned numNumaNodes = max(unsigned(8), unsigned(realNumaNodes)); // this max ensures a parallel merge on developer machine
+    int numThreadsPerPart = numa_num_configured_cpus() / numNumaNodes;
 
 //allocate memory for annotated strings
     AS *tmp = static_cast<AS *>(malloc(n * sizeof(AS)));
 
-    std::pair < size_t, size_t > ranges[K];
-    calculateRanges(ranges, K, n);
+    std::pair < size_t, size_t > ranges[numNumaNodes];
+    calculateRanges(ranges, numNumaNodes, n);
 
 #pragma omp parallel for
-    for (unsigned k = 0; k < K; k++)
+    for (unsigned k = 0; k < numNumaNodes; k++)
     {
         size_t start = ranges[k].first;
         size_t length = ranges[k].second;
 
-        parallel_sample_sort_numa(strings + start, length, k % numNumaNodes, numThreadsPerPart);
+        parallel_sample_sort_numa(strings + start, length, k % realNumaNodes, numThreadsPerPart);
 
         //calculate lcps
         size_t end = start + length;
@@ -475,11 +485,11 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
 #ifdef PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
     MeasureTime < 0 > timer;
     timer.start();
-    parallelMerge<K>(tmp, strings, ranges);
+    parallelMerge(tmp, strings, ranges, numNumaNodes);
     timer.stop();
     cout << endl << "top level merge needed: " << timer.delta() << " s" << endl << endl;
 #else
-    parallelMerge<K>(tmp, output, ranges);
+    parallelMerge(tmp, output, ranges, numNumaNodes);
 #endif
 
     free(tmp);
