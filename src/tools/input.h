@@ -492,7 +492,10 @@ bool generate_sinha_randomASCII()
 /// Run through a list of artificial inputs and maybe generate one.
 bool load_artifical(const std::string& path)
 {
-    if (path == "random4") {
+    if (path == "random2") {
+        return generate_random("random2", "01");
+    }
+    else if (path == "random4") {
         return generate_random("random4", "ACGT");
     }
     else if (path == "random10") {
