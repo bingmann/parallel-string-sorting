@@ -33,8 +33,10 @@ namespace bingmann_lcp_inssort {
 using namespace stringtools;
 
 static inline
-void lcp_insertion_sort(const StringPtr& strptr, size_t n, size_t depth)
+void lcp_insertion_sort(const StringPtr& strptr, size_t depth)
 {
+    size_t n = strptr.size();
+
     if (n <= 1) return;
 
     for (size_t j = 0; j < n - 1; ++j)
@@ -152,11 +154,11 @@ static inline
 void do_lcp_insertion_sort(string* strings, size_t n)
 {
     string* shadow = new string[n]; // allocate shadow pointer array
-    StringPtr strptr(strings, shadow, false);
+    StringPtr strptr(strings, shadow, n, false);
 
     strptr.lcp(0) = 42; // must keep lcp[0] unchanged
 
-    lcp_insertion_sort(strptr, n, 0);
+    lcp_insertion_sort(strptr, 0);
 
     std::cout << "lcp[0] " << strptr.lcp(0) << "\n";
 

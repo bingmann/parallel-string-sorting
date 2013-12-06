@@ -348,16 +348,19 @@ static inline void self_verify_tree_calculations()
 class StringPtr
 {
 private:
-    /// strings (front) and temporary shadow (back) array
+    //! strings (front) and temporary shadow (back) array
     string      *m_front, *m_back;
 
-    /// false if m_front is original, true if m_back is original
+    //! length of subarray
+    size_t      m_size;
+
+    //! false if m_front is original, true if m_back is original
     bool        m_flipped;
 
 public:
     /// constructor specifying all attributes
-    inline StringPtr(string* original, string* shadow = NULL, bool flipped = false)
-        : m_front(original), m_back(shadow), m_flipped(flipped)
+    inline StringPtr(string* original, string* shadow = NULL, size_t size = 0, bool flipped = false)
+        : m_front(original), m_back(shadow), m_size(size), m_flipped(flipped)
     {
     }
 
@@ -379,42 +382,44 @@ public:
         return m_back;
     }
 
-    /// Advance (both) pointers by given offset
-    inline StringPtr& operator += (size_t offset)
+    //! return valid length
+    inline size_t size() const
     {
-        m_front += offset, m_back += offset;
-        return *this;
+        return m_size;
     }
 
-    /// Advance (both) pointers by given offset
-    inline StringPtr operator + (size_t offset) const
+    /// Advance (both) pointers by given offset, return sub-array
+    inline StringPtr sub(size_t offset, size_t size) const
     {
-        return StringPtr(m_front + offset, m_back + offset, m_flipped);
+        assert(offset + size <= m_size);
+        return StringPtr(m_front + offset, m_back + offset, size, m_flipped);
     }
 
-    /// construct a StringPtr object specifying a subarray with flipping to
+    /// construct a StringPtr object specifying a sub-array with flipping to
     /// other array.
-    inline StringPtr flip(size_t offset) const
+    inline StringPtr flip(size_t offset, size_t size) const
     {
-        return StringPtr(m_back + offset, m_front + offset, !m_flipped);
+        assert(offset + size <= m_size);
+        return StringPtr(m_back + offset, m_front + offset, size, !m_flipped);
     }
 
     /// return subarray pointer to n strings in original array, might copy from
     /// shadow before returning.
-    inline StringPtr copy_back(size_t n) const
+    inline StringPtr copy_back() const
     {
         if (!m_flipped) {
             return *this;
         }
         else {
-            memcpy(m_back, m_front, n * sizeof(string));
-            return flip(0);
+            memcpy(m_back, m_front, m_size * sizeof(string));
+            return flip(0, m_size);
         }
     }
 
     /// Return i-th string pointer from m_front
     inline string& str(size_t i) const
     {
+        assert(i < m_size);
         return m_front[i];
     }
 
@@ -422,6 +427,7 @@ public:
     inline uintptr_t& lcp(size_t i) const
     {
         assert(!m_flipped);
+        assert(i < m_size);
         return ((uintptr_t*)m_back)[i];
     }
 
@@ -429,6 +435,8 @@ public:
     inline const StringPtr& set_lcp(size_t i, const uintptr_t& v) const
     {
         assert(i > 0);
+        assert(i < m_size);
+
         if (v != calc_lcp(str(i-1), str(i))) {
             DBG(1, "lcp[" << i << "] = " << v << " != expected " << calc_lcp(str(i-1), str(i)) );
         }
@@ -437,11 +445,11 @@ public:
         return *this;
     }
 
-    //! Fill LCP array with n times the value v, ! excluding the first LCP[0]
-    //! position
-    inline StringPtr fill_lcp(size_t n, uintptr_t v)
+    //! Fill whole LCP array with n times the value v, ! excluding the first
+    //! LCP[0] position
+    inline StringPtr fill_lcp(uintptr_t v)
     {
-        for (size_t i = 1; i < n; ++i)
+        for (size_t i = 1; i < m_size; ++i)
             set_lcp(i, v);
         return *this;
     }
@@ -449,7 +457,7 @@ public:
     /// Return the original front (for LCP calculation)
     inline StringPtr front() const
     {
-        return m_flipped ? flip(0) : *this;
+        return m_flipped ? flip(0, m_size) : *this;
     }
 };
 

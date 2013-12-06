@@ -457,11 +457,11 @@ struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
 // ****************************************************************************
 // *** Insertion Sort Template-switch
 
-void insertion_sort(const StringPtr& strptr, size_t n, size_t depth)
+void insertion_sort(const StringPtr& strptr, size_t depth)
 {
     assert(!strptr.flipped());
     //inssort::inssort(strptr.active(), n, depth);
-    bingmann_lcp_inssort::lcp_insertion_sort(strptr, n, depth);
+    bingmann_lcp_inssort::lcp_insertion_sort(strptr, depth);
 }
 
 // ****************************************************************************
@@ -551,7 +551,7 @@ void sample_sort_lcp(const Classify& classifier, const StringPtr& strptr, size_t
 // *** SampleSort non-recursive in-place sequential sample sort for small sorts
 
 template <template <size_t> class Classify>
-void Enqueue(Context& ctx, SortStep* sstep, const StringPtr& strptr, size_t n, size_t depth);
+void Enqueue(Context& ctx, SortStep* sstep, const StringPtr& strptr, size_t depth);
 
 template <template <size_t> class Classify, typename BktSizeType>
 struct SmallsortJob : public Job, public SortStep
@@ -560,15 +560,15 @@ struct SmallsortJob : public Job, public SortStep
     SortStep*   pstep;
 
     StringPtr   in_strptr;
-    size_t      in_n, in_depth;
+    size_t      in_depth;
 
     typedef BktSizeType bktsize_type;
 
     SmallsortJob(Context& ctx, SortStep* _pstep,
-                 const StringPtr& strptr, size_t n, size_t depth)
-        : pstep(_pstep), in_strptr(strptr), in_n(n), in_depth(depth)
+                 const StringPtr& strptr, size_t depth)
+        : pstep(_pstep), in_strptr(strptr), in_depth(depth)
     {
-        DBG(debug_jobs, "enqueue SmallsortJob n=" << in_n << " depth=" << in_depth);
+        DBG(debug_jobs, "enqueue SmallsortJob n=" << in_strptr.size() << " depth=" << in_depth);
 
         ctx.jobqueue.enqueue(this);
     }
@@ -598,9 +598,11 @@ struct SmallsortJob : public Job, public SortStep
         Classify<treebits> classifier;
         unsigned char splitter_lcp[numsplitters+1];
 
-        SeqSampleSortStep(Context& ctx, const StringPtr& _strptr, size_t n, size_t _depth, uint16_t* bktcache)
+        SeqSampleSortStep(Context& ctx, const StringPtr& _strptr, size_t _depth, uint16_t* bktcache)
             : strptr(_strptr), idx(0), depth(_depth)
         {
+            size_t n = strptr.size();
+
             // step 1: select splitters with oversampling
 
             const size_t oversample_factor = 2;
@@ -688,7 +690,9 @@ struct SmallsortJob : public Job, public SortStep
 
     virtual bool run(Context& ctx)
     {
-        DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << in_n);
+        size_t n = in_strptr.size();
+
+        DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
         // create anonymous wrapper job
         substep_add();
@@ -698,15 +702,15 @@ struct SmallsortJob : public Job, public SortStep
         ss_pop_front = 0;
         ms_pop_front = 0;
 
-        if (in_n >= g_smallsort_threshold)
+        if (n >= g_smallsort_threshold)
         {
-            bktcache = new uint16_t[in_n];
-            bktcache_size = in_n * sizeof(uint16_t);
-            sort_sample_sort(ctx, in_strptr, in_n, in_depth);
+            bktcache = new uint16_t[n];
+            bktcache_size = n * sizeof(uint16_t);
+            sort_sample_sort(ctx, in_strptr, in_depth);
         }
         else
         {
-            sort_mkqs_cache(ctx, in_strptr, in_n, in_depth);
+            sort_mkqs_cache(ctx, in_strptr, in_depth);
         }
 
         delete [] bktcache;
@@ -717,7 +721,7 @@ struct SmallsortJob : public Job, public SortStep
         return false;
     }
 
-    void sort_sample_sort(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
+    void sort_sample_sort(Context& ctx, const StringPtr& strptr, size_t depth)
     {
         typedef SeqSampleSortStep Step;
 
@@ -725,7 +729,7 @@ struct SmallsortJob : public Job, public SortStep
         assert(ss_stack.size() == 0);
 
         // sort first level
-        ss_stack.push_back( Step(ctx,strptr,n,depth,bktcache) );
+        ss_stack.push_back( Step(ctx,strptr,depth,bktcache) );
 
         // step 5: "recursion"
 
@@ -752,7 +756,7 @@ struct SmallsortJob : public Job, public SortStep
                         else
                             DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
-                        sort_mkqs_cache(ctx, s.strptr + s.bkt[i], bktsize, s.depth + (s.splitter_lcp[i/2] & 0x7F));
+                        sort_mkqs_cache(ctx, s.strptr.sub(s.bkt[i], bktsize), s.depth + (s.splitter_lcp[i/2] & 0x7F));
                     }
                     else
                     {
@@ -761,7 +765,7 @@ struct SmallsortJob : public Job, public SortStep
                         else
                             DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
-                        ss_stack.push_back( Step(ctx, s.strptr + s.bkt[i], bktsize, s.depth + (s.splitter_lcp[i/2] & 0x7F), bktcache) );
+                        ss_stack.push_back( Step(ctx, s.strptr.sub(s.bkt[i], bktsize), s.depth + (s.splitter_lcp[i/2] & 0x7F), bktcache) );
                     }
                 }
                 // i is odd -> bkt[i] is equal bucket
@@ -771,21 +775,21 @@ struct SmallsortJob : public Job, public SortStep
                         ;
                     else if ( s.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " is done!");
-                        StringPtr sp = (s.strptr + s.bkt[i]).copy_back(bktsize);
-                        sp.fill_lcp(bktsize, s.depth + lcpKeyDepth(s.classifier.get_splitter(i/2)));
+                        StringPtr sp = s.strptr.sub(s.bkt[i], bktsize).copy_back();
+                        sp.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i/2)));
                         ctx.restsize -= bktsize;
                     }
                     else if (bktsize < g_smallsort_threshold)
                     {
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
 
-                        sort_mkqs_cache(ctx, s.strptr + s.bkt[i], bktsize, s.depth + sizeof(key_type));
+                        sort_mkqs_cache(ctx, s.strptr.sub(s.bkt[i], bktsize), s.depth + sizeof(key_type));
                     }
                     else
                     {
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
 
-                        ss_stack.push_back( Step(ctx, s.strptr + s.bkt[i], bktsize, s.depth + sizeof(key_type), bktcache) );
+                        ss_stack.push_back( Step(ctx, s.strptr.sub(s.bkt[i], bktsize), s.depth + sizeof(key_type), bktcache) );
                     }
                 }
 
@@ -835,7 +839,7 @@ struct SmallsortJob : public Job, public SortStep
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i/2] & 0x7F));
 
                     substep_add();
-                    Enqueue<Classify>( ctx, this, s.strptr + s.bkt[i], bktsize, s.depth + (s.splitter_lcp[i/2] & 0x7F) );
+                    Enqueue<Classify>( ctx, this, s.strptr.sub(s.bkt[i], bktsize), s.depth + (s.splitter_lcp[i/2] & 0x7F) );
                 }
             }
             // i is odd -> bkt[i] is equal bucket
@@ -845,8 +849,8 @@ struct SmallsortJob : public Job, public SortStep
                     ;
                 else if ( s.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
                     DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " is done!");
-                    StringPtr sp = (s.strptr + s.bkt[i]).copy_back(bktsize);
-                    sp.fill_lcp(bktsize, s.depth + lcpKeyDepth(s.classifier.get_splitter(i/2)));
+                    StringPtr sp = s.strptr.sub(s.bkt[i], bktsize).copy_back();
+                    sp.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i/2)));
                     ctx.restsize -= bktsize;
                 }
                 else
@@ -854,7 +858,7 @@ struct SmallsortJob : public Job, public SortStep
                     DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
 
                     substep_add();
-                    Enqueue<Classify>( ctx, this, s.strptr + s.bkt[i], bktsize, s.depth + sizeof(key_type) );
+                    Enqueue<Classify>( ctx, this, s.strptr.sub(s.bkt[i], bktsize), s.depth + sizeof(key_type) );
                 }
             }
         }
@@ -891,9 +895,10 @@ struct SmallsortJob : public Job, public SortStep
 
     // Insertion sort the strings only based on the cached characters.
     static inline void
-    insertion_sort_cache_block(const StringPtr& strptr, key_type* cache, int n)
+    insertion_sort_cache_block(const StringPtr& strptr, key_type* cache)
     {
         string* strings = strptr.active();
+        unsigned int n = strptr.size();
         unsigned int pi, pj;
         for (pi = 1; --n > 0; ++pi) {
             string tmps = strings[pi];
@@ -912,17 +917,17 @@ struct SmallsortJob : public Job, public SortStep
     // Insertion sort, but use cached characters if possible.
     template <bool CacheDirty>
     static inline void
-    insertion_sort_cache(const StringPtr& _strptr, key_type* cache, int n, size_t depth)
+    insertion_sort_cache(const StringPtr& _strptr, key_type* cache, size_t depth)
     {
-        StringPtr strptr = _strptr.copy_back(n);
+        StringPtr strptr = _strptr.copy_back();
 
-        if (n <= 1) return;
-        if (CacheDirty) return insertion_sort(strptr, n, depth);
+        if (strptr.size() <= 1) return;
+        if (CacheDirty) return insertion_sort(strptr, depth);
 
-        insertion_sort_cache_block(strptr, cache, n);
+        insertion_sort_cache_block(strptr, cache);
 
         size_t start = 0, bktsize = 1;
-        for (int i = 0; i < n - 1; ++i) {
+        for (size_t i = 0; i < strptr.size() - 1; ++i) {
             // group areas with equal cache values
             if (cache[i] == cache[i+1]) {
                 ++bktsize;
@@ -935,9 +940,9 @@ struct SmallsortJob : public Job, public SortStep
             // sort group areas deeper if needed
             if (bktsize > 1) {
                 if (cache[start] & 0xFF) // need deeper sort
-                    insertion_sort(strptr + start, bktsize, depth + sizeof(key_type));
+                    insertion_sort(strptr.sub(start, bktsize), depth + sizeof(key_type));
                 else // cache contains NULL-termination
-                    (strptr + start).fill_lcp(bktsize, depth + lcpKeyDepth(cache[start]));
+                    strptr.sub(start, bktsize).fill_lcp(depth + lcpKeyDepth(cache[start]));
             }
             bktsize = 1;
             start = i+1;
@@ -948,9 +953,9 @@ struct SmallsortJob : public Job, public SortStep
         }
         if (bktsize > 1) {
             if (cache[start] & 0xFF) // need deeper sort
-                insertion_sort(strptr + start, bktsize, depth + sizeof(key_type));
+                insertion_sort(strptr.sub(start, bktsize), depth + sizeof(key_type));
             else // cache contains NULL-termination
-                (strptr + start).fill_lcp(bktsize, depth + lcpKeyDepth(cache[start]));
+                strptr.sub(start, bktsize).fill_lcp(depth + lcpKeyDepth(cache[start]));
         }
     }
 
@@ -963,9 +968,11 @@ struct SmallsortJob : public Job, public SortStep
         bool eq_recurse;
         unsigned char lcp_lt, lcp_eq, lcp_gt;
 
-        MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* _cache, size_t n, size_t _depth, bool CacheDirty)
+        MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* _cache, size_t _depth, bool CacheDirty)
             : strptr(_strptr), cache(_cache), depth(_depth), idx(0)
         {
+            size_t n = strptr.size();
+
             string* strings = strptr.active();
 
             if (CacheDirty) {
@@ -1115,18 +1122,18 @@ struct SmallsortJob : public Job, public SortStep
     size_t ms_pop_front;
     std::vector<MKQSStep> ms_stack;
 
-    void sort_mkqs_cache(Context& ctx, const StringPtr& strptr, size_t n, size_t depth)
+    void sort_mkqs_cache(Context& ctx, const StringPtr& strptr, size_t depth)
     {
-        if (n < g_inssort_threshold) { // TODO
-            insertion_sort(strptr.copy_back(n), n, depth);
-            ctx.restsize -= n;
+        if (strptr.size() < g_inssort_threshold) { // TODO
+            insertion_sort(strptr.copy_back(), depth);
+            ctx.restsize -= strptr.size();
             return;
         }
 
-        if (bktcache_size < n * sizeof(key_type)) {
+        if (bktcache_size < strptr.size() * sizeof(key_type)) {
             delete [] bktcache;
-            bktcache = (uint16_t*)new key_type[n];
-            bktcache_size = n * sizeof(key_type);
+            bktcache = (uint16_t*)new key_type[strptr.size()];
+            bktcache_size = strptr.size() * sizeof(key_type);
         }
 
         key_type* cache = (key_type*)bktcache;
@@ -1135,7 +1142,7 @@ struct SmallsortJob : public Job, public SortStep
         assert(ms_stack.size() == 0);
 
         // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
-        ms_stack.push_back( MKQSStep(ctx, strptr, cache, n, depth, true) );
+        ms_stack.push_back( MKQSStep(ctx, strptr, cache, depth, true) );
 
     jumpout:
         while ( ms_stack.size() > ms_pop_front )
@@ -1151,39 +1158,39 @@ struct SmallsortJob : public Job, public SortStep
                     if (ms.num_lt == 0)
                         ;
                     else if (ms.num_lt < g_inssort_threshold) {
-                        insertion_sort_cache<false>(ms.strptr, ms.cache,
-                                                    ms.num_lt, ms.depth);
+                        insertion_sort_cache<false>(ms.strptr.sub(0, ms.num_lt),
+                                                    ms.cache, ms.depth);
                         ctx.restsize -= ms.num_lt;
                     }
                     else {
                         ms_stack.push_back(
                             MKQSStep(ctx,
-                                     ms.strptr, ms.cache,
-                                     ms.num_lt, ms.depth, false) );
+                                     ms.strptr.sub(0, ms.num_lt),
+                                     ms.cache, ms.depth, false) );
                     }
                 }
                 // process the eq-subsequence
                 else if (ms.idx == 2)
                 {
-                    StringPtr sp = ms.strptr + ms.num_lt;
+                    StringPtr sp = ms.strptr.sub(ms.num_lt, ms.num_eq);
 
                     assert(ms.num_eq > 0);
 
                     if (!ms.eq_recurse) {
-                        sp = sp.copy_back(ms.num_eq);
-                        sp.fill_lcp(ms.num_eq, ms.depth + ms.lcp_eq);
-                        ctx.restsize -= ms.num_eq;
+                        sp = sp.copy_back();
+                        sp.fill_lcp(ms.depth + ms.lcp_eq);
+                        ctx.restsize -= sp.size();
                     }
                     else if (ms.num_eq < g_inssort_threshold) {
                         insertion_sort_cache<true>(sp, ms.cache + ms.num_lt,
-                                                   ms.num_eq, ms.depth + sizeof(key_type));
+                                                   ms.depth + sizeof(key_type));
                         ctx.restsize -= ms.num_eq;
                     }
                     else {
                         ms_stack.push_back(
                             MKQSStep(ctx, sp,
                                      ms.cache + ms.num_lt,
-                                     ms.num_eq, ms.depth + sizeof(key_type), true) );
+                                     ms.depth + sizeof(key_type), true) );
                     }
                 }
                 // process the gt-subsequence
@@ -1191,20 +1198,20 @@ struct SmallsortJob : public Job, public SortStep
                 {
                     assert(ms.idx == 3);
 
-                    StringPtr sp = ms.strptr + ms.num_lt + ms.num_eq;
+                    StringPtr sp = ms.strptr.sub(ms.num_lt + ms.num_eq, ms.num_gt);
 
                     if (ms.num_gt == 0)
                         ;
                     else if (ms.num_gt < g_inssort_threshold) {
                         insertion_sort_cache<false>(sp, ms.cache + ms.num_lt + ms.num_eq,
-                                                    ms.num_gt, ms.depth);
+                                                    ms.depth);
                         ctx.restsize -= ms.num_gt;
                     }
                     else {
                         ms_stack.push_back(
                             MKQSStep(ctx, sp,
                                      ms.cache + ms.num_lt + ms.num_eq,
-                                     ms.num_gt, ms.depth, false) );
+                                     ms.depth, false) );
                     }
                 }
 
@@ -1237,30 +1244,30 @@ struct SmallsortJob : public Job, public SortStep
         if (ms.idx == 0 && ms.num_lt != 0)
         {
             substep_add();
-            Enqueue<Classify>(ctx, this, ms.strptr, ms.num_lt, ms.depth);
+            Enqueue<Classify>(ctx, this, ms.strptr.sub(0, ms.num_lt), ms.depth);
         }
         if (ms.idx <= 1) // st.num_eq > 0 always
         {
             assert(ms.num_eq > 0);
 
-            StringPtr sp = ms.strptr + ms.num_lt;
+            StringPtr sp = ms.strptr.sub(ms.num_lt, ms.num_eq);
 
             if (ms.eq_recurse) {
                 substep_add();
                 Enqueue<Classify>(ctx, this, sp,
-                                  ms.num_eq, ms.depth + sizeof(key_type));
+                                  ms.depth + sizeof(key_type));
             }
             else {
-                sp = sp.copy_back(ms.num_eq);
-                sp.fill_lcp(ms.num_eq, ms.depth + ms.lcp_eq);
+                sp = sp.copy_back();
+                sp.fill_lcp(ms.depth + ms.lcp_eq);
                 ctx.restsize -= ms.num_eq;
             }
         }
         if (ms.idx <= 2 && ms.num_gt != 0)
         {
             substep_add();
-            Enqueue<Classify>(ctx, this, ms.strptr + ms.num_lt + ms.num_eq,
-                              ms.num_gt, ms.depth);
+            Enqueue<Classify>(ctx, this,
+                              ms.strptr.sub(ms.num_lt + ms.num_eq, ms.num_gt), ms.depth);
         }
 
         // shorten the current stack
@@ -1309,7 +1316,7 @@ struct SampleSortStep : public SortStep
 
     //! string pointers, size, and current sorting depth
     StringPtr           strptr;
-    size_t              n, depth;
+    size_t              depth;
 
     //! number of parts into which the strings were split
     unsigned int        parts;
@@ -1377,14 +1384,14 @@ struct SampleSortStep : public SortStep
     // *** Constructor
 
     SampleSortStep(Context& ctx, SortStep* _pstep,
-                   const StringPtr& _strptr, size_t _n, size_t _depth)
-        : pstep(_pstep), strptr(_strptr), n(_n), depth(_depth)
+                   const StringPtr& _strptr, size_t _depth)
+        : pstep(_pstep), strptr(_strptr), depth(_depth)
     {
-        parts = (n + ctx.sequential_threshold()-1) / ctx.sequential_threshold();
+        parts = (strptr.size() + ctx.sequential_threshold()-1) / ctx.sequential_threshold();
         if (parts == 0) parts = 1;
 
-        psize = (n + parts-1) / parts;
-        DBG(debug_jobs, "enqueue SampleSortStep n=" << n << " parts=" << parts << " psize=" << psize);
+        psize = (strptr.size() + parts-1) / parts;
+        DBG(debug_jobs, "enqueue SampleSortStep n=" << strptr.size() << " parts=" << parts << " psize=" << psize);
 
         ctx.jobqueue.enqueue( new SampleJob(this) );
         ++ctx.para_ss_steps;
@@ -1406,7 +1413,7 @@ struct SampleSortStep : public SortStep
 
         for (unsigned int i = 0; i < samplesize; ++i)
         {
-            samples[i] = get_char<key_type>(strings[ rng() % n ], depth);
+            samples[i] = get_char<key_type>(strings[ rng() % strptr.size() ], depth);
         }
 
         std::sort(samples, samples + samplesize);
@@ -1426,7 +1433,7 @@ struct SampleSortStep : public SortStep
         DBG(debug_jobs, "Process CountJob " << p << " @ " << this);
 
         string* strB = strptr.active() + p * psize;
-        string* strE = strptr.active() + std::min((p+1) * psize, n);
+        string* strE = strptr.active() + std::min((p+1) * psize, strptr.size());
         if (strE < strB) strE = strB;
 
         uint16_t* mybktcache = bktcache[p] = new uint16_t[strE-strB];
@@ -1455,7 +1462,7 @@ struct SampleSortStep : public SortStep
                 bkt[p][i] = (sum += bkt[p][i]);
             }
         }
-        assert(sum == n);
+        assert(sum == strptr.size());
 
         // create new jobs
         pwork = parts;
@@ -1470,7 +1477,7 @@ struct SampleSortStep : public SortStep
         DBG(debug_jobs, "Process DistributeJob " << p << " @ " << this);
 
         string* strB = strptr.active() + p * psize;
-        string* strE = strptr.active() + std::min((p+1) * psize, n);
+        string* strE = strptr.active() + std::min((p+1) * psize, strptr.size());
         if (strE < strB) strE = strB;
 
         string* sorted = strptr.shadow(); // get alternative shadow pointer array
@@ -1499,7 +1506,7 @@ struct SampleSortStep : public SortStep
 
         // first processor's bkt pointers are boundaries between bkts, just add sentinel:
         assert(bkt[0] == 0);
-        bkt[bktnum] = n;
+        bkt[bktnum] = strptr.size();
 
         // keep anonymous subjob handle while creating subjobs
         substep_add();
@@ -1512,14 +1519,14 @@ struct SampleSortStep : public SortStep
             if (bktsize == 0)
                 ;
             else if (bktsize == 1) { // just one string pointer, copyback
-                strptr.flip(bkt[i]).copy_back(1);
+                strptr.flip(bkt[i], 1).copy_back();
                 ctx.restsize -= 1;
             }
             else
             {
                 DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bkt[i] << " size " << bktsize << " lcp " << int(splitter_lcp[i/2] & 0x7F));
                 substep_add();
-                Enqueue<Classify>(ctx, this, strptr.flip(bkt[i]), bktsize, depth + (splitter_lcp[i/2] & 0x7F));
+                Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize), depth + (splitter_lcp[i/2] & 0x7F));
             }
             ++i;
             // i is odd -> bkt[i] is equal bucket
@@ -1527,21 +1534,21 @@ struct SampleSortStep : public SortStep
             if (bktsize == 0)
                 ;
             else if (bktsize == 1) { // just one string pointer, copyback
-                strptr.flip(bkt[i]).copy_back(1);
+                strptr.flip(bkt[i], 1).copy_back();
                 ctx.restsize -= 1;
             }
             else
             {
                 if ( splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " is done!");
-                    StringPtr sp = strptr.flip(bkt[i]).copy_back(bktsize);
-                    sp.fill_lcp(bktsize, depth + lcpKeyDepth(classifier.get_splitter(i/2)));
+                    StringPtr sp = strptr.flip(bkt[i], bktsize).copy_back();
+                    sp.fill_lcp(depth + lcpKeyDepth(classifier.get_splitter(i/2)));
                     ctx.restsize -= bktsize;
                 }
                 else {
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " lcp keydepth!");
                     substep_add();
-                    Enqueue<Classify>(ctx, this, strptr.flip(bkt[i]), bktsize, depth + sizeof(key_type));
+                    Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize), depth + sizeof(key_type));
                 }
             }
             ++i;
@@ -1552,14 +1559,14 @@ struct SampleSortStep : public SortStep
         if (bktsize == 0)
             ;
         else if (bktsize == 1) { // just one string pointer, copyback
-            strptr.flip(bkt[i]).copy_back(1);
+            strptr.flip(bkt[i], 1).copy_back();
             ctx.restsize -= 1;
         }
         else
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bkt[i] << " size " << bktsize << " no lcp");
             substep_add();
-            Enqueue<Classify>(ctx, this, strptr.flip(bkt[i]), bktsize, depth);
+            Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize), depth);
         }
 
         substep_notify_done(); // release anonymous subjob handle
@@ -1588,16 +1595,16 @@ struct SampleSortStep : public SortStep
 
 template <template <size_t> class Classify>
 void Enqueue(Context& ctx, SortStep* pstep,
-             const StringPtr& strptr, size_t n, size_t depth)
+             const StringPtr& strptr, size_t depth)
 {
-    if (n > ctx.sequential_threshold()) { // TODO
-        new SampleSortStep<Classify>(ctx, pstep, strptr, n, depth);
+    if (strptr.size() > ctx.sequential_threshold()) { // TODO
+        new SampleSortStep<Classify>(ctx, pstep, strptr, depth);
     }
     else {
-        if (n < ((uint64_t)1 << 32))
-            new SmallsortJob<Classify,uint32_t>(ctx, pstep, strptr, n, depth);
+        if (strptr.size() < ((uint64_t)1 << 32))
+            new SmallsortJob<Classify,uint32_t>(ctx, pstep, strptr, depth);
         else
-            new SmallsortJob<Classify,uint64_t>(ctx, pstep, strptr, n, depth);
+            new SmallsortJob<Classify,uint64_t>(ctx, pstep, strptr, depth);
     }
 }
 
@@ -1613,9 +1620,9 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 
     string* shadow = new string[n]; // allocate shadow pointer array
 
-    StringPtr strptr(strings, shadow);
+    StringPtr strptr(strings, shadow, n);
 
-    Enqueue<Classify>(ctx, NULL, strptr, n, depth);
+    Enqueue<Classify>(ctx, NULL, strptr, depth);
     ctx.jobqueue.loop(ctx);
 
     if (1)
@@ -2257,9 +2264,9 @@ void parallel_sample_sort_numa(string * strings, size_t n,
 
     string* shadow = new string[n]; // allocate shadow pointer array
 
-    StringPtr strptr(strings, shadow);
+    StringPtr strptr(strings, shadow, n);
 
-    Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, n, 0);
+    Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
 
     delete [] shadow;
