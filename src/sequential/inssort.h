@@ -25,14 +25,6 @@ namespace inssort {
 
 typedef unsigned char* string;
 
-static inline
-int scmp(string s1, string s2)
-{
-    while( *s1 != '\0' && *s1 == *s2 )
-        s1++, s2++;
-    return( *s1-*s2 );
-}
-
 static inline void
 inssort(string* str, int n, int d)
 {

@@ -63,6 +63,16 @@ static inline std::string toBinary(Type v, const int width = (1 << sizeof(Type))
     return binstr;
 }
 
+/// compare strings by scanning
+static inline int scmp(const string _s1, const string _s2)
+{
+    string s1 = _s1, s2 = _s2;
+
+    while (*s1 != 0 && *s1 == *s2)
+        s1++, s2++;
+    return (*s1 - *s2);
+}
+
 /// calculate lcp by scanning
 static inline unsigned int calc_lcp(const string _s1, const string _s2)
 {
@@ -388,6 +398,12 @@ public:
         return m_size;
     }
 
+    //! ostream-able
+    friend inline std::ostream& operator << (std::ostream& os, const StringPtr& sp)
+    {
+        return os << '(' << sp.active() << '/' << sp.shadow() << '|' << sp.flipped() << ':' << sp.size() << ')';
+    }
+
     /// Advance (both) pointers by given offset, return sub-array
     inline StringPtr sub(size_t offset, size_t size) const
     {
@@ -414,6 +430,14 @@ public:
             memcpy(m_back, m_front, m_size * sizeof(string));
             return flip(0, m_size);
         }
+    }
+
+    //! check sorted order of strings
+    inline bool check() const
+    {
+        for (size_t i = 1; i < m_size; ++i)
+            assert(scmp(str(i-1), str(i)) <= 0);
+        return true;
     }
 
     /// Return i-th string pointer from m_front

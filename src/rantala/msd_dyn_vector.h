@@ -129,14 +129,14 @@ msd_D_adaptive(unsigned char** strings, size_t n, size_t depth, Bucket* buckets)
 	for (; i < n-n%16; i+=16) {
 		uint16_t cache[16];
 		for (size_t j=0; j < 16; ++j) {
-			cache[j] = get_char<uint16_t>(strings[i+j], depth);
+                        cache[j] = rantala::get_char<uint16_t>(strings[i+j], depth);
 		}
 		for (size_t j=0; j < 16; ++j) {
 			buckets[cache[j]].push_back(strings[i+j]);
 		}
 	}
 	for (; i < n; ++i) {
-		const uint16_t ch = get_char<uint16_t>(strings[i], depth);
+		const uint16_t ch = rantala::get_char<uint16_t>(strings[i], depth);
 		buckets[ch].push_back(strings[i]);
 	}
 	for (unsigned i=0; i < 0x10000; ++i) {

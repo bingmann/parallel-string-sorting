@@ -19,22 +19,6 @@ void calculateRanges(std::pair<size_t, size_t>* ranges, unsigned numberOfSplits,
 			lengthToSplit - (numberOfSplits - 1) * split);
 }
 
-static inline
-int scmp(string s1, string s2) {
-	while (*s1 != '\0' && *s1 == *s2)
-		s1++, s2++;
-	return (*s1 - *s2);
-}
-
-static inline
-unsigned calculateLcp(string s1, string s2) {
-	unsigned lcp = 0;
-	while (*s1 != '\0' && *s1 == *s2)
-		s1++, s2++, lcp++;
-
-	return lcp;
-}
-
 }
 // namespace eberle_utils
 

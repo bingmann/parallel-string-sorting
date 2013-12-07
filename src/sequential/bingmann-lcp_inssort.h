@@ -154,7 +154,7 @@ static inline
 void do_lcp_insertion_sort(string* strings, size_t n)
 {
     string* shadow = new string[n]; // allocate shadow pointer array
-    StringPtr strptr(strings, shadow, n, false);
+    StringPtr strptr(strings, shadow, n);
 
     strptr.lcp(0) = 42; // must keep lcp[0] unchanged
 

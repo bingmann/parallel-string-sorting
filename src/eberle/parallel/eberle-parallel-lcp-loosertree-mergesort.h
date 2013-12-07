@@ -30,6 +30,7 @@ using namespace eberle_utils;
 using namespace eberle_mergesort_lcp;
 
 using namespace jobqueue;
+using namespace stringtools;
 
 using namespace bingmann_parallel_sample_sort;
 
@@ -242,7 +243,7 @@ static inline list<pair<size_t, char> > ** findMinimas(AS* input,
 			string text = input[ranges[k].first].text;
 
 			if (lastText != NULL) {
-				unsigned lcp = calculateLcp(lastText, text);
+				unsigned lcp = calc_lcp(lastText, text);
 				if (lcp < minLcp) {
 					minLcp = lcp;
 				}
@@ -426,7 +427,7 @@ void eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n) {
 		tmp[start].lcp = 0;
 		for (size_t pos = start + 1; pos < end; pos++) {
 			tmp[pos].text = strings[pos];
-			tmp[pos].lcp = calculateLcp(strings[pos - 1], strings[pos]);
+			tmp[pos].lcp = calc_lcp(strings[pos - 1], strings[pos]);
 		}
 	}
 
