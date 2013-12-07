@@ -15,6 +15,7 @@
 namespace eberle_utils {
 
 using namespace std;
+using namespace stringtools;
 
 //typedefs
 typedef unsigned char* string;

@@ -68,7 +68,7 @@ struct CopyDataJob : public Job
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
     }
 
-    virtual void
+    virtual bool
     run(JobQueue& jobQueue)
     {
         (void) jobQueue;
@@ -78,6 +78,8 @@ struct CopyDataJob : public Job
         {
             *output = input->text;
         }
+
+        return true;
     }
 };
 
@@ -100,13 +102,15 @@ struct BinaryMergeJob : public Job
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
     }
 
-    virtual void
+    virtual bool
     run(JobQueue& jobQueue)
     {
         (void) jobQueue;
         input1->lcp = 0;
         input2->lcp = 0;
         eberle_lcp_merge(input1, length1, input2, length2, output);
+
+        return true;
     }
 }
 ;
@@ -162,7 +166,7 @@ template<unsigned K>
             return true;
         }
 
-        virtual void
+        virtual bool
         run(JobQueue& jobQueue)
         {
             for (unsigned k = 0; k < K; k++)
@@ -182,6 +186,8 @@ template<unsigned K>
             }
 
             delete loserTree;
+
+            return true;
         }
 
         ~MergeJob()
@@ -211,7 +217,7 @@ findMinimas(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
 
             if (lastText != NULL)
             {
-                unsigned lcp = calculateLcp(lastText, text);
+                unsigned lcp = stringtools::calc_lcp(lastText, text);
                 if (lcp < minLcp)
                 {
                     minLcp = lcp;
@@ -478,7 +484,7 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
         for (size_t pos = start + 1; pos < end; pos++)
         {
             tmp[pos].text = strings[pos];
-            tmp[pos].lcp = calculateLcp(strings[pos - 1], strings[pos]);
+            tmp[pos].lcp = stringtools::calc_lcp(strings[pos - 1], strings[pos]);
         }
     }
 

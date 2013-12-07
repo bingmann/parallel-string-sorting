@@ -189,6 +189,7 @@ public:
     {
         assert(m_firstfield == 0);
         m_line << '\t' << k << '=' << v;
+        return *this;
     }
 
     // Append a stats map

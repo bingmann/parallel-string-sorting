@@ -34,7 +34,7 @@ static void simplesort(string a[], int n, int b)
    string tmp;
 
    for (i = 1; i < n; i++)
-     for (j = i; j > 0 && inssort::scmp(a[j-1]+b, a[j]+b) > 0; j--)
+     for (j = i; j > 0 && stringtools::scmp(a[j-1]+b, a[j]+b) > 0; j--)
          { tmp = a[j]; a[j] = a[j-1]; a[j-1] = tmp; }
 }
 

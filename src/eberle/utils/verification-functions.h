@@ -7,6 +7,7 @@
 namespace eberle_utils {
 
 using namespace types;
+using namespace stringtools;
 
 static inline
 bool checkLcps(AS* output, size_t n, unsigned expectedFirstLcp) {

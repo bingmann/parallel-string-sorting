@@ -353,7 +353,7 @@ struct SequentialMKQS : public Job
 
     // *** Sequential Work
 
-    virtual void run(JobQueue& jobqueue)
+    virtual bool run(JobQueue& jobqueue)
     {
         DBG(debug_seqjobs, "SequentialMKQS for " << n << " strings @ " << this);
 
@@ -382,7 +382,7 @@ struct SequentialMKQS : public Job
                 assert(block_queue->empty());
                 delete block_queue;
 
-                return;
+                return true;
             }
 
             // locally allocate (ptr,cache) array (NUMA-friendly)
@@ -414,6 +414,8 @@ struct SequentialMKQS : public Job
 
         // sort using cache
         sequential_mkqs(jobqueue);
+
+        return true;
     }
 
     inline void
@@ -785,9 +787,10 @@ struct ParallelMKQS
         inline PartitionJob(ParallelMKQS* _step, unsigned int _p)
             : step(_step), p(_p) { }
 
-        virtual void run(JobQueue& jobqueue)
+        virtual bool run(JobQueue& jobqueue)
         {
             step->partition(p, jobqueue);
+            return true;
         }
     };
 

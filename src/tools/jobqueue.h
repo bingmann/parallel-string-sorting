@@ -57,8 +57,9 @@ public:
     /// local typedef of cookie
     typedef CookieType cookie_type;
 
-    /// virtual function that is called by the JobQueue
-    virtual void run(cookie_type& cookie) = 0;
+    /// virtual function that is called by the JobQueue, delete object if run()
+    /// returns true.
+    virtual bool run(cookie_type& cookie) = 0;
 };
 
 template <typename CookieType>
@@ -114,8 +115,8 @@ public:
             {
                 m_logger << m_queue.unsafe_size();
 
-                job->run(cookie);
-                delete job;
+                if (job->run(cookie))
+                    delete job;
             }
             else
             {
@@ -132,8 +133,9 @@ public:
 
                         m_logger << m_queue.unsafe_size();
 
-                        job->run(cookie);
-                        delete job;
+                        if (job->run(cookie))
+                            delete job;
+
                         break;
                     }
                 }

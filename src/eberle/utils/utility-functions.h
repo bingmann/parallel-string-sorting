@@ -22,26 +22,6 @@ calculateRanges(std::pair<size_t, size_t>* ranges, unsigned numberOfSplits, size
 }
 
 static inline
-int
-scmp(string s1, string s2)
-{
-    while (*s1 != '\0' && *s1 == *s2)
-        s1++, s2++;
-    return (*s1 - *s2);
-}
-
-static inline
-unsigned
-calculateLcp(string s1, string s2)
-{
-    unsigned lcp = 0;
-    while (*s1 != '\0' && *s1 == *s2)
-        s1++, s2++, lcp++;
-
-    return lcp;
-}
-
-static inline
 unsigned
 getNextHigherPowerOfTwo(unsigned v)
 {
