@@ -460,11 +460,8 @@ public:
     {
         assert(i > 0);
         assert(i < m_size);
-
-        if (v != calc_lcp(str(i-1), str(i))) {
-            DBG(1, "lcp[" << i << "] = " << v << " != expected " << calc_lcp(str(i-1), str(i)) );
-        }
         assert(v == calc_lcp(str(i-1), str(i)));
+
         lcp(i) = v;
         return *this;
     }

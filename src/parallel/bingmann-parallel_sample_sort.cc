@@ -1625,7 +1625,7 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
     Enqueue<Classify>(ctx, NULL, strptr, depth);
     ctx.jobqueue.loop(ctx);
 
-    if (1)
+    if (0)
     {
         unsigned int err = 0;
         for (size_t i = 1; i < n; ++i)
