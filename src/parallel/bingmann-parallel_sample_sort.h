@@ -3,11 +3,11 @@
 
 #include "../tools/stringtools.h"
 
-namespace bingmann_parallel_sample_sort {
+namespace bingmann_parallel_sample_sort
+{
 
-void parallel_sample_sort_numa(
-    stringtools::string * strings, size_t n, int numaNode, int numberOfThreads
-    );
+void
+parallel_sample_sort_numa(stringtools::StringPtr& strptr, size_t n, int numaNode, int numberOfThreads);
 
 } // namespace bingmann_parallel_sample_sort
 

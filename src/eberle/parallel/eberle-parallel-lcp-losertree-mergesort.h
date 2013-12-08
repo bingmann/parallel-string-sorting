@@ -12,6 +12,7 @@
 #include "../sequential/eberle-lcp-mergesort.h"
 
 #include "../../tools/jobqueue.h"
+#include "../../tools/stringtools.h"
 
 #include "../../parallel/bingmann-parallel_sample_sort.h"
 
@@ -31,6 +32,7 @@ using namespace eberle_utils;
 using namespace eberle_mergesort_lcp;
 
 using namespace jobqueue;
+using namespace stringtools;
 
 using namespace bingmann_parallel_sample_sort;
 
@@ -199,7 +201,7 @@ template<unsigned K>
 //implementations follow
 
 static inline list<pair<size_t, char> > **
-findMinimas(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
+findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
 {
 
     //create list to store the minimas in the streams
@@ -319,7 +321,7 @@ static inline
 void
 createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams)
 {
-    list < pair<size_t, char> > **minimas = findMinimas(input, ranges, numStreams);
+    list < pair<size_t, char> > **minimas = findSplitters(input, ranges, numStreams);
 
     list<pair<size_t, char> >::iterator iterators[numStreams]; // get iterators of minimas of each streams
     for (unsigned k = 0; k < numStreams; ++k)
@@ -465,6 +467,7 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
 
 //allocate memory for annotated strings
     AS *tmp = static_cast<AS *>(malloc(n * sizeof(AS)));
+    string* shadow = new string[n]; // allocate shadow pointer array
 
     std::pair < size_t, size_t > ranges[numNumaNodes];
     calculateRanges(ranges, numNumaNodes, n);
@@ -475,18 +478,18 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
         size_t start = ranges[k].first;
         size_t length = ranges[k].second;
 
-        parallel_sample_sort_numa(strings + start, length, k % realNumaNodes, numThreadsPerPart);
+        StringPtr strptr(strings + start, shadow + start, length);
+        parallel_sample_sort_numa(strptr, length, k % realNumaNodes, numThreadsPerPart);
 
         //calculate lcps
-        size_t end = start + length;
-        tmp[start].text = strings[start];
-        tmp[start].lcp = 0;
-        for (size_t pos = start + 1; pos < end; pos++)
+        for (size_t pos = 0; pos < length; pos++)
         {
-            tmp[pos].text = strings[pos];
-            tmp[pos].lcp = stringtools::calc_lcp(strings[pos - 1], strings[pos]);
+            tmp[start + pos].text = strptr.str(pos);
+            tmp[start + pos].lcp = strptr.lcp(pos);
         }
     }
+
+    delete[] shadow;
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
     MeasureTime < 0 > timer;

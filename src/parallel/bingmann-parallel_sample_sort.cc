@@ -2330,24 +2330,18 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCEU1,
         "bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree")
 
 //! Call for NUMA aware parallel sorting
-void parallel_sample_sort_numa(string * strings, size_t n,
+void parallel_sample_sort_numa(StringPtr& strptr, size_t n,
                                int numaNode, int numberOfThreads)
 {
     Context ctx;
-    ctx.totalsize = ctx.restsize = n;
+    ctx.totalsize = ctx.restsize = strptr.size();
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
     SampleSortStep<ClassifyUnrollBoth>::put_stats();
 
-    string* shadow = new string[n]; // allocate shadow pointer array
-
-    StringPtr strptr(strings, shadow, n);
-
-    Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
+     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
-
-    delete [] shadow;
 
     assert(ctx.restsize == 0);
 
