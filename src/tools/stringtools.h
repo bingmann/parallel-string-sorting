@@ -355,7 +355,7 @@ static inline void self_verify_tree_calculations()
 
 /// Objectified string array pointer and shadow pointer array for out-of-place
 /// swapping of pointers.
-template <bool LcpDummy>
+template <bool NoLcpCalc>
 class StringPtrBase
 {
 private:
@@ -451,7 +451,7 @@ public:
     /// return reference to the i-th lcp
     inline uintptr_t& lcp(size_t i) const
     {
-        if (LcpDummy) assert(0);
+        if (NoLcpCalc) assert(0);
 
         assert(!m_flipped);
         assert(i < m_size);
@@ -461,7 +461,7 @@ public:
     /// set the i-th lcp to v and check its value
     inline const StringPtrBase& set_lcp(size_t i, const uintptr_t& v) const
     {
-        if (LcpDummy) return *this;
+        if (NoLcpCalc) return *this;
 
         assert(i > 0);
         assert(i < m_size);
@@ -475,7 +475,7 @@ public:
     //! LCP[0] position
     inline StringPtrBase& fill_lcp(uintptr_t v)
     {
-        if (LcpDummy) return *this;
+        if (NoLcpCalc) return *this;
 
         for (size_t i = 1; i < m_size; ++i)
             set_lcp(i, v);
@@ -490,7 +490,7 @@ public:
 };
 
 typedef StringPtrBase<false> StringPtr;
-typedef StringPtrBase<true> StringPtrLcpDummy;
+typedef StringPtrBase<true> StringPtrNoLcpCalc;
 
 } // namespace stringtools
 

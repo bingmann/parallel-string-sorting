@@ -78,7 +78,7 @@ typedef uint64_t key_type;
 #if CALC_LCP
 typedef stringtools::StringPtr StringPtr;
 #else
-typedef stringtools::StringPtrLcpDummy StringPtr;
+typedef stringtools::StringPtrNoLcpCalc StringPtr;
 #endif
 
 // ****************************************************************************
@@ -111,6 +111,7 @@ public:
     //! decrement number of unordered strings
     void donesize(size_t n)
     {
+        //restsize -= n;
     }
 };
 
@@ -493,7 +494,7 @@ struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
 // ****************************************************************************
 // *** Insertion Sort Template-switch
 
-void insertion_sort(const stringtools::StringPtrLcpDummy& strptr, size_t depth)
+void insertion_sort(const stringtools::StringPtrNoLcpCalc& strptr, size_t depth)
 {
     assert(!strptr.flipped());
     inssort::inssort(strptr.active(), strptr.size(), depth);
@@ -598,6 +599,7 @@ struct SmallsortJob : public Job, public SortStep
     size_t      in_depth;
 
     typedef BktSizeType bktsize_type;
+    //typedef size_t bktsize_type;
 
     SmallsortJob(Context& ctx, SortStep* _pstep,
                  const StringPtr& strptr, size_t depth)
@@ -674,53 +676,33 @@ struct SmallsortJob : public Job, public SortStep
             for (size_t si = 0; si < n; ++si)
                 ++bktsize[ bktcache[si] ];
 
-            // step 3: prefix sum
+            // step 3: inclusive prefix sum
 
             bkt[0] = bktsize[0];
-            bktsize_type last_bkt_size = bktsize[0];
             for (unsigned int i=1; i < bktnum; ++i) {
                 bkt[i] = bkt[i-1] + bktsize[i];
-                if (bktsize[i]) last_bkt_size = bktsize[i];
             }
             assert(bkt[bktnum-1] == n);
             bkt[bktnum] = n;
 
-#if 1
-            // step 4: premute in-place
-
-            for (size_t i=0, j; i < n - last_bkt_size; )
-            {
-                string perm = strings[i];
-                uint16_t permbkt = bktcache[i];
-
-                while ( (j = --bkt[ permbkt ]) > i )
-                {
-                    std::swap(perm, strings[j]);
-                    std::swap(permbkt, bktcache[j]);
-                }
-
-                strings[i] = perm;
-                i += bktsize[ permbkt ];
-            }
-
-            // fix prefix sum??? TODO
-
-            bkt[0] = 0;
-            for (unsigned int i=1; i <= bktnum; ++i) {
-                bkt[i] = bkt[i-1] + bktsize[i-1];
-            }
-            assert(bkt[bktnum] == n);
-#else
             // step 4: premute out-of-place
-
-            string* sorted = strptr.shadow(); // get alternative shadow pointer array
 
             string* strB = strptr.active();
             string* strE = strptr.active() + strptr.size();
+            string* sorted = strptr.shadow(); // get alternative shadow pointer array
 
             for (string* str = strB; str != strE; ++str, ++bktcache)
                 sorted[ --bkt[ *bktcache ] ] = *str;
-#endif
+
+            // bkt is afterwards the exclusive prefix sum of bktsize
+
+            bktsize_type sum = 0;
+            for (unsigned int i = 0; i <= bktnum; ++i) {
+                assert(bkt[i] == sum);
+                sum += bktsize[i];
+            }
+
+            // statistics
 
             ++ctx.seq_ss_steps;
         }
@@ -796,7 +778,7 @@ struct SmallsortJob : public Job, public SortStep
             {
                 size_t bktsize = s.bkt[i+1] - s.bkt[i];
 
-                StringPtr sp = s.strptr.sub(s.bkt[i], bktsize);
+                StringPtr sp = s.strptr.flip(s.bkt[i], bktsize);
 
                 // i is even -> bkt[i] is less-than bucket
                 if (i % 2 == 0)
@@ -888,7 +870,7 @@ struct SmallsortJob : public Job, public SortStep
 
             size_t bktsize = s.bkt[i+1] - s.bkt[i];
 
-            StringPtr sp = s.strptr.sub(s.bkt[i], bktsize);
+            StringPtr sp = s.strptr.flip(s.bkt[i], bktsize);
 
             // i is even -> bkt[i] is less-than bucket
             if (i % 2 == 0)
@@ -1033,7 +1015,9 @@ struct SmallsortJob : public Job, public SortStep
         size_t num_lt, num_eq, num_gt, depth;
         size_t idx;
         bool eq_recurse;
+#if CALC_LCP
         unsigned char lcp_lt, lcp_eq, lcp_gt;
+#endif
 
         MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* _cache, size_t _depth, bool CacheDirty)
             : strptr(_strptr), cache(_cache), depth(_depth), idx(0)
@@ -1255,7 +1239,9 @@ struct SmallsortJob : public Job, public SortStep
 
                 if (!ms.eq_recurse) {
                     sp = sp.copy_back();
+#if CALC_LCP
                     sp.fill_lcp(ms.depth + ms.lcp_eq);
+#endif
                     ctx.donesize(sp.size());
                 }
                 else if (ms.num_eq < g_inssort_threshold) {
@@ -1339,7 +1325,9 @@ struct SmallsortJob : public Job, public SortStep
             }
             else {
                 sp = sp.copy_back();
+#if CALC_LCP
                 sp.fill_lcp(ms.depth + ms.lcp_eq);
+#endif
                 ctx.donesize(ms.num_eq);
             }
         }
