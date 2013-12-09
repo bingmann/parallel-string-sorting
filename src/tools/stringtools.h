@@ -108,7 +108,8 @@ public:
 /// get packed characters from string at certain depth, needed due to
 /// zero-termianted strings.
 template <typename CharT>
-inline CharT get_char(string ptr, size_t depth);
+static inline CharT get_char(string ptr, size_t depth)
+__attribute__((always_inline));
 
 template <>
 inline uint8_t get_char<uint8_t>(string str, size_t depth)
@@ -233,7 +234,8 @@ inline uint128_t get_char<uint128_t>(string str, size_t depth)
 /// Templated hardware operation to get the number of zero bits, starting from
 /// the most significant.
 template <typename T>
-inline int count_high_zero_bits(const T& t);
+static inline int count_high_zero_bits(const T& t)
+__attribute__((always_inline));
 
 template <>
 inline int count_high_zero_bits<uint32_t>(const uint32_t& t)
@@ -264,7 +266,8 @@ inline int count_high_zero_bits<uint128_t>(const uint128_t& t)
 /// Templated hardware operation to get the number of zero bits, starting from
 /// the least significant.
 template <typename T>
-inline int count_low_zero_bits(const T& t);
+static inline int count_low_zero_bits(const T& t)
+__attribute__((always_inline));
 
 template <>
 inline int count_low_zero_bits<uint32_t>(const uint32_t& t)
