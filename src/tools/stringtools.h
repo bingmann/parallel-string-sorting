@@ -355,7 +355,8 @@ static inline void self_verify_tree_calculations()
 
 /// Objectified string array pointer and shadow pointer array for out-of-place
 /// swapping of pointers.
-class StringPtr
+template <bool LcpDummy>
+class StringPtrBase
 {
 private:
     //! strings (front) and temporary shadow (back) array
@@ -369,7 +370,7 @@ private:
 
 public:
     /// constructor specifying all attributes
-    inline StringPtr(string* original, string* shadow = NULL, size_t size = 0, bool flipped = false)
+    inline StringPtrBase(string* original, string* shadow = NULL, size_t size = 0, bool flipped = false)
         : m_front(original), m_back(shadow), m_size(size), m_flipped(flipped)
     {
     }
@@ -399,29 +400,29 @@ public:
     }
 
     //! ostream-able
-    friend inline std::ostream& operator << (std::ostream& os, const StringPtr& sp)
+    friend inline std::ostream& operator << (std::ostream& os, const StringPtrBase& sp)
     {
         return os << '(' << sp.active() << '/' << sp.shadow() << '|' << sp.flipped() << ':' << sp.size() << ')';
     }
 
     /// Advance (both) pointers by given offset, return sub-array
-    inline StringPtr sub(size_t offset, size_t size) const
+    inline StringPtrBase sub(size_t offset, size_t size) const
     {
         assert(offset + size <= m_size);
-        return StringPtr(m_front + offset, m_back + offset, size, m_flipped);
+        return StringPtrBase(m_front + offset, m_back + offset, size, m_flipped);
     }
 
-    /// construct a StringPtr object specifying a sub-array with flipping to
+    /// construct a StringPtrBase object specifying a sub-array with flipping to
     /// other array.
-    inline StringPtr flip(size_t offset, size_t size) const
+    inline StringPtrBase flip(size_t offset, size_t size) const
     {
         assert(offset + size <= m_size);
-        return StringPtr(m_back + offset, m_front + offset, size, !m_flipped);
+        return StringPtrBase(m_back + offset, m_front + offset, size, !m_flipped);
     }
 
     /// return subarray pointer to n strings in original array, might copy from
     /// shadow before returning.
-    inline StringPtr copy_back() const
+    inline StringPtrBase copy_back() const
     {
         if (!m_flipped) {
             return *this;
@@ -450,14 +451,18 @@ public:
     /// return reference to the i-th lcp
     inline uintptr_t& lcp(size_t i) const
     {
+        if (LcpDummy) assert(0);
+
         assert(!m_flipped);
         assert(i < m_size);
         return ((uintptr_t*)m_back)[i];
     }
 
     /// set the i-th lcp to v and check its value
-    inline const StringPtr& set_lcp(size_t i, const uintptr_t& v) const
+    inline const StringPtrBase& set_lcp(size_t i, const uintptr_t& v) const
     {
+        if (LcpDummy) return *this;
+
         assert(i > 0);
         assert(i < m_size);
         assert(v == calc_lcp(str(i-1), str(i)));
@@ -468,19 +473,24 @@ public:
 
     //! Fill whole LCP array with n times the value v, ! excluding the first
     //! LCP[0] position
-    inline StringPtr fill_lcp(uintptr_t v)
+    inline StringPtrBase& fill_lcp(uintptr_t v)
     {
+        if (LcpDummy) return *this;
+
         for (size_t i = 1; i < m_size; ++i)
             set_lcp(i, v);
         return *this;
     }
 
     /// Return the original front (for LCP calculation)
-    inline StringPtr front() const
+    inline StringPtrBase front() const
     {
         return m_flipped ? flip(0, m_size) : *this;
     }
 };
+
+typedef StringPtrBase<false> StringPtr;
+typedef StringPtrBase<true> StringPtrLcpDummy;
 
 } // namespace stringtools
 
