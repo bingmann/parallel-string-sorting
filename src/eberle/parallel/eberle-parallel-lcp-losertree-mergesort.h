@@ -5,6 +5,7 @@
 #include <list>
 #include <vector>
 #include <climits>
+#include <atomic>
 
 #include "../utils/types.h"
 #include "../utils/utility-functions.h"
@@ -114,8 +115,9 @@ struct BinaryMergeJob : public Job
 
         return true;
     }
-}
-;
+};
+
+atomic_uint currentlySplittingJobs(0);
 
 template<unsigned K>
     struct MergeJob : public Job
@@ -155,8 +157,9 @@ template<unsigned K>
             const string* end = output + length - MERGE_BULK_SIZE;
             for (; output < end; output += MERGE_BULK_SIZE)
             {
-                if (USE_WORK_SHARING && jobQueue.has_idle() && (end - output) > SHARE_WORK_THRESHOLD)
+                if (USE_WORK_SHARING && jobQueue.has_idle() && (end - output) > SHARE_WORK_THRESHOLD && currentlySplittingJobs < 2)
                 {
+                    currentlySplittingJobs++;
                     return false;
                 }
 
@@ -185,6 +188,7 @@ template<unsigned K>
                 pair < size_t, size_t > newRanges[K];
                 loserTree->getRangesOfRemaining(newRanges, input);
                 createJobs(jobQueue, input, output, newRanges, K);
+                currentlySplittingJobs--;
             }
 
             delete loserTree;
@@ -217,8 +221,6 @@ struct Splitter
 static inline list<Splitter*>*
 findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
 {
-    //create list to store the minimas in the streams
-    list < pair<size_t, unsigned> > minimas[numStreams];
     unsigned smallestLcp = UINT_MAX;
 
     //calculate the minimum lcp between the leading elements
@@ -232,15 +234,15 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
             if (lastText != NULL)
             {
                 unsigned lcp = stringtools::calc_lcp(lastText, text);
-                if (lcp < smallestLcp)
-                {
-                    smallestLcp = lcp;
-                }
+                smallestLcp = min(smallestLcp, lcp);
             }
 
             lastText = text;
         }
     }
+
+    //create list to store the position and lcps of the minimum lcps in the streams
+    list < pair<size_t, unsigned> > minimas[numStreams];
 
     // find minimas in each stream
     for (unsigned k = 0; k < numStreams; ++k)
@@ -253,12 +255,9 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
         }
 
         list<pair<size_t, unsigned>>* currList = minimas + k;
-
         AS* currInput = input + ranges[k].first;
-        if (currInput[1].lcp < smallestLcp)
-        {
-            smallestLcp = currInput[1].lcp;
-        }
+
+        smallestLcp = min(smallestLcp, currInput[1].lcp);
         char lastCharacter = currInput[0].text[smallestLcp];
         unsigned lastLcp = smallestLcp;
 
@@ -282,7 +281,32 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
         }
     }
 
+    // Positions with lcps with at max this value are allowed as splitter points
     unsigned maxAllowedLcp = smallestLcp + CHARS_PER_KEY - 1;
+
+    // calculate result and get distinguishing characters
+    list<Splitter*>* splitters = new list<Splitter*> [numStreams];
+
+    for (unsigned k = 0; k < numStreams; ++k)
+    {
+        if (ranges[k].second > 0)
+        {
+            list < pair<size_t, unsigned> > *currList = minimas + k;
+            AS* currInput = input + ranges[k].first;
+
+            currList->push_front(make_pair(0, smallestLcp));
+
+            for (list<pair<size_t, unsigned> >::iterator it = currList->begin(); it != currList->end(); ++it)
+            {
+                if (it->second <= maxAllowedLcp)
+                {
+                    splitters[k].push_back(new Splitter(it->first, get_char<CHAR_TYPE>(currInput[it->first].text, smallestLcp)));
+                }
+            }
+        }
+
+        splitters[k].push_back(new Splitter(ranges[k].second, CHAR_TYPE_MAX));
+    }
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_SPLITTER_DETECTION
 #pragma omp critical (OUTPUT)
@@ -312,35 +336,39 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
     }
 #endif // PARALLEL_LCP_MERGE_DEBUG_SPLITTER_DETECTION
 
-    // calculate result and get distinguishing characters
-    list<Splitter*>* splitters = new list<Splitter*> [numStreams];
-
-    for (unsigned k = 0; k < numStreams; ++k)
-    {
-        if (ranges[k].second > 0)
-        {
-            list < pair<size_t, unsigned> > *currList = minimas + k;
-            AS* currInput = input + ranges[k].first;
-
-            currList->push_front(make_pair(0, smallestLcp));
-
-            for (list<pair<size_t, unsigned> >::iterator it = currList->begin(); it != currList->end(); ++it)
-            {
-                if (it->second <= maxAllowedLcp)
-                {
-                    splitters[k].push_back(new Splitter(it->first, get_char<CHAR_TYPE>(currInput[it->first].text, smallestLcp)));
-                }
-            }
-        }
-
-        splitters[k].push_back(new Splitter(ranges[k].second, CHAR_TYPE_MAX));
-    }
-
     return splitters;
 }
 
-static inline
-void
+static inline void
+enqueueMergeJob(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams)
+{
+    switch (numStreams)
+    {
+    case 2:
+        jobQueue.enqueue(new BinaryMergeJob(input + ranges[0].first, ranges[0].second, input + ranges[1].first, ranges[1].second, output));
+        break;
+    case 4:
+        jobQueue.enqueue(new MergeJob<4>(input, output, ranges, length));
+        break;
+    case 8:
+        jobQueue.enqueue(new MergeJob<8>(input, output, ranges, length));
+        break;
+    case 16:
+        jobQueue.enqueue(new MergeJob<16>(input, output, ranges, length));
+        break;
+    case 32:
+        jobQueue.enqueue(new MergeJob<32>(input, output, ranges, length));
+        break;
+    case 64:
+        jobQueue.enqueue(new MergeJob<64>(input, output, ranges, length));
+        break;
+    default:
+        cerr << "CANNOT MERGE! TO MANY STREAMS: " << numStreams;
+        break;
+    }
+}
+
+static inline void
 createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams)
 {
     list<Splitter*>* splitters = findSplitters(input, ranges, numStreams);
@@ -447,21 +475,7 @@ createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* 
                 newRange[k] = make_pair(0, 0); // this stream is not used
             }
 
-            switch (numStreams)
-            {
-            case 4:
-                jobQueue.enqueue(new MergeJob<4>(input, output, newRange, length));
-                break;
-            case 8:
-                jobQueue.enqueue(new MergeJob<8>(input, output, newRange, length));
-                break;
-            case 16:
-                jobQueue.enqueue(new MergeJob<16>(input, output, newRange, length));
-                break;
-            case 32:
-                jobQueue.enqueue(new MergeJob<32>(input, output, newRange, length));
-                break;
-            }
+            enqueueMergeJob(jobQueue, input, output, newRange, length, numStreams);
 
         }
 
@@ -473,11 +487,11 @@ createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* 
 
 static inline
 void
-parallelMerge(AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams)
+parallelMerge(AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams)
 {
     JobQueue jobQueue;
     cout << "doing parallel merge for " << numStreams << " streams" << endl;
-    createJobs(jobQueue, input, output, ranges, numStreams);
+    enqueueMergeJob(jobQueue, input, output, ranges, length, numStreams);
     jobQueue.loop();
 }
 
@@ -492,7 +506,7 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
     AS *tmp = static_cast<AS *>(malloc(n * sizeof(AS)));
     string* shadow = new string[n]; // allocate shadow pointer array
 
-    std::pair < size_t, size_t > ranges[numNumaNodes];
+    pair < size_t, size_t > *ranges = new pair<size_t, size_t> [numNumaNodes];
     calculateRanges(ranges, numNumaNodes, n);
 
     // enable nested parallel regions
@@ -520,11 +534,11 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
 #ifdef PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
     MeasureTime < 0 > timer;
     timer.start();
-    parallelMerge(tmp, strings, ranges, numNumaNodes);
+    parallelMerge(tmp, strings, ranges, n, numNumaNodes);
     timer.stop();
     cout << endl << "top level merge needed: " << timer.delta() << " s" << endl << endl;
 #else
-    parallelMerge(tmp, output, ranges, numNumaNodes);
+    parallelMerge(tmp, output, ranges, n, numNumaNodes);
 #endif
 
     free(tmp);
