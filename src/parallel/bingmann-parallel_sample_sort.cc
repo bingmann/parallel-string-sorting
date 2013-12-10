@@ -84,6 +84,10 @@ typedef stringtools::StringPtrNoLcpCalc StringPtr;
 //! step timer ids for different sorting steps
 enum { TM_WAITING, TM_PARA_SS, TM_SEQ_SS, TM_MKQS, TM_INSSORT };
 
+//! replace TimerArrayMT with a no-op implementation
+typedef ::TimerArrayDummy TimerArrayMT;
+typedef ::ScopedTimerKeeperDummy ScopedTimerKeeperMT;
+
 // ****************************************************************************
 // *** Global Parallel Super Scalar String Sample Sort Context
 
@@ -1763,6 +1767,26 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
                  >> "tm_inssort" << ctx.timers.get(TM_INSSORT);
 }
 
+//! Call for NUMA aware parallel sorting
+void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThreads)
+{
+    Context ctx;
+    ctx.totalsize = ctx.restsize = strptr.size();
+    ctx.threadnum = numberOfThreads;
+    ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
+
+    SampleSortStep<ClassifyUnrollBoth>::put_stats();
+
+    Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
+    ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
+
+    //assert(ctx.restsize == 0);
+
+    g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
+                 >> "steps_seq_sample_sort" << ctx.seq_ss_steps
+                 >> "steps_base_sort" << ctx.bs_steps;
+}
+
 void parallel_sample_sortBTC(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifySimple>(strings, n, 0);
@@ -2360,25 +2384,5 @@ void parallel_sample_sortBTCEU1(string* strings, size_t n)
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCEU1,
         "bingmann/parallel_sample_sortBTCEU1",
         "bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree")
-
-//! Call for NUMA aware parallel sorting
-void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThreads)
-{
-    Context ctx;
-    ctx.totalsize = ctx.restsize = strptr.size();
-    ctx.threadnum = numberOfThreads;
-    ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
-
-    SampleSortStep<ClassifyUnrollBoth>::put_stats();
-
-     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
-    ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
-
-    assert(ctx.restsize == 0);
-
-    g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
-                 >> "steps_seq_sample_sort" << ctx.seq_ss_steps
-                 >> "steps_base_sort" << ctx.bs_steps;
-}
 
 } // namespace bingmann_parallel_sample_sort(_lcp)

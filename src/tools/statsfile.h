@@ -440,26 +440,31 @@ public:
     }
 };
 
-/// Dummy class to replace TimerArray with no-ops.
+/// Dummy class to replace TimerArray calls with no-ops.
 class TimerArrayDummy
 {
 public:
 
-    TimerArrayDummy(unsigned int /* timers */)
-    {
-    }
+    inline TimerArrayDummy(unsigned int /* timers */)
+    { }
 
-    /// clear all timers and start counting in timer 0.
-    void clear()
-    {
-    }
+    //! clear all timers and start counting in timer 0.
+    inline void clear()
+    { }
 
-    /// switch to other timer
+    //! clear timers and start nthreads timers
+    inline void start(unsigned /* nthreads */)
+    { }
+
+    //! stop all timers, add remaining time
+    inline void stop()
+    { }
+
+    //! switch to other timer
     inline void change(unsigned int /* tm */)
-    {
-    }
+    { }
 
-    /// return amount of time spent in a timer
+    //! return amount of time spent in a timer
     inline double get(unsigned int /* tm */)
     {
         return 0;
@@ -602,6 +607,16 @@ public:
     ~ScopedTimerKeeperMT()
     {
         m_ta.change(m_tmprev);
+    }
+};
+
+//! Dummy implementation of scoped TimerKeeper
+class ScopedTimerKeeperDummy
+{
+public:
+    template <typename Whatever>
+    ScopedTimerKeeperDummy(Whatever /* ta */, unsigned int /* tm */)
+    {
     }
 };
 
