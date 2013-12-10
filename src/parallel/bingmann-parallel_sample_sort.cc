@@ -2330,8 +2330,7 @@ CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCEU1,
         "bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree")
 
 //! Call for NUMA aware parallel sorting
-void parallel_sample_sort_numa(StringPtr& strptr, size_t n,
-                               int numaNode, int numberOfThreads)
+void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThreads)
 {
     Context ctx;
     ctx.totalsize = ctx.restsize = strptr.size();

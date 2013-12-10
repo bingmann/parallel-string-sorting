@@ -7,7 +7,7 @@ namespace bingmann_parallel_sample_sort
 {
 
 void
-parallel_sample_sort_numa(stringtools::StringPtr& strptr, size_t n, int numaNode, int numberOfThreads);
+parallel_sample_sort_numa(stringtools::StringPtr& strptr, int numaNode, int numberOfThreads);
 
 } // namespace bingmann_parallel_sample_sort
 
