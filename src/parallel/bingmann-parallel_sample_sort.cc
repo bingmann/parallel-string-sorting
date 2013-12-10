@@ -81,6 +81,9 @@ typedef stringtools::StringPtr StringPtr;
 typedef stringtools::StringPtrNoLcpCalc StringPtr;
 #endif
 
+//! step timer ids for different sorting steps
+enum { TM_WAITING, TM_PARA_SS, TM_SEQ_SS, TM_MKQS, TM_INSSORT };
+
 // ****************************************************************************
 // *** Global Parallel Super Scalar String Sample Sort Context
 
@@ -99,8 +102,15 @@ public:
     //! counters
     size_t para_ss_steps, seq_ss_steps, bs_steps;
 
+    //! timers for individual sorting steps
+    TimerArrayMT timers;
+
     //! job queue
     JobQueueT<Context> jobqueue;
+
+    //! context constructor
+    Context() : timers(16)
+    { }
 
     //! return sequential sorting threshold
     size_t sequential_threshold()
@@ -728,6 +738,8 @@ struct SmallsortJob : public Job, public SortStep
     {
         size_t n = in_strptr.size();
 
+        ScopedTimerKeeperMT tm_seq_ss(ctx.timers, TM_SEQ_SS);
+
         DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
         // create anonymous wrapper job
@@ -1188,7 +1200,10 @@ struct SmallsortJob : public Job, public SortStep
 
     void sort_mkqs_cache(Context& ctx, const StringPtr& strptr, size_t depth)
     {
+        ScopedTimerKeeperMT tm_mkqs(ctx.timers, TM_MKQS);
+
         if (strptr.size() < g_inssort_threshold) {
+            ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
             insertion_sort(strptr.copy_back(), depth);
             ctx.donesize(strptr.size());
             return;
@@ -1219,6 +1234,7 @@ struct SmallsortJob : public Job, public SortStep
                 if (ms.num_lt == 0)
                     ;
                 else if (ms.num_lt < g_inssort_threshold) {
+                    ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
                     insertion_sort_cache<false>(ms.strptr.sub(0, ms.num_lt),
                                                 ms.cache, ms.depth);
                     ctx.donesize(ms.num_lt);
@@ -1245,6 +1261,7 @@ struct SmallsortJob : public Job, public SortStep
                     ctx.donesize(sp.size());
                 }
                 else if (ms.num_eq < g_inssort_threshold) {
+                    ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
                     insertion_sort_cache<true>(sp, ms.cache + ms.num_lt,
                                                ms.depth + sizeof(key_type));
                     ctx.donesize(ms.num_eq);
@@ -1264,6 +1281,7 @@ struct SmallsortJob : public Job, public SortStep
                 if (ms.num_gt == 0)
                     ;
                 else if (ms.num_gt < g_inssort_threshold) {
+                    ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
                     insertion_sort_cache<false>(sp, ms.cache + ms.num_lt + ms.num_eq,
                                                 ms.depth);
                     ctx.donesize(ms.num_gt);
@@ -1416,6 +1434,8 @@ struct SampleSortStep : public SortStep
 
         virtual bool run(Context& ctx)
         {
+            ScopedTimerKeeperMT tm_seq_ss(ctx.timers, TM_PARA_SS);
+
             step->sample(ctx);
             return true;
         }
@@ -1431,6 +1451,8 @@ struct SampleSortStep : public SortStep
 
         virtual bool run(Context& ctx)
         {
+            ScopedTimerKeeperMT tm_seq_ss(ctx.timers, TM_PARA_SS);
+
             step->count(p, ctx);
             return true;
         }
@@ -1446,6 +1468,8 @@ struct SampleSortStep : public SortStep
 
         virtual bool run(Context& ctx)
         {
+            ScopedTimerKeeperMT tm_seq_ss(ctx.timers, TM_PARA_SS);
+
             step->distribute(p, ctx);
             return true;
         }
@@ -1693,6 +1717,7 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
     ctx.totalsize = ctx.restsize = n;
     ctx.threadnum = omp_get_max_threads();
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
+    ctx.timers.start(ctx.threadnum);
 
     SampleSortStep<Classify>::put_stats();
 
@@ -1702,6 +1727,8 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 
     Enqueue<Classify>(ctx, NULL, strptr, depth);
     ctx.jobqueue.loop(ctx);
+
+    ctx.timers.stop();
 
     if (0)
     {
@@ -1721,13 +1748,19 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
         std::cout << err << " lcp errors" << std::endl;
     }
 
-    assert(ctx.restsize == 0);
+    // TODO assert(ctx.restsize == 0);
 
     delete [] shadow;
 
     g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
                  >> "steps_base_sort" << ctx.bs_steps;
+
+    g_statscache >> "tm_waiting" << ctx.timers.get(TM_WAITING)
+                 >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
+                 >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
+                 >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
+                 >> "tm_inssort" << ctx.timers.get(TM_INSSORT);
 }
 
 void parallel_sample_sortBTC(string* strings, size_t n)
@@ -2313,7 +2346,6 @@ ClassifyEqualUnrollTree<14>::find_bkt_tree(const key_type& key) const
 void parallel_sample_sortBTCE(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyEqual>(strings, n, 0);
-
 }
 
 CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCE,

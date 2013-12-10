@@ -391,14 +391,6 @@ private:
     //! array of timers (usually preallocated)
     std::vector<struct timespec> m_tpvector;
 
-    //! add ts2 to ts1
-    void ts_fixcarray(struct timespec& ts)
-    {
-        if (ts.tv_nsec >= 1000000000L) {
-            ts.tv_sec++, ts.tv_nsec -= 1000000000L;
-        }
-    }
-
 public:
 
     TimerArray(unsigned int timers)
@@ -435,7 +427,6 @@ public:
         // add difference to current timer
         m_tpvector[ m_tmcurr ].tv_sec += tpnow.tv_sec - m_tplast.tv_sec;
         m_tpvector[ m_tmcurr ].tv_nsec += tpnow.tv_nsec - m_tplast.tv_nsec;
-        ts_fixcarray(m_tpvector[ m_tmcurr ]);
 
         m_tplast = tpnow;
         m_tmcurr = tm;
@@ -472,6 +463,145 @@ public:
     inline double get(unsigned int /* tm */)
     {
         return 0;
+    }
+};
+
+/// Class to measure different parts of a funciton by switching between
+/// different aggregating timers. Immediately start with timer 0. Use enums in
+/// your code to give the timer numbers names. Multi-threading aware version.
+class TimerArrayMT
+{
+private:
+
+    //! struct of information per thread
+    struct ThreadInfo
+    {
+        //! clock time of last call per thread
+        struct timespec     m_tplast;
+
+        //! currently running timer per thread
+        unsigned int        m_tmcurr;
+
+        //! filler to put info into different cache lines
+        unsigned char       m_filler[64 - sizeof(struct timespec) - sizeof(unsigned int)];
+    } __attribute__((packed));
+
+    //! array of timers (preallocated)
+    std::vector<struct timespec> m_timers;
+
+    //! array of thread info
+    std::vector<ThreadInfo> m_thread;
+
+public:
+    //! clear all timers at construction
+    TimerArrayMT(unsigned ntimers)
+        : m_timers(ntimers)
+    {
+    }
+
+    //! clear all timers and start counting in timer 0.
+    void start(unsigned nthreads)
+    {
+        struct timespec tp = { 0, 0 };
+        std::fill(m_timers.begin(), m_timers.end(), tp);
+
+        if (clock_gettime(CLOCK_MONOTONIC, &tp)) {
+            perror("Could not clock_gettime(CLOCK_MONOTONIC)");
+        }
+
+        m_thread.resize(nthreads);
+
+        for (size_t i = 0; i < m_thread.size(); ++i) {
+            m_thread[i].m_tplast = tp;
+            m_thread[i].m_tmcurr = 0;
+        }
+    }
+
+    //! stop all timers, add remaining time
+    void stop()
+    {
+        for (size_t t = 0; t < m_thread.size(); ++t) {
+            change(0, t);
+        }
+    }
+
+    //! switch to other timer tm for the thread tid
+    inline void change(unsigned int tm, unsigned int tid)
+    {
+        assert(tm < m_timers.size());
+        assert(tid < m_thread.size());
+
+        // get current time
+        struct timespec tpnow;
+        if (clock_gettime(CLOCK_MONOTONIC, &tpnow)) {
+            perror("Could not clock_gettime(CLOCK_MONOTONIC)");
+        }
+
+        // thread info
+        ThreadInfo& ti = m_thread[tid];
+
+        // add difference to current timer
+#pragma omp atomic
+        m_timers[ ti.m_tmcurr ].tv_sec += (tpnow.tv_sec - ti.m_tplast.tv_sec);
+#pragma omp atomic
+        m_timers[ ti.m_tmcurr ].tv_nsec += tpnow.tv_nsec - ti.m_tplast.tv_nsec;
+
+        ti.m_tplast = tpnow;
+        ti.m_tmcurr = tm;
+    }
+
+    //! switch to other timer tm for the current thread
+    inline void change(unsigned int tm)
+    {
+        return change(tm, omp_get_thread_num());
+    }
+
+    //! return current timer of a thread
+    inline unsigned int get_tmcurr(unsigned int tid)
+    {
+        assert(tid < m_thread.size());
+        return m_thread[tid].m_tmcurr;
+    }
+
+    //! return current timer of the current thread
+    inline unsigned int get_tmcurr()
+    {
+        return get_tmcurr(omp_get_thread_num());
+    }
+
+    //! return amount of time spent in a timer
+    inline double get(unsigned int tm) const
+    {
+        assert(tm < m_timers.size());
+        return (m_timers[tm].tv_sec + m_timers[tm].tv_nsec / 1e9);
+    }
+};
+
+//! Scoped timer keeper: changes timer array to new timer on construction and
+//! back to old one on destruction.
+class ScopedTimerKeeperMT
+{
+protected:
+    //! reference to timer array
+    TimerArrayMT&       m_ta;
+
+    //! previous timer identifier
+    unsigned int        m_tmprev;
+
+public:
+
+    //! construct and change timer to tm
+    ScopedTimerKeeperMT(TimerArrayMT& ta, unsigned int tm)
+        : m_ta(ta),
+          m_tmprev(ta.get_tmcurr())
+    {
+        m_ta.change(tm);
+    }
+
+    //! change back timer to previous timer.
+    ~ScopedTimerKeeperMT()
+    {
+        m_ta.change(m_tmprev);
     }
 };
 
