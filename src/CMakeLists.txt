@@ -29,6 +29,7 @@ set(SOURCES
   parallel/bingmann-parallel_radix_sort.cc
   parallel/bingmann-parallel_mkqs.cc
   parallel/bingmann-parallel_sample_sort.cc
+  parallel/bingmann-parallel_sample_sort_lcp.cc
   parallel/shamsundar-lcp-merge-string-sort.cc
 )
 

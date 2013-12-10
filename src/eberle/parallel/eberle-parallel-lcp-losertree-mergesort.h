@@ -34,7 +34,7 @@ using namespace eberle_mergesort_lcp;
 using namespace jobqueue;
 using namespace stringtools;
 
-using namespace bingmann_parallel_sample_sort;
+using namespace bingmann_parallel_sample_sort_lcp;
 
 //typedefs
 typedef unsigned char* string;

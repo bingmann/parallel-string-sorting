@@ -46,10 +46,10 @@
 #define CALC_LCP 0
 #endif
 
-#if CALC_LCP
+#if !CALC_LCP
 namespace bingmann_parallel_sample_sort {
 #else
-namespace bingmann_parallel_sample_sort {
+namespace bingmann_parallel_sample_sort_lcp {
 #endif
 
 using namespace stringtools;
@@ -1650,18 +1650,18 @@ struct SampleSortStep : public SortStep
 
     // *** After Recursive Sorting
 
+#if CALC_LCP
     virtual void substep_all_done()
     {
         DBG(debug_steps, "pSampleSortStep[" << depth << "]: all substeps done.");
 
-#if CALC_LCP
         sample_sort_lcp<bktnum>(classifier, strptr.front(), depth, bkt[0]);
         delete [] bkt[0];
 
         if (pstep) pstep->substep_notify_done();
         delete this;
-#endif
     }
+#endif
 
     static inline void put_stats()
     {
@@ -2349,4 +2349,4 @@ void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThre
                  >> "steps_base_sort" << ctx.bs_steps;
 }
 
-} // namespace bingmann_parallel_sample_sort
+} // namespace bingmann_parallel_sample_sort(_lcp)

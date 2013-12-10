@@ -3,12 +3,18 @@
 
 #include "../tools/stringtools.h"
 
-namespace bingmann_parallel_sample_sort
-{
+namespace bingmann_parallel_sample_sort {
+
+void
+parallel_sample_sort_numa(stringtools::StringPtrNoLcpCalc& strptr, int numaNode, int numberOfThreads);
+
+} // namespace bingmann_parallel_sample_sort
+
+namespace bingmann_parallel_sample_sort_lcp {
 
 void
 parallel_sample_sort_numa(stringtools::StringPtr& strptr, int numaNode, int numberOfThreads);
 
-} // namespace bingmann_parallel_sample_sort
+} // namespace bingmann_parallel_sample_sort_lcp
 
 #endif // BINGMANN_PARALLEL_SAMPLE_SORT_H_
