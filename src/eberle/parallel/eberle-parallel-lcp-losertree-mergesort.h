@@ -498,7 +498,7 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
     // enable nested parallel regions
     omp_set_nested(true);
 
-#pragma omp parallel for num_threads(numNumaNodes)
+#pragma omp parallel for
     for (unsigned k = 0; k < numNumaNodes; k++)
     {
         size_t start = ranges[k].first;
