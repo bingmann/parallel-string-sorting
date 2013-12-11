@@ -151,6 +151,125 @@ void lcp_insertion_sort(const StringPtr& strptr, size_t depth)
 }
 
 static inline
+void lcp_insertion_sort(const StringPtrNoLcpCalc& strptr, size_t depth)
+{
+    size_t n = strptr.size();
+    size_t tmp_lcp[n];
+
+    if (n <= 1) return;
+
+    for (size_t j = 0; j < n - 1; ++j)
+    {
+        // insert strings[j] into sorted strings[0..j-1]
+
+        string new_str = strptr.str(j);
+        size_t new_lcp = depth; // start with LCP depth
+
+        size_t i = j;
+        while (i > 0)
+        {
+            size_t prev_lcp = new_lcp;
+
+            string& cur_str = strptr.str(i - 1);
+            size_t& cur_lcp = tmp_lcp[i];
+
+            if (cur_lcp < new_lcp)
+            {
+                // CASE 1: lcp goes down -> insert string
+                break;
+            }
+            else if (cur_lcp == new_lcp)
+            {
+                // CASE 2: compare more characters
+
+                string s1 = new_str + new_lcp;
+                string s2 = cur_str + new_lcp;
+
+                while (*s1 != 0 && *s1 == *s2)
+                    ++s1, ++s2, ++new_lcp;
+
+                // if (new_str >= curr_str) -> insert string
+                if (*s1 >= *s2)
+                {
+                    // update lcp of prev (smaller string) with inserted string
+                    cur_lcp = new_lcp;
+                    // lcp of inserted string with next string
+                    new_lcp = prev_lcp;
+                    break;
+                }
+            }
+            // else (cur_lcp > new_lcp), CASE 3: nothing to do
+
+            strptr.str(i) = cur_str;
+            tmp_lcp[i + 1] = cur_lcp;
+
+            --i;
+        }
+
+        strptr.str(i) = new_str;
+        tmp_lcp[i + 1] = new_lcp;
+    }
+
+    // last loop specialized with checks for out-of-bound access to lcp.
+    {
+        size_t j = n - 1;
+
+        // insert strings[j] into sorted strings[0..j-1]
+
+        string new_str = strptr.str(j);
+        size_t new_lcp = depth; // start with LCP depth
+
+        size_t i = j;
+        while (i > 0)
+        {
+            size_t prev_lcp = new_lcp;
+
+            string& cur_str = strptr.str(i - 1);
+            size_t& cur_lcp = tmp_lcp[i];
+
+            if (cur_lcp < new_lcp)
+            {
+                // CASE 1: lcp goes down -> insert string
+                break;
+            }
+            else if (cur_lcp == new_lcp)
+            {
+                // CASE 2: compare more characters
+
+                string s1 = new_str + new_lcp;
+                string s2 = cur_str + new_lcp;
+
+                while (*s1 != 0 && *s1 == *s2)
+                    ++s1, ++s2, ++new_lcp;
+
+                // if (new_str >= curr_str) -> insert string
+                if (*s1 >= *s2)
+                {
+                    // update lcp of prev (smaller string) with inserted string
+                    cur_lcp = new_lcp;
+                    // lcp of inserted string with next string
+                    new_lcp = prev_lcp;
+                    break;
+                }
+            }
+            // else (cur_lcp > new_lcp), CASE 3: nothing to do
+
+            strptr.str(i) = cur_str;
+
+            if (i + 1 < n) // check out-of-bounds copy
+                tmp_lcp[i + 1] = cur_lcp;
+
+            --i;
+        }
+
+        strptr.str(i) = new_str;
+
+        if (i + 1 < n) // check out-of-bounds save
+            tmp_lcp[i + 1] = new_lcp;
+    }
+}
+
+static inline
 void do_lcp_insertion_sort(string* strings, size_t n)
 {
     string* shadow = new string[n]; // allocate shadow pointer array
