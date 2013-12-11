@@ -43,7 +43,7 @@ typedef unsigned int UINT;
 //constants
 static const bool USE_WORK_SHARING = true;
 static const size_t MERGE_BULK_SIZE = 3000;
-static const int SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
+static const size_t SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
 
 //method definitions
 
@@ -51,7 +51,8 @@ static inline void
 createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams);
 
 static inline void
-createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, unsigned baseLcp);
+createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
+        unsigned baseLcp);
 
 //definitions
 
@@ -139,7 +140,7 @@ struct BinaryMergeJob : public Job
     }
 };
 
-atomic_uint currentlySplittingJobs(0);
+size_t lengthOfLongestJob(0);
 
 template<unsigned K>
     struct MergeJob : public Job
@@ -153,6 +154,8 @@ template<unsigned K>
         MergeJob(AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned baseLcp) :
                 input(input), output(output), ranges(ranges), length(length), baseLcp(baseLcp)
         {
+            lengthOfLongestJob = max(lengthOfLongestJob, length);
+
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
             {
@@ -166,7 +169,6 @@ template<unsigned K>
 #endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
             }
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-
         }
 
         /*
@@ -176,20 +178,21 @@ template<unsigned K>
         inline bool
         mergeToOutput(JobQueue& jobQueue, LcpStringLoserTree<K> * loserTree)
         {
-
-            const string* end = output + length - MERGE_BULK_SIZE;
-            for (; output < end; output += MERGE_BULK_SIZE)
+            for (size_t lastLength = length; length >= MERGE_BULK_SIZE; length -= MERGE_BULK_SIZE, output += MERGE_BULK_SIZE)
             {
-                if (USE_WORK_SHARING && jobQueue.has_idle() && (end - output) > SHARE_WORK_THRESHOLD && currentlySplittingJobs < 1)
-                {
-                    currentlySplittingJobs++;
+                if (lengthOfLongestJob == lastLength)
+                    lengthOfLongestJob = length;
+
+                if (lengthOfLongestJob < length)
+                    lengthOfLongestJob = length; // else if to prevent work sharing when we just increased lengthOfLongestJob
+                else if (USE_WORK_SHARING && jobQueue.has_idle() && length > SHARE_WORK_THRESHOLD && lengthOfLongestJob == length)
                     return false;
-                }
 
                 loserTree->writeElementsToStream(output, MERGE_BULK_SIZE);
+                lastLength = length;
             }
 
-            loserTree->writeElementsToStream(output, end - output + MERGE_BULK_SIZE);
+            loserTree->writeElementsToStream(output, length);
 
             return true;
         }
@@ -198,8 +201,8 @@ template<unsigned K>
         run(JobQueue& jobQueue)
         {
             for (unsigned k = 0; k < K; k++)
-            { // this is a temporary fix, because the losertree modifies the lcps.
-                input[ranges[k].first].lcp = 0;
+            { // this ensures that the streams are all equally compared at the start
+                input[ranges[k].first].lcp = baseLcp;
             }
 
             //merge
@@ -212,9 +215,10 @@ template<unsigned K>
                 loserTree->getRangesOfRemaining(newRanges, input);
 
                 //createJobs(jobQueue, input, output, newRanges, K);
-                createJobs2(jobQueue, input, output, newRanges, K, baseLcp + CHARS_PER_KEY);
+                createJobs2(jobQueue, input, output, newRanges, K, length, baseLcp + CHARS_PER_KEY);
 
-                currentlySplittingJobs--;
+                if (lengthOfLongestJob == length)
+                    lengthOfLongestJob = 0;
             }
 
             delete loserTree;
@@ -285,9 +289,11 @@ findNextSplitter(AS* &inputStream, AS* end, unsigned baseLcp, unsigned maxAllowe
 }
 
 static inline void
-createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, unsigned baseLcp)
+createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
+        unsigned baseLcp)
 {
-    cout << endl << "CREATING JOBS at baseLcp: " << baseLcp << endl;
+    cout << endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements << ", longest job: " << lengthOfLongestJob
+            << endl;
 
     AS* inputStreams[numStreams];
     AS* ends[numStreams];
@@ -650,7 +656,7 @@ void
 eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
 {
     int realNumaNodes = numa_num_configured_nodes();
-    unsigned numNumaNodes = max(unsigned(8), unsigned(realNumaNodes)); // this max ensures a parallel merge on developer machine
+    unsigned numNumaNodes = max(unsigned(4), unsigned(realNumaNodes)); // this max ensures a parallel merge on developer machine
     int numThreadsPerPart = numa_num_configured_cpus() / numNumaNodes;
 
 //allocate memory for annotated strings
