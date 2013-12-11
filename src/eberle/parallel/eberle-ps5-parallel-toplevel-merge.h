@@ -3,8 +3,6 @@
 
 #include <iostream>
 #include <vector>
-#include <climits>
-#include <atomic>
 
 #include "../utils/types.h"
 #include "../utils/utility-functions.h"
@@ -19,6 +17,7 @@
 //#define PARALLEL_LCP_MERGE_DEBUG_SPLITTER_DETECTION
 //#define PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 //#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
+//#define PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
 #define PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
 
 namespace eberle_parallel_mergesort_lcp_loosertree
@@ -57,8 +56,6 @@ createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>*
 //definitions
 
 typedef uint32_t CHAR_TYPE;
-const CHAR_TYPE CHAR_TYPE_MAX = CHAR_TYPE(-1);
-const unsigned CHARS_PER_KEY = 4;
 
 struct Splitter
 {
@@ -139,7 +136,6 @@ struct BinaryMergeJob : public Job
         return true;
     }
 };
-
 size_t lengthOfLongestJob(0);
 
 template<unsigned K>
@@ -154,8 +150,6 @@ template<unsigned K>
         MergeJob(AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned baseLcp) :
                 input(input), output(output), ranges(ranges), length(length), baseLcp(baseLcp)
         {
-            lengthOfLongestJob = max(lengthOfLongestJob, length);
-
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
             {
@@ -215,7 +209,7 @@ template<unsigned K>
                 loserTree->getRangesOfRemaining(newRanges, input);
 
                 //createJobs(jobQueue, input, output, newRanges, K);
-                createJobs2(jobQueue, input, output, newRanges, K, length, baseLcp + CHARS_PER_KEY);
+                createJobs2(jobQueue, input, output, newRanges, K, length, baseLcp + key_traits<CHAR_TYPE>::add_depth);
 
                 if (lengthOfLongestJob == length)
                     lengthOfLongestJob = 0;
@@ -231,6 +225,35 @@ template<unsigned K>
             delete ranges;
         }
     };
+
+struct InitialSplitJob : public Job
+{
+    AS* input;
+    string* output;
+    pair<size_t, size_t>* ranges;
+    size_t length;
+    unsigned numStreams;
+    unsigned splitStartLcp;
+
+    InitialSplitJob(AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams, unsigned splitStartLcp) :
+            input(input), output(output), ranges(ranges), length(length), numStreams(numStreams), splitStartLcp(splitStartLcp)
+    {
+        lengthOfLongestJob = length; // prevents that the first MergeJob immediately starts splitting itself
+    }
+
+    virtual bool
+    run(JobQueue& jobQueue)
+    {
+        createJobs2(jobQueue, input, output, ranges, numStreams, length, splitStartLcp);
+        lengthOfLongestJob = 0;
+        return true;
+    }
+
+    ~InitialSplitJob()
+    {
+        delete ranges;
+    }
+};
 
 // Implementations follow.
 
@@ -284,7 +307,7 @@ findNextSplitter(AS* &inputStream, AS* end, unsigned baseLcp, unsigned maxAllowe
         }
     }
 
-    lastCharacter = CHAR_TYPE_MAX;
+    lastCharacter = key_traits<CHAR_TYPE>::maxValue;
     return inputStream - streamStart;
 }
 
@@ -292,8 +315,11 @@ static inline void
 createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
         unsigned baseLcp)
 {
-    cout << endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements << ", longest job: " << lengthOfLongestJob
-            << endl;
+#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
+    cout << endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements << endl;
+#else
+    (void) numberOfElements;
+#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
 
     AS* inputStreams[numStreams];
     AS* ends[numStreams];
@@ -309,18 +335,18 @@ createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>*
         }
         else
         {
-            splitterCharacter[k] = CHAR_TYPE_MAX;
+            splitterCharacter[k] = key_traits<CHAR_TYPE>::maxValue;
         }
     }
 
-    unsigned maxAllowedLcp(baseLcp + CHARS_PER_KEY - 1);
+    unsigned maxAllowedLcp(baseLcp + key_traits<CHAR_TYPE>::add_depth - 1);
     unsigned indexesOfFound[numStreams];
 
     unsigned createdJobsCtr = 0;
 
     while (true)
     {
-        CHAR_TYPE currBucket = CHAR_TYPE_MAX;
+        CHAR_TYPE currBucket = key_traits<CHAR_TYPE>::maxValue;
         unsigned numberOfFoundBuckets = 0;
 
         for (unsigned k = 0; k < numStreams; ++k)
@@ -342,7 +368,7 @@ createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>*
             }
         }
 
-        if (currBucket == CHAR_TYPE_MAX)
+        if (currBucket == key_traits<CHAR_TYPE>::maxValue)
         {
             break;
         }
@@ -401,7 +427,10 @@ createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>*
         output += length;
         createdJobsCtr++;
     }
+
+#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
     cout << "Created " << createdJobsCtr << " Jobs!" << endl;
+#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
 }
 
 static inline vector<Splitter*>*
@@ -451,7 +480,7 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
         {
             unsigned lcp = currInput[i].lcp;
 
-            if (lcp <= smallestLcp + CHARS_PER_KEY - 1)
+            if (lcp <= smallestLcp + key_traits<CHAR_TYPE>::add_depth - 1)
             {
                 smallestLcp = min(smallestLcp, lcp);
 
@@ -468,7 +497,7 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
     }
 
 // Positions with lcps with at max this value are allowed as splitter points
-    unsigned maxAllowedLcp = smallestLcp + CHARS_PER_KEY - 1;
+    unsigned maxAllowedLcp = smallestLcp + key_traits<CHAR_TYPE>::add_depth - 1;
 
 // calculate result and get distinguishing characters
     vector<Splitter*>* splitters = new vector<Splitter*> [numStreams];
@@ -491,7 +520,7 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
             }
         }
 
-        splitters[k].push_back(new Splitter(ranges[k].second, CHAR_TYPE_MAX));
+        splitters[k].push_back(new Splitter(ranges[k].second, key_traits<CHAR_TYPE>::maxValue));
     }
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_SPLITTER_DETECTION
@@ -551,7 +580,7 @@ createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* 
     while (true)
     {
         // find all matching buckets with the smallest character
-        CHAR_TYPE currBucket = CHAR_TYPE_MAX;
+        CHAR_TYPE currBucket = key_traits<CHAR_TYPE>::maxValue;
 
         unsigned numberOfFoundBuckets = 0;
         unsigned indexesOfFound[numStreams];
@@ -575,8 +604,8 @@ createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* 
             }
         }
 
-        if (currBucket == CHAR_TYPE_MAX)
-        { // no bucket < CHAR_MAX found => we reached the end
+        if (currBucket == key_traits<CHAR_TYPE>::maxValue)
+        { // no bucket < maxValue found => we reached the end
             break;
         }
 
@@ -648,7 +677,7 @@ parallelMerge(AS* input, string* output, pair<size_t, size_t>* ranges, size_t le
 {
     JobQueue jobQueue;
     cout << "doing parallel merge for " << numStreams << " streams" << endl;
-    enqueueMergeJob(jobQueue, input, output, ranges, length, numStreams, -CHARS_PER_KEY);
+    jobQueue.enqueue(new InitialSplitJob(input, output, ranges, length, numStreams, unsigned(0)));
     jobQueue.loop();
 }
 
@@ -678,12 +707,18 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
         StringPtr strptr(strings + start, shadow + start, length);
         parallel_sample_sort_numa(strptr, k % realNumaNodes, numThreadsPerPart);
 
-        //calculate lcps
+        //create AS* array
+        MeasureTime < 0 > timer;
+        timer.start();
+
         for (size_t pos = 0; pos < length; pos++)
         {
             tmp[start + pos].text = strptr.str(pos);
             tmp[start + pos].lcp = strptr.lcp(pos);
         }
+
+        timer.stop();
+        cout << endl << "Creating AS* needed: " << timer.delta() << " s" << endl << endl;
     }
 
     delete[] shadow;

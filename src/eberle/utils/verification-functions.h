@@ -2,12 +2,11 @@
 #define VERIFICATION_FUNCTIONS_H_
 
 #include "types.h"
-#include "utility-functions.h"
+#include "../../tools/stringtools.h"
 
 namespace eberle_utils {
 
 using namespace types;
-using namespace stringtools;
 
 static inline
 bool checkLcps(AS* output, size_t n, unsigned expectedFirstLcp) {
@@ -43,7 +42,7 @@ bool checkLcps(AS* output, size_t n, unsigned expectedFirstLcp) {
 
 static inline void checkSorting(AS* stream, size_t length) {
 	for (size_t i = 1; i < length; i++) {
-		if (scmp(stream[i - 1].text, stream[i].text) > 0) {
+		if (stringtools::scmp(stream[i - 1].text, stream[i].text) > 0) {
 			std::cout << "SORT ERROR! ( " << stream[i - 1].text << " | "
 					<< stream[i].text << " )" << std::endl;
 		}

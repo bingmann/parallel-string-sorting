@@ -1,10 +1,12 @@
-#ifndef LCP_MERGESORT_H_
-#define LCP_MERGESORT_H_
+#ifndef EBERLE_LCP_MERGESORT_H_
+#define EBERLE_LCP_MERGESORT_H_
 
+#include "../../tools/stringtools.h"
 #include "../utils/types.h"
 
 namespace eberle_mergesort_lcp {
 
+using namespace stringtools;
 using namespace types;
 
 //typedefs
@@ -159,7 +161,7 @@ void eberle_lcp_mergesort(string *strings, size_t n) {
 CONTESTANT_REGISTER(eberle_lcp_mergesort, "eberle/mergesort_lcp_binary", "Binary Mergesort with LCP-usage by Andreas Eberle")
 
 }
-		// namespace eberle_lcp_mergesort
+// namespace eberle_lcp_mergesort
 
-#endif // LCP_MERGESORT_H_
+#endif // EBERLE_LCP_MERGESORT_H_
 

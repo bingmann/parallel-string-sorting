@@ -2,6 +2,7 @@
 #define EBERLE_MERGESORT_H_
 
 #include "../utils/utility-functions.h"
+#include "../../tools/stringtools.h"
 
 namespace eberle_mergesort {
 
@@ -21,7 +22,7 @@ void eberle_merge(string *strings, string *tmp, size_t length1,
 	size_t mergedIdx = 0;
 
 	for (; idx1 < end1 && idx2 < end2; mergedIdx++) {
-		if (scmp(strings[idx1], strings[idx2]) < 0) {
+		if (stringtools::scmp(strings[idx1], strings[idx2]) < 0) {
 			tmp[mergedIdx] = strings[idx1];
 			idx1++;
 		} else {
