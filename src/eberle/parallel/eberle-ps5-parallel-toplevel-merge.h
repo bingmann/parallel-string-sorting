@@ -1,5 +1,5 @@
-#ifndef PARALLEL_LCP_LOOSERTREE_MERGESORT_H_
-#define PARALLEL_LCP_LOOSERTREE_MERGESORT_H_
+#ifndef EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
+#define EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
 
 #include <iostream>
 #include <vector>
@@ -701,11 +701,11 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
     free(tmp);
 }
 
-CONTESTANT_REGISTER_PARALLEL(eberle_parallel_mergesort_lcp_loosertree, "eberle/parallel_mergesort_lcp_losertree",
-        "Parallel Mergesort with LCP-Losertree-usage by Andreas Eberle")
+CONTESTANT_REGISTER_PARALLEL(eberle_parallel_mergesort_lcp_loosertree, "eberle/ps5-parallel-toplevel-merge",
+        "NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle")
 
 }
 // namespace eberle_parallel_mergesort_lcp_loosertree
 
-#endif // PARALLEL_LCP_LOOSERTREE_MERGESORT_H_
+#endif // EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
 
