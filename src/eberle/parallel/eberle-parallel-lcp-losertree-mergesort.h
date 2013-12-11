@@ -2,7 +2,6 @@
 #define PARALLEL_LCP_LOOSERTREE_MERGESORT_H_
 
 #include <iostream>
-#include <list>
 #include <vector>
 #include <climits>
 #include <atomic>
@@ -218,7 +217,7 @@ struct Splitter
     }
 };
 
-static inline list<Splitter*>*
+static inline vector<Splitter*>*
 findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
 {
     unsigned smallestLcp = UINT_MAX;
@@ -242,7 +241,7 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
     }
 
     //create list to store the position and lcps of the minimum lcps in the streams
-    list < pair<size_t, unsigned> > minimas[numStreams];
+    vector < pair<size_t, unsigned> > minimas[numStreams];
 
     // find minimas in each stream
     for (unsigned k = 0; k < numStreams; ++k)
@@ -254,7 +253,7 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
             continue;
         }
 
-        list<pair<size_t, unsigned>>* currList = minimas + k;
+        vector<pair<size_t, unsigned>>* currList = minimas + k;
         AS* currInput = input + ranges[k].first;
 
         smallestLcp = min(smallestLcp, currInput[1].lcp);
@@ -285,18 +284,18 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
     unsigned maxAllowedLcp = smallestLcp + CHARS_PER_KEY - 1;
 
     // calculate result and get distinguishing characters
-    list<Splitter*>* splitters = new list<Splitter*> [numStreams];
+    vector<Splitter*>* splitters = new vector<Splitter*> [numStreams];
 
     for (unsigned k = 0; k < numStreams; ++k)
     {
         if (ranges[k].second > 0)
         {
-            list < pair<size_t, unsigned> > *currList = minimas + k;
+            vector < pair<size_t, unsigned> > *currList = minimas + k;
             AS* currInput = input + ranges[k].first;
 
-            currList->push_front(make_pair(0, smallestLcp));
+            splitters[k].push_back(new Splitter(0, get_char<CHAR_TYPE>(currInput[0].text, smallestLcp)));
 
-            for (list<pair<size_t, unsigned> >::iterator it = currList->begin(); it != currList->end(); ++it)
+            for (vector<pair<size_t, unsigned> >::iterator it = currList->begin(); it != currList->end(); ++it)
             {
                 if (it->second <= maxAllowedLcp)
                 {
@@ -316,9 +315,9 @@ findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
         for (unsigned k = 0; k < numStreams; k++)
         {
             AS* currInput = input + ranges[k].first;
-            list < pair<size_t, unsigned> > *v = minimas + k;
+            vector < pair<size_t, unsigned> > *v = minimas + k;
 
-            for (list<pair<size_t, unsigned> >::iterator it = v->begin(); it != v->end(); ++it)
+            for (vector<pair<size_t, unsigned> >::iterator it = v->begin(); it != v->end(); ++it)
             {
                 cout << it->first << ":" << (it->second - smallestLcp) << "(";
                 string text = currInput[it->first].text;
@@ -371,9 +370,9 @@ enqueueMergeJob(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size
 static inline void
 createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams)
 {
-    list<Splitter*>* splitters = findSplitters(input, ranges, numStreams);
+    vector<Splitter*>* splitters = findSplitters(input, ranges, numStreams);
 
-    list<Splitter*>::iterator iterators[numStreams]; // get iterators of minimas of each streams
+    vector<Splitter*>::iterator iterators[numStreams]; // get iterators of minimas of each streams
     for (unsigned k = 0; k < numStreams; ++k)
     {
         iterators[k] = splitters[k].begin();
