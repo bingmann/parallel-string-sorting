@@ -48,8 +48,15 @@
 
 #if !CALC_LCP
 namespace bingmann_parallel_sample_sort {
+
+#define CONTESTANT_REGISTER_PARALLEL_LCP CONTESTANT_REGISTER_PARALLEL
+
 #else
 namespace bingmann_parallel_sample_sort_lcp {
+
+#define CONTESTANT_REGISTER_PARALLEL_LCP(func,name,desc) \
+    CONTESTANT_REGISTER_PARALLEL(func, name "_lcp", desc "_lcp")
+
 #endif
 
 using namespace stringtools;
@@ -1789,27 +1796,30 @@ void parallel_sample_sortBTC(string* strings, size_t n)
     parallel_sample_sort_base<ClassifySimple>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTC,
-                             "bingmann/parallel_sample_sortBTC",
-                             "bingmann/parallel_sample_sortBTC: binary tree, bktcache")
+CONTESTANT_REGISTER_PARALLEL_LCP(
+    parallel_sample_sortBTC,
+    "bingmann/parallel_sample_sortBTC",
+    "bingmann/parallel_sample_sortBTC: binary tree, bktcache")
 
 void parallel_sample_sortBTCU1(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyUnrollTree>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU1,
-                             "bingmann/parallel_sample_sortBTCU1",
-                             "bingmann/parallel_sample_sortBTCU1: binary tree, bktcache, unroll tree")
+CONTESTANT_REGISTER_PARALLEL_LCP(
+    parallel_sample_sortBTCU1,
+    "bingmann/parallel_sample_sortBTCU1",
+    "bingmann/parallel_sample_sortBTCU1: binary tree, bktcache, unroll tree")
 
 void parallel_sample_sortBTCU2(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyUnrollBoth>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCU2,
-                             "bingmann/parallel_sample_sortBTCU2",
-                             "bingmann/parallel_sample_sortBTCU2: binary tree, bktcache, unroll tree and strings")
+CONTESTANT_REGISTER_PARALLEL_LCP(
+    parallel_sample_sortBTCU2,
+    "bingmann/parallel_sample_sortBTCU2",
+    "bingmann/parallel_sample_sortBTCU2: binary tree, bktcache, unroll tree and strings")
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1901,9 +1911,10 @@ void parallel_sample_sortBSC(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyBinarySearch>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBSC,
-                             "bingmann/parallel_sample_sortBSC",
-                             "bingmann/parallel_sample_sortBSC: binary search, bktcache")
+CONTESTANT_REGISTER_PARALLEL_LCP(
+    parallel_sample_sortBSC,
+    "bingmann/parallel_sample_sortBSC",
+    "bingmann/parallel_sample_sortBSC: binary search, bktcache")
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -2369,17 +2380,19 @@ void parallel_sample_sortBTCE(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyEqual>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCE,
-                "bingmann/parallel_sample_sortBTCE",
-                "bingmann/parallel_sample_sortBTCE: binary tree, equality, bktcache")
+CONTESTANT_REGISTER_PARALLEL_LCP(
+    parallel_sample_sortBTCE,
+    "bingmann/parallel_sample_sortBTCE",
+    "bingmann/parallel_sample_sortBTCE: binary tree, equality, bktcache")
 
 void parallel_sample_sortBTCEU1(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyEqualUnrollTree>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_sample_sortBTCEU1,
-        "bingmann/parallel_sample_sortBTCEU1",
-        "bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree")
+CONTESTANT_REGISTER_PARALLEL_LCP(
+    parallel_sample_sortBTCEU1,
+    "bingmann/parallel_sample_sortBTCEU1",
+    "bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree")
 
 } // namespace bingmann_parallel_sample_sort(_lcp)
