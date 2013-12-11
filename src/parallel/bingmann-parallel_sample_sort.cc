@@ -512,6 +512,7 @@ void insertion_sort(const stringtools::StringPtrNoLcpCalc& strptr, size_t depth)
 {
     assert(!strptr.flipped());
     inssort::inssort(strptr.active(), strptr.size(), depth);
+    //bingmann_lcp_inssort::lcp_insertion_sort(strptr, depth);
 }
 
 void insertion_sort(const stringtools::StringPtr& strptr, size_t depth)
@@ -613,7 +614,6 @@ struct SmallsortJob : public Job, public SortStep
     size_t      in_depth;
 
     typedef BktSizeType bktsize_type;
-    //typedef size_t bktsize_type;
 
     SmallsortJob(Context& ctx, SortStep* _pstep,
                  const StringPtr& strptr, size_t depth)
@@ -632,7 +632,7 @@ struct SmallsortJob : public Job, public SortStep
         // bounding equations:
         // a) K * key_type splitter_tree size (and maybe K * key_type equal-cmp splitters)
         // b) 2 * K + 1 buckets (bktsize_type) when counting bkt occurances.
-        static const size_t numsplitters2 = (l2cache - sizeof(BktSizeType)) / (2 * sizeof(BktSizeType));
+        static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 #endif
 
         static const size_t treebits = logfloor_<numsplitters2>::value;
@@ -709,12 +709,6 @@ struct SmallsortJob : public Job, public SortStep
                 sorted[ --bkt[ *bktcache ] ] = *str;
 
             // bkt is afterwards the exclusive prefix sum of bktsize
-
-            bktsize_type sum = 0;
-            for (unsigned int i = 0; i <= bktnum; ++i) {
-                assert(bkt[i] == sum);
-                sum += bktsize[i];
-            }
 
             // statistics
 
@@ -1319,49 +1313,52 @@ struct SmallsortJob : public Job, public SortStep
     {
         assert(ms_stack.size() >= ms_pop_front);
 
-        if (ms_stack.size() == ms_pop_front) {
-            return;
-        }
-
-        DBG(debug_jobs, "Freeing top level of SmallsortJob's mkqs stack");
-
-        // convert top level of stack into independent jobs
-
-        MKQSStep& ms = ms_stack[ms_pop_front];
-
-        if (ms.idx == 0 && ms.num_lt != 0)
+        for (unsigned int fl = 0; fl < 8; ++fl)
         {
-            substep_add();
-            Enqueue<Classify>(ctx, this, ms.strptr.sub(0, ms.num_lt), ms.depth);
-        }
-        if (ms.idx <= 1) // st.num_eq > 0 always
-        {
-            assert(ms.num_eq > 0);
+            if (ms_stack.size() == ms_pop_front) {
+                return;
+            }
 
-            StringPtr sp = ms.strptr.sub(ms.num_lt, ms.num_eq);
+            DBG(debug_jobs, "Freeing top level of SmallsortJob's mkqs stack - size " << ms_stack.size());
 
-            if (ms.eq_recurse) {
+            // convert top level of stack into independent jobs
+
+            MKQSStep& ms = ms_stack[ms_pop_front];
+
+            if (ms.idx == 0 && ms.num_lt != 0)
+            {
                 substep_add();
-                Enqueue<Classify>(ctx, this, sp,
-                                  ms.depth + sizeof(key_type));
+                Enqueue<Classify>(ctx, this, ms.strptr.sub(0, ms.num_lt), ms.depth);
             }
-            else {
-                sp = sp.copy_back();
-#if CALC_LCP
-                sp.fill_lcp(ms.depth + ms.lcp_eq);
-#endif
-                ctx.donesize(ms.num_eq);
-            }
-        }
-        if (ms.idx <= 2 && ms.num_gt != 0)
-        {
-            substep_add();
-            Enqueue<Classify>(ctx, this,
-                              ms.strptr.sub(ms.num_lt + ms.num_eq, ms.num_gt), ms.depth);
-        }
+            if (ms.idx <= 1) // st.num_eq > 0 always
+            {
+                assert(ms.num_eq > 0);
 
-        // shorten the current stack
-        ++ms_pop_front;
+                StringPtr sp = ms.strptr.sub(ms.num_lt, ms.num_eq);
+
+                if (ms.eq_recurse) {
+                    substep_add();
+                    Enqueue<Classify>(ctx, this, sp,
+                                      ms.depth + sizeof(key_type));
+                }
+                else {
+                    sp = sp.copy_back();
+#if CALC_LCP
+                    sp.fill_lcp(ms.depth + ms.lcp_eq);
+#endif
+                    ctx.donesize(ms.num_eq);
+                }
+            }
+            if (ms.idx <= 2 && ms.num_gt != 0)
+            {
+                substep_add();
+                Enqueue<Classify>(ctx, this,
+                                  ms.strptr.sub(ms.num_lt + ms.num_eq, ms.num_gt), ms.depth);
+            }
+
+            // shorten the current stack
+            ++ms_pop_front;
+        }
     }
 
     virtual void substep_all_done()
