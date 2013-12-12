@@ -393,6 +393,9 @@ private:
 
 public:
 
+    //! real or dummy implementation
+    static const bool is_real = true;
+
     TimerArray(unsigned int timers)
     {
         m_tplast.tv_sec = m_tplast.tv_nsec = 0;
@@ -444,6 +447,9 @@ public:
 class TimerArrayDummy
 {
 public:
+
+    //! real or dummy implementation
+    static const bool is_real = false;
 
     inline TimerArrayDummy(unsigned int /* timers */)
     { }
@@ -498,6 +504,10 @@ private:
     std::vector<ThreadInfo> m_thread;
 
 public:
+
+    //! real or dummy implementation?
+    static const bool is_real = true;
+
     //! clear all timers at construction
     TimerArrayMT(unsigned ntimers)
         : m_timers(ntimers)

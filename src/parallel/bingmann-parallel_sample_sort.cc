@@ -1764,18 +1764,22 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
                  >> "steps_base_sort" << ctx.bs_steps;
 
-    g_statscache >> "tm_waiting" << ctx.timers.get(TM_WAITING)
-                 >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
-                 >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
-                 >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
-                 >> "tm_inssort" << ctx.timers.get(TM_INSSORT);
+    if (ctx.timers.is_real)
+    {
+        g_statscache >> "tm_waiting" << ctx.timers.get(TM_WAITING)
+                     >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
+                     >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
+                     >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
+                     >> "tm_inssort" << ctx.timers.get(TM_INSSORT);
+    }
 }
 
 //! Call for NUMA aware parallel sorting
 void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThreads)
 {
     Context ctx;
-    ctx.totalsize = ctx.restsize = strptr.size();
+    ctx.totalsize = strptr.size();
+    ctx.restsize = strptr.size();
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
