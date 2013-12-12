@@ -38,6 +38,7 @@
 #include "../tools/stringtools.h"
 #include "../tools/jobqueue.h"
 #include "../tools/logfloor.h"
+#include "../tools/lockfree.h"
 
 #include "../sequential/inssort.h"
 #include "../sequential/bingmann-lcp_inssort.h"
@@ -73,6 +74,13 @@ static const bool debug_lcp = false;
 
 static const bool use_work_sharing = true;
 
+//! whether the base sequential_threshold() on the remaining unsorted string
+//! set or on the whole string set.
+static const bool use_restsize = false;
+
+//! use LCP insertion sort even for non-LCP pS5
+static const bool use_lcp_inssort = true;
+
 static const size_t MAXPROCS = 64+1; // +1 due to round up of processor number
 
 static const size_t l2cache = 256*1024;
@@ -105,7 +113,7 @@ public:
     size_t totalsize;
 
     //! number of remaining strings to sort
-    std::atomic<size_t> restsize;
+    lockfree::lazy_counter<MAXPROCS> restsize;
 
     //! number of threads overall
     size_t threadnum;
@@ -126,13 +134,16 @@ public:
     //! return sequential sorting threshold
     size_t sequential_threshold()
     {
-        return std::max(g_smallsort_threshold, restsize / threadnum);
+        size_t wholesize = use_restsize ? restsize.update().get() : totalsize;
+        return std::max(g_smallsort_threshold, wholesize / threadnum);
     }
 
     //! decrement number of unordered strings
-    void donesize(size_t n)
+    void donesize(size_t n, size_t tid)
     {
-        //restsize -= n;
+        if (use_restsize) {
+            restsize.add(-n, tid);
+        }
     }
 };
 
@@ -518,13 +529,17 @@ struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
 void insertion_sort(const stringtools::StringPtrNoLcpCalc& strptr, size_t depth)
 {
     assert(!strptr.flipped());
-    inssort::inssort(strptr.active(), strptr.size(), depth);
-    //bingmann_lcp_inssort::lcp_insertion_sort(strptr, depth);
+
+    if (!use_lcp_inssort)
+        inssort::inssort(strptr.active(), strptr.size(), depth);
+    else
+        bingmann_lcp_inssort::lcp_insertion_sort(strptr, depth);
 }
 
 void insertion_sort(const stringtools::StringPtr& strptr, size_t depth)
 {
     assert(!strptr.flipped());
+
     bingmann_lcp_inssort::lcp_insertion_sort(strptr, depth);
 }
 
@@ -616,6 +631,8 @@ struct SmallsortJob : public Job, public SortStep
 {
     //! parent sort step
     SortStep*   pstep;
+
+    size_t      thrid;
 
     StringPtr   in_strptr;
     size_t      in_depth;
@@ -747,6 +764,8 @@ struct SmallsortJob : public Job, public SortStep
 
         DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
+        thrid = use_restsize ? omp_get_thread_num() : 0;
+
         // create anonymous wrapper job
         substep_add();
 
@@ -833,7 +852,7 @@ struct SmallsortJob : public Job, public SortStep
 #if CALC_LCP
                         sp.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i/2)));
 #endif
-                        ctx.donesize(bktsize);
+                        ctx.donesize(bktsize, thrid);
                     }
                     else if (bktsize < g_smallsort_threshold)
                     {
@@ -916,7 +935,7 @@ struct SmallsortJob : public Job, public SortStep
 #if CALC_LCP
                     sp.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i/2)));
 #endif
-                    ctx.donesize(bktsize);
+                    ctx.donesize(bktsize, thrid);
                 }
                 else
                 {
@@ -1210,7 +1229,7 @@ struct SmallsortJob : public Job, public SortStep
         if (strptr.size() < g_inssort_threshold) {
             ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
             insertion_sort(strptr.copy_back(), depth);
-            ctx.donesize(strptr.size());
+            ctx.donesize(strptr.size(), thrid);
             return;
         }
 
@@ -1242,7 +1261,7 @@ struct SmallsortJob : public Job, public SortStep
                     ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
                     insertion_sort_cache<false>(ms.strptr.sub(0, ms.num_lt),
                                                 ms.cache, ms.depth);
-                    ctx.donesize(ms.num_lt);
+                    ctx.donesize(ms.num_lt, thrid);
                 }
                 else {
                     ms_stack.push_back(
@@ -1263,13 +1282,13 @@ struct SmallsortJob : public Job, public SortStep
 #if CALC_LCP
                     sp.fill_lcp(ms.depth + ms.lcp_eq);
 #endif
-                    ctx.donesize(sp.size());
+                    ctx.donesize(sp.size(), thrid);
                 }
                 else if (ms.num_eq < g_inssort_threshold) {
                     ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
                     insertion_sort_cache<true>(sp, ms.cache + ms.num_lt,
                                                ms.depth + sizeof(key_type));
-                    ctx.donesize(ms.num_eq);
+                    ctx.donesize(ms.num_eq, thrid);
                 }
                 else {
                     ms_stack.push_back(
@@ -1289,7 +1308,7 @@ struct SmallsortJob : public Job, public SortStep
                     ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
                     insertion_sort_cache<false>(sp, ms.cache + ms.num_lt + ms.num_eq,
                                                 ms.depth);
-                    ctx.donesize(ms.num_gt);
+                    ctx.donesize(ms.num_gt, thrid);
                 }
                 else {
                     ms_stack.push_back(
@@ -1353,7 +1372,7 @@ struct SmallsortJob : public Job, public SortStep
 #if CALC_LCP
                     sp.fill_lcp(ms.depth + ms.lcp_eq);
 #endif
-                    ctx.donesize(ms.num_eq);
+                    ctx.donesize(ms.num_eq, thrid);
                 }
             }
             if (ms.idx <= 2 && ms.num_gt != 0)
@@ -1489,7 +1508,7 @@ struct SampleSortStep : public SortStep
                    const StringPtr& _strptr, size_t _depth)
         : pstep(_pstep), strptr(_strptr), depth(_depth)
     {
-        parts = (strptr.size() + ctx.sequential_threshold()-1) / ctx.sequential_threshold();
+        parts = strptr.size() / ctx.sequential_threshold();
         if (parts == 0) parts = 1;
 
         psize = (strptr.size() + parts-1) / parts;
@@ -1604,6 +1623,8 @@ struct SampleSortStep : public SortStep
     {
         DBG(debug_jobs, "Finishing DistributeJob " << this << " with enqueuing subjobs");
 
+        size_t thrid = use_restsize ? omp_get_thread_num() : 0;
+
         size_t* bkt = this->bkt[0];
         assert(bkt);
 
@@ -1623,7 +1644,7 @@ struct SampleSortStep : public SortStep
                 ;
             else if (bktsize == 1) { // just one string pointer, copyback
                 strptr.flip(bkt[i], 1).copy_back();
-                ctx.donesize(1);
+                ctx.donesize(1, thrid);
             }
             else
             {
@@ -1638,7 +1659,7 @@ struct SampleSortStep : public SortStep
                 ;
             else if (bktsize == 1) { // just one string pointer, copyback
                 strptr.flip(bkt[i], 1).copy_back();
-                ctx.donesize(1);
+                ctx.donesize(1, thrid);
             }
             else
             {
@@ -1646,7 +1667,7 @@ struct SampleSortStep : public SortStep
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " is done!");
                     StringPtr sp = strptr.flip(bkt[i], bktsize).copy_back();
                     sp.fill_lcp(depth + lcpKeyDepth(classifier.get_splitter(i/2)));
-                    ctx.donesize(bktsize);
+                    ctx.donesize(bktsize, thrid);
                 }
                 else {
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " lcp keydepth!");
@@ -1663,7 +1684,7 @@ struct SampleSortStep : public SortStep
             ;
         else if (bktsize == 1) { // just one string pointer, copyback
             strptr.flip(bkt[i], 1).copy_back();
-            ctx.donesize(1);
+            ctx.donesize(1, thrid);
         }
         else
         {
@@ -1722,7 +1743,8 @@ template <template <size_t> class Classify>
 void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 {
     Context ctx;
-    ctx.totalsize = ctx.restsize = n;
+    ctx.totalsize = n;
+    ctx.restsize = n;
     ctx.threadnum = omp_get_max_threads();
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
     ctx.timers.start(ctx.threadnum);
@@ -1756,7 +1778,7 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
         std::cout << err << " lcp errors" << std::endl;
     }
 
-    // TODO assert(ctx.restsize == 0);
+    assert(!use_restsize || ctx.restsize.update().get() == 0);
 
     delete [] shadow;
 
@@ -1788,7 +1810,7 @@ void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThre
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
 
-    //assert(ctx.restsize == 0);
+    assert(!use_restsize || ctx.restsize.update().get() == 0);
 
     g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
