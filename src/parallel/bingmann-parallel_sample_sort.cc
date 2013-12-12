@@ -47,6 +47,11 @@
 #define CALC_LCP 0
 #endif
 
+// first MKQS lcp variant: keep min/max during ternary split
+#if CALC_LCP
+#define CALC_LCP_MKQS 1
+#endif
+
 #if !CALC_LCP
 namespace bingmann_parallel_sample_sort {
 
@@ -1050,9 +1055,11 @@ struct SmallsortJob : public Job, public SortStep
         key_type* cache;
         size_t num_lt, num_eq, num_gt, depth;
         size_t idx;
-        bool eq_recurse;
-#if CALC_LCP
+        unsigned char eq_recurse;
+#if CALC_LCP_MKQS == 1
         unsigned char lcp_lt, lcp_eq, lcp_gt;
+#elif CALC_LCP_MKQS == 2
+        key_type pivot;
 #endif
 
         MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* _cache, size_t _depth, bool CacheDirty)
@@ -1078,9 +1085,11 @@ struct SmallsortJob : public Job, public SortStep
             std::swap(cache[0], cache[p]);
             // save the pivot value
             key_type pivot = cache[0];
-#if CALC_LCP
+#if CALC_LCP_MKQS == 1
             // for immediate LCP calculation
             key_type max_lt = 0, min_gt = std::numeric_limits<key_type>::max();
+#elif CALC_LCP_MKQS == 2
+            this->pivot = pivot;
 #endif
             // indexes into array: 0 [pivot] 1 [===] leq [<<<] llt [???] rgt [>>>] req [===] n-1
             size_t leq = 1, llt = 1, rgt = n-1, req = n-1;
@@ -1090,7 +1099,7 @@ struct SmallsortJob : public Job, public SortStep
                 {
                     int r = cmp(cache[llt], pivot);
                     if (r > 0) {
-#if CALC_LCP
+#if CALC_LCP_MKQS == 1
                         min_gt = std::min(min_gt, cache[llt]);
 #endif
                         break;
@@ -1101,7 +1110,7 @@ struct SmallsortJob : public Job, public SortStep
                         leq++;
                     }
                     else {
-#if CALC_LCP
+#if CALC_LCP_MKQS == 1
                         max_lt = std::max(max_lt, cache[llt]);
 #endif
                     }
@@ -1111,7 +1120,7 @@ struct SmallsortJob : public Job, public SortStep
                 {
                     int r = cmp(cache[rgt], pivot);
                     if (r < 0) {
-#if CALC_LCP
+#if CALC_LCP_MKQS == 1
                         max_lt = std::max(max_lt, cache[rgt]);
 #endif
                         break;
@@ -1122,7 +1131,7 @@ struct SmallsortJob : public Job, public SortStep
                         req--;
                     }
                     else {
-#if CALC_LCP
+#if CALC_LCP_MKQS == 1
                         min_gt = std::min(min_gt, cache[rgt]);
 #endif
                     }
@@ -1156,7 +1165,7 @@ struct SmallsortJob : public Job, public SortStep
             // No recursive sorting if pivot has a zero byte
             this->eq_recurse = (pivot & 0xFF);
 
-#if CALC_LCP
+#if CALC_LCP_MKQS == 1
             // save LCP values for writing into LCP array after sorting further
             if (num_lt > 0)
             {
@@ -1182,39 +1191,31 @@ struct SmallsortJob : public Job, public SortStep
 
         void calculate_lcp()
         {
-#if CALC_LCP
-#if 1
+#if CALC_LCP_MKQS == 1
             if (num_lt > 0)
                 strptr.front().set_lcp(num_lt, depth + lcp_lt);
 
             if (num_gt > 0)
                 strptr.front().set_lcp(num_lt + num_eq, depth + lcp_gt);
-#else
-            key_type pivot = get_char<key_type>(strptr.str(num_lt), depth);
-
+#elif CALC_LCP_MKQS == 2
             if (num_lt > 0)
             {
-                key_type max_lt = get_char<key_type>(strptr.str(num_lt-1), depth);
+                key_type max_lt = get_char<key_type>(strptr.front().str(num_lt-1), depth);
 
                 unsigned int lcp = depth + lcpKeyType(max_lt, pivot);
                 DBG(debug_lcp, "LCP lt with pivot: " << lcp);
 
-                assert(lcp == depth + lcp_lt);
-
-                strptr.set_lcp(num_lt, lcp);
+                strptr.front().set_lcp(num_lt, lcp);
             }
             if (num_gt > 0)
             {
-                key_type min_gt = get_char<key_type>(strptr.str(num_lt + num_eq), depth);
+                key_type min_gt = get_char<key_type>(strptr.front().str(num_lt + num_eq), depth);
 
                 unsigned int lcp = depth + lcpKeyType(pivot, min_gt);
                 DBG(debug_lcp, "LCP pivot with gt: " << lcp);
 
-                assert(lcp == depth + lcp_gt);
-
-                strptr.set_lcp(num_lt + num_eq, lcp);
+                strptr.front().set_lcp(num_lt + num_eq, lcp);
             }
-#endif
 #endif
         }
     };
@@ -1279,8 +1280,10 @@ struct SmallsortJob : public Job, public SortStep
 
                 if (!ms.eq_recurse) {
                     sp = sp.copy_back();
-#if CALC_LCP
+#if CALC_LCP_MKQS == 1
                     sp.fill_lcp(ms.depth + ms.lcp_eq);
+#elif CALC_LCP_MKQS == 2
+                    sp.fill_lcp(ms.depth + lcpKeyDepth(ms.pivot));
 #endif
                     ctx.donesize(sp.size(), thrid);
                 }
@@ -1369,8 +1372,10 @@ struct SmallsortJob : public Job, public SortStep
                 }
                 else {
                     sp = sp.copy_back();
-#if CALC_LCP
+#if CALC_LCP_MKQS == 1
                     sp.fill_lcp(ms.depth + ms.lcp_eq);
+#elif CALC_LCP_MKQS == 2
+                    sp.fill_lcp(ms.depth + lcpKeyDepth(ms.pivot));
 #endif
                     ctx.donesize(ms.num_eq, thrid);
                 }
