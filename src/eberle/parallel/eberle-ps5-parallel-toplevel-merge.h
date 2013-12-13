@@ -47,30 +47,13 @@ static const size_t SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
 //method definitions
 
 static inline void
-createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams);
-
-static inline void
-createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
+createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
         unsigned baseLcp);
 
 //definitions
 
 typedef uint32_t CHAR_TYPE;
 
-struct Splitter
-{
-    size_t pos;
-    CHAR_TYPE character;
-
-    Splitter(size_t pos, CHAR_TYPE character) :
-            pos(pos), character(character)
-    {
-    }
-
-    Splitter()
-    {
-    }
-};
 
 //structs defining the jobs
 
@@ -208,8 +191,7 @@ template<unsigned K>
                 pair < size_t, size_t > newRanges[K];
                 loserTree->getRangesOfRemaining(newRanges, input);
 
-                //createJobs(jobQueue, input, output, newRanges, K);
-                createJobs2(jobQueue, input, output, newRanges, K, length, baseLcp + key_traits<CHAR_TYPE>::add_depth);
+                createJobs(jobQueue, input, output, newRanges, K, length, baseLcp + key_traits<CHAR_TYPE>::add_depth);
 
                 if (lengthOfLongestJob == length)
                     lengthOfLongestJob = 0;
@@ -244,7 +226,7 @@ struct InitialSplitJob : public Job
     virtual bool
     run(JobQueue& jobQueue)
     {
-        createJobs2(jobQueue, input, output, ranges, numStreams, length, splitStartLcp);
+        createJobs(jobQueue, input, output, ranges, numStreams, length, splitStartLcp);
         lengthOfLongestJob = 0;
         return true;
     }
@@ -312,7 +294,7 @@ findNextSplitter(AS* &inputStream, AS* end, unsigned baseLcp, unsigned maxAllowe
 }
 
 static inline void
-createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
+createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
         unsigned baseLcp)
 {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
@@ -431,244 +413,6 @@ createJobs2(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>*
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
     cout << "Created " << createdJobsCtr << " Jobs!" << endl;
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
-}
-
-static inline vector<Splitter*>*
-findSplitters(AS* input, pair<size_t, size_t>* ranges, unsigned numStreams)
-{
-    unsigned smallestLcp = UINT_MAX;
-
-//calculate the minimum lcp between the leading elements
-    string lastText = NULL;
-    for (unsigned k = 0; k < numStreams; ++k)
-    {
-        if (ranges[k].second > 0)
-        {
-            string text = input[ranges[k].first].text;
-
-            if (lastText != NULL)
-            {
-                unsigned lcp = stringtools::calc_lcp(lastText, text);
-                smallestLcp = min(smallestLcp, lcp);
-            }
-
-            lastText = text;
-        }
-    }
-
-//create list to store the position and lcps of the minimum lcps in the streams
-    vector < pair<size_t, unsigned> > minimas[numStreams];
-
-// find minimas in each stream
-    for (unsigned k = 0; k < numStreams; ++k)
-    {
-        size_t currLength = ranges[k].second;
-
-        if (currLength <= 1)
-        { // the stream has no or just one element => no splitters can be found => skip it.
-            continue;
-        }
-
-        vector<pair<size_t, unsigned>>* currList = minimas + k;
-        AS* currInput = input + ranges[k].first;
-
-        smallestLcp = min(smallestLcp, currInput[1].lcp);
-        char lastCharacter = currInput[0].text[smallestLcp];
-        unsigned lastLcp = smallestLcp;
-
-        for (size_t i = 1; i < currLength; ++i)
-        {
-            unsigned lcp = currInput[i].lcp;
-
-            if (lcp <= smallestLcp + key_traits<CHAR_TYPE>::add_depth - 1)
-            {
-                smallestLcp = min(smallestLcp, lcp);
-
-                char character = currInput[i].text[lcp];
-
-                if (lastLcp != lcp || character != lastCharacter)
-                { // prevents multiple insertions for equal strings at start
-                    currList->push_back(make_pair(i, lcp));
-                    lastCharacter = character;
-                    lastLcp = lcp;
-                }
-            }
-        }
-    }
-
-// Positions with lcps with at max this value are allowed as splitter points
-    unsigned maxAllowedLcp = smallestLcp + key_traits<CHAR_TYPE>::add_depth - 1;
-
-// calculate result and get distinguishing characters
-    vector<Splitter*>* splitters = new vector<Splitter*> [numStreams];
-
-    for (unsigned k = 0; k < numStreams; ++k)
-    {
-        if (ranges[k].second > 0)
-        {
-            vector < pair<size_t, unsigned> > *currList = minimas + k;
-            AS* currInput = input + ranges[k].first;
-
-            splitters[k].push_back(new Splitter(0, get_char<CHAR_TYPE>(currInput[0].text, smallestLcp)));
-
-            for (vector<pair<size_t, unsigned> >::iterator it = currList->begin(); it != currList->end(); ++it)
-            {
-                if (it->second <= maxAllowedLcp)
-                {
-                    splitters[k].push_back(new Splitter(it->first, get_char<CHAR_TYPE>(currInput[it->first].text, smallestLcp)));
-                }
-            }
-        }
-
-        splitters[k].push_back(new Splitter(ranges[k].second, key_traits<CHAR_TYPE>::maxValue));
-    }
-
-#ifdef PARALLEL_LCP_MERGE_DEBUG_SPLITTER_DETECTION
-#pragma omp critical (OUTPUT)
-    {
-        // now we have all minimas of minimaHeight.
-        cout << endl << "minLcp: " << smallestLcp << " at positions:" << endl;
-        for (unsigned k = 0; k < numStreams; k++)
-        {
-            AS* currInput = input + ranges[k].first;
-            vector < pair<size_t, unsigned> > *v = minimas + k;
-
-            for (vector<pair<size_t, unsigned> >::iterator it = v->begin(); it != v->end(); ++it)
-            {
-                cout << it->first << ":" << (it->second - smallestLcp) << "(";
-                string text = currInput[it->first].text;
-                char lastCharacter = text[smallestLcp];
-                for (unsigned lcp = smallestLcp + 1; lcp <= maxAllowedLcp && lastCharacter != 0; lcp++)
-                {
-                    cout << lastCharacter;
-                    lastCharacter = text[lcp];
-                }
-                cout << lastCharacter << "), ";
-            }
-            cout << endl;
-        }
-        cout << endl;
-    }
-#endif // PARALLEL_LCP_MERGE_DEBUG_SPLITTER_DETECTION
-
-    return splitters;
-}
-
-static inline void
-createJobs(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams)
-{
-    vector<Splitter*>* splitters = findSplitters(input, ranges, numStreams);
-
-    vector<Splitter*>::iterator iterators[numStreams]; // get iterators of minimas of each streams
-    for (unsigned k = 0; k < numStreams; ++k)
-    {
-        iterators[k] = splitters[k].begin();
-
-        if ((*iterators[k])->character == 0)
-        {
-            size_t start = (*iterators[k])->pos;
-            iterators[k]++;
-            size_t length = (*iterators[k])->pos - start;
-
-            AS* newInput = input + ranges[k].first + start;
-            jobQueue.enqueue(new CopyDataJob(newInput, output, length));
-            output += length;
-        }
-    }
-
-//Go through all found minimas, find the matching buckets and create jobs for them
-    while (true)
-    {
-        // find all matching buckets with the smallest character
-        CHAR_TYPE currBucket = key_traits<CHAR_TYPE>::maxValue;
-
-        unsigned numberOfFoundBuckets = 0;
-        unsigned indexesOfFound[numStreams];
-
-        for (unsigned k = 0; k < numStreams; ++k)
-        {
-            if ((*iterators[k])->character <= currBucket)
-            {
-                if ((*iterators[k])->character < currBucket)
-                {
-                    currBucket = (*iterators[k])->character;
-
-                    indexesOfFound[0] = k;
-                    numberOfFoundBuckets = 1;
-                }
-                else
-                {
-                    indexesOfFound[numberOfFoundBuckets] = k;
-                    numberOfFoundBuckets++;
-                }
-            }
-        }
-
-        if (currBucket == key_traits<CHAR_TYPE>::maxValue)
-        { // no bucket < maxValue found => we reached the end
-            break;
-        }
-
-        size_t length = 0; // length of the current job (needed to increase output)
-
-        if (numberOfFoundBuckets == 1)
-        { // only one stream => copy instead of merge
-            unsigned index = indexesOfFound[0];
-            size_t start = (*iterators[index])->pos;
-            iterators[index]++;
-            length = (*iterators[index])->pos - start;
-
-            AS* newInput = input + ranges[index].first + start;
-            jobQueue.enqueue(new CopyDataJob(newInput, output, length));
-
-        }
-        else if (numberOfFoundBuckets == 2)
-        { // only two steams => binary merge
-            unsigned index1 = indexesOfFound[0];
-            size_t start1 = (*iterators[index1])->pos;
-            iterators[index1]++;
-            size_t length1 = (*iterators[index1])->pos - start1;
-            AS* newInput1 = input + ranges[index1].first + start1;
-
-            unsigned index2 = indexesOfFound[1];
-            size_t start2 = (*iterators[index2])->pos;
-            iterators[index2]++;
-            size_t length2 = (*iterators[index2])->pos - start2;
-            AS* newInput2 = input + ranges[index2].first + start2;
-
-            jobQueue.enqueue(new BinaryMergeJob(newInput1, length1, newInput2, length2, output));
-
-            length = length1 + length2;
-
-        }
-        else
-        { // default case: use a loosertree to merge the streams.
-            unsigned numStreams = getNextHigherPowerOfTwo(numberOfFoundBuckets);
-            pair < size_t, size_t > *newRange = new pair<size_t, size_t> [numStreams];
-
-            unsigned k = 0;
-            for (; k < numberOfFoundBuckets; ++k)
-            {
-                unsigned idx = indexesOfFound[k];
-                size_t start = (*iterators[idx])->pos;
-                iterators[idx]++;
-                size_t currLength = (*iterators[idx])->pos - start;
-                newRange[k] = make_pair(ranges[idx].first + start, currLength);
-                length += currLength;
-            }
-            for (; k < numStreams; k++)
-            {
-                newRange[k] = make_pair(0, 0); // this stream is not used
-            }
-
-            enqueueMergeJob(jobQueue, input, output, newRange, length, numStreams, 0);
-
-        }
-
-        output += length;
-    }
-
-    delete[] splitters;
 }
 
 static inline
