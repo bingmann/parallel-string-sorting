@@ -95,7 +95,6 @@ class key_traits<uint8_t> {
 public:
     static const size_t radix = 256;
     static const size_t add_depth = 1;
-    static const uint8_t maxValue = uint8_t(-1);
 };
 
 template <>
@@ -103,7 +102,6 @@ class key_traits<uint16_t> {
 public:
     static const size_t radix = 65536;
     static const size_t add_depth = 2;
-    static const uint16_t maxValue = uint16_t(-1);
 };
 
 template <>
@@ -111,14 +109,12 @@ class key_traits<uint32_t> {
 public:
     static const size_t radix = 4294967296;
     static const size_t add_depth = 4;
-    static const uint32_t maxValue = uint32_t(-1);
 };
 
 template <>
 class key_traits<uint64_t> {
 public:
     static const size_t add_depth = 8;
-    static const uint64_t maxValue = uint64_t(-1);
 };
 
 /// get packed characters from string at certain depth, needed due to

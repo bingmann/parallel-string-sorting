@@ -14,10 +14,9 @@
 
 #include "../../parallel/bingmann-parallel_sample_sort.h"
 
-//#define PARALLEL_LCP_MERGE_DEBUG_SPLITTER_DETECTION
 //#define PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 //#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
-//#define PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
+#define PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
 #define PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
 
 namespace eberle_parallel_mergesort_lcp_loosertree
@@ -52,8 +51,8 @@ createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* 
 
 //definitions
 
-typedef uint32_t CHAR_TYPE;
-
+typedef uint64_t CHAR_TYPE;
+string * outputBase;
 
 //structs defining the jobs
 
@@ -69,7 +68,7 @@ struct CopyDataJob : public Job
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
         {
-            cout << "CopyDataJob (output: " << output << ", length: " << length << ")" << endl;
+            cout << "CopyDataJob (output: " << (output - outputBase) << ", length: " << length << ")" << endl;
         }
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
     }
@@ -103,7 +102,7 @@ struct BinaryMergeJob : public Job
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
         {
-            cout << "BinaryMergeJob (output: " << output << ", length1: " << length1 << ", length2: " << length2 << ")" << endl;
+            cout << "BinaryMergeJob (output: " << (output - outputBase) << ", length1: " << length1 << ", length2: " << length2 << ")" << endl;
         }
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
     }
@@ -129,14 +128,16 @@ template<unsigned K>
         pair<size_t, size_t>* ranges;
         size_t length;
         unsigned baseLcp;
+        unsigned nextBaseLcp;
 
-        MergeJob(AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned baseLcp) :
-                input(input), output(output), ranges(ranges), length(length), baseLcp(baseLcp)
+        MergeJob(AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned baseLcp, unsigned nextBaseLcp) :
+                input(input), output(output), ranges(ranges), length(length), baseLcp(baseLcp), nextBaseLcp(nextBaseLcp)
         {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 #pragma omp critical (OUTPUT)
             {
-                cout << "MergeJob<" << K << "> (output: " << output << ", baseLcp: " << baseLcp << ", length: " << length << ")" << endl;
+                cout << "MergeJob<" << K << "> (output: " << (output - outputBase) << ", baseLcp: " << baseLcp << ", nextBaseLcp: " << nextBaseLcp
+                        << ", length: " << length << ")" << endl;
 #ifdef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
                 for (unsigned k = 0; k < K; ++k)
                 {
@@ -191,7 +192,7 @@ template<unsigned K>
                 pair < size_t, size_t > newRanges[K];
                 loserTree->getRangesOfRemaining(newRanges, input);
 
-                createJobs(jobQueue, input, output, newRanges, K, length, baseLcp + key_traits<CHAR_TYPE>::add_depth);
+                createJobs(jobQueue, input, output, newRanges, K, length, nextBaseLcp);
 
                 if (lengthOfLongestJob == length)
                     lengthOfLongestJob = 0;
@@ -215,18 +216,18 @@ struct InitialSplitJob : public Job
     pair<size_t, size_t>* ranges;
     size_t length;
     unsigned numStreams;
-    unsigned splitStartLcp;
 
-    InitialSplitJob(AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams, unsigned splitStartLcp) :
-            input(input), output(output), ranges(ranges), length(length), numStreams(numStreams), splitStartLcp(splitStartLcp)
+    InitialSplitJob(AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams) :
+            input(input), output(output), ranges(ranges), length(length), numStreams(numStreams)
     {
         lengthOfLongestJob = length; // prevents that the first MergeJob immediately starts splitting itself
+        outputBase = output;
     }
 
     virtual bool
     run(JobQueue& jobQueue)
     {
-        createJobs(jobQueue, input, output, ranges, numStreams, length, splitStartLcp);
+        createJobs(jobQueue, input, output, ranges, numStreams, length, unsigned(0));
         lengthOfLongestJob = 0;
         return true;
     }
@@ -240,7 +241,8 @@ struct InitialSplitJob : public Job
 // Implementations follow.
 
 static inline void
-enqueueMergeJob(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams, unsigned baseLcp)
+enqueueMergeJob(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams, unsigned baseLcp,
+        unsigned nextBaseLcp)
 {
     switch (numStreams)
     {
@@ -248,19 +250,19 @@ enqueueMergeJob(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size
         jobQueue.enqueue(new BinaryMergeJob(input + ranges[0].first, ranges[0].second, input + ranges[1].first, ranges[1].second, output));
         break;
     case 4:
-        jobQueue.enqueue(new MergeJob<4>(input, output, ranges, length, baseLcp));
+        jobQueue.enqueue(new MergeJob<4>(input, output, ranges, length, baseLcp, nextBaseLcp));
         break;
     case 8:
-        jobQueue.enqueue(new MergeJob<8>(input, output, ranges, length, baseLcp));
+        jobQueue.enqueue(new MergeJob<8>(input, output, ranges, length, baseLcp, nextBaseLcp));
         break;
     case 16:
-        jobQueue.enqueue(new MergeJob<16>(input, output, ranges, length, baseLcp));
+        jobQueue.enqueue(new MergeJob<16>(input, output, ranges, length, baseLcp, nextBaseLcp));
         break;
     case 32:
-        jobQueue.enqueue(new MergeJob<32>(input, output, ranges, length, baseLcp));
+        jobQueue.enqueue(new MergeJob<32>(input, output, ranges, length, baseLcp, nextBaseLcp));
         break;
     case 64:
-        jobQueue.enqueue(new MergeJob<64>(input, output, ranges, length, baseLcp));
+        jobQueue.enqueue(new MergeJob<64>(input, output, ranges, length, baseLcp, nextBaseLcp));
         break;
     default:
         cerr << "CANNOT MERGE! TO MANY STREAMS: " << numStreams;
@@ -269,7 +271,7 @@ enqueueMergeJob(JobQueue& jobQueue, AS* input, string* output, pair<size_t, size
 }
 
 static inline unsigned
-findNextSplitter(AS* &inputStream, AS* end, unsigned baseLcp, unsigned maxAllowedLcp, CHAR_TYPE &lastCharacter)
+findNextSplitter(AS* &inputStream, AS* end, unsigned baseLcp, unsigned maxAllowedLcp, CHAR_TYPE &lastCharacter, CHAR_TYPE keyMask)
 {
     AS* streamStart = inputStream;
     inputStream++;
@@ -281,7 +283,7 @@ findNextSplitter(AS* &inputStream, AS* end, unsigned baseLcp, unsigned maxAllowe
         if (lcp <= maxAllowedLcp)
         {
             CHAR_TYPE character = get_char<CHAR_TYPE>(inputStream->text, baseLcp);
-            if (character != lastCharacter)
+            if ((character & keyMask) != (lastCharacter & keyMask))
             {
                 lastCharacter = character;
                 return inputStream - streamStart;
@@ -289,7 +291,7 @@ findNextSplitter(AS* &inputStream, AS* end, unsigned baseLcp, unsigned maxAllowe
         }
     }
 
-    lastCharacter = key_traits<CHAR_TYPE>::maxValue;
+    lastCharacter = numeric_limits < CHAR_TYPE > ::max();
     return inputStream - streamStart;
 }
 
@@ -317,27 +319,33 @@ createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* 
         }
         else
         {
-            splitterCharacter[k] = key_traits<CHAR_TYPE>::maxValue;
+            splitterCharacter[k] = numeric_limits < CHAR_TYPE > ::max();
         }
     }
 
-    unsigned maxAllowedLcp(baseLcp + key_traits<CHAR_TYPE>::add_depth - 1);
     unsigned indexesOfFound[numStreams];
-
     unsigned createdJobsCtr = 0;
+    unsigned keyWidth = 8;
+
+    unsigned toShortCtr = 0;
+    unsigned notToShortCtr = 0;
 
     while (true)
     {
-        CHAR_TYPE currBucket = key_traits<CHAR_TYPE>::maxValue;
+        unsigned maxAllowedLcp(baseLcp + keyWidth - 1);
+        CHAR_TYPE keyMask = numeric_limits < CHAR_TYPE > ::max() << ((key_traits<CHAR_TYPE>::add_depth - keyWidth) * 8);
+
+        CHAR_TYPE currBucket = numeric_limits < CHAR_TYPE > ::max();
         unsigned numberOfFoundBuckets = 0;
 
         for (unsigned k = 0; k < numStreams; ++k)
         {
-            if (splitterCharacter[k] <= currBucket)
+            CHAR_TYPE splitter = splitterCharacter[k] & keyMask;
+            if (splitter <= currBucket)
             {
-                if (splitterCharacter[k] < currBucket)
+                if (splitter < currBucket)
                 {
-                    currBucket = splitterCharacter[k];
+                    currBucket = splitter;
 
                     indexesOfFound[0] = k;
                     numberOfFoundBuckets = 1;
@@ -350,7 +358,7 @@ createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* 
             }
         }
 
-        if (currBucket == key_traits<CHAR_TYPE>::maxValue)
+        if (currBucket == (numeric_limits < CHAR_TYPE > ::max() & keyMask))
         {
             break;
         }
@@ -363,7 +371,7 @@ createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* 
         {
             unsigned streamIdx = indexesOfFound[0];
             AS* inputStart = inputStreams[streamIdx];
-            length += findNextSplitter(inputStreams[streamIdx], ends[streamIdx], baseLcp, maxAllowedLcp, splitterCharacter[streamIdx]);
+            length += findNextSplitter(inputStreams[streamIdx], ends[streamIdx], baseLcp, maxAllowedLcp, splitterCharacter[streamIdx], keyMask);
             jobQueue.enqueue(new CopyDataJob(inputStart, output, length));
             break;
         }
@@ -371,11 +379,13 @@ createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* 
         {
             unsigned streamIdx1 = indexesOfFound[0];
             AS* inputStart1 = inputStreams[streamIdx1];
-            size_t length1 = findNextSplitter(inputStreams[streamIdx1], ends[streamIdx1], baseLcp, maxAllowedLcp, splitterCharacter[streamIdx1]);
+            size_t length1 = findNextSplitter(inputStreams[streamIdx1], ends[streamIdx1], baseLcp, maxAllowedLcp, splitterCharacter[streamIdx1],
+                    keyMask);
 
             unsigned streamIdx2 = indexesOfFound[1];
             AS* inputStart2 = inputStreams[streamIdx2];
-            size_t length2 = findNextSplitter(inputStreams[streamIdx2], ends[streamIdx2], baseLcp, maxAllowedLcp, splitterCharacter[streamIdx2]);
+            size_t length2 = findNextSplitter(inputStreams[streamIdx2], ends[streamIdx2], baseLcp, maxAllowedLcp, splitterCharacter[streamIdx2],
+                    keyMask);
 
             jobQueue.enqueue(new BinaryMergeJob(inputStart1, length1, inputStart2, length2, output));
             length = length1 + length2;
@@ -392,7 +402,7 @@ createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* 
             {
                 unsigned idx = indexesOfFound[k];
                 AS* inputStart = inputStreams[idx];
-                size_t currLength = findNextSplitter(inputStreams[idx], ends[idx], baseLcp, maxAllowedLcp, splitterCharacter[idx]);
+                size_t currLength = findNextSplitter(inputStreams[idx], ends[idx], baseLcp, maxAllowedLcp, splitterCharacter[idx], keyMask);
                 newRange[k] = make_pair(inputStart - input, currLength);
                 length += currLength;
             }
@@ -401,13 +411,32 @@ createJobs(JobQueue &jobQueue, AS* input, string* output, pair<size_t, size_t>* 
                 newRange[k] = make_pair(0, 0); // this stream is not used
             }
 
-            enqueueMergeJob(jobQueue, input, output, newRange, length, numNewStreams, baseLcp);
+            enqueueMergeJob(jobQueue, input, output, newRange, length, numNewStreams, baseLcp, maxAllowedLcp + 1);
             break;
         }
         }
 
         output += length;
         createdJobsCtr++;
+
+        if (keyWidth > 1)
+        {
+            if (length < MERGE_BULK_SIZE)
+                toShortCtr++;
+            else
+                notToShortCtr++;
+
+            if (toShortCtr + notToShortCtr > 30)
+            {
+                if ((float(toShortCtr) / float(toShortCtr + notToShortCtr)) > float(0.5))
+                {
+                    keyWidth = max(unsigned(1), keyWidth - 1);
+                    cout << "decreased keyWidth to " << keyWidth << endl;
+                    toShortCtr = 0;
+                    notToShortCtr = 0;
+                }
+            }
+        }
     }
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
@@ -421,7 +450,7 @@ parallelMerge(AS* input, string* output, pair<size_t, size_t>* ranges, size_t le
 {
     JobQueue jobQueue;
     cout << "doing parallel merge for " << numStreams << " streams" << endl;
-    jobQueue.enqueue(new InitialSplitJob(input, output, ranges, length, numStreams, unsigned(0)));
+    jobQueue.enqueue(new InitialSplitJob(input, output, ranges, length, numStreams));
     jobQueue.loop();
 }
 
