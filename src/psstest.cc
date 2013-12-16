@@ -412,6 +412,16 @@ void Contestant_UCArray::real_run()
 
     omp_set_num_threads(pss_num_threads);
 
+    if (pss_num_threads)
+    {
+        // dummy parallel region to start up threads
+        unsigned int thrsum = 0;
+#pragma omp parallel
+        {
+            thrsum += omp_get_thread_num();
+        }
+    }
+
 #ifdef MALLOC_COUNT
     //MemProfile memprofile( m_algoname, memprofile_path );
     size_t memuse = malloc_count_current();
@@ -487,6 +497,9 @@ void Contestant_UCArray::real_run()
 
 void Contestant_UCArray::run()
 {
+    // sequential algorithm
+    pss_num_threads = p;
+
     for (size_t r = 0; r < gopt_repeats; ++r)
         run_forked();
 }
