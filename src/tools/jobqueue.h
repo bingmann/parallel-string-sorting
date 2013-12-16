@@ -39,6 +39,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include "../tools/debug.h"
+#include "../tools/agglogger.h"
 
 namespace jobqueue {
 
@@ -78,11 +79,14 @@ private:
     tbb::concurrent_queue<job_type*> m_queue;
 
     /// number of threads idle
-    std::atomic<int> m_idle_count;
+    std::atomic<unsigned int> m_idle_count;
 
     //! SizeLogger or a dummy class
-    //typedef SizeLoggerLocking logger_type;
-    typedef SizeLoggerDummy logger_type;
+    typedef AggregateLogger<unsigned int> IntLogger;
+
+    typedef IntLogger::LockingAverageLogger logger_type;
+    //typedef IntLogger::LockingMinLogger logger_type;
+    //typedef IntLogger::DummyLogger logger_type;
 
     logger_type m_logger, m_work_logger;
 
@@ -109,7 +113,7 @@ public:
     inline void executeThreadWork(cookie_type& cookie)
     {
         job_type* job = NULL;
-        int numthrs = omp_get_num_threads();
+        unsigned int numthrs = omp_get_num_threads();
 
         while (m_idle_count != numthrs)
         {
