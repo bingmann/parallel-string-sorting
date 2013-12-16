@@ -498,7 +498,7 @@ void Contestant_UCArray::real_run()
 void Contestant_UCArray::run()
 {
     // sequential algorithm
-    pss_num_threads = p;
+    pss_num_threads = 0;
 
     for (size_t r = 0; r < gopt_repeats; ++r)
         run_forked();

@@ -86,7 +86,7 @@ static const bool use_restsize = false;
 //! use LCP insertion sort even for non-LCP pS5
 static const bool use_lcp_inssort = true;
 
-static const size_t MAXPROCS = 64+1; // +1 due to round up of processor number
+static const size_t MAXPROCS = 2*64+1; // +1 due to round up of processor number
 
 static const size_t l2cache = 256*1024;
 
@@ -1513,8 +1513,9 @@ struct SampleSortStep : public SortStep
                    const StringPtr& _strptr, size_t _depth)
         : pstep(_pstep), strptr(_strptr), depth(_depth)
     {
-        parts = strptr.size() / ctx.sequential_threshold();
+        parts = strptr.size() / ctx.sequential_threshold() * 2;
         if (parts == 0) parts = 1;
+        if (parts > MAXPROCS) parts = MAXPROCS;
 
         psize = (strptr.size() + parts-1) / parts;
 
