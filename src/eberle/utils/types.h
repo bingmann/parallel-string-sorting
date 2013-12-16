@@ -37,26 +37,26 @@ public:
     }
 
     inline void
-    set(string s, unsigned lcp)
+    set(string s, unsigned lcp) const
     {
         *strings = s;
         *lcps = lcp;
     }
 
     inline string&
-    str()
+    str() const
     {
         return *strings;
     }
 
     inline unsigned&
-    lcp()
+    lcp() const
     {
         return *lcps;
     }
 
     inline void
-    copyFrom(LcpStringPtr other, size_t length)
+    copyFrom(LcpStringPtr& other, size_t length) const
     {
         memcpy(strings, other.strings, length * sizeof(string));
         memcpy(lcps, other.lcps, length * sizeof(unsigned));

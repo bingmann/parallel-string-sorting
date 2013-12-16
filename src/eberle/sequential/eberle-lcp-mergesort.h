@@ -15,120 +15,6 @@ using namespace types;
 
 using namespace stringtools;
 
-// implementation follows
-static inline
-void
-eberle_lcp_merge(LcpStringPtr input1, size_t length1, LcpStringPtr input2, size_t length2, LcpStringPtr output)
-{
-    const string* end1 = input1.strings + length1;
-    const string* end2 = input2.strings + length2;
-
-    unsigned lcp1 = *input1.lcps;
-    unsigned lcp2 = *input2.lcps;
-
-    //do the merge
-    while (input1.strings < end1 && input2.strings < end2)
-    {
-        if (lcp1 == lcp2)
-        { // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
-            string s1 = *input1.strings + lcp1;
-            string s2 = *input2.strings + lcp1;
-
-            // check the strings starting after lcp and calculate new lcp
-            while (*s1 != '\0' && *s1 == *s2)
-                s1++, s2++;
-
-            const unsigned lcp = s1 - *input1.strings;
-
-            if (*s1 <= *s2)
-            {   // CASE 1.1: lcp1 <= lcp2
-                output.set(*input1.strings, lcp1);
-                ++input1;
-                lcp1 = *input1.lcps;
-                lcp2 = lcp;
-
-            }
-            else
-            {   // CASE 1.2: lcp1 > lcp2
-                output.set(*input2.strings, lcp2);
-                ++input2;
-                lcp2 = *input2.lcps;
-                lcp1 = lcp;
-            }
-        }
-
-        else if (lcp1 < lcp2)
-        {   // CASE 2: lcp1 > lcp2
-            output.set(*input2.strings, lcp2);
-            ++input2;
-            lcp2 = *input2.lcps;
-        }
-
-        else
-        {   // CASE 3: lcp1 < lcp2
-            output.set(*input1.strings, lcp1);
-            ++input1;
-            lcp1 = *input1.lcps;
-        }
-
-        ++output;
-    }
-
-    if (input1.strings < end1)
-    {   // if there are remaining elements in stream1, copy them to the end
-        output.copyFrom(input1, end1 - input1.strings);
-        *output.lcps = lcp1;
-    }
-    else
-    {
-        output.copyFrom(input2, end2 - input2.strings);
-        *output.lcps = lcp2;
-    }
-}
-
-static inline
-void
-eberle_lcp_mergesort(string *strings, LcpStringPtr tmp, LcpStringPtr output, size_t length)
-{
-    if (length <= 1)
-    {
-        output.set(*strings, 0);
-        return;
-    }
-
-    const size_t length1 = length / 2;
-    const size_t length2 = length - length1;
-    LcpStringPtr tmp2 = tmp + length1;
-
-    eberle_lcp_mergesort(strings, output, tmp, length1);
-    eberle_lcp_mergesort(strings + length1, output + length1, tmp2, length2);
-
-    eberle_lcp_merge(tmp, length1, tmp2, length2, output);
-}
-
-void
-eberle_lcp_mergesort_ptr(string *strings, size_t n)
-{
-    // Allocate memory for LCPs and temporary string array
-
-    unsigned* outputLcps = new unsigned[n];
-    string* tmpStrings = new string[n];
-    unsigned* tmpLcps = new unsigned[n];
-
-    LcpStringPtr output(strings, outputLcps);
-    LcpStringPtr tmp(tmpStrings, tmpLcps);
-
-    eberle_lcp_mergesort(strings, tmp, output, n);
-
-    delete outputLcps;
-    delete tmpStrings;
-    delete tmpLcps;
-}
-
-CONTESTANT_REGISTER(eberle_lcp_mergesort_ptr, "eberle/mergesort_lcp_binary_ptr", "Binary Mergesort with LCP-usage by Andreas Eberle")
-
-
-
 static inline
 void
 eberle_lcp_merge(string* input1, unsigned* lcps1, size_t length1, string* input2, unsigned* lcps2, size_t length2, string* output,
@@ -248,6 +134,55 @@ eberle_lcp_mergesort_seperate(string *strings, size_t n)
 }
 
 CONTESTANT_REGISTER(eberle_lcp_mergesort_seperate, "eberle/mergesort_lcp_binary_seperate", "Binary Mergesort with LCP-usage by Andreas Eberle")
+
+// implementation follows
+static inline
+void
+eberle_lcp_merge(const LcpStringPtr& input1, size_t length1, const LcpStringPtr& input2, size_t length2, const LcpStringPtr& output)
+{
+    eberle_lcp_merge(input1.strings, input1.lcps, length1, input2.strings, input2.lcps, length2, output.strings, output.lcps);
+}
+
+static inline
+void
+eberle_lcp_mergesort(string *strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
+{
+    if (length <= 1)
+    {
+        output.set(*strings, 0);
+        return;
+    }
+
+    const size_t length1 = length / 2;
+    const size_t length2 = length - length1;
+    const LcpStringPtr tmp2 = tmp + length1;
+
+    eberle_lcp_mergesort(strings, output, tmp, length1);
+    eberle_lcp_mergesort(strings + length1, output + length1, tmp2, length2);
+
+    eberle_lcp_merge(tmp, length1, tmp2, length2, output);
+}
+
+void
+eberle_lcp_mergesort_ptr(string *strings, size_t n)
+{
+    // Allocate memory for LCPs and temporary string array
+
+    unsigned* outputLcps = new unsigned[n];
+    string* tmpStrings = new string[n];
+    unsigned* tmpLcps = new unsigned[n];
+
+    LcpStringPtr output(strings, outputLcps);
+    LcpStringPtr tmp(tmpStrings, tmpLcps);
+
+    eberle_lcp_mergesort(strings, tmp, output, n);
+
+    delete outputLcps;
+    delete tmpStrings;
+    delete tmpLcps;
+}
+
+CONTESTANT_REGISTER(eberle_lcp_mergesort_ptr, "eberle/mergesort_lcp_binary_ptr", "Binary Mergesort with LCP-usage by Andreas Eberle")
 
 static inline
 void eberle_lcp_merge(AS* input1, size_t length1, AS* input2, size_t length2,
