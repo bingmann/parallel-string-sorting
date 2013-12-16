@@ -763,9 +763,9 @@ struct SmallsortJob : public Job, public SortStep
 
     virtual bool run(Context& ctx)
     {
-        size_t n = in_strptr.size();
-
         ScopedTimerKeeperMT tm_seq_ss(ctx.timers, TM_SEQ_SS);
+
+        size_t n = in_strptr.size();
 
         DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
@@ -1752,13 +1752,14 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
     ctx.restsize = n;
     ctx.threadnum = omp_get_max_threads();
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
-    ctx.timers.start(ctx.threadnum);
 
     SampleSortStep<Classify>::put_stats();
 
     string* shadow = new string[n]; // allocate shadow pointer array
 
     StringPtr strptr(strings, shadow, n);
+
+    ctx.timers.start(ctx.threadnum);
 
     Enqueue<Classify>(ctx, NULL, strptr, depth);
     ctx.jobqueue.loop(ctx);
@@ -1797,7 +1798,8 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
                      >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
                      >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
                      >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
-                     >> "tm_inssort" << ctx.timers.get(TM_INSSORT);
+                     >> "tm_inssort" << ctx.timers.get(TM_INSSORT)
+                     >> "tm_sum" << ctx.timers.get_sum();
     }
 }
 

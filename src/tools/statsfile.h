@@ -249,8 +249,8 @@ private:
 
 public:
 
-    SizeLogger(const char* logname, double max_interval = 0.01, double max_count = 1000)
-        : m_logfile(logname, std::ios::app),
+    SizeLogger(const char* logname, double max_interval = 0.01, double max_count = 1000, bool append = false)
+        : m_logfile(logname, append ? std::ios::app : std::ios::out),
           m_begintime(0),
           m_max_interval(max_interval),
           m_max_count(max_count)
@@ -330,7 +330,7 @@ public:
 };
 
 /// Very simple class to measure runtime of function using clock_gettime.
-template <clockid_t clk_id>
+template <clockid_t clk_id = CLOCK_MONOTONIC>
 class MeasureTime
 {
 private:
@@ -475,6 +475,12 @@ public:
     {
         return 0;
     }
+
+    //! return sum over all timers
+    inline double get_sum() const
+    {
+        return 0;
+    }
 };
 
 /// Class to measure different parts of a funciton by switching between
@@ -511,13 +517,14 @@ public:
     //! clear all timers at construction
     TimerArrayMT(unsigned ntimers)
         : m_timers(ntimers)
-    {
-    }
+    { }
 
     //! clear all timers and start counting in timer 0.
     void start(unsigned nthreads)
     {
-        struct timespec tp = { 0, 0 };
+        struct timespec tp;
+        memset(&tp, 0, sizeof(tp));
+
         std::fill(m_timers.begin(), m_timers.end(), tp);
 
         if (clock_gettime(CLOCK_MONOTONIC, &tp)) {
@@ -589,6 +596,15 @@ public:
     {
         assert(tm < m_timers.size());
         return (m_timers[tm].tv_sec + m_timers[tm].tv_nsec / 1e9);
+    }
+
+    //! return sum over all timers
+    inline double get_sum() const
+    {
+        double sum = 0;
+        for (size_t i = 0; i < m_timers.size(); ++i)
+            sum += get(i);
+        return sum;
     }
 };
 
