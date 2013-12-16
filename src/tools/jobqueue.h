@@ -84,13 +84,14 @@ private:
     //typedef SizeLoggerLocking logger_type;
     typedef SizeLoggerDummy logger_type;
 
-    logger_type m_logger;
+    logger_type m_logger, m_work_logger;
 
 public:
 
     JobQueueT()
         : m_queue(), m_idle_count(0),
-          m_logger("jobqueue")
+          m_logger("jobqueue.txt", 0.01, 100),
+          m_work_logger("worker_count.txt", 0.01, 4)
     {
     }
 
@@ -108,8 +109,9 @@ public:
     inline void executeThreadWork(cookie_type& cookie)
     {
         job_type* job = NULL;
+        int numthrs = omp_get_num_threads();
 
-        while (m_idle_count != omp_get_num_threads())
+        while (m_idle_count != numthrs)
         {
             if (m_queue.try_pop(job))
             {
@@ -121,9 +123,11 @@ public:
             else
             {
                 DBG(debug_queue, "Queue is empty");
-                ++m_idle_count;
 
-                while (m_idle_count != omp_get_num_threads())
+                ++m_idle_count;
+                m_work_logger << (numthrs - m_idle_count);
+
+                while (m_idle_count != numthrs)
                 {
                     DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
                     if (m_queue.try_pop(job))
@@ -132,6 +136,7 @@ public:
                         --m_idle_count;
 
                         m_logger << m_queue.unsafe_size();
+                        m_work_logger << (numthrs - m_idle_count);
 
                         if (job->run(cookie))
                             delete job;
@@ -140,6 +145,8 @@ public:
                     }
                 }
             }
+
+            m_work_logger << (numthrs - m_idle_count);
         }
     }
 
