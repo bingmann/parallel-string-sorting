@@ -1801,6 +1801,8 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
     if (ctx.timers.is_real)
     {
         g_statscache >> "tm_waiting" << ctx.timers.get(TM_WAITING)
+                     >> "tm_jq_work" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_WORK)
+                     >> "tm_jq_idle" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_IDLE)
                      >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
                      >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
                      >> "tm_mkqs" << ctx.timers.get(TM_MKQS)

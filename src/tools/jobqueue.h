@@ -90,11 +90,20 @@ private:
     logger_type m_logger, m_work_logger;
 
 public:
+    //typedef TimerArrayDummy TimerArrayMT;
+
+    enum { TM_WORK, TM_IDLE };
+
+    //! TimerArray for measing working and idle time (or a dummy class)
+    TimerArrayMT m_timers;
+
+public:
 
     JobQueueT()
         : m_queue(), m_idle_count(0),
           m_logger("jobqueue.txt", 0.01, 100),
-          m_work_logger("worker_count.txt", 0.01, 4)
+          m_work_logger("worker_count.txt", 0.01, 4),
+          m_timers(2)
     {
     }
 
@@ -114,6 +123,8 @@ public:
         job_type* job = NULL;
         unsigned int numthrs = omp_get_num_threads();
 
+        m_timers.change(TM_WORK);
+
         while (m_idle_count != numthrs)
         {
             if (m_queue.try_pop(job))
@@ -128,6 +139,7 @@ public:
                 DBG(debug_queue, "Queue is empty");
 
                 ++m_idle_count;
+                m_timers.change(TM_IDLE);
                 m_work_logger << (numthrs - m_idle_count);
 
                 while (m_idle_count != numthrs)
@@ -137,6 +149,7 @@ public:
                     {
                         // got a new job -> not idle anymore
                         --m_idle_count;
+                        m_timers.change(TM_WORK);
 
                         m_logger << m_queue.unsafe_size();
                         m_work_logger << (numthrs - m_idle_count);
@@ -155,23 +168,32 @@ public:
 
     void loop(cookie_type& cookie)
     {
+        m_timers.start(omp_get_max_threads());
+
 #pragma omp parallel
         {
             executeThreadWork(cookie);
         } // end omp parallel
+
+        m_timers.stop();
 
         assert(m_queue.unsafe_size() == 0);
     }
 
     void numaLoop(int numaNode, int numberOfThreads, cookie_type& cookie)
     {
+        m_timers.start(omp_get_max_threads());
+
 #pragma omp parallel num_threads(numberOfThreads)
         {
+            // tie thread to a NUMA node
             numa_run_on_node(numaNode);
             numa_set_preferred(numaNode);
 
             executeThreadWork(cookie);
         } // end omp parallel
+
+        m_timers.stop();
 
         assert(m_queue.unsafe_size() == 0);
     }
