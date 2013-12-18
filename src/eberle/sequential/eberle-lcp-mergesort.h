@@ -14,6 +14,7 @@ namespace eberle_mergesort_lcp
 using namespace types;
 
 using namespace stringtools;
+using stringtools::string;
 
 static inline
 void

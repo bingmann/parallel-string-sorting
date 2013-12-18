@@ -55,7 +55,10 @@
 #if !CALC_LCP
 namespace bingmann_parallel_sample_sort {
 
-#define CONTESTANT_REGISTER_PARALLEL_LCP CONTESTANT_REGISTER_PARALLEL
+#define CONTESTANT_REGISTER_PARALLEL_LCP(func,name,desc) \
+    CONTESTANT_REGISTER_PARALLEL(func, name "_nolcp", desc "_nolcp")
+
+//#define CONTESTANT_REGISTER_PARALLEL_LCP CONTESTANT_REGISTER_PARALLEL
 
 #else
 namespace bingmann_parallel_sample_sort_lcp {
@@ -105,8 +108,10 @@ typedef stringtools::StringPtrNoLcpCalc StringPtr;
 enum { TM_WAITING, TM_PARA_SS, TM_SEQ_SS, TM_MKQS, TM_INSSORT };
 
 //! replace TimerArrayMT with a no-op implementation
+#ifndef TIMERARRAY_REAL
 typedef ::TimerArrayDummy TimerArrayMT;
 typedef ::ScopedTimerKeeperDummy ScopedTimerKeeperMT;
+#endif
 
 // ****************************************************************************
 // *** Global Parallel Super Scalar String Sample Sort Context
@@ -558,7 +563,7 @@ void sample_sort_lcp(const Classify& classifier, const StringPtr& strptr, size_t
     assert(strptr.check());
 
     size_t b = 0; // current bucket number
-    key_type prevkey; // previous key
+    key_type prevkey = 0; // previous key
 
     // the following while loops only check b < bktnum when b is odd,
     // because bktnum is always odd. We need a goto to jump into the loop,
