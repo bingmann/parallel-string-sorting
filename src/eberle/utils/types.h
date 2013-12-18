@@ -31,6 +31,11 @@ struct LcpStringPtr
     unsigned* lcps;
 
 public:
+    LcpStringPtr() :
+            strings(NULL), lcps(NULL)
+    {
+    }
+
     LcpStringPtr(string* strings, unsigned* lcps) :
             strings(strings), lcps(lcps)
     {
@@ -41,6 +46,13 @@ public:
     {
         *strings = s;
         *lcps = lcp;
+    }
+
+    inline void
+    setFirst(LcpStringPtr& ptr)
+    {
+        *strings = *ptr.strings;
+        *lcps = *ptr.lcps;
     }
 
     inline string&
@@ -73,7 +85,22 @@ public:
 
     friend inline LcpStringPtr
     operator+(const LcpStringPtr& ptr, size_t delta);
+
+    friend inline size_t
+    operator-(const LcpStringPtr& lhs, const LcpStringPtr& rhs);
+
+    inline bool
+    operator<(const LcpStringPtr& rhs)
+    {
+        return strings < rhs.strings;
+    }
 };
+
+inline size_t
+operator-(const LcpStringPtr& lhs, const LcpStringPtr& rhs)
+{
+    return lhs.strings - rhs.strings;
+}
 
 inline LcpStringPtr
 operator+(const LcpStringPtr& ptr, size_t delta)
