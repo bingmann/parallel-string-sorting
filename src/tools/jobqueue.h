@@ -138,28 +138,29 @@ public:
             {
                 DBG(debug_queue, "Queue is empty");
 
-                ++m_idle_count;
                 m_timers.change(TM_IDLE);
+                ++m_idle_count;
+
+                m_logger << m_queue.unsafe_size();
                 m_work_logger << (numthrs - m_idle_count);
 
-                while (m_idle_count != numthrs)
+                while (!m_queue.try_pop(job))
                 {
                     DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
-                    if (m_queue.try_pop(job))
-                    {
-                        // got a new job -> not idle anymore
-                        --m_idle_count;
-                        m_timers.change(TM_WORK);
 
-                        m_logger << m_queue.unsafe_size();
-                        m_work_logger << (numthrs - m_idle_count);
-
-                        if (job->run(cookie))
-                            delete job;
-
-                        break;
-                    }
+                    if (m_idle_count == numthrs)
+                        return;
                 }
+
+                // got a new job -> not idle anymore
+                m_timers.change(TM_WORK);
+                --m_idle_count;
+
+                m_logger << m_queue.unsafe_size();
+                m_work_logger << (numthrs - m_idle_count);
+
+                if (job->run(cookie))
+                    delete job;
             }
 
             m_work_logger << (numthrs - m_idle_count);
