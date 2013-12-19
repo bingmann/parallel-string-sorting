@@ -64,7 +64,7 @@ protected:
     class TemplateLogger
     {
     protected:
-    
+
         //! log output file
         std::ofstream       m_logfile;
 
@@ -74,9 +74,12 @@ protected:
         //! end timestamp of current time range
         double              m_endtime;
 
+        //! timestamp defined as zero time, output is relative to this
+        double              m_zerotime;
+
         //! count of samples in current time range
         size_t              m_count;
-    
+
         //! current aggregate value
         value_type          m_aggregate;
 
@@ -90,7 +93,7 @@ protected:
         inline void output()
         {
             m_logfile << std::setprecision(16)
-                      << ((m_begintime + m_endtime) / 2.0) << " "
+                      << ((m_begintime + m_endtime) / 2.0) - m_zerotime << " "
                       << AggFunctor::output(m_aggregate, m_count) << " "
                       << m_count << std::endl;
         }
@@ -103,9 +106,17 @@ protected:
                        size_t max_count = 1000, bool append = false)
             : m_logfile(logname, append ? std::ios::app : std::ios::out),
               m_begintime(0),
+              m_zerotime(timestamp()),
               m_max_interval(max_interval),
               m_max_count(max_count)
         {
+        }
+
+        //! Define current timestamp as zero.
+        TemplateLogger& start()
+        {
+            m_zerotime = timestamp();
+            return *this;
         }
 
         //! Put a value into the logger
@@ -119,7 +130,7 @@ protected:
                 m_count = 1;
                 m_aggregate = AggFunctor::aggregate(AggFunctor::initial(), value);
             }
-            else if (m_begintime - thistime > m_max_interval || 
+            else if (thistime - m_begintime > m_max_interval ||
                      m_count >= m_max_count)
             {
                 // output an average value
@@ -225,6 +236,12 @@ protected:
         {
         }
 
+        LockingLogger& start()
+        {
+            BaseLogger::start();
+            return *this;
+        }
+
         LockingLogger& operator << (const value_type& value)
         {
 #pragma omp critical
@@ -252,6 +269,11 @@ protected:
         DummyLogger(const char* /* logname */, double /* max_interval */ = 0,
                     double /* max_count */ = 0, bool /* append */ = false)
         { }
+
+        DummyLogger& start()
+        {
+            return *this;
+        }
 
         DummyLogger& operator<< (const value_type& /* value */)
         {

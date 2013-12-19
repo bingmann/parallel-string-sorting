@@ -101,8 +101,8 @@ public:
 
     JobQueueT()
         : m_queue(), m_idle_count(0),
-          m_logger("jobqueue.txt", 0.01, 100),
-          m_work_logger("worker_count.txt", 0.01, 4),
+          m_logger("jobqueue.txt", 0.005, 10000),
+          m_work_logger("worker_count.txt", 0.005, 10000),
           m_timers(2)
     {
     }
@@ -124,6 +124,8 @@ public:
         unsigned int numthrs = omp_get_num_threads();
 
         m_timers.change(TM_WORK);
+        m_logger.start();
+        m_work_logger.start();
 
         while (m_idle_count != numthrs)
         {
