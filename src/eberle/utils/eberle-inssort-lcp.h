@@ -5,6 +5,8 @@
 #include "types.h"
 #include "verification-functions.h"
 
+//#define EBERLE_INSSORT_CHECK_LCPS
+
 namespace eberle_inssort_lcp
 {
 
@@ -39,7 +41,7 @@ inssort_lcp(string* strings, AS* output, size_t length)
                 while (*s1 != '\0' && *s1 == *s2)
                     s1++, s2++;
 
-                const UINT lcp = s1 - candidateText;
+                const lcp_t lcp = s1 - candidateText;
 
                 if (*s1 <= *s2)
                 { 	// CASE 1.1: candidate <= curr => insert it
@@ -79,13 +81,15 @@ eberle_lcp_inssort(string *strings, size_t n)
 
     inssort_lcp(strings, output, n);
 
-    //check lcps
-    eberle_utils::checkLcps(output, n, 0);
-
     for (size_t i = 0; i < n; i++)
     {
         strings[i] = output[i].text;
     }
+
+    //check lcps
+#ifdef EBERLE_INSSORT_CHECK_LCPS
+    eberle_utils::checkLcps(output, n, 0);
+#endif
 
     free(output);
 }
@@ -96,17 +100,17 @@ static inline
 void inssort_lcp(string* strings, const LcpStringPtr& out, size_t length)
 {
     string* output = out.strings;
-    unsigned* lcps = out.lcps;
+    lcp_t* lcps = out.lcps;
 
     for (size_t n = 0; n < length; n++)
     {
         const string candidateText = strings[n];
-        unsigned candidateLcp = 0;
+        lcp_t candidateLcp = 0;
 
         size_t insIdx = 0;
         for (; insIdx < n; insIdx++)
         {
-            unsigned currLcp = lcps[insIdx];
+            lcp_t currLcp = lcps[insIdx];
 
             if (candidateLcp == currLcp)
             { // CASE 1 lcps are equal
@@ -117,7 +121,7 @@ void inssort_lcp(string* strings, const LcpStringPtr& out, size_t length)
                 while (*s1 != '\0' && *s1 == *s2)
                 s1++, s2++;
 
-                const UINT lcp = s1 - candidateText;
+                const lcp_t lcp = s1 - candidateText;
 
                 if (*s1 <= *s2)
                 {   // CASE 1.1: candidate <= curr => insert it
@@ -154,15 +158,17 @@ static inline
 void
 eberle_lcp_inssort_lcpstrptr(string *strings, size_t n)
 {
-    unsigned* lcps = new unsigned[n];
+    lcp_t* lcps = new lcp_t[n];
     LcpStringPtr output(strings, lcps);
 
     inssort_lcp(strings, output, n);
 
     //check lcps
+#ifdef EBERLE_INSSORT_CHECK_LCPS
     eberle_utils::checkLcps(output, n, 0);
+#endif
 
-    delete lcps;
+    delete[] lcps;
 }
 
 CONTESTANT_REGISTER(eberle_lcp_inssort_lcpstrptr, "eberle/lcp_inssort_lcpstrptr", "LCP aware inssertion sort by Andreas Eberle")

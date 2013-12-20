@@ -11,7 +11,7 @@ using namespace types;
 
 static inline
 bool
-checkLcps(AS* output, size_t n, unsigned expectedFirstLcp)
+checkLcps(AS* output, size_t n, lcp_t expectedFirstLcp)
 {
     bool allValid = true;
 
@@ -24,7 +24,7 @@ checkLcps(AS* output, size_t n, unsigned expectedFirstLcp)
     for (size_t i = 1; i < n; ++i)
     {
         string s1 = output[i - 1].text, s2 = output[i].text;
-        size_t lcp = 0;
+        lcp_t lcp = 0;
         while (*s1 != 0 && *s1 == *s2)
             ++lcp, ++s1, ++s2;
 
@@ -49,7 +49,7 @@ checkLcps(AS* output, size_t n, unsigned expectedFirstLcp)
 
 static inline
 bool
-checkLcps(LcpStringPtr output, size_t n, unsigned expectedFirstLcp)
+checkLcps(LcpStringPtr output, size_t n, lcp_t expectedFirstLcp)
 {
     bool allValid = true;
 
@@ -65,7 +65,7 @@ checkLcps(LcpStringPtr output, size_t n, unsigned expectedFirstLcp)
     for (size_t i = 1; i < n; ++i, ++output)
     {
         string s1 = lastText, s2 = output.str();
-        size_t lcp = 0;
+        lcp_t lcp = 0;
         while (*s1 != 0 && *s1 == *s2)
             ++lcp, ++s1, ++s2;
 

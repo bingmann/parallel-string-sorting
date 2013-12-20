@@ -21,7 +21,6 @@ using namespace types;
 
 //typedefs
 typedef unsigned char* string;
-typedef unsigned int UINT;
 
 //implementation follows
 
@@ -38,7 +37,7 @@ template<unsigned NUMBER_OF_STREAMS>
     private:
         STREAM streams[NUMBER_OF_STREAMS];
         unsigned nodes[NUMBER_OF_STREAMS];
-        unsigned lcps[NUMBER_OF_STREAMS];
+        lcp_t lcps[NUMBER_OF_STREAMS];
 
         /*
          * Returns the winner of all games.
@@ -55,8 +54,8 @@ template<unsigned NUMBER_OF_STREAMS>
 
             const STREAM* contenderStream = streams + contenderIdx;
 
-            unsigned* contenderLcp = lcps + contenderIdx;
-            unsigned* defenderLcp = lcps + defenderIdx;
+            lcp_t* contenderLcp = lcps + contenderIdx;
+            lcp_t* defenderLcp = lcps + defenderIdx;
 
             if (contenderStream->isEmpty || *defenderLcp > *contenderLcp)
             { // CASE 2: curr->lcp > contender->lcp => curr < contender
@@ -65,7 +64,7 @@ template<unsigned NUMBER_OF_STREAMS>
             }
             else if (*defenderLcp == *contenderLcp)
             { // CASE 1: curr.lcp == contender.lcp
-                unsigned lcp = *defenderLcp;
+                lcp_t lcp = *defenderLcp;
                 string s1 = defenderStream->elements->text + lcp;
                 string s2 = contenderStream->elements->text + lcp;
 
@@ -88,7 +87,7 @@ template<unsigned NUMBER_OF_STREAMS>
         }
 
         inline void
-        initTree(unsigned knownCommonLcp)
+        initTree(lcp_t knownCommonLcp)
         {
             for (unsigned i = 0; i < NUMBER_OF_STREAMS; i++)
             {
@@ -125,7 +124,7 @@ template<unsigned NUMBER_OF_STREAMS>
         }
 
     public:
-        LcpStringLoserTree(AS* input, pair<size_t, size_t>* ranges, unsigned knownCommonLcp = 0)
+        LcpStringLoserTree(AS* input, pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
         {
 
             for (unsigned i = 0; i < NUMBER_OF_STREAMS; i++)

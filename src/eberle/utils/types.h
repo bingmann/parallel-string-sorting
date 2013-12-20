@@ -5,11 +5,11 @@ namespace types
 {
 
 typedef unsigned char* string;
-typedef unsigned int UINT;
+typedef uintptr_t lcp_t;
 
 struct AS
 {
-    UINT lcp;
+    lcp_t lcp;
     string text;
 
     AS()
@@ -18,7 +18,7 @@ struct AS
         text = 0;
     }
 
-    AS(UINT lcp, string text)
+    AS(lcp_t lcp, string text)
     {
         this->lcp = lcp;
         this->text = text;
@@ -28,7 +28,7 @@ struct AS
 struct LcpStringPtr
 {
     string * strings;
-    unsigned* lcps;
+    lcp_t* lcps;
 
 public:
     LcpStringPtr() :
@@ -36,13 +36,13 @@ public:
     {
     }
 
-    LcpStringPtr(string* strings, unsigned* lcps) :
+    LcpStringPtr(string* strings, lcp_t* lcps) :
             strings(strings), lcps(lcps)
     {
     }
 
     inline void
-    set(string s, unsigned lcp) const
+    set(string s, lcp_t lcp) const
     {
         *strings = s;
         *lcps = lcp;
@@ -61,7 +61,7 @@ public:
         return *strings;
     }
 
-    inline unsigned&
+    inline lcp_t&
     lcp() const
     {
         return *lcps;
@@ -71,7 +71,19 @@ public:
     copyFrom(LcpStringPtr& other, size_t length) const
     {
         memcpy(strings, other.strings, length * sizeof(string));
-        memcpy(lcps, other.lcps, length * sizeof(unsigned));
+        memcpy(lcps, other.lcps, length * sizeof(lcp_t));
+    }
+
+    inline void
+    copyStringsTo(string* destination, size_t length) const
+    {
+        memcpy(destination, strings, length * sizeof(string));
+    }
+
+    inline void
+    setLcp(size_t position, lcp_t value) const
+    {
+        lcps[position] = value;
     }
 
     // preincrement
