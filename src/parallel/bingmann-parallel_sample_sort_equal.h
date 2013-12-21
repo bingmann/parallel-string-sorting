@@ -334,6 +334,151 @@ ClassifyEqualUnrollTree<5>::find_bkt_tree(const key_type& key) const
 }
 
 template <> inline unsigned int
+ClassifyEqualUnrollTree<6>::find_bkt_tree(const key_type& key) const
+{
+    unsigned int i;
+
+    // hand-coded assembler binary tree traversal with equality, using CMOV
+    asm("mov    $1, %%rax \n"             // rax = i
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_END
+
+        : "=&a" (i)
+        : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
+          [numsplitters1] "g" (numsplitters+1),
+          [treebits] "g" (treebits),
+          [numsplitters] "g" (numsplitters)
+        : "rcx", "rdx");
+
+    return i;
+}
+
+template <> inline unsigned int
+ClassifyEqualUnrollTree<7>::find_bkt_tree(const key_type& key) const
+{
+    unsigned int i;
+
+    // hand-coded assembler binary tree traversal with equality, using CMOV
+    asm("mov    $1, %%rax \n"             // rax = i
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_END
+
+        : "=&a" (i)
+        : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
+          [numsplitters1] "g" (numsplitters+1),
+          [treebits] "g" (treebits),
+          [numsplitters] "g" (numsplitters)
+        : "rcx", "rdx");
+
+    return i;
+}
+
+template <> inline unsigned int
+ClassifyEqualUnrollTree<8>::find_bkt_tree(const key_type& key) const
+{
+    unsigned int i;
+
+    // hand-coded assembler binary tree traversal with equality, using CMOV
+    asm("mov    $1, %%rax \n"             // rax = i
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_END
+
+        : "=&a" (i)
+        : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
+          [numsplitters1] "g" (numsplitters+1),
+          [treebits] "g" (treebits),
+          [numsplitters] "g" (numsplitters)
+        : "rcx", "rdx");
+
+    return i;
+}
+
+template <> inline unsigned int
+ClassifyEqualUnrollTree<9>::find_bkt_tree(const key_type& key) const
+{
+    unsigned int i;
+
+    // hand-coded assembler binary tree traversal with equality, using CMOV
+    asm("mov    $1, %%rax \n"             // rax = i
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_END
+
+        : "=&a" (i)
+        : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
+          [numsplitters1] "g" (numsplitters+1),
+          [treebits] "g" (treebits),
+          [numsplitters] "g" (numsplitters)
+        : "rcx", "rdx");
+
+    return i;
+}
+
+template <> inline unsigned int
+ClassifyEqualUnrollTree<10>::find_bkt_tree(const key_type& key) const
+{
+    unsigned int i;
+
+    // hand-coded assembler binary tree traversal with equality, using CMOV
+    asm("mov    $1, %%rax \n"             // rax = i
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_END
+
+        : "=&a" (i)
+        : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
+          [numsplitters1] "g" (numsplitters+1),
+          [treebits] "g" (treebits),
+          [numsplitters] "g" (numsplitters)
+        : "rcx", "rdx");
+
+    return i;
+}
+
+template <> inline unsigned int
 ClassifyEqualUnrollTree<11>::find_bkt_tree(const key_type& key) const
 {
     unsigned int i;
@@ -454,6 +599,43 @@ ClassifyEqualUnrollTree<14>::find_bkt_tree(const key_type& key) const
         SPLITTER_TREE_STEP
         SPLITTER_TREE_STEP
 
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_END
+
+        : "=&a" (i)
+        : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
+          [numsplitters1] "g" (numsplitters+1),
+          [treebits] "g" (treebits),
+          [numsplitters] "g" (numsplitters)
+        : "rcx", "rdx");
+
+    return i;
+}
+
+template <> inline unsigned int
+ClassifyEqualUnrollTree<15>::find_bkt_tree(const key_type& key) const
+{
+    unsigned int i;
+
+    // hand-coded assembler binary tree traversal with equality, using CMOV
+    asm("mov    $1, %%rax \n"             // rax = i
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+        SPLITTER_TREE_STEP
+
+        SPLITTER_TREE_STEP
         SPLITTER_TREE_STEP
         SPLITTER_TREE_STEP
         SPLITTER_TREE_STEP
