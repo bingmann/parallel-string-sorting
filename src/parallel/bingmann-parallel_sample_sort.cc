@@ -1961,5 +1961,6 @@ CONTESTANT_REGISTER_PARALLEL_LCP(
 
 // Different Classifier variants are moved to other files
 #include "bingmann-parallel_sample_sort_equal.h"
+#include "bingmann-parallel_sample_sort_treecalc.h"
 
 } // namespace bingmann_parallel_sample_sort(_lcp)
