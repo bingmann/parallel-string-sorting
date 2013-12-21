@@ -753,7 +753,7 @@ struct SmallsortJob : public Job, public SortStep
         {
 #if CALC_LCP
             DBG(debug_lcp, "Calculate LCP after sample sort step " << strptr);
-            sample_sort_lcp<bktnum>(classifier, strptr.front(), depth, bkt);
+            sample_sort_lcp<bktnum>(classifier, strptr.output(), depth, bkt);
 #endif
         }
     };
@@ -1198,28 +1198,28 @@ struct SmallsortJob : public Job, public SortStep
         {
 #if CALC_LCP_MKQS == 1
             if (num_lt > 0)
-                strptr.front().set_lcp(num_lt, depth + lcp_lt);
+                strptr.output().set_lcp(num_lt, depth + lcp_lt);
 
             if (num_gt > 0)
-                strptr.front().set_lcp(num_lt + num_eq, depth + lcp_gt);
+                strptr.output().set_lcp(num_lt + num_eq, depth + lcp_gt);
 #elif CALC_LCP_MKQS == 2
             if (num_lt > 0)
             {
-                key_type max_lt = get_char<key_type>(strptr.front().str(num_lt-1), depth);
+                key_type max_lt = get_char<key_type>(strptr.output().str(num_lt-1), depth);
 
                 unsigned int lcp = depth + lcpKeyType(max_lt, pivot);
                 DBG(debug_lcp, "LCP lt with pivot: " << lcp);
 
-                strptr.front().set_lcp(num_lt, lcp);
+                strptr.output().set_lcp(num_lt, lcp);
             }
             if (num_gt > 0)
             {
-                key_type min_gt = get_char<key_type>(strptr.front().str(num_lt + num_eq), depth);
+                key_type min_gt = get_char<key_type>(strptr.output().str(num_lt + num_eq), depth);
 
                 unsigned int lcp = depth + lcpKeyType(pivot, min_gt);
                 DBG(debug_lcp, "LCP pivot with gt: " << lcp);
 
-                strptr.front().set_lcp(num_lt + num_eq, lcp);
+                strptr.output().set_lcp(num_lt + num_eq, lcp);
             }
 #endif
         }
@@ -1719,7 +1719,7 @@ struct SampleSortStep : public SortStep
     {
         DBG(debug_steps, "pSampleSortStep[" << depth << "]: all substeps done.");
 
-        sample_sort_lcp<bktnum>(classifier, strptr.front(), depth, bkt[0]);
+        sample_sort_lcp<bktnum>(classifier, strptr.output(), depth, bkt[0]);
         delete [] bkt[0];
 
         if (pstep) pstep->substep_notify_done();

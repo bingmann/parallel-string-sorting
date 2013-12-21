@@ -497,15 +497,110 @@ public:
         return *this;
     }
 
-    /// Return the original front (for LCP calculation)
-    inline StringPtrBase front() const
+    /// Return the output (the original for this StringPtr) for LCP calculation
+    inline StringPtrBase output() const
     {
         return m_flipped ? flip(0, m_size) : *this;
+    }
+
+    /// Return i-th output string pointer from m_front / output()
+    inline string& out(size_t i) const
+    {
+        assert(!m_flipped); // m_front is original/output array
+        return str(i);
     }
 };
 
 typedef StringPtrBase<false> StringPtr;
 typedef StringPtrBase<true> StringPtrNoLcpCalc;
+
+/// Objectified string array pointer and shadow pointer array for out-of-place
+/// swapping of pointers.
+template <bool NoLcpCalc>
+class StringPtrOutBase : public StringPtrBase<NoLcpCalc>
+{
+private:
+    //! output string array
+    string      *m_output;
+
+    //! base type
+    typedef StringPtrBase<NoLcpCalc> super_type;
+
+public:
+    /// constructor specifying all attributes
+    inline StringPtrOutBase(string* original, string* shadow = NULL, string* output = NULL,
+                            size_t size = 0, bool flipped = false)
+        : super_type(original, shadow, size, flipped),
+          m_output(output)
+    {
+    }
+
+    //! ostream-able
+    friend inline std::ostream&
+    operator << (std::ostream& os, const StringPtrOutBase& sp)
+    {
+        return os << '(' << sp.active() << '/' << sp.shadow() << '/' << sp.output()
+                  << '|' << sp.flipped() << ':' << sp.size() << ')';
+    }
+
+    /// Advance (both) pointers by given offset, return sub-array
+    inline StringPtrOutBase sub(size_t offset, size_t size) const
+    {
+        assert(offset + size <= this->size());
+        return StringPtrOutBase(this->m_front + offset, this->m_back + offset,
+                                m_output + offset,
+                                size, this->m_flipped);
+    }
+
+    /// construct a sub-object specifying a sub-array with flipping to other
+    /// array.
+    inline StringPtrOutBase flip(size_t offset, size_t size) const
+    {
+        assert(offset + size <= this->size());
+        return StringPtrOutBase(this->m_back + offset, this->m_front + offset,
+                                m_output + offset,
+                                size, !this->m_flipped);
+    }
+
+#if 0
+    /// return subarray pointer to n strings in original array, might copy from
+    /// shadow before returning.
+    inline StringPtrOutBase copy_back() const
+    {
+        if (!m_flipped) {
+            return *this;
+        }
+        else {
+            memcpy(m_back, m_front, m_size * sizeof(string));
+            return flip(0, m_size);
+        }
+    }
+#endif
+
+    //! check sorted order of output strings
+    inline bool check() const
+    {
+        for (size_t i = 1; i < this->size(); ++i)
+            assert(scmp(out(i-1), out(i)) <= 0);
+        return true;
+    }
+
+    /// Return the output array for LCP calculation
+    inline StringPtrOutBase output() const
+    {
+        return m_output;
+    }
+
+    /// Return i-th output string pointer from m_front / output()
+    inline string& out(size_t i) const
+    {
+        assert(i < this->size());
+        return m_output[i];
+    }
+};
+
+typedef StringPtrOutBase<false> StringPtrOut;
+typedef StringPtrOutBase<true> StringPtrOutNoLcpCalc;
 
 } // namespace stringtools
 
