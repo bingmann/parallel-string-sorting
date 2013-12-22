@@ -321,7 +321,7 @@ void parallel_sample_sortBTCT(string* strings, size_t n)
 CONTESTANT_REGISTER_PARALLEL_LCP(
     parallel_sample_sortBTCT,
     "bingmann/parallel_sample_sortBTCT",
-    "bingmann/parallel_sample_sortBTCT: binary tree, bktcache, tree calc")
+    "pS5: binary tree, bktcache, tree calc")
 
 void parallel_sample_sortBTCTU1(string* strings, size_t n)
 {
@@ -331,7 +331,7 @@ void parallel_sample_sortBTCTU1(string* strings, size_t n)
 CONTESTANT_REGISTER_PARALLEL_LCP(
     parallel_sample_sortBTCTU1,
     "bingmann/parallel_sample_sortBTCTU1",
-    "bingmann/parallel_sample_sortBTCTU1: binary tree, bktcache, unroll tree, tree calc")
+    "pS5: binary tree, bktcache, unroll tree, tree calc")
 
 void parallel_sample_sortBTCTU2(string* strings, size_t n)
 {
@@ -341,4 +341,4 @@ void parallel_sample_sortBTCTU2(string* strings, size_t n)
 CONTESTANT_REGISTER_PARALLEL_LCP(
     parallel_sample_sortBTCTU2,
     "bingmann/parallel_sample_sortBTCTU2",
-    "bingmann/parallel_sample_sortBTCTU2: binary tree, bktcache, unroll tree and strings, tree calc")
+    "pS5: binary tree, bktcache, unroll tree and strings, tree calc")
