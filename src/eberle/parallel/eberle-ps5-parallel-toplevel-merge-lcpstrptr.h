@@ -15,7 +15,7 @@
 
 //#define PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 //#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
-#define PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
+//#define PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
 #define PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
 
 namespace eberle_parallel_mergesort_lcp_loosertree
@@ -476,38 +476,41 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
         size_t start = ranges[k].first;
         size_t length = ranges[k].second;
 
-        StringPtr strptr(strings + start, shadow + start, length);
+        const StringPtrOut strptr(strings + start, shadow + start, tmp + start, length);
         parallel_sample_sort_numa(strptr, k % realNumaNodes, numThreadsPerPart);
     }
 
-    LcpStringPtr lcpStringPtr(strings, (lcp_t*) shadow);
+    LcpStringPtr lcpStringPtr(tmp, (lcp_t*) shadow);
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
     MeasureTime<0> timer;
     timer.start();
-    parallelMerge(lcpStringPtr, tmp, ranges, n, numNumaNodes);
+    parallelMerge(lcpStringPtr, strings, ranges, n, numNumaNodes);
     timer.stop();
     cout << endl << "top level merge needed: " << timer.delta() << " s" << endl << endl;
 #else
     parallelMerge(tmp, output, ranges, n, numNumaNodes);
 #endif
 
-    //copy temp array back
-    unsigned numSplits = numa_num_configured_cpus();
-    pair < size_t, size_t > newRanges[numSplits];
-    calculateRanges(newRanges, numSplits, n);
+    /*
+     //copy temp array back
+     unsigned numSplits = numa_num_configured_cpus();
+     pair < size_t, size_t > newRanges[numSplits];
+     calculateRanges(newRanges, numSplits, n);
 
-#pragma omp parallel for
-    for (unsigned k = 0; k < numSplits; k++)
-    {
-        timer.start();
-        size_t start = newRanges[k].first;
-        memcpy(strings + start, tmp + start, newRanges[k].second * sizeof(string));
-        timer.stop();
 
-#pragma omp critical (OUTPUT)
-        cout << "Copying strings needed: " << timer.delta() << " s" << endl;
-    }
+     #pragma omp parallel for
+     for (unsigned k = 0; k < numSplits; k++)
+     {
+     timer.start();
+     size_t start = newRanges[k].first;
+     memcpy(strings + start, tmp + start, newRanges[k].second * sizeof(string));
+     timer.stop();
+
+     #pragma omp critical (OUTPUT)
+     cout << "Copying strings needed: " << timer.delta() << " s" << endl;
+     }
+     */
 
     delete[] shadow;
     delete[] tmp;

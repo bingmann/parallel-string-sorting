@@ -1896,8 +1896,10 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
     }
 }
 
+
 //! Call for NUMA aware parallel sorting
-void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThreads)
+template <typename StringPtrType>
+inline void parallel_sample_sort_numa(const StringPtrType& strptr, int numaNode, int numberOfThreads)
 {
     Context ctx;
     ctx.totalsize = strptr.size();
@@ -1905,7 +1907,7 @@ void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThre
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    SampleSortStep<ClassifyUnrollBoth, StringPtr>::put_stats();
+    SampleSortStep<ClassifyUnrollBoth, StringPtrType>::put_stats();
 
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
@@ -1916,6 +1918,17 @@ void parallel_sample_sort_numa(StringPtr& strptr, int numaNode, int numberOfThre
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
                  >> "steps_base_sort" << ctx.bs_steps;
 }
+
+void parallel_sample_sort_numa(const StringPtr& strptr, int numaNode, int numberOfThreads)
+{
+    parallel_sample_sort_numa<StringPtr>(strptr, numaNode, numberOfThreads);
+}
+
+void parallel_sample_sort_numa(const StringPtrOut& strptr, int numaNode, int numberOfThreads)
+{
+    parallel_sample_sort_numa<StringPtrOut>(strptr, numaNode, numberOfThreads);
+}
+
 
 void parallel_sample_sortBTC(string* strings, size_t n)
 {

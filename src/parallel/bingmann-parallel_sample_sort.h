@@ -6,14 +6,22 @@
 namespace bingmann_parallel_sample_sort {
 
 void
-parallel_sample_sort_numa(stringtools::StringPtrNoLcpCalc& strptr, int numaNode, int numberOfThreads);
+parallel_sample_sort_numa(const stringtools::StringPtrNoLcpCalc& strptr, int numaNode, int numberOfThreads);
+
+void
+parallel_sample_sort_numa(const stringtools::StringPtrOutNoLcpCalc& strptr, int numaNode, int numberOfThreads);
+
 
 } // namespace bingmann_parallel_sample_sort
 
 namespace bingmann_parallel_sample_sort_lcp {
 
 void
-parallel_sample_sort_numa(stringtools::StringPtr& strptr, int numaNode, int numberOfThreads);
+parallel_sample_sort_numa(const stringtools::StringPtr& strptr, int numaNode, int numberOfThreads);
+
+void
+parallel_sample_sort_numa(const stringtools::StringPtrOut& strptr, int numaNode, int numberOfThreads);
+
 
 } // namespace bingmann_parallel_sample_sort_lcp
 
