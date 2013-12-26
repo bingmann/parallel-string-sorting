@@ -51,24 +51,27 @@ void do_numa_segment(char* buff, size_t buffsize)
     int numnodes = numa_num_configured_nodes();
     size_t segsize = (buffsize + numnodes-1) / numnodes;
 
-    std::cout << "Segmenting string characters onto " << numnodes << " NUMA nodes, "
+    std::cout << "Segmenting string characters onto " << numnodes << " NUMA nodes, about "
               << segsize << " characters each." << std::endl;
 
     int pagesize = sysconf(_SC_PAGE_SIZE);
+    segsize = segsize - segsize % pagesize;
 
     segsize += pagesize - (segsize % pagesize);
     assert(segsize % pagesize == 0);
 
-    for (int n = 0; n < numnodes; ++n)
+    for (int n = 0; n < numnodes-1; ++n)
     {
         char* p = buff + n * segsize;
-
-        // round p down to pagesize
-        p -= (uintptr_t)p % pagesize;
 
         // segsize need not be page aligned
         numa_tonode_memory(p, segsize, n);
     }
+
+    size_t offset = (numnodes-1)*segsize;
+    numa_tonode_memory(buff + offset, buffsize-offset, numnodes-1);
+
+    std::cout << "NUMA segmenting finished." << std::endl;
 }
 
 /// Free previous data file
