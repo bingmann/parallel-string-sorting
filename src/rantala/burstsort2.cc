@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <iostream>
+#include <vector>
 
 #include <boost/array.hpp>
 

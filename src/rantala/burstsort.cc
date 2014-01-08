@@ -43,6 +43,7 @@
 #include <string.h>
 #include <iostream>
 #include <bitset>
+#include <vector>
 
 #include <boost/array.hpp>
 
