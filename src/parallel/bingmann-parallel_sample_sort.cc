@@ -80,6 +80,7 @@ static const bool debug_recursion = false;
 static const bool debug_splitter_tree = false;
 static const bool debug_lcp = false;
 
+//! enable work freeing
 static const bool use_work_sharing = true;
 
 //! whether the base sequential_threshold() on the remaining unsorted string
@@ -89,9 +90,20 @@ static const bool use_restsize = false;
 //! use LCP insertion sort even for non-LCP pS5
 static const bool use_lcp_inssort = true;
 
+//! terminate sort after first parallel sample sort step
+#ifndef PS5_SINGLE_STEP
+#define PS5_SINGLE_STEP false
+#endif
+static const bool use_only_first_sortstep = PS5_SINGLE_STEP;
+
+//! maximum number of threads, used in a few static arrays
 static const size_t MAXPROCS = 2*64+1; // +1 due to round up of processor number
 
-static const size_t l2cache = 256*1024;
+//! L2 cache size, used to calculate classifier tree sizes
+#ifndef PS5_L2CACHE
+#define PS5_L2CACHE     256*1024
+#endif
+static const size_t l2cache = PS5_L2CACHE;
 
 static const size_t g_smallsort_threshold = 64*1024;
 static const size_t g_inssort_threshold = 64;
@@ -1602,6 +1614,10 @@ struct SampleSortStep : public SortStep
     {
         DBG(debug_jobs, "Finishing CountJob " << this << " with prefixsum");
 
+        // abort sorting if we're measuring only the top level
+        if (use_only_first_sortstep)
+            return;
+
         // inclusive prefix sum over bkt
         size_t sum = 0;
         for (unsigned int i = 0; i < bktnum; ++i)
@@ -1755,7 +1771,7 @@ template <template <size_t> class Classify, typename StringPtr>
 void Enqueue(Context& ctx, SortStep* pstep,
              const StringPtr& strptr, size_t depth)
 {
-    if (strptr.size() > ctx.sequential_threshold()) {
+    if (strptr.size() > ctx.sequential_threshold() || use_only_first_sortstep) {
         new SampleSortStep<Classify, StringPtr>(ctx, pstep, strptr, depth);
     }
     else {
