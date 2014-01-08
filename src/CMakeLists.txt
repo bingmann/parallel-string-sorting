@@ -33,7 +33,7 @@ set(SOURCES
   parallel/shamsundar-lcp-merge-string-sort.cc
 )
 
-set(LIBS minitbb ${GMP_LIBRARIES} ${NUMA_LIBRARIES})
+set(LIBS minitbb ${GMP_LIBRARIES} ${NUMA_LIBRARIES} rt)
 
 if(WITH_MALLOC_COUNT)
 
