@@ -70,6 +70,7 @@ size_t          gopt_inputsize = 0;
 size_t          gopt_inputsize_minlimit = 0;
 size_t          gopt_inputsize_maxlimit = 0;
 size_t          gopt_repeats = 1;
+size_t          gopt_repeats_inner = 1;
 std::vector<const char*> gopt_algorithm;
 std::vector<const char*> gopt_algorithm_full;
 int             gopt_timeout = 0;
@@ -456,11 +457,35 @@ void Contestant_UCArray::real_run()
     MeasureTime<CLOCK_MONOTONIC> timer;
     MeasureTime<CLOCK_PROCESS_CPUTIME_ID> cpu_timer;
 
-    cpu_timer.start(), timer.start();
+    if (gopt_repeats_inner == 1)
     {
-        m_run_func(stringptr.data(), stringptr.size());
+        cpu_timer.start(), timer.start();
+        {
+            m_run_func(stringptr.data(), stringptr.size());
+        }
+        timer.stop(), cpu_timer.stop();
     }
-    timer.stop(), cpu_timer.stop();
+    else
+    {
+        // copy unsorted array
+        membuffer<string> stringptr_copy;
+        stringptr_copy.copy(stringptr_copy);
+
+        cpu_timer.start(), timer.start();
+
+        for (size_t rep = 0; rep < gopt_repeats_inner; ++rep)
+        {
+            // restore array
+            if (rep != 0)
+            {
+                memcpy(stringptr.data(), stringptr_copy.data(),
+                       stringptr_copy.size() * sizeof(string));
+            }
+
+            m_run_func(stringptr.data(), stringptr.size());
+        }
+        timer.stop(), cpu_timer.stop();
+    }
 
 #ifdef MALLOC_COUNT
     std::cout << "Max stack usage: " << stack_count_usage(stack) << std::endl;
@@ -476,9 +501,12 @@ void Contestant_UCArray::real_run()
     }
 #endif
 
-    g_statscache >> "time" << timer.delta()
-                 >> "cpu_time" << cpu_timer.delta();
+    g_statscache >> "time" << timer.delta() / gopt_repeats_inner
+                 >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
     (std::cout << timer.delta() << "\tchecking ").flush();
+
+    if (gopt_repeats_inner != 1)
+        g_statscache >> "repeats_inner" << gopt_repeats_inner;
 
     if (!gopt_no_check)
     {
@@ -621,7 +649,8 @@ void print_usage(const char* prog)
               << "      --no-mlockall      Skip call of mlockall(). Use if locked memory is scarce." << std::endl
               << "  -o, --output <path>    Write sorted strings to output file, terminate after first algorithm run." << std::endl
               << "      --parallel         Run only parallelized algorithms." << std::endl
-              << "  -r, --repeat <num>     Repeat experiment a number of times and divide by repetition count." << std::endl
+              << "  -r, --repeat <num>     Repeat experiment a number of times." << std::endl
+              << "  -R, --repeat-inner <n> Repeat inner experiment loop a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>      Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>   Run through powers of two for input size limit." << std::endl
               << "      --sequential       Run only sequential algorithms." << std::endl
@@ -646,6 +675,7 @@ int main(int argc, char* argv[])
         { "no-check", no_argument,       0, 'N' },
         { "output",  required_argument,  0, 'o' },
         { "repeat",  required_argument,  0, 'r' },
+        { "repeat-inner",required_argument,  0, 'R' },
         { "size",    required_argument,  0, 's' },
         { "maxsize", required_argument,  0, 'S' },
         { "timeout", required_argument,  0, 'T' },
@@ -680,7 +710,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:A:r:o:i:T:DFNM:", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:A:r:R:o:i:T:DFNM:", longopts, &index);
 
         if (argi < 0) break;
 
@@ -745,6 +775,11 @@ int main(int argc, char* argv[])
         case 'r':
             gopt_repeats = atoi(optarg);
             std::cout << "Option -r: repeat string sorting algorithms " << gopt_repeats << " times. " << std::endl;
+            break;
+
+        case 'R':
+            gopt_repeats_inner = atoi(optarg);
+            std::cout << "Option -R: repeat inner loop " << gopt_repeats_inner << " times. " << std::endl;
             break;
 
         case 's':
