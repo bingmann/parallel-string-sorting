@@ -884,7 +884,8 @@ ClassifyEqualUnrollTree<20>::find_bkt_tree(const key_type& key) const
 #undef SPLITTER_TREE_STEP
 #undef SPLITTER_TREE_END
 
-void parallel_sample_sortBTCE(string* strings, size_t n)
+static inline void
+parallel_sample_sortBTCE(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyEqual>(strings, n, 0);
 }
@@ -894,7 +895,8 @@ CONTESTANT_REGISTER_PARALLEL_LCP(
     "bingmann/parallel_sample_sortBTCE",
     "pS5: binary tree, equality, bktcache")
 
-void parallel_sample_sortBTCEU1(string* strings, size_t n)
+static inline void
+parallel_sample_sortBTCEU1(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyEqualUnrollTree>(strings, n, 0);
 }

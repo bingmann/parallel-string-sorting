@@ -223,13 +223,15 @@ public:
 // ****************************************************************************
 // *** Classification Variants
 
-unsigned char lcpKeyType(const key_type& a, const key_type& b)
+static inline unsigned char
+lcpKeyType(const key_type& a, const key_type& b)
 {
     // XOR both values and count the number of zero bytes
     return count_high_zero_bits(a ^ b) / 8;
 }
 
-unsigned char lcpKeyDepth(const key_type& a)
+static inline unsigned char
+lcpKeyDepth(const key_type& a)
 {
     // count number of non-zero bytes
     return sizeof(key_type) - (count_low_zero_bits(a) / 8);
@@ -1946,7 +1948,8 @@ void parallel_sample_sort_numa(const StringPtrOut& strptr, int numaNode, int num
 }
 
 
-void parallel_sample_sortBTC(string* strings, size_t n)
+static inline void
+parallel_sample_sortBTC(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifySimple>(strings, n, 0);
 }
@@ -1956,7 +1959,8 @@ CONTESTANT_REGISTER_PARALLEL_LCP(
     "bingmann/parallel_sample_sortBTC",
     "pS5: binary tree, bktcache")
 
-void parallel_sample_sortBTCU1(string* strings, size_t n)
+static inline void
+parallel_sample_sortBTCU1(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyUnrollTree>(strings, n, 0);
 }
@@ -1966,7 +1970,8 @@ CONTESTANT_REGISTER_PARALLEL_LCP(
     "bingmann/parallel_sample_sortBTCU1",
     "pS5: binary tree, bktcache, unroll tree")
 
-void parallel_sample_sortBTCU2(string* strings, size_t n)
+static inline void
+parallel_sample_sortBTCU2(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyUnrollBoth>(strings, n, 0);
 }
@@ -1976,7 +1981,8 @@ CONTESTANT_REGISTER_PARALLEL_LCP(
     "bingmann/parallel_sample_sortBTCU2",
     "pS5: binary tree, bktcache, unroll tree and strings")
 
-void parallel_sample_sortBTCU2_out(string* strings, size_t n)
+static inline void
+parallel_sample_sortBTCU2_out(string* strings, size_t n)
 {
     string* output = new string[n];
 
@@ -2077,7 +2083,8 @@ struct ClassifyBinarySearch
     }
 };
 
-void parallel_sample_sortBSC(string* strings, size_t n)
+static inline void
+parallel_sample_sortBSC(string* strings, size_t n)
 {
     parallel_sample_sort_base<ClassifyBinarySearch>(strings, n, 0);
 }

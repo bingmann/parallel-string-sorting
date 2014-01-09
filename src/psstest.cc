@@ -234,7 +234,7 @@ void Contest::run_contest(const char* path)
         std::cout << "Sorting " << g_string_count << " strings composed of " << g_string_datasize << " bytes." << std::endl;
     }
 
-    std::sort(m_list.begin(), m_list.end(), sort_contestants);
+    std::stable_sort(m_list.begin(), m_list.end(), sort_contestants);
 
     // iterate over all contestants
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
@@ -262,7 +262,7 @@ void Contest::list_contentants()
 {
     std::cout << "Available string sorting algorithms:" << std::endl;
 
-    std::sort(m_list.begin(), m_list.end(), sort_contestants);
+    std::stable_sort(m_list.begin(), m_list.end(), sort_contestants);
 
     size_t w_algoname = 0;
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
@@ -378,6 +378,9 @@ void Contestant_UCArray::real_run()
     // create unsigned char* array from offsets
     membuffer<string> stringptr( g_string_count );
 
+    MeasureTime<CLOCK_MONOTONIC> strptr_timer;
+    strptr_timer.start();
+
     if (!gopt_suffixsort)
     {
         size_t j = 0;
@@ -397,6 +400,9 @@ void Contestant_UCArray::real_run()
         for (size_t i = 0; i < g_string_datasize; ++i)
             stringptr[i] = (string)g_string_data + i;
     }
+
+    strptr_timer.stop();
+    std::cout << "Wrote string pointer array in " << strptr_timer.delta() << " seconds" << std::endl;
 
     // save permutation check evaluation result
     PermutationCheck pc;

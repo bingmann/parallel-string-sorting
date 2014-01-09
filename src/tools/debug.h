@@ -34,6 +34,12 @@
 #define DBG2(dbg,X)   DBGX(dbg, X)
 #define DBG3(dbg,X)   DBGX(dbg, X << std::endl)
 
+#define STRINGIFY_X(s) #s
+#define STRINGIFY(s)  STRINGIFY_X(s)
+
+#define CONCAT(a,b)     a ## b
+#define CONCAT_EXPANDED(a,b) CONCAT(a, b)
+
 // *** Support for multi-threaded programs, to activate:
 // #undef DBGX
 // #define DBGX DBGX_OMP
