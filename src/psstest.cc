@@ -71,6 +71,7 @@ size_t          gopt_inputsize_minlimit = 0;
 size_t          gopt_inputsize_maxlimit = 0;
 size_t          gopt_repeats = 1;
 std::vector<const char*> gopt_algorithm;
+std::vector<const char*> gopt_algorithm_full;
 int             gopt_timeout = 0;
 
 const char*     g_datapath = NULL;      // path of input
@@ -182,15 +183,24 @@ static inline bool gopt_algorithm_select(const Contestant* c)
     if (gopt_sequential_only && c->is_parallel()) return false;
     if (gopt_parallel_only && !c->is_parallel()) return false;
 
-    if (!gopt_algorithm.size()) return true;
+    if (gopt_algorithm.size() || gopt_algorithm_full.size())
+    {
+        // iterate over gopt_algorithm list as a filter
+        for (size_t ai = 0; ai < gopt_algorithm.size(); ++ai) {
+            if (strstr(c->m_algoname, gopt_algorithm[ai]) != NULL)
+                return true;
+        }
 
-    // iterate over gopt_algorithm list as a filter
-    for (size_t ai = 0; ai < gopt_algorithm.size(); ++ai) {
-        if (strstr(c->m_algoname, gopt_algorithm[ai]) != NULL)
-            return true;
+        // iterate over gopt_algorithm_full list as a exact match filter
+        for (size_t ai = 0; ai < gopt_algorithm_full.size(); ++ai) {
+            if (strcmp(c->m_algoname, gopt_algorithm_full[ai]) == 0)
+                return true;
+        }
+
+        return false;
     }
 
-    return false;
+    return true;
 }
 
 static inline void maybe_inputwrite()
@@ -277,6 +287,9 @@ void Contest::list_contentants()
         if (!gopt_algorithm_select(*c)) continue;
         std::cout << std::left << std::setw(w_algoname) << (*c)->m_algoname << "  " << (*c)->m_description << std::endl;
     }
+
+    if (w_algoname == 0)
+        std::cout << "Selected algorithm set is empty." << std::endl;
 }
 
 void Contestant_UCArray::run_forked()
@@ -598,6 +611,7 @@ void print_usage(const char* prog)
     std::cout << "Usage: " << prog << " [options] filename" << std::endl
               << "Options:" << std::endl
               << "  -a, --algo <match>     Run only algorithms containing this substring, can be used multile times. Try \"list\"." << std::endl
+              << "  -A, --algoname <name>  Run only algorithms fully matching this string, can be used multile times. Try \"list\"." << std::endl
               << "      --all-threads      Run linear thread increase test from 1 to max_processors." << std::endl
               << "  -D, --datafork         Fork before running algorithm and load data within fork!" << std::endl
               << "  -F, --fork             Fork before running algorithm, but load data before fork!" << std::endl
@@ -624,6 +638,7 @@ int main(int argc, char* argv[])
     static const struct option longopts[] = {
         { "help",    no_argument,        0, 'h' },
         { "algo",    required_argument,  0, 'a' },
+        { "algoname", required_argument, 0, 'A' },
         { "fork",    no_argument,        0, 'F' },
         { "datafork", no_argument,       0, 'D' },
         { "input",   required_argument,  0, 'i' },
@@ -665,7 +680,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:r:o:i:T:DFNM:", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:A:r:o:i:T:DFNM:", longopts, &index);
 
         if (argi < 0) break;
 
@@ -683,6 +698,16 @@ int main(int argc, char* argv[])
             }
             gopt_algorithm.push_back(optarg);
             std::cout << "Option -a: selecting algorithms containing " << optarg << std::endl;
+            break;
+
+        case 'A':
+            if (strcmp(optarg,"list") == 0)
+            {
+                getContestSingleton()->list_contentants();
+                return 0;
+            }
+            gopt_algorithm_full.push_back(optarg);
+            std::cout << "Option -A: selecting algorithm " << optarg << std::endl;
             break;
 
         case 'D':

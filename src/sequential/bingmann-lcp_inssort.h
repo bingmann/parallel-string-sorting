@@ -149,6 +149,8 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
     }
 }
 
+// *** Externally Called Functions ***
+
 static inline
 void lcp_insertion_sort(string* str, size_t n, size_t depth)
 {
@@ -168,8 +170,19 @@ void lcp_insertion_sort(StringPtrNoLcpCalc& str, size_t depth)
     return lcp_insertion_sort(str.active(), str.size(), depth);
 }
 
+// *** Registered Test Functions ***
+
 static inline
 void test_lcp_insertion_sort(string* strings, size_t n)
+{
+    lcp_insertion_sort(strings, n, 0);
+}
+
+CONTESTANT_REGISTER(test_lcp_insertion_sort, "bingmann/lcp_insertion_sort",
+                    "LCP-aware insertion sort")
+
+static inline
+void test_lcp_insertion_sort_checked(string* strings, size_t n)
 {
     string* shadow = new string[n]; // allocate shadow pointer array
     StringPtr strptr(strings, shadow, n);
@@ -193,6 +206,10 @@ void test_lcp_insertion_sort(string* strings, size_t n)
     delete [] shadow;
 }
 
+CONTESTANT_REGISTER(test_lcp_insertion_sort_checked,
+    "bingmann/lcp_insertion_sort with checking",
+    "LCP-aware insertion sort")
+
 static inline
 void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
 {
@@ -203,9 +220,6 @@ void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
 
     delete [] shadow;
 }
-
-CONTESTANT_REGISTER(test_lcp_insertion_sort, "bingmann/lcp_insertion_sort",
-                    "LCP-aware insertion sort")
 
 CONTESTANT_REGISTER(test_lcp_insertion_sort_nolcp, "bingmann/lcp_insertion_sort_nolcp",
                     "LCP-aware insertion sort (without LCP output)")
