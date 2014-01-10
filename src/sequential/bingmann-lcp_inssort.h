@@ -149,6 +149,63 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
     }
 }
 
+//! LCP insertion sort, shorter
+static inline
+void lcp_insertion_sort_shorter(string* str, uintptr_t* lcp, size_t n, size_t depth)
+{
+    unsigned int cmp = 0;
+
+    for (size_t j = 0; j < n; ++j)
+    {
+        // insert strings[j] into sorted strings[0..j-1]
+
+        string snew = str[j];
+        size_t h = depth; // start with LCP depth
+
+        size_t i = j;
+        while (i > 0)
+        {
+            if (lcp[i] < h)
+            {
+                // CASE 1: lcp goes down -> insert string
+                break;
+            }
+            else if (lcp[i] == h)
+            {
+                // CASE 2: compare more characters
+
+                size_t prev_lcp = h;
+
+                string s2 = str[i - 1];
+
+                while (cmp++, snew[h] != 0 && snew[h] == s2[h])
+                    ++h;
+
+                // if (new_str >= curr_str) -> insert string
+                if (snew[h] >= s2[h])
+                {
+                    // update lcp of prev (smaller string) with inserted string
+                    lcp[i] = h;
+                    // lcp of inserted string with next string
+                    h = prev_lcp;
+                    break;
+                }
+            }
+            // else (cur_lcp > new_lcp), CASE 3: nothing to do
+
+            str[i] = str[i - 1];
+            lcp[i + 1] = lcp[i];
+
+            --i;
+        }
+
+        str[i] = snew;
+        lcp[i + 1] = h;
+    }
+
+    std::cout << "cmp = " << cmp << "\n";
+}
+
 // *** Externally Called Functions ***
 
 static inline
@@ -184,12 +241,12 @@ CONTESTANT_REGISTER(test_lcp_insertion_sort, "bingmann/lcp_insertion_sort",
 static inline
 void test_lcp_insertion_sort_checked(string* strings, size_t n)
 {
-    string* shadow = new string[n]; // allocate shadow pointer array
+    string* shadow = new string[n+1]; // allocate shadow pointer array
     StringPtr strptr(strings, shadow, n);
 
     strptr.lcp(0) = 42; // must keep lcp[0] unchanged
 
-    lcp_insertion_sort(strptr, 0);
+    lcp_insertion_sort_shorter(strptr.active(), strptr.lcparray(), n, 0);
 
     std::cout << "lcp[0] " << strptr.lcp(0) << "\n";
 
@@ -207,8 +264,8 @@ void test_lcp_insertion_sort_checked(string* strings, size_t n)
 }
 
 CONTESTANT_REGISTER(test_lcp_insertion_sort_checked,
-    "bingmann/lcp_insertion_sort with checking",
-    "LCP-aware insertion sort")
+    "bingmann/lcp_insertion_sort_checked",
+    "LCP-aware insertion sort with checking")
 
 static inline
 void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
