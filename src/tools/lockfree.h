@@ -20,6 +20,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+#ifndef LOCKFREE_H_
+#define LOCKFREE_H_
+
 namespace lockfree {
 
 template <unsigned MaxThreads>
@@ -113,3 +116,5 @@ public:
 };
 
 } // namespace lockfree
+
+#endif // LOCKFREE_H_

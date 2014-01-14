@@ -15,7 +15,8 @@
 
 //#define PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
 //#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
-#define PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
+//#define PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
+#define PARALLEL_LCP_MERGE_DEBUG_CREATED_JOBS_COUNT
 #define PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
 
 namespace eberle_parallel_mergesort_lcp_loosertree
@@ -300,8 +301,6 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
 {
 #ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
     cout << endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements << endl;
-#else
-    (void) numberOfElements;
 #endif // PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
 
     LcpStringPtr inputStreams[numStreams];
@@ -322,7 +321,7 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
         }
     }
 
-    const unsigned overProvFactor = 100;
+    const unsigned overProvFactor = 500;
     const size_t expectedJobLength = max(MERGE_BULK_SIZE, numberOfElements / (overProvFactor * numa_num_configured_cpus()));
     cout << "Expected job length: " << expectedJobLength << endl;
 
@@ -431,18 +430,24 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
         if (diffExpectedReal <= -tollerance)
         {
             keyWidth = max(unsigned(1), keyWidth - 1);
+
+#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
             cout << "decreased key to " << keyWidth << "  diff: " << diffExpectedReal << endl;
+#endif
         }
         else if (diffExpectedReal >= tollerance)
         {
             keyWidth = min(unsigned(8), keyWidth + 1);
+
+#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
             cout << "increased key to " << keyWidth << "  diff: " << diffExpectedReal << endl;
+#endif
         }
     }
 
-#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
+#ifdef PARALLEL_LCP_MERGE_DEBUG_CREATED_JOBS_COUNT
     cout << "Created " << createdJobsCtr << " Jobs!" << endl;
-#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
+#endif // PARALLEL_LCP_MERGE_DEBUG_CREATED_JOBS_COUNT
 }
 
 static inline
@@ -460,28 +465,28 @@ eberle_parallel_mergesort_lcp_loosertree(string *strings, size_t n)
 {
     int realNumaNodes = numa_num_configured_nodes();
     unsigned numNumaNodes = max(unsigned(4), unsigned(realNumaNodes)); // this max ensures a parallel merge on developer machine
-    int numThreadsPerPart = numa_num_configured_cpus() / numNumaNodes;
+    int numThreadsPerNode = numa_num_configured_cpus() / numNumaNodes;
 
-//allocate memory for lcps and temporary strings
+    //allocate memory for lcps and temporary strings
     string* shadow = new string[n]; // allocate shadow pointer array
     string* tmp = new string[n];
 
     pair < size_t, size_t > *ranges = new pair<size_t, size_t> [numNumaNodes];
     calculateRanges(ranges, numNumaNodes, n);
 
-// enable nested parallel regions
+    // enable nested parallel regions
     omp_set_nested(true);
 
-#pragma omp parallel for
     for (unsigned k = 0; k < numNumaNodes; k++)
     {
         size_t start = ranges[k].first;
         size_t length = ranges[k].second;
 
         const StringPtrOut strptr(strings + start, shadow + start, tmp + start, length);
-        parallel_sample_sort_numa(strptr, k % realNumaNodes, numThreadsPerPart);
+        parallel_sample_sort_numa(strptr, k % realNumaNodes, numThreadsPerNode);
     }
 
+    // do top level merge
     LcpStringPtr lcpStringPtr(tmp, (lcp_t*) shadow);
 
 #ifdef PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
