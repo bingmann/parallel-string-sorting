@@ -2,6 +2,7 @@
 #define EBERLE_MERGESORT_LCP_LOSERTREE_H_
 
 #include <iostream>
+
 #include "../utils/types.h"
 #include "../utils/utility-functions.h"
 #include "../utils/lcp-string-losertree.h"
@@ -17,12 +18,10 @@ using namespace eberle_lcp_utils;
 using namespace types;
 
 typedef unsigned char* string;
-typedef unsigned int UINT;
 
 template<unsigned K>
-    static inline
-    void
-    eberle_mergesort_losertree_lcp_kway(string* strings, AS* tmp, AS* output, size_t length)
+    static inline void
+    eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
     {
         if (length <= 2 * K)
         {
@@ -46,14 +45,17 @@ template<unsigned K>
         delete loserTree;
     }
 
+// K must be a power of two
 template<unsigned K>
-    // K must be a power of two
-    static inline
-    void
-    eberle_mergesort_losertree_lcp_kway(string *strings, size_t n)
+    static inline void
+    eberle_mergesort_losertree_kway(string *strings, size_t n)
     {
-        AS *tmp = static_cast<AS *>(malloc(n * sizeof(AS)));
-        AS *output = static_cast<AS *>(malloc(n * sizeof(AS)));
+        lcp_t* outputLcps = new lcp_t[n];
+        string* tmpStrings = new string[n];
+        lcp_t* tmpLcps = new lcp_t[n];
+
+        LcpStringPtr output(strings, outputLcps);
+        LcpStringPtr tmp(tmpStrings, tmpLcps);
 
         eberle_mergesort_losertree_lcp_kway<K>(strings, tmp, output, n);
 
@@ -62,64 +64,39 @@ template<unsigned K>
         eberle_utils::checkLcps(output, n, 0);
 #endif //EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 
-        for (size_t i = 0; i < n; i++)
-        {
-            strings[i] = output[i].text;
-        }
-
-        free(tmp);
-        free(output);
+        delete[] outputLcps;
+        delete[] tmpStrings;
+        delete[] tmpLcps;
     }
 
 void
-eberle_mergesort_losertree_lcp_4way(string *strings, size_t n)
+eberle_mergesort_losertree_4way(string *strings, size_t n)
 {
-    eberle_mergesort_losertree_lcp_kway<4>(strings, n);
+    eberle_mergesort_losertree_kway<4>(strings, n);
 }
 
 void
-eberle_mergesort_losertree_lcp_16way(string *strings, size_t n)
+eberle_mergesort_losertree_16way(string *strings, size_t n)
 {
-    eberle_mergesort_losertree_lcp_kway<16>(strings, n);
+    eberle_mergesort_losertree_kway<16>(strings, n);
 }
 
 void
-eberle_mergesort_losertree_lcp_32way(string *strings, size_t n)
+eberle_mergesort_losertree_32way(string *strings, size_t n)
 {
-    eberle_mergesort_losertree_lcp_kway<32>(strings, n);
+    eberle_mergesort_losertree_kway<32>(strings, n);
 }
 
 void
-eberle_mergesort_losertree_lcp_64way(string *strings, size_t n)
+eberle_mergesort_losertree_64way(string *strings, size_t n)
 {
-    eberle_mergesort_losertree_lcp_kway<64>(strings, n);
+    eberle_mergesort_losertree_kway<64>(strings, n);
 }
 
-void
-eberle_mergesort_losertree_lcp_128way(string *strings, size_t n)
-{
-    eberle_mergesort_losertree_lcp_kway<128>(strings, n);
-}
-
-void
-eberle_mergesort_losertree_lcp_512way(string *strings, size_t n)
-{
-    eberle_mergesort_losertree_lcp_kway<512>(strings, n);
-}
-
-void
-eberle_mergesort_losertree_lcp_1024way(string *strings, size_t n)
-{
-    eberle_mergesort_losertree_lcp_kway<1024>(strings, n);
-}
-
-CONTESTANT_REGISTER(eberle_mergesort_losertree_lcp_4way, "eberle/mergesort_lcp_losertree_4way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_lcp_16way, "eberle/mergesort_lcp_losertree_16way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_lcp_32way, "eberle/mergesort_lcp_losertree_32way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_lcp_64way, "eberle/mergesort_lcp_losertree_64way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_lcp_128way, "eberle/mergesort_lcp_losertree_128way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_lcp_512way, "eberle/mergesort_lcp_losertree_512way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_lcp_1024way, "eberle/mergesort_lcp_losertree_1024way", "Mergesort with lcp aware Losertree by Andreas Eberle")
+CONTESTANT_REGISTER(eberle_mergesort_losertree_4way, "eberle/mergesort_lcp_losertree_4way", "Mergesort with lcp aware Losertree by Andreas Eberle")
+CONTESTANT_REGISTER(eberle_mergesort_losertree_16way, "eberle/mergesort_lcp_losertree_16way", "Mergesort with lcp aware Losertree by Andreas Eberle")
+CONTESTANT_REGISTER(eberle_mergesort_losertree_32way, "eberle/mergesort_lcp_losertree_32way", "Mergesort with lcp aware Losertree by Andreas Eberle")
+CONTESTANT_REGISTER(eberle_mergesort_losertree_64way, "eberle/mergesort_lcp_losertree_64way", "Mergesort with lcp aware Losertree by Andreas Eberle")
 
 }
  // namespace eberle_mergesort

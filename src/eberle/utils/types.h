@@ -1,29 +1,13 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 
+#include "../../tools/stringtools.h"
+
 namespace types
 {
 
-typedef unsigned char* string;
+using stringtools::string;
 typedef uintptr_t lcp_t;
-
-struct AS
-{
-    lcp_t lcp;
-    string text;
-
-    AS()
-    {
-        lcp = 0;
-        text = 0;
-    }
-
-    AS(lcp_t lcp, string text)
-    {
-        this->lcp = lcp;
-        this->text = text;
-    }
-};
 
 struct LcpStringPtr
 {

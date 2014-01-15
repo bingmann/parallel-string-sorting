@@ -29,7 +29,7 @@ template<unsigned NUMBER_OF_STREAMS>
     {
         struct STREAM
         {
-            AS* elements;
+            LcpStringPtr elements;
             unsigned length;
             bool isEmpty;
         };
@@ -65,8 +65,8 @@ template<unsigned NUMBER_OF_STREAMS>
             else if (*defenderLcp == *contenderLcp)
             { // CASE 1: curr.lcp == contender.lcp
                 lcp_t lcp = *defenderLcp;
-                string s1 = defenderStream->elements->text + lcp;
-                string s2 = contenderStream->elements->text + lcp;
+                string s1 = defenderStream->elements.str() + lcp;
+                string s2 = contenderStream->elements.str() + lcp;
 
                 // check the strings starting after lcp and calculate new lcp
                 while (*s1 != '\0' && *s1 == *s2)
@@ -104,33 +104,28 @@ template<unsigned NUMBER_OF_STREAMS>
             }
         }
 
-        inline AS*
+        inline void
         removeTopFromStream(unsigned streamIdx)
         {
             STREAM* stream = streams + streamIdx;
-            AS* top = stream->elements;
-            top->lcp = lcps[streamIdx];
 
             stream->length--;
-            stream->elements++;
+            ++(stream->elements);
             stream->isEmpty = stream->length <= 0;
 
             if (!stream->isEmpty)
             {
-                lcps[streamIdx] = stream->elements->lcp;
+                lcps[streamIdx] = stream->elements.lcp();
             }
-
-            return top;
         }
 
     public:
-        LcpStringLoserTree(AS* input, pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
+        LcpStringLoserTree(const LcpStringPtr& input, pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
         {
-
             for (unsigned i = 0; i < NUMBER_OF_STREAMS; i++)
             {
-                const std::pair<size_t, size_t> currRange = ranges[i];
-                STREAM* curr = &(this->streams[i]);
+                const pair<size_t, size_t> currRange = ranges[i];
+                STREAM* curr = streams + i;
                 curr->elements = input + currRange.first;
                 curr->length = currRange.second;
                 curr->isEmpty = (curr->length <= 0);
@@ -157,47 +152,33 @@ template<unsigned NUMBER_OF_STREAMS>
 
             for (unsigned i = 0; i < NUMBER_OF_STREAMS; ++i)
             {
-                STREAM stream = streams[i];
+                STREAM* stream = streams + i;
                 if (stream.length > 0)
                 {
-                    cout << lcps[i] << "|" << stream.elements[0].text;
+                    cout << lcps[i] << "|" << stream->elements.str();
                 }
                 else
                 {
                     cout << -1;
                 }
-                cout << "(" << stream.length << ")  ";
+                cout << "(" << stream->length << ")  ";
             }
 
             cout << endl;
         }
 
-        inline AS*
-        deleteMin()
-        {
-            unsigned contenderIdx = nodes[0];
-            AS* min = removeTopFromStream(contenderIdx);
-
-            for (unsigned nodeIdx = (NUMBER_OF_STREAMS + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
-            {
-                contenderIdx = updateNode(nodes[nodeIdx], contenderIdx);
-            }
-
-            nodes[0] = contenderIdx;
-
-            return min;
-        }
-
         inline void
-        writeElementsToStream(AS *outStream, const size_t length)
+        writeElementsToStream(LcpStringPtr outStream, const size_t length)
         {
-            const AS* end = outStream + length;
+            const LcpStringPtr end = outStream + length;
             unsigned contenderIdx = nodes[0];
 
             while (outStream < end)
             {
-                *outStream = *removeTopFromStream(contenderIdx);
-                outStream++;
+                outStream.set(streams[contenderIdx].elements.str(), lcps[contenderIdx]);
+                ++outStream;
+
+                removeTopFromStream(contenderIdx);
 
                 for (unsigned nodeIdx = (NUMBER_OF_STREAMS + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
                 {
@@ -216,8 +197,10 @@ template<unsigned NUMBER_OF_STREAMS>
 
             while (outStream < end)
             {
-                *outStream = removeTopFromStream(contenderIdx)->text;
-                outStream++;
+                *outStream = streams[contenderIdx].elements.str();
+                ++outStream;
+
+                removeTopFromStream(contenderIdx);
 
                 for (unsigned nodeIdx = (NUMBER_OF_STREAMS + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
                 {
@@ -229,7 +212,7 @@ template<unsigned NUMBER_OF_STREAMS>
         }
 
         inline void
-        getRangesOfRemaining(pair<size_t, size_t>* ranges, AS* inputBase)
+        getRangesOfRemaining(pair<size_t, size_t>* ranges, const LcpStringPtr& inputBase)
         {
             for (unsigned k = 0; k < NUMBER_OF_STREAMS; k++)
             {

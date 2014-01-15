@@ -144,12 +144,8 @@ std::string     gopt_memory_type; // argument -M, --memory, see tools/input.h
 #include "sequential/bingmann-lcp_inssort.h"
 
 #include "eberle/parallel/eberle-ps5-parallel-toplevel-merge.h"
-#include "eberle/parallel/eberle-ps5-parallel-toplevel-merge-lcpstrptr.h"
-#include "eberle/sequential/eberle-mergesort-lcp-losertree-lcpstrptr.h"
 #include "eberle/sequential/eberle-mergesort-lcp-losertree.h"
 #include "eberle/sequential/eberle-mergesort-lcp.h"
-#include "eberle/sequential/eberle-mergesort-losertree.h"
-#include "eberle/sequential/eberle-mergesort.h"
 
 #include "rantala/tools/debug.h"
 #include "rantala/tools/get_char.h"
