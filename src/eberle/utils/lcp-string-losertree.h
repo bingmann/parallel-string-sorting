@@ -1,9 +1,25 @@
-/*
- * lcp-string-losertree.h
+/******************************************************************************
+ * src/eberle/utils/lcp-string-losertree.h
  *
- *  Created on: Oct 30, 2013
- *      Author: aeberle
- */
+ * Implementation of a LCP aware multiway losertree.
+ *
+ ******************************************************************************
+ * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
+
 
 #ifndef LCP_STRING_LOSERTREE_H_
 #define LCP_STRING_LOSERTREE_H_
