@@ -11,13 +11,17 @@
 #include "../../tools/jobqueue.h"
 #include "../../tools/stringtools.h"
 
+#include "../../tools/debug.h"
+#undef DBGX
+#define DBGX DBGX_OMP
+
 #include "../../parallel/bingmann-parallel_sample_sort.h"
 
-//#define PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-//#define PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
-//#define PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
-#define PARALLEL_LCP_MERGE_DEBUG_CREATED_JOBS_COUNT
-#define PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
+static const bool debug_jobtype_on_creation = false;
+static const bool debug_job_details = false;
+static const bool debug_job_creation = false;
+static const bool debug_created_jobs_count = true;
+static const bool debug_toplevel_merge_duration = true;
 
 namespace eberle_ps5_parallel_toplevel_merge
 {
@@ -67,12 +71,8 @@ struct CopyDataJob : public Job
     CopyDataJob(const LcpStringPtr& input, string* output, size_t length) :
             input(input), output(output), length(length)
     {
-#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-#pragma omp critical (OUTPUT)
-        {
-            cout << "CopyDataJob (input: " << (input - inputBase) << ", output: " << (output - outputBase) << ", length: " << length << ")" << endl;
-        }
-#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
+        DBG(debug_jobtype_on_creation,
+                "CopyDataJob (input: " << (input - inputBase) << ", output: " << (output - outputBase) << ", length: " << length << ")");
     }
 
     virtual bool
@@ -84,7 +84,8 @@ struct CopyDataJob : public Job
 
         return true;
     }
-};
+}
+;
 
 struct BinaryMergeJob : public Job
 {
@@ -97,13 +98,8 @@ struct BinaryMergeJob : public Job
     BinaryMergeJob(const LcpStringPtr& input1, size_t length1, const LcpStringPtr& input2, size_t length2, string* output) :
             input1(input1), length1(length1), input2(input2), length2(length2), output(output)
     {
-#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-#pragma omp critical (OUTPUT)
-        {
-            cout << "BinaryMergeJob (input1: " << (input1 - inputBase) << ", length1: " << length1 << ", input2: " << (input2 - inputBase)
-            << ", length2: " << length2 << ", output: " << (output - outputBase) << ")" << endl;
-        }
-#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
+        DBG(debug_jobtype_on_creation,
+                "BinaryMergeJob (input1: " << (input1 - inputBase) << ", length1: " << length1 << ", input2: " << (input2 - inputBase) << ", length2: " << length2 << ", output: " << (output - outputBase) << ")");
     }
 
     virtual bool
@@ -131,20 +127,14 @@ template<unsigned K>
         MergeJob(const LcpStringPtr& input, string* output, pair<size_t, size_t>* ranges, size_t length, lcp_t baseLcp, lcp_t nextBaseLcp) :
                 input(input), output(output), ranges(ranges), length(length), baseLcp(baseLcp), nextBaseLcp(nextBaseLcp)
         {
-#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
-#pragma omp critical (OUTPUT)
+            DBG(debug_jobtype_on_creation,
+                    "MergeJob<" << K << "> (output: " << (output - outputBase) << ", baseLcp: " << baseLcp << ", nextBaseLcp: " << nextBaseLcp << ", length: " << length << ")");
+
+            for (unsigned k = 0; k < K; ++k)
             {
-                cout << "MergeJob<" << K << "> (output: " << (output - outputBase) << ", baseLcp: " << baseLcp << ", nextBaseLcp: " << nextBaseLcp
-                << ", length: " << length << ")" << endl;
-#ifdef PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
-                for (unsigned k = 0; k < K; ++k)
-                {
-                    cout << k << ": " << ranges[k].first << " length: " << ranges[k].second << endl;
-                }
-                cout << endl;
-#endif // PARALLEL_LCP_MERGE_DEBUG_MERGE_JOBS_DETAILED
+                DBG(debug_job_details, "" << k << ": " << ranges[k].first << " length: " << ranges[k].second);
             }
-#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_TYPE_ON_CREATION
+            DBG(debug_job_details, endl);
         }
 
         /*
@@ -205,7 +195,8 @@ template<unsigned K>
         {
             delete ranges;
         }
-    };
+    }
+    ;
 
 struct InitialSplitJob : public Job
 {
@@ -299,9 +290,7 @@ static inline void
 createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
         lcp_t baseLcp)
 {
-#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
-    cout << endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements << endl;
-#endif // PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
+    DBG(debug_job_creation, endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements);
 
     LcpStringPtr inputStreams[numStreams];
     LcpStringPtr ends[numStreams];
@@ -323,10 +312,10 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
 
     const unsigned overProvFactor = 500;
     const size_t expectedJobLength = max(MERGE_BULK_SIZE, numberOfElements / (overProvFactor * numa_num_configured_cpus()));
-    cout << "Expected job length: " << expectedJobLength << endl;
+
+    DBG(debug_job_creation, "Expected job length: " << expectedJobLength);
 
     unsigned keyWidth = 8;
-
     unsigned createdJobsCtr = 0;
     size_t elementsProcessed = 0;
 
@@ -431,23 +420,17 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
         {
             keyWidth = max(unsigned(1), keyWidth - 1);
 
-#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
-            cout << "decreased key to " << keyWidth << "  diff: " << diffExpectedReal << endl;
-#endif
+            DBG(debug_job_creation, "decreased key to " << keyWidth << "  diff: " << diffExpectedReal);
         }
         else if (diffExpectedReal >= tollerance)
         {
             keyWidth = min(unsigned(8), keyWidth + 1);
 
-#ifdef PARALLEL_LCP_MERGE_DEBUG_JOB_CREATION
-            cout << "increased key to " << keyWidth << "  diff: " << diffExpectedReal << endl;
-#endif
+            DBG(debug_job_creation, "increased key to " << keyWidth << "  diff: " << diffExpectedReal);
         }
     }
 
-#ifdef PARALLEL_LCP_MERGE_DEBUG_CREATED_JOBS_COUNT
-    cout << "Created " << createdJobsCtr << " Jobs!" << endl;
-#endif // PARALLEL_LCP_MERGE_DEBUG_CREATED_JOBS_COUNT
+    DBG(debug_created_jobs_count, "Created " << createdJobsCtr << " Jobs!");
 }
 
 static inline
@@ -455,7 +438,7 @@ void
 parallelMerge(const LcpStringPtr& input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams)
 {
     JobQueue jobQueue;
-    cout << "doing parallel merge for " << numStreams << " streams" << endl;
+    DBG(debug_toplevel_merge_duration, "doing parallel merge for " << numStreams << " streams");
     jobQueue.enqueue(new InitialSplitJob(input, output, ranges, length, numStreams));
     jobQueue.loop();
 }
@@ -467,14 +450,14 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     unsigned numNumaNodes = max(unsigned(4), unsigned(realNumaNodes)); // this max ensures a parallel merge on developer machine
     int numThreadsPerNode = numa_num_configured_cpus() / numNumaNodes;
 
-    //allocate memory for lcps and temporary strings
+//allocate memory for lcps and temporary strings
     string* shadow = new string[n]; // allocate shadow pointer array
     string* tmp = new string[n];
 
     pair < size_t, size_t > *ranges = new pair<size_t, size_t> [numNumaNodes];
     calculateRanges(ranges, numNumaNodes, n);
 
-    // enable nested parallel regions
+// enable nested parallel regions
     omp_set_nested(true);
 
     for (unsigned k = 0; k < numNumaNodes; k++)
@@ -486,18 +469,15 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
         parallel_sample_sort_numa(strptr, k % realNumaNodes, numThreadsPerNode);
     }
 
-    // do top level merge
+// do top level merge
     LcpStringPtr lcpStringPtr(tmp, (lcp_t*) shadow);
 
-#ifdef PARALLEL_LCP_MERGE_DEBUG_TOP_LEVEL_MERGE_DURATION
     MeasureTime<0> timer;
     timer.start();
     parallelMerge(lcpStringPtr, strings, ranges, n, numNumaNodes);
     timer.stop();
-    cout << endl << "top level merge needed: " << timer.delta() << " s" << endl << endl;
-#else
-    parallelMerge(tmp, output, ranges, n, numNumaNodes);
-#endif
+
+    DBG(debug_toplevel_merge_duration, cout << endl << "top level merge needed: " << timer.delta() << " s" << endl);
 
     delete[] shadow;
     delete[] tmp;
