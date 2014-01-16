@@ -26,7 +26,6 @@
 
 #include <iostream>
 
-#include "../utils/types.h"
 #include "../utils/utility-functions.h"
 #include "../utils/lcp-string-losertree.h"
 #include "../sequential/eberle-mergesort-lcp.h"
@@ -45,7 +44,6 @@ namespace eberle_ps5_parallel_toplevel_merge
 
 using namespace std;
 
-using namespace types;
 using namespace eberle_lcp_utils;
 using namespace eberle_utils;
 using namespace eberle_mergesort_lcp;

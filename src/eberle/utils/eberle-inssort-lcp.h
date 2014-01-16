@@ -24,15 +24,15 @@
 #define EBERLE_INSSORT_H_
 
 #include <stdlib.h>
-#include "types.h"
 #include "verification-functions.h"
+#include "../../tools/stringtools.h"
 
 //#define EBERLE_INSSORT_CHECK_LCPS
 
 namespace eberle_inssort_lcp
 {
 
-using namespace types;
+using namespace stringtools;
 
 //typedefs
 typedef unsigned char* string;

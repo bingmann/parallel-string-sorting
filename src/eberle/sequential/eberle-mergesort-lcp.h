@@ -25,18 +25,13 @@
 
 #include <iostream>
 
-#include "../utils/types.h"
-
 #include "../../tools/stringtools.h"
 #include "../../tools/statsfile.h"
 
 namespace eberle_mergesort_lcp
 {
 
-using namespace types;
-
 using namespace stringtools;
-using stringtools::string;
 
 static inline void
 eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, lcp_t* lcps2, size_t length2, string* output, lcp_t* outputLcps)

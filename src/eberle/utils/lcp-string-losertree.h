@@ -27,13 +27,13 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "types.h"
+#include "../../tools/stringtools.h"
 
 namespace eberle_lcp_utils
 {
 
 using namespace std;
-using namespace types;
+using namespace stringtools;
 
 //typedefs
 typedef unsigned char* string;

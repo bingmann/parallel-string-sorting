@@ -25,7 +25,6 @@
 
 #include <iostream>
 
-#include "../utils/types.h"
 #include "../utils/utility-functions.h"
 #include "../utils/lcp-string-losertree.h"
 #include "../utils/eberle-inssort-lcp.h"
@@ -37,7 +36,6 @@ namespace eberle_mergesort
 {
 
 using namespace eberle_lcp_utils;
-using namespace types;
 
 typedef unsigned char* string;
 

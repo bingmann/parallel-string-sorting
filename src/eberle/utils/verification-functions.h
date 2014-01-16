@@ -23,12 +23,12 @@
 #ifndef VERIFICATION_FUNCTIONS_H_
 #define VERIFICATION_FUNCTIONS_H_
 
-#include "types.h"
+#include "../../tools/stringtools.h"
 
 namespace eberle_utils
 {
 
-using namespace types;
+using namespace stringtools;
 
 static inline
 bool

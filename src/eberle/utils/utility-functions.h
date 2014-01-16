@@ -24,12 +24,9 @@
 #define UTILITY_FUNCTIONS_H_
 
 #include <stdlib.h>
-#include "types.h"
 
 namespace eberle_utils
 {
-
-using namespace types;
 
 static inline
 void
