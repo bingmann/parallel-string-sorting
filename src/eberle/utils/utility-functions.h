@@ -40,20 +40,6 @@ calculateRanges(std::pair<size_t, size_t>* ranges, unsigned numberOfSplits, size
     ranges[numberOfSplits - 1] = std::make_pair((numberOfSplits - 1) * split, lengthToSplit - (numberOfSplits - 1) * split);
 }
 
-static inline
-unsigned
-getNextHigherPowerOfTwo(unsigned v)
-{
-    v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v++;
-    return v;
-}
-
 }
 // namespace eberle_utils
 

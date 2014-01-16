@@ -40,4 +40,24 @@ struct logfloor_<0, base> {
     enum { value = 0 };
 };
 
+////////////////////////////////////////////////////////////////////////////
+
+//! calculate the log2 floor of an integer type (by repeated bit shifts)
+template <typename IntegerType>
+unsigned int ilog2_floor(IntegerType i)
+{
+    unsigned int p = 0;
+    while (i >= 256) i >>= 8, p += 8;
+    while (i >>= 1) ++p;
+    return p;
+}
+
+//! calculate the log2 ceiling of an integer type (by repeated bit shifts)
+template <typename IntegerType>
+unsigned int ilog2_ceil(const IntegerType& i)
+{
+    if (i <= 1) return 0;
+    return ilog2_floor(i - 1) + 1;
+}
+
 #endif // LOGFLOOT_H_

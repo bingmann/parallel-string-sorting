@@ -404,7 +404,7 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
 
         default:
         {
-            unsigned numNewStreams = getNextHigherPowerOfTwo(numberOfFoundBuckets);
+            unsigned numNewStreams = ilog2_ceil(numberOfFoundBuckets);
             pair < size_t, size_t > *newRange = new pair<size_t, size_t> [numNewStreams];
 
             unsigned k = 0;
