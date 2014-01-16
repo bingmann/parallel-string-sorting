@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "../../tools/stringtools.h"
+#include "../tools/stringtools.h"
 
 namespace eberle_lcp_utils
 {

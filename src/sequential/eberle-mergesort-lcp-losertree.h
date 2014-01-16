@@ -25,9 +25,9 @@
 
 #include <iostream>
 
-#include "../utils/utility-functions.h"
-#include "../utils/lcp-string-losertree.h"
-#include "../utils/eberle-inssort-lcp.h"
+#include "../tools/eberle-utilities.h"
+#include "../tools/eberle-lcp-losertree.h"
+#include "../sequential/eberle-inssort-lcp.h"
 
 //#define EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 

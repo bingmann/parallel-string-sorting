@@ -26,18 +26,18 @@
 
 #include <iostream>
 
-#include "../utils/utility-functions.h"
-#include "../utils/lcp-string-losertree.h"
+#include "../tools/eberle-utilities.h"
+#include "../tools/eberle-lcp-losertree.h"
 #include "../sequential/eberle-mergesort-lcp.h"
 
-#include "../../tools/jobqueue.h"
-#include "../../tools/stringtools.h"
+#include "../tools/jobqueue.h"
+#include "../tools/stringtools.h"
 
-#include "../../tools/debug.h"
+#include "../tools/debug.h"
 #undef DBGX
 #define DBGX DBGX_OMP
 
-#include "../../parallel/bingmann-parallel_sample_sort.h"
+#include "../parallel/bingmann-parallel_sample_sort.h"
 
 namespace eberle_ps5_parallel_toplevel_merge
 {

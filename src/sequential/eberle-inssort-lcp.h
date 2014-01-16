@@ -24,7 +24,7 @@
 #define EBERLE_INSSORT_H_
 
 #include <stdlib.h>
-#include "../../tools/stringtools.h"
+#include "../tools/stringtools.h"
 
 //#define EBERLE_INSSORT_CHECK_LCPS
 

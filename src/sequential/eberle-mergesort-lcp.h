@@ -25,8 +25,8 @@
 
 #include <iostream>
 
-#include "../../tools/stringtools.h"
-#include "../../tools/statsfile.h"
+#include "../tools/stringtools.h"
+#include "../tools/statsfile.h"
 
 namespace eberle_mergesort_lcp
 {
