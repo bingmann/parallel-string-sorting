@@ -74,13 +74,13 @@ static inline void
 createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements,
         lcp_t baseLcp);
 
-// debug variables
-string * outputBase;
-LcpStringPtr inputBase;
+// debug variables (for delta calculations)
+string * g_outputBase;
+LcpStringPtr g_inputBase;
 
 // variable definitions
 typedef uint64_t CHAR_TYPE;
-size_t lengthOfLongestJob(0);
+size_t g_lengthOfLongestJob(0);
 
 //structs defining the jobs
 
@@ -94,7 +94,7 @@ struct CopyDataJob : public Job
             input(input), output(output), length(length)
     {
         DBG(debug_jobtype_on_creation,
-                "CopyDataJob (input: " << (input - inputBase) << ", output: " << (output - outputBase) << ", length: " << length << ")");
+                "CopyDataJob (input: " << (input - g_inputBase) << ", output: " << (output - g_outputBase) << ", length: " << length << ")");
     }
 
     virtual bool
@@ -120,7 +120,7 @@ struct BinaryMergeJob : public Job
             input1(input1), length1(length1), input2(input2), length2(length2), output(output)
     {
         DBG(debug_jobtype_on_creation,
-                "BinaryMergeJob (input1: " << (input1 - inputBase) << ", length1: " << length1 << ", input2: " << (input2 - inputBase) << ", length2: " << length2 << ", output: " << (output - outputBase) << ")");
+                "BinaryMergeJob (input1: " << (input1 - g_inputBase) << ", length1: " << length1 << ", input2: " << (input2 - g_inputBase) << ", length2: " << length2 << ", output: " << (output - g_outputBase) << ")");
     }
 
     virtual bool
@@ -149,7 +149,7 @@ struct MergeJob : public Job
             input(input), output(output), ranges(ranges), length(length), baseLcp(baseLcp), nextBaseLcp(nextBaseLcp)
     {
         DBG(debug_jobtype_on_creation,
-                "MergeJob<" << K << "> (output: " << (output - outputBase) << ", baseLcp: " << baseLcp << ", nextBaseLcp: " << nextBaseLcp << ", length: " << length << ")");
+                "MergeJob<" << K << "> (output: " << (output - g_outputBase) << ", baseLcp: " << baseLcp << ", nextBaseLcp: " << nextBaseLcp << ", length: " << length << ")");
 
         for (unsigned k = 0; k < K; ++k)
         {
@@ -163,23 +163,23 @@ struct MergeJob : public Job
      * false if the merge has been stopped to free work.
      */
     inline bool
-    mergeToOutput(JobQueue& jobQueue, LcpStringLoserTree<K> * loserTree)
+    mergeToOutput(JobQueue& jobQueue, LcpStringLoserTree<K> & loserTree)
     {
         for (size_t lastLength = length; length >= MERGE_BULK_SIZE; length -= MERGE_BULK_SIZE, output += MERGE_BULK_SIZE)
         {
-            if (lengthOfLongestJob == lastLength)
-                lengthOfLongestJob = length;
+            if (g_lengthOfLongestJob == lastLength)
+                g_lengthOfLongestJob = length;
 
-            if (lengthOfLongestJob < length)
-                lengthOfLongestJob = length; // else if to prevent work sharing when we just increased lengthOfLongestJob
-            else if (USE_WORK_SHARING && jobQueue.has_idle() && length > SHARE_WORK_THRESHOLD && lengthOfLongestJob == length)
+            if (g_lengthOfLongestJob < length)
+                g_lengthOfLongestJob = length; // else if to prevent work sharing when we just increased g_lengthOfLongestJob
+            else if (USE_WORK_SHARING && jobQueue.has_idle() && length > SHARE_WORK_THRESHOLD && g_lengthOfLongestJob == length)
                 return false;
 
-            loserTree->writeElementsToStream(output, MERGE_BULK_SIZE);
+            loserTree.writeElementsToStream(output, MERGE_BULK_SIZE);
             lastLength = length;
         }
 
-        loserTree->writeElementsToStream(output, length);
+        loserTree.writeElementsToStream(output, length);
 
         return true;
     }
@@ -193,28 +193,26 @@ struct MergeJob : public Job
         }
 
         //merge
-        LcpStringLoserTree<K> *loserTree = new LcpStringLoserTree<K>(input, ranges);
+        LcpStringLoserTree<K> loserTree(input, ranges);
 
         if (!mergeToOutput(jobQueue, loserTree))
         {
             // share work
             pair < size_t, size_t > newRanges[K];
-            loserTree->getRangesOfRemaining(newRanges, input);
+            loserTree.getRangesOfRemaining(newRanges, input);
 
             createJobs(jobQueue, input, output, newRanges, K, length, nextBaseLcp);
 
-            if (lengthOfLongestJob == length)
-                lengthOfLongestJob = 0;
+            if (g_lengthOfLongestJob == length)
+                g_lengthOfLongestJob = 0;
         }
-
-        delete loserTree;
 
         return true;
     }
 
     ~MergeJob()
     {
-        delete ranges;
+        delete [] ranges;
     }
 };
 
@@ -229,23 +227,23 @@ struct InitialSplitJob : public Job
     InitialSplitJob(const LcpStringPtr& input, string* output, pair<size_t, size_t>* ranges, size_t length, unsigned numStreams) :
             input(input), output(output), ranges(ranges), length(length), numStreams(numStreams)
     {
-        lengthOfLongestJob = length; // prevents that the first MergeJob immediately starts splitting itself
+        g_lengthOfLongestJob = length; // prevents that the first MergeJob immediately starts splitting itself
 
-        inputBase = input;
-        outputBase = output;
+        g_inputBase = input;
+        g_outputBase = output;
     }
 
     virtual bool
     run(JobQueue& jobQueue)
     {
         createJobs(jobQueue, input, output, ranges, numStreams, length, lcp_t(0));
-        lengthOfLongestJob = 0;
+        g_lengthOfLongestJob = 0;
         return true;
     }
 
     ~InitialSplitJob()
     {
-        delete ranges;
+        delete [] ranges;
     }
 };
 
@@ -404,7 +402,7 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
 
         default:
         {
-            unsigned numNewStreams = ilog2_ceil(numberOfFoundBuckets);
+            unsigned numNewStreams = 1 << ilog2_ceil(numberOfFoundBuckets);
             pair < size_t, size_t > *newRange = new pair<size_t, size_t> [numNewStreams];
 
             unsigned k = 0;
@@ -466,8 +464,16 @@ void
 eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 {
     int realNumaNodes = numa_num_configured_nodes();
+    if (realNumaNodes < 1) realNumaNodes = 1;
+
+    if (realNumaNodes == 1) {
+        DBG(1, "No or just one NUMA nodes detected on the system.");
+        DBG(1, "pS5-LCP-Mergesort is designed for NUMA systems.");
+    }
+
     unsigned numNumaNodes = max(unsigned(4), unsigned(realNumaNodes)); // this max ensures a parallel merge on developer machine
     int numThreadsPerNode = numa_num_configured_cpus() / numNumaNodes;
+    if (numThreadsPerNode < 1) numThreadsPerNode = 1;
 
     //allocate memory for lcps and temporary strings
     string* shadow = new string[n];
