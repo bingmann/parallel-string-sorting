@@ -24,7 +24,6 @@
 #define EBERLE_INSSORT_H_
 
 #include <stdlib.h>
-#include "verification-functions.h"
 #include "../../tools/stringtools.h"
 
 //#define EBERLE_INSSORT_CHECK_LCPS
@@ -108,7 +107,7 @@ eberle_lcp_inssort(string *strings, size_t n)
     //check lcps
 #ifdef EBERLE_INSSORT_CHECK_LCPS
     std::cout << "Checking LCPs" << std::endl;
-    eberle_utils::checkLcps(output, n, 0);
+    stringtools::verify_lcp(output.str(), output.lcp(), n, 0);
 #endif
 
     delete[] lcps;

@@ -410,6 +410,38 @@ operator+(const LcpStringPtr& ptr, size_t delta)
     return LcpStringPtr(ptr.strings + delta, ptr.lcps + delta);
 }
 
+/// verify LCP array against sorted string array by scanning LCPs
+static inline bool
+verify_lcp(string* strings, lcp_t* lcps, size_t n, lcp_t expectedFirstLcp)
+{
+    bool allValid = true;
+
+    if (lcps[0] != expectedFirstLcp)
+    {
+        std::cout << "lcp[0] = " << lcps[0] << " excepted " << expectedFirstLcp << std::endl;
+        allValid = false;
+    }
+
+    for (size_t i = 1; i < n; ++i)
+    {
+        string s1 = strings[i-1], s2 = strings[i];
+        size_t h = calc_lcp(s1, s2);
+
+        if (h != lcps[i])
+        {
+            std::cout << "lcp[" << i << "] = " << lcps[i] << " excepted " << h << std::endl;
+            allValid = false;
+        }
+    }
+
+    if (allValid)
+        std::cout << "All LCPs valid!" << std::endl;
+    else
+        std::cout << "Found invalid LCPS!" << std::endl;
+
+    return allValid;
+}
+
 } // namespace stringtools
 
 #endif // STRINGPTR_H_

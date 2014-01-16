@@ -248,17 +248,7 @@ void test_lcp_insertion_sort_checked(string* strings, size_t n)
 
     lcp_insertion_sort_shorter(strptr.active(), strptr.lcparray(), n, 0);
 
-    std::cout << "lcp[0] " << strptr.lcp(0) << "\n";
-
-    for (size_t j = 1; j < n; ++j)
-    {
-        string s1 = strptr.out(j-1), s2 = strptr.out(j);
-        size_t h = calc_lcp(s1, s2);
-
-        if (h != strptr.lcp(j)) {
-            std::cout << "lcp[" << j << "] mismatch " << h << " != " << strptr.lcp(j) << std::endl;
-        }
-    }
+    stringtools::verify_lcp(strptr.active(), strptr.lcparray(), n, 42);
 
     delete [] shadow;
 }
