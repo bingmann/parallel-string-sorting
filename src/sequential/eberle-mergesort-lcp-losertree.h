@@ -39,54 +39,53 @@ using namespace eberle_lcp_utils;
 typedef unsigned char* string;
 
 template<unsigned K>
-    static inline void
-    eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
+static inline void
+eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
+{
+    if (length <= 2 * K)
     {
-        if (length <= 2 * K)
-        {
-            return eberle_inssort_lcp::inssort_lcp(strings, output, length);
-        }
-
-        //create ranges of the parts
-        pair < size_t, size_t > ranges[K];
-        eberle_utils::calculateRanges(ranges, K, length);
-
-        // execute mergesorts for parts
-        for (unsigned i = 0; i < K; i++)
-        {
-            const size_t offset = ranges[i].first;
-            eberle_mergesort_losertree_lcp_kway<K>(strings + offset, output + offset, tmp + offset, ranges[i].second);
-        }
-
-        //merge
-        LcpStringLoserTree<K> *loserTree = new LcpStringLoserTree<K>(tmp, ranges);
-        loserTree->writeElementsToStream(output, length);
-        delete loserTree;
+        return eberle_inssort_lcp::inssort_lcp(strings, output, length);
     }
+
+    //create ranges of the parts
+    pair < size_t, size_t > ranges[K];
+    eberle_utils::calculateRanges(ranges, K, length);
+
+    // execute mergesorts for parts
+    for (unsigned i = 0; i < K; i++)
+    {
+        const size_t offset = ranges[i].first;
+        eberle_mergesort_losertree_lcp_kway<K>(strings + offset, output + offset, tmp + offset, ranges[i].second);
+    }
+
+    //merge
+    LcpStringLoserTree<K> loserTree(tmp, ranges);
+    loserTree.writeElementsToStream(output, length);
+}
 
 // K must be a power of two
 template<unsigned K>
-    static inline void
-    eberle_mergesort_losertree_kway(string *strings, size_t n)
-    {
-        lcp_t* outputLcps = new lcp_t[n];
-        string* tmpStrings = new string[n];
-        lcp_t* tmpLcps = new lcp_t[n];
+static inline void
+eberle_mergesort_losertree_kway(string *strings, size_t n)
+{
+    lcp_t* outputLcps = new lcp_t[n];
+    string* tmpStrings = new string[n];
+    lcp_t* tmpLcps = new lcp_t[n];
 
-        LcpStringPtr output(strings, outputLcps);
-        LcpStringPtr tmp(tmpStrings, tmpLcps);
+    LcpStringPtr output(strings, outputLcps);
+    LcpStringPtr tmp(tmpStrings, tmpLcps);
 
-        eberle_mergesort_losertree_lcp_kway<K>(strings, tmp, output, n);
+    eberle_mergesort_losertree_lcp_kway<K>(strings, tmp, output, n);
 
 #ifdef EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
-        //check lcps
-        eberle_utils::checkLcps(output, n, 0);
+    //check lcps
+    eberle_utils::checkLcps(output, n, 0);
 #endif //EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 
-        delete[] outputLcps;
-        delete[] tmpStrings;
-        delete[] tmpLcps;
-    }
+    delete[] outputLcps;
+    delete[] tmpStrings;
+    delete[] tmpLcps;
+}
 
 void
 eberle_mergesort_losertree_4way(string *strings, size_t n)
