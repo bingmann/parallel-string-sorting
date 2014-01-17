@@ -11,6 +11,7 @@ set(SOURCES
   sequential/nilsson-forward8.cc
   sequential/nilsson-forward16.cc
   sequential/bingmann-qsort.cc
+  sequential/bingmann-lcp-mergesort.cc
   rantala/burstsort.cc
   rantala/burstsort2.cc
   rantala/burstsort_mkq.cc
