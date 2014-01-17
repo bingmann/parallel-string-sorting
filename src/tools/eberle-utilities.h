@@ -23,7 +23,7 @@
 #ifndef UTILITY_FUNCTIONS_H_
 #define UTILITY_FUNCTIONS_H_
 
-#include <stdlib.h>
+#include <utility>
 
 namespace eberle_utils
 {

@@ -1,5 +1,5 @@
 /******************************************************************************
- * src/eberle/utils/eberle-inssort-lcp.h
+ * src/sequential/eberle-inssort-lcp.h
  *
  * LCP aware insertion sort.
  *
@@ -23,7 +23,7 @@
 #ifndef EBERLE_INSSORT_H_
 #define EBERLE_INSSORT_H_
 
-#include <stdlib.h>
+#include <iostream>
 #include "../tools/stringtools.h"
 
 //#define EBERLE_INSSORT_CHECK_LCPS

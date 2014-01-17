@@ -23,7 +23,7 @@
 #ifndef EBERLE_MERGESORT_LCP_LOSERTREE_H_
 #define EBERLE_MERGESORT_LCP_LOSERTREE_H_
 
-#include <iostream>
+#include <utility>
 
 #include "../tools/eberle-utilities.h"
 #include "../tools/eberle-lcp-losertree.h"
@@ -48,7 +48,7 @@ eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp, co
     }
 
     //create ranges of the parts
-    pair < size_t, size_t > ranges[K];
+    std::pair<size_t, size_t> ranges[K];
     eberle_utils::calculateRanges(ranges, K, length);
 
     // execute mergesorts for parts

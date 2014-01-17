@@ -1,5 +1,5 @@
 /******************************************************************************
- * src/eberle/sequential/eberle-mergesort-lcp.h
+ * src/sequential/eberle-mergesort-lcp.h
  *
  * LCP aware binary mergesort.
  *
@@ -22,8 +22,6 @@
 
 #ifndef EBERLE_MERGESORT_LCP_H_
 #define EBERLE_MERGESORT_LCP_H_
-
-#include <iostream>
 
 #include "../tools/stringtools.h"
 #include "../tools/statsfile.h"

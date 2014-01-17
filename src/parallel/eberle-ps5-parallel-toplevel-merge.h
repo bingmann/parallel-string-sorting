@@ -25,6 +25,9 @@
 #define EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
 
 #include <iostream>
+#include <algorithm>
+#include <utility>
+#include <limits>
 
 #include "../tools/eberle-utilities.h"
 #include "../tools/eberle-lcp-losertree.h"
@@ -41,8 +44,8 @@
 
 namespace eberle_ps5_parallel_toplevel_merge
 {
-
-using namespace std;
+using std::pair;
+using std::numeric_limits;
 
 using namespace eberle_lcp_utils;
 using namespace eberle_utils;
@@ -155,7 +158,6 @@ struct MergeJob : public Job
         {
             DBG(debug_job_details, "" << k << ": " << ranges[k].first << " length: " << ranges[k].second);
         }
-        DBG(debug_job_details, endl);
     }
 
     /*
@@ -198,7 +200,7 @@ struct MergeJob : public Job
         if (!mergeToOutput(jobQueue, loserTree))
         {
             // share work
-            pair < size_t, size_t > newRanges[K];
+            pair<size_t, size_t> newRanges[K];
             loserTree.getRangesOfRemaining(newRanges, input);
 
             createJobs(jobQueue, input, output, newRanges, K, length, nextBaseLcp);
@@ -274,8 +276,8 @@ enqueueMergeJob(JobQueue& jobQueue, const LcpStringPtr& input, string* output, p
         jobQueue.enqueue(new MergeJob<64>(input, output, ranges, length, baseLcp, nextBaseLcp));
         break;
     default:
-        cerr << "CANNOT MERGE! TO MANY STREAMS: " << numStreams;
-        break;
+        DBG(1, "CANNOT MERGE! TO MANY STREAMS: " << numStreams);
+        abort();
     }
 }
 
@@ -300,14 +302,14 @@ findNextSplitter(LcpStringPtr& inputStream, const LcpStringPtr& end, lcp_t baseL
         }
     }
 
-    lastCharacter = numeric_limits < CHAR_TYPE > ::max();
+    lastCharacter = numeric_limits<CHAR_TYPE>::max();
     return length;
 }
 
 static inline void
 createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<size_t, size_t>* ranges, unsigned numStreams, size_t numberOfElements, lcp_t baseLcp)
 {
-    DBG(debug_job_creation, endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements);
+    DBG(debug_job_creation, std::endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements);
 
     LcpStringPtr inputStreams[numStreams];
     LcpStringPtr ends[numStreams];
@@ -323,12 +325,12 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
         }
         else
         {
-            splitterCharacter[k] = numeric_limits < CHAR_TYPE > ::max();
+            splitterCharacter[k] = numeric_limits<CHAR_TYPE>::max();
         }
     }
 
     const unsigned overProvFactor = 500;
-    const size_t expectedJobLength = max(MERGE_BULK_SIZE, numberOfElements / (overProvFactor * numa_num_configured_cpus()));
+    const size_t expectedJobLength = std::max(MERGE_BULK_SIZE, numberOfElements / (overProvFactor * numa_num_configured_cpus()));
 
     DBG(debug_job_creation, "Expected job length: " << expectedJobLength);
 
@@ -366,7 +368,7 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
             }
         }
 
-        if (currBucket == (numeric_limits < CHAR_TYPE > ::max() & keyMask))
+        if (currBucket == (numeric_limits<CHAR_TYPE>::max() & keyMask))
         {
             break;
         }
@@ -411,12 +413,12 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
                 const unsigned idx = indexesOfFound[k];
                 const LcpStringPtr inputStart = inputStreams[idx];
                 size_t currLength = findNextSplitter(inputStreams[idx], ends[idx], baseLcp, maxAllowedLcp, splitterCharacter[idx], keyMask);
-                newRange[k] = make_pair(inputStart - input, currLength);
+                newRange[k] = std::make_pair(inputStart - input, currLength);
                 length += currLength;
             }
             for (; k < numNewStreams; k++)
             {
-                newRange[k] = make_pair(0, 0); // this stream is not used
+                newRange[k] = std::make_pair(0, 0); // this stream is not used
             }
 
             enqueueMergeJob(jobQueue, input, output, newRange, length, numNewStreams, baseLcp, maxAllowedLcp + 1);
@@ -435,13 +437,13 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr& input, string* output, pair<s
 
         if (diffExpectedReal <= -tollerance)
         {
-            keyWidth = max(unsigned(1), keyWidth - 1);
+            keyWidth = std::max(unsigned(1), keyWidth - 1);
 
             DBG(debug_job_creation, "decreased key to " << keyWidth << "  diff: " << diffExpectedReal);
         }
         else if (diffExpectedReal >= tollerance)
         {
-            keyWidth = min(unsigned(8), keyWidth + 1);
+            keyWidth = std::min(unsigned(8), keyWidth + 1);
 
             DBG(debug_job_creation, "increased key to " << keyWidth << "  diff: " << diffExpectedReal);
         }
@@ -471,7 +473,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
         DBG(1, "pS5-LCP-Mergesort is designed for NUMA systems.");
     }
 
-    unsigned numNumaNodes = max(unsigned(4), unsigned(realNumaNodes)); // this max ensures a parallel merge on developer machine
+    unsigned numNumaNodes = std::max(unsigned(4), unsigned(realNumaNodes)); // this max ensures a parallel merge on developer machine
     int numThreadsPerNode = numa_num_configured_cpus() / numNumaNodes;
     if (numThreadsPerNode < 1) numThreadsPerNode = 1;
 
@@ -502,7 +504,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     parallelMerge(lcpStringPtr, strings, ranges, n, numNumaNodes);
     timer.stop();
 
-    DBG(debug_toplevel_merge_duration, cout << endl << "top level merge needed: " << timer.delta() << " s" << endl);
+    DBG(debug_toplevel_merge_duration, std::endl << "top level merge needed: " << timer.delta() << " s" << std::endl);
 
     delete[] shadow;
     delete[] tmp;
