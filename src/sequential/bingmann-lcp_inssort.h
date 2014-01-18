@@ -149,9 +149,9 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
     }
 }
 
-//! LCP insertion sort, shorter
+//! LCP insertion sort, close to journal's pseudo-code
 static inline
-void lcp_insertion_sort_shorter(string* str, uintptr_t* lcp, size_t n, size_t depth)
+void lcp_insertion_sort_pseudocode(string* str, uintptr_t* lcp, size_t n, size_t depth)
 {
     unsigned int cmp = 0;
 
@@ -203,7 +203,7 @@ void lcp_insertion_sort_shorter(string* str, uintptr_t* lcp, size_t n, size_t de
         lcp[i + 1] = h;
     }
 
-    std::cout << "cmp = " << cmp << "\n";
+    std::cout << "lcp_inssort comparisons = " << cmp << "\n";
 }
 
 // *** Externally Called Functions ***
@@ -239,23 +239,23 @@ CONTESTANT_REGISTER(test_lcp_insertion_sort, "bingmann/lcp_insertion_sort",
                     "LCP-aware insertion sort")
 
 static inline
-void test_lcp_insertion_sort_checked(string* strings, size_t n)
+void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
 {
     string* shadow = new string[n+1]; // allocate shadow pointer array
     StringPtr strptr(strings, shadow, n);
 
     strptr.lcp(0) = 42; // must keep lcp[0] unchanged
 
-    lcp_insertion_sort_shorter(strptr.active(), strptr.lcparray(), n, 0);
+    lcp_insertion_sort_pseudocode(strptr.active(), strptr.lcparray(), n, 0);
 
     stringtools::verify_lcp(strptr.active(), strptr.lcparray(), n, 42);
 
     delete [] shadow;
 }
 
-CONTESTANT_REGISTER(test_lcp_insertion_sort_checked,
-    "bingmann/lcp_insertion_sort_checked",
-    "LCP-aware insertion sort with checking")
+CONTESTANT_REGISTER(test_lcp_insertion_sort_pseudocode,
+    "bingmann/lcp_insertion_sort_pseudocode",
+    "LCP-aware insertion sort close to pseudo-code, with checking")
 
 static inline
 void test_lcp_insertion_sort_nolcp(string* strings, size_t n)

@@ -1,8 +1,8 @@
 /******************************************************************************
  * src/sequential/bingmann-lcp-mergesort.h
  *
- * LCP aware binary mergesort, implemented to verify pseudo-code in journal.
- * Not necessarily the fastest implementation, and just binary.
+ * LCP aware binary and k-way mergesort, implemented to verify pseudo-code in
+ * journal.  Not necessarily the fastest implementations.
  *
  ******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
@@ -30,6 +30,7 @@
 
 #include "../tools/stringtools.h"
 #include "../tools/contest.h"
+#include "bingmann-lcp_inssort.h"
 
 namespace bingmann_lcp_mergesort
 {
@@ -163,7 +164,7 @@ lcp_mergesort_binary(string *strings, const LcpStringPtr& tmp, const LcpStringPt
                      output.strings, output.lcps);
 }
 
-void
+static inline void
 lcp_mergesort_binary(string *strings, size_t n)
 {
     // Allocate memory for LCPs and temporary string array
@@ -185,7 +186,220 @@ lcp_mergesort_binary(string *strings, size_t n)
     delete[] tmpLcps;
 }
 
-CONTESTANT_REGISTER(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary", "Binary Mergesort with LCP-merge by Andreas Eberle and Timo Bingmann")
+CONTESTANT_REGISTER(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
+    "Binary Mergesort with LCP-merge by Andreas Eberle and Timo Bingmann")
+
+////////////////////////////////////////////////////////////////////////////////
+
+template <unsigned K>
+class LcpLoserTree
+{
+    struct STREAM
+    {
+        LcpStringPtr elements;
+        unsigned length;
+        bool isEmpty;
+    };
+
+private:
+    STREAM streams[K];
+    unsigned nodes[K];
+    lcp_t lcps[K];
+
+    /*
+     * Returns the winner of all games.
+     */
+    inline unsigned
+    updateNode(unsigned &defenderIdx, unsigned contenderIdx)
+    {
+        const STREAM* defenderStream = streams + defenderIdx;
+
+        if (defenderStream->isEmpty)
+            return contenderIdx;
+
+        const STREAM* contenderStream = streams + contenderIdx;
+
+        lcp_t* contenderLcp = lcps + contenderIdx;
+        lcp_t* defenderLcp = lcps + defenderIdx;
+
+        if (contenderStream->isEmpty || *defenderLcp > *contenderLcp)
+        { // CASE 2: curr->lcp > contender->lcp => curr < contender
+            std::swap(defenderIdx, contenderIdx);
+
+        }
+        else if (*defenderLcp == *contenderLcp)
+        { // CASE 1: curr.lcp == contender.lcp
+            lcp_t lcp = *defenderLcp;
+            string s1 = defenderStream->elements.str() + lcp;
+            string s2 = contenderStream->elements.str() + lcp;
+
+            // check the strings starting after lcp and calculate new lcp
+            while (*s1 != 0 && *s1 == *s2)
+                s1++, s2++, lcp++;
+
+            if (*s1 < *s2)
+            { 	// CASE 1.1: curr < contender
+                *contenderLcp = lcp;
+                std::swap(defenderIdx, contenderIdx);
+            }
+            else
+            {	// CASE 1.2: curr >= contender
+                *defenderLcp = lcp;
+            }
+        } // else // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
+
+        return contenderIdx;
+    }
+
+    inline void
+    initTree(lcp_t knownCommonLcp)
+    {
+        for (unsigned i = 0; i < K; i++)
+        {
+            lcps[i] = knownCommonLcp;
+            unsigned nodeIdx = K + i;
+            unsigned contenderIdx = i;
+
+            while (nodeIdx % 2 == 1 && nodeIdx > 1)
+            {
+                nodeIdx >>= 1;
+                contenderIdx = updateNode(nodes[nodeIdx], contenderIdx);
+            }
+            nodes[nodeIdx >> 1] = contenderIdx;
+        }
+    }
+
+    inline void
+    removeTopFromStream(unsigned streamIdx)
+    {
+        STREAM* stream = streams + streamIdx;
+
+        stream->length--;
+        ++(stream->elements);
+        stream->isEmpty = stream->length <= 0;
+
+        if (!stream->isEmpty)
+        {
+            lcps[streamIdx] = stream->elements.lcp();
+        }
+    }
+
+public:
+    LcpLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
+    {
+        for (unsigned i = 0; i < K; i++)
+        {
+            const std::pair<size_t, size_t> currRange = ranges[i];
+            STREAM* curr = streams + i;
+            curr->elements = input + currRange.first;
+            curr->length = currRange.second;
+            curr->isEmpty = (curr->length <= 0);
+        }
+
+        initTree(knownCommonLcp);
+    }
+
+    inline void
+    writeElementsToStream(LcpStringPtr outStream, const size_t length)
+    {
+        const LcpStringPtr end = outStream + length;
+        unsigned contenderIdx = nodes[0];
+
+        while (outStream < end)
+        {
+            outStream.set(streams[contenderIdx].elements.str(), lcps[contenderIdx]);
+            ++outStream;
+
+            removeTopFromStream(contenderIdx);
+
+            for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
+            {
+                contenderIdx = updateNode(nodes[nodeIdx], contenderIdx);
+            }
+        }
+
+        nodes[0] = contenderIdx;
+    }
+};
+
+template <unsigned K>
+static inline void
+lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
+{
+    if (length <= 2 * K)
+    {
+        memcpy(output.strings, strings, length * sizeof(string));
+        return bingmann_lcp_inssort::lcp_insertion_sort(output.strings, output.lcps, length, 0);
+    }
+
+    // create ranges of the parts
+    std::pair<size_t, size_t> ranges[K];
+
+    const size_t split = length / K;
+    for (unsigned i = 0; i < K - 1; ++i)
+    {
+        ranges[i] = std::make_pair(i * split, split);
+    }
+    ranges[K - 1] = std::make_pair((K - 1) * split, length - (K - 1) * split);
+
+    // execute mergesorts for parts
+    for (unsigned i = 0; i < K; i++)
+    {
+        const size_t offset = ranges[i].first;
+        lcp_mergesort_kway<K>(strings + offset, output + offset, tmp + offset, ranges[i].second);
+    }
+
+    // K-way merge
+    LcpLoserTree<K> loserTree(tmp, ranges);
+    loserTree.writeElementsToStream(output, length);
+}
+
+// K must be a power of two
+template <unsigned K>
+static inline void
+lcp_mergesort_kway(string *strings, size_t n)
+{
+    lcp_t* outputLcps = new lcp_t[n+1];
+    string* tmpStrings = new string[n];
+    lcp_t* tmpLcps = new lcp_t[n+1];
+
+    LcpStringPtr output(strings, outputLcps);
+    LcpStringPtr tmp(tmpStrings, tmpLcps);
+
+    lcp_mergesort_kway<K>(strings, tmp, output, n);
+
+    // check lcps
+    stringtools::verify_lcp(output.strings, output.lcps, n, 0);
+
+    delete[] outputLcps;
+    delete[] tmpStrings;
+    delete[] tmpLcps;
+}
+
+static inline void
+lcp_mergesort_4way(string *strings, size_t n)
+{
+    lcp_mergesort_kway<4>(strings, n);
+}
+
+static inline void
+lcp_mergesort_8way(string *strings, size_t n)
+{
+    lcp_mergesort_kway<8>(strings, n);
+}
+
+static inline void
+lcp_mergesort_16way(string *strings, size_t n)
+{
+    lcp_mergesort_kway<16>(strings, n);
+}
+
+CONTESTANT_REGISTER(lcp_mergesort_4way, "bingmann/lcp_mergesort_4way",
+                    "4-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
+CONTESTANT_REGISTER(lcp_mergesort_8way, "bingmann/lcp_mergesort_8way",
+                    "8-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
+CONTESTANT_REGISTER(lcp_mergesort_16way, "bingmann/lcp_mergesort_16way",
+                    "16-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
 
 }
 // namespace bingmann_lcp_mergesort
