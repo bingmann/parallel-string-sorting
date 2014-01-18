@@ -5,6 +5,7 @@
  *
  ******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
+ * Copyright (C) 2014 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -40,10 +41,10 @@ typedef unsigned char* string;
 
 //implementation follows
 
-template<unsigned NUMBER_OF_STREAMS>
+template<unsigned K>
 class LcpStringLoserTree
 {
-    struct STREAM
+    struct Stream
     {
         LcpStringPtr elements;
         unsigned length;
@@ -51,38 +52,37 @@ class LcpStringLoserTree
     };
 
 private:
-    STREAM streams[NUMBER_OF_STREAMS];
-    unsigned nodes[NUMBER_OF_STREAMS];
-    lcp_t lcps[NUMBER_OF_STREAMS];
+    Stream streams[K];
+    unsigned nodes[K];
+    lcp_t lcps[K];
 
     /*
      * Returns the winner of all games.
      */
-    inline unsigned
-    updateNode(unsigned &defenderIdx, unsigned contenderIdx)
+    inline void
+    updateNode(unsigned &defenderIdx, unsigned &contenderIdx)
     {
-        const STREAM* defenderStream = streams + defenderIdx;
+        const Stream& defenderStream = streams[defenderIdx];
 
-        if (defenderStream->isEmpty)
-        {
-            return contenderIdx;
-        }
+        if (defenderStream.isEmpty)
+            return;
 
-        const STREAM* contenderStream = streams + contenderIdx;
+        const Stream& contenderStream = streams[contenderIdx];
 
-        lcp_t* contenderLcp = lcps + contenderIdx;
-        lcp_t* defenderLcp = lcps + defenderIdx;
+        lcp_t& contenderLcp = lcps[contenderIdx];
+        lcp_t& defenderLcp = lcps[defenderIdx];
 
-        if (contenderStream->isEmpty || *defenderLcp > *contenderLcp)
+        if (contenderStream.isEmpty || defenderLcp > contenderLcp)
         { // CASE 2: curr->lcp > contender->lcp => curr < contender
             std::swap(defenderIdx, contenderIdx);
 
         }
-        else if (*defenderLcp == *contenderLcp)
+        else if (defenderLcp == contenderLcp)
         { // CASE 1: curr.lcp == contender.lcp
-            lcp_t lcp = *defenderLcp;
-            string s1 = defenderStream->elements.str() + lcp;
-            string s2 = contenderStream->elements.str() + lcp;
+            lcp_t lcp = defenderLcp;
+
+            string s1 = defenderStream.elements.str() + lcp;
+            string s2 = contenderStream.elements.str() + lcp;
 
             // check the strings starting after lcp and calculate new lcp
             while (*s1 != '\0' && *s1 == *s2)
@@ -90,31 +90,29 @@ private:
 
             if (*s1 < *s2)
             { 	// CASE 1.1: curr < contender
-                *contenderLcp = lcp;
+                contenderLcp = lcp;
                 std::swap(defenderIdx, contenderIdx);
             }
             else
             {	// CASE 1.2: curr >= contender
-                *defenderLcp = lcp;
+                defenderLcp = lcp;
             }
         } // else // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
-
-        return contenderIdx;
     }
 
     inline void
     initTree(lcp_t knownCommonLcp)
     {
-        for (unsigned i = 0; i < NUMBER_OF_STREAMS; i++)
+        for (unsigned i = 0; i < K; i++)
         {
             lcps[i] = knownCommonLcp;
-            unsigned nodeIdx = NUMBER_OF_STREAMS + i;
+            unsigned nodeIdx = K + i;
             unsigned contenderIdx = i;
 
             while (nodeIdx % 2 == 1 && nodeIdx > 1)
             {
                 nodeIdx >>= 1;
-                contenderIdx = updateNode(nodes[nodeIdx], contenderIdx);
+                updateNode(nodes[nodeIdx], contenderIdx);
             }
             nodes[nodeIdx >> 1] = contenderIdx;
         }
@@ -123,25 +121,25 @@ private:
     inline void
     removeTopFromStream(unsigned streamIdx)
     {
-        STREAM* stream = streams + streamIdx;
+        Stream& stream = streams[streamIdx];
 
-        stream->length--;
-        ++(stream->elements);
-        stream->isEmpty = stream->length <= 0;
+        stream.length--;
+        ++(stream.elements);
+        stream.isEmpty = (stream.length <= 0);
 
-        if (!stream->isEmpty)
+        if (!stream.isEmpty)
         {
-            lcps[streamIdx] = stream->elements.lcp();
+            lcps[streamIdx] = stream.elements.lcp();
         }
     }
 
 public:
     LcpStringLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
     {
-        for (unsigned i = 0; i < NUMBER_OF_STREAMS; i++)
+        for (unsigned i = 0; i < K; i++)
         {
             const std::pair<size_t, size_t> currRange = ranges[i];
-            STREAM* curr = streams + i;
+            Stream* curr = streams + i;
             curr->elements = input + currRange.first;
             curr->length = currRange.second;
             curr->isEmpty = (curr->length <= 0);
@@ -155,7 +153,7 @@ public:
     {
         unsigned levelSize = 1;
 
-        for (unsigned i = 0; i < NUMBER_OF_STREAMS; ++i)
+        for (unsigned i = 0; i < K; ++i)
         {
             if (i >= levelSize)
             {
@@ -166,9 +164,9 @@ public:
         }
         std::cout << std::endl;
 
-        for (unsigned i = 0; i < NUMBER_OF_STREAMS; ++i)
+        for (unsigned i = 0; i < K; ++i)
         {
-            STREAM* stream = streams + i;
+            Stream* stream = streams + i;
             if (stream.length > 0)
             {
                 std::cout << lcps[i] << "|" << stream->elements.str();
@@ -196,9 +194,9 @@ public:
 
             removeTopFromStream(contenderIdx);
 
-            for (unsigned nodeIdx = (NUMBER_OF_STREAMS + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
+            for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
             {
-                contenderIdx = updateNode(nodes[nodeIdx], contenderIdx);
+                updateNode(nodes[nodeIdx], contenderIdx);
             }
         }
 
@@ -218,9 +216,9 @@ public:
 
             removeTopFromStream(contenderIdx);
 
-            for (unsigned nodeIdx = (NUMBER_OF_STREAMS + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
+            for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
             {
-                contenderIdx = updateNode(nodes[nodeIdx], contenderIdx);
+                updateNode(nodes[nodeIdx], contenderIdx);
             }
         }
 
@@ -230,7 +228,7 @@ public:
     inline void
     getRangesOfRemaining(std::pair<size_t, size_t>* ranges, const LcpStringPtr& inputBase)
     {
-        for (unsigned k = 0; k < NUMBER_OF_STREAMS; k++)
+        for (unsigned k = 0; k < K; k++)
         {
             ranges[k] = std::make_pair(size_t(streams[k].elements - inputBase), streams[k].length);
         }

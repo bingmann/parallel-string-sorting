@@ -194,7 +194,7 @@ CONTESTANT_REGISTER(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
 template <unsigned K>
 class LcpLoserTree
 {
-    struct STREAM
+    struct Stream
     {
         LcpStringPtr elements;
         unsigned length;
@@ -202,36 +202,37 @@ class LcpLoserTree
     };
 
 private:
-    STREAM streams[K];
+    Stream streams[K];
     unsigned nodes[K];
     lcp_t lcps[K];
 
     /*
      * Returns the winner of all games.
      */
-    inline unsigned
-    updateNode(unsigned &defenderIdx, unsigned contenderIdx)
+    inline void
+    updateNode(unsigned &defenderIdx, unsigned &contenderIdx)
     {
-        const STREAM* defenderStream = streams + defenderIdx;
+        const Stream& defenderStream = streams[defenderIdx];
 
-        if (defenderStream->isEmpty)
-            return contenderIdx;
+        if (defenderStream.isEmpty)
+            return;
 
-        const STREAM* contenderStream = streams + contenderIdx;
+        const Stream& contenderStream = streams[contenderIdx];
 
-        lcp_t* contenderLcp = lcps + contenderIdx;
-        lcp_t* defenderLcp = lcps + defenderIdx;
+        lcp_t& contenderLcp = lcps[contenderIdx];
+        lcp_t& defenderLcp = lcps[defenderIdx];
 
-        if (contenderStream->isEmpty || *defenderLcp > *contenderLcp)
+        if (contenderStream.isEmpty || defenderLcp > contenderLcp)
         { // CASE 2: curr->lcp > contender->lcp => curr < contender
             std::swap(defenderIdx, contenderIdx);
 
         }
-        else if (*defenderLcp == *contenderLcp)
+        else if (defenderLcp == contenderLcp)
         { // CASE 1: curr.lcp == contender.lcp
-            lcp_t lcp = *defenderLcp;
-            string s1 = defenderStream->elements.str() + lcp;
-            string s2 = contenderStream->elements.str() + lcp;
+            lcp_t lcp = defenderLcp;
+
+            string s1 = defenderStream.elements.str() + lcp;
+            string s2 = contenderStream.elements.str() + lcp;
 
             // check the strings starting after lcp and calculate new lcp
             while (*s1 != 0 && *s1 == *s2)
@@ -239,16 +240,14 @@ private:
 
             if (*s1 < *s2)
             { 	// CASE 1.1: curr < contender
-                *contenderLcp = lcp;
+                contenderLcp = lcp;
                 std::swap(defenderIdx, contenderIdx);
             }
             else
             {	// CASE 1.2: curr >= contender
-                *defenderLcp = lcp;
+                defenderLcp = lcp;
             }
         } // else // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
-
-        return contenderIdx;
     }
 
     inline void
@@ -263,7 +262,7 @@ private:
             while (nodeIdx % 2 == 1 && nodeIdx > 1)
             {
                 nodeIdx >>= 1;
-                contenderIdx = updateNode(nodes[nodeIdx], contenderIdx);
+                updateNode(nodes[nodeIdx], contenderIdx);
             }
             nodes[nodeIdx >> 1] = contenderIdx;
         }
@@ -272,15 +271,15 @@ private:
     inline void
     removeTopFromStream(unsigned streamIdx)
     {
-        STREAM* stream = streams + streamIdx;
+        Stream& stream = streams[streamIdx];
 
-        stream->length--;
-        ++(stream->elements);
-        stream->isEmpty = stream->length <= 0;
+        stream.length--;
+        ++(stream.elements);
+        stream.isEmpty = (stream.length <= 0);
 
-        if (!stream->isEmpty)
+        if (!stream.isEmpty)
         {
-            lcps[streamIdx] = stream->elements.lcp();
+            lcps[streamIdx] = stream.elements.lcp();
         }
     }
 
@@ -290,7 +289,7 @@ public:
         for (unsigned i = 0; i < K; i++)
         {
             const std::pair<size_t, size_t> currRange = ranges[i];
-            STREAM* curr = streams + i;
+            Stream* curr = streams + i;
             curr->elements = input + currRange.first;
             curr->length = currRange.second;
             curr->isEmpty = (curr->length <= 0);
@@ -314,7 +313,7 @@ public:
 
             for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
             {
-                contenderIdx = updateNode(nodes[nodeIdx], contenderIdx);
+                updateNode(nodes[nodeIdx], contenderIdx);
             }
         }
 
