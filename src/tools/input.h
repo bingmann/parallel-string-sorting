@@ -27,20 +27,20 @@ bool check_memory_type(const std::string& memtype)
 {
     if (memtype == "malloc") return true;
     if (memtype == "mmap") return true;
-    if (memtype == "interleaved") return true;
+    if (memtype == "interleave") return true;
     if (memtype == "node0") return true;
     if (memtype == "segment") return true;
-    if (memtype == "mmap_interleaved") return true;
+    if (memtype == "mmap_interleave") return true;
     if (memtype == "mmap_node0") return true;
     if (memtype == "mmap_segment") return true;
 
     std::cout << "Following --memory types are available:" << std::endl
               << "  malloc        use plain malloc() call (default)" << std::endl
               << "  mmap          use mmap() to allocate private memory" << std::endl
-              << "  interleaved   use libnuma to interleave onto nodes" << std::endl
+              << "  interleave    use libnuma to interleave onto nodes" << std::endl
               << "  node0         pin memory to numa node 0" << std::endl
               << "  segment       segment characters equally onto all numa nodes" << std::endl
-              << "  mmap_{interleaved,node0,segment} combination of mmap and numa allocation" << std::endl
+              << "  mmap_{interleave,node0,segment} combination of mmap and numa allocation" << std::endl
         ;
 
     return false;
@@ -80,7 +80,7 @@ void free_stringdata()
     if (!g_string_databuff) return;
 
     if (gopt_memory_type == "mmap" ||
-        gopt_memory_type == "mmap_interleaved" ||
+        gopt_memory_type == "mmap_interleave" ||
         gopt_memory_type == "mmap_node0" ||
         gopt_memory_type == "mmap_segment")
     {
@@ -88,7 +88,7 @@ void free_stringdata()
             std::cout << "Error unmapping string data memory: " << strerror(errno) << std::endl;
         }
     }
-    else if (gopt_memory_type == "interleaved" ||
+    else if (gopt_memory_type == "interleave" ||
              gopt_memory_type == "node0" ||
              gopt_memory_type == "segment")
     {
@@ -114,7 +114,7 @@ char* allocate_stringdata(size_t size, const std::string& path)
 
     char* stringdata;
     if (gopt_memory_type == "mmap" ||
-        gopt_memory_type == "mmap_interleaved" ||
+        gopt_memory_type == "mmap_interleave" ||
         gopt_memory_type == "mmap_node0" ||
         gopt_memory_type == "mmap_segment")
     {
@@ -124,14 +124,14 @@ char* allocate_stringdata(size_t size, const std::string& path)
             return NULL;
         }
 
-        if (gopt_memory_type == "mmap_interleaved")
+        if (gopt_memory_type == "mmap_interleave")
             numa_interleave_memory(stringdata, g_string_buffsize, numa_all_cpus_ptr);
         if (gopt_memory_type == "mmap_node0")
             numa_tonode_memory(stringdata, g_string_buffsize, 0);
         if (gopt_memory_type == "mmap_segment")
             do_numa_segment(stringdata, g_string_buffsize);
     }
-    else if (gopt_memory_type == "interleaved")
+    else if (gopt_memory_type == "interleave")
     {
         stringdata = (char*)numa_alloc_interleaved(g_string_buffsize);
     }
