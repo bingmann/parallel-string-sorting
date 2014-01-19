@@ -56,7 +56,7 @@
 namespace bingmann_parallel_sample_sort {
 
 #define CONTESTANT_REGISTER_PARALLEL_LCP(func,name,desc) \
-    CONTESTANT_REGISTER_PARALLEL(func, name "_nolcp", desc "_nolcp")
+    CONTESTANT_REGISTER_PARALLEL(func, name, desc)
 
 //#define CONTESTANT_REGISTER_PARALLEL_LCP CONTESTANT_REGISTER_PARALLEL
 
