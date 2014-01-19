@@ -686,10 +686,15 @@ int main(int argc, char* argv[])
         { 0,0,0,0 },
     };
 
+#ifndef GIT_VERSION_SHA1
+#define GIT_VERSION_SHA1 "unknown"
+#endif
+
     {
         char hostname[128];
         gethostname(hostname, sizeof(hostname));
-        std::cout << "Running parallel-string-sorting test on " << hostname << std::endl;
+        std::cout << "Running parallel-string-sorting " << GIT_VERSION_SHA1
+                  << " on " << hostname << std::endl;
 
         std::cout << "Called as";
         for (int i = 0; i < argc; ++i)

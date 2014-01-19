@@ -8,11 +8,22 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 option(WITH_MALLOC_COUNT "Use malloc_count for memory profiling" OFF)
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 # disallow in-source builds
 
 if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
    message(SEND_ERROR "In-source builds are not allowed.")
 endif("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
+
+# read .git directory (if it exists) and find git sha
+
+include(GetGitRevisionDescription)
+get_git_head_revision(GIT_VERSION_REFSPEC GIT_VERSION_SHA1)
+if(GIT_VERSION_REFSPEC)
+  message(STATUS "Detected git refspec ${GIT_VERSION_REFSPEC} sha ${GIT_VERSION_SHA1}")
+  add_definitions("-DGIT_VERSION_SHA1=\"${GIT_VERSION_SHA1}\"")
+endif()
 
 # compilation options 
 
