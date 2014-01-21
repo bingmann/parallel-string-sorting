@@ -38,9 +38,9 @@ namespace bingmann_lcp_mergesort
 using namespace stringtools;
 
 static inline void
-lcp_compare(int a, string inputA, lcp_t lcpA,
-            int b, string inputB, lcp_t lcpB,
-            int& output, lcp_t& outputLcp)
+lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
+            unsigned int b, string inputB, lcp_t lcpB,
+            unsigned int& outSmaller, unsigned int& outLarger, lcp_t& outLcpAB, lcp_t& outLcpSmaller)
 {
     if (lcpA == lcpB)
     { // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
@@ -54,26 +54,36 @@ lcp_compare(int a, string inputA, lcp_t lcpA,
         const lcp_t h = sA - inputA;
 
         if (*sA <= *sB) // CASE 1.1: s1 <= s2
-        { 	
-            output = a;
-            outputLcp = h;
+        {
+            outSmaller = a;
+            outLarger = b;
+            outLcpAB = h;
+            outLcpSmaller = lcpA;
         }
         else // CASE 1.2: s1 > s2
         {
-            output = b;
-            outputLcp = h;
+            outSmaller = b;
+            outLarger = a;
+            outLcpAB = h;
+            outLcpSmaller = lcpB;
         }
     }
     else if (lcpA > lcpB) // CASE 2: lcp1 < lcp2 -> s_1 > s_2
     {
-        output = a;
-        outputLcp = lcpB;
+        outSmaller = a;
+        outLarger = b;
+        outLcpAB = lcpB;
+        outLcpSmaller = lcpA;
     }
     else // CASE 3: lcp1 > lcp2 -> s_1 < s_2
     {
-        output = b;
-        outputLcp = lcpA;
+        outSmaller = b;
+        outLarger = a;
+        outLcpAB = lcpA;
+        outLcpSmaller = lcpB;
     }
+
+    assert( calc_lcp(inputA, inputB) == outLcpAB );
 }
 
 static inline void
@@ -92,18 +102,17 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
     //do the merge
     while (input1 < end1 && input2 < end2)
     {
-        int cmp;
-        lcp_t cmpLcp;
+        unsigned int cmpSmaller, cmpLarger;
+        lcp_t cmpLcp, cmpLcpSmaller;
 
         //std::cout << "prev = " << prev << " - input1 = " << *input1 << "\n";
         assert( calc_lcp(prev, *input1) == lcp1 );
         assert( calc_lcp(prev, *input2) == lcp2 );
 
-        lcp_compare(1, *input1, lcp1, 2, *input2, lcp2, cmp, cmpLcp);
+        lcp_compare(0, *input1, lcp1, 1, *input2, lcp2,
+                    cmpSmaller, cmpLarger, cmpLcp, cmpLcpSmaller);
 
-        assert( calc_lcp(*input1, *input2) == cmpLcp );
-
-        if (cmp == 1)
+        if (cmpSmaller == 0)
         {
             prev = *input1;
             *output++ = *input1;
@@ -201,35 +210,44 @@ class LcpLoserTree
         bool isEmpty;
     };
 
+    struct Node
+    {
+        unsigned int idx;
+        lcp_t lcp;
+    };
+
 private:
     Stream streams[K];
-    unsigned nodes[K];
-    lcp_t lcps[K];
+    Node nodes[K];
 
-    /*
-     * Returns the winner of all games.
-     */
+    //! play one comparison edge game: contender is the node below
+    //! defender. After the game, defender contains the lower index, contender
+    //! the winning index, and defender.lcp = lcp(s_loser,s_winner).
     inline void
-    updateNode(unsigned &defenderIdx, unsigned &contenderIdx)
+    updateNode(Node& contender, Node& defender)
     {
-        const Stream& defenderStream = streams[defenderIdx];
+        const Stream& defenderStream = streams[defender.idx];
 
         if (defenderStream.isEmpty)
             return;
 
-        const Stream& contenderStream = streams[contenderIdx];
+        const Stream& contenderStream = streams[contender.idx];
 
-        lcp_t& contenderLcp = lcps[contenderIdx];
-        lcp_t& defenderLcp = lcps[defenderIdx];
-
-        if (contenderStream.isEmpty || defenderLcp > contenderLcp)
-        { // CASE 2: curr->lcp > contender->lcp => curr < contender
-            std::swap(defenderIdx, contenderIdx);
-
+        if (contenderStream.isEmpty)
+        {
+            std::swap(defender, contender);
+            return;
         }
-        else if (defenderLcp == contenderLcp)
-        { // CASE 1: curr.lcp == contender.lcp
-            lcp_t lcp = defenderLcp;
+#if 1
+        if (defender.lcp > contender.lcp)
+        {
+            // CASE 2: curr->lcp > contender->lcp => curr < contender
+            std::swap(defender, contender);
+        }
+        else if (defender.lcp == contender.lcp)
+        {
+            // CASE 1: compare more characters
+            lcp_t lcp = defender.lcp;
 
             string s1 = defenderStream.elements.str() + lcp;
             string s2 = contenderStream.elements.str() + lcp;
@@ -238,16 +256,25 @@ private:
             while (*s1 != 0 && *s1 == *s2)
                 s1++, s2++, lcp++;
 
-            if (*s1 < *s2)
-            { 	// CASE 1.1: curr < contender
-                contenderLcp = lcp;
-                std::swap(defenderIdx, contenderIdx);
-            }
-            else
-            {	// CASE 1.2: curr >= contender
-                defenderLcp = lcp;
-            }
-        } // else // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
+            if (*s1 < *s2) // CASE 1.1: curr < contender
+                std::swap(defender, contender);
+
+            // update inner node with lcp(s_1,s_2)
+            defender.lcp = lcp;
+        }
+        else {
+            // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
+        }
+#else
+        lcp_compare(contender.idx, contenderStream.elements.str(), contender.lcp,
+                    defender.idx, defenderStream.elements.str(), defender.lcp,
+                    contender.idx, defender.idx, defender.lcp, contender.lcp);
+#endif
+        assert( scmp(streams[contender.idx].elements.str(),
+                     streams[defender.idx].elements.str()) <= 0 );
+
+        assert( calc_lcp(streams[contender.idx].elements.str(),
+                         streams[defender.idx].elements.str()) == defender.lcp );
     }
 
     inline void
@@ -255,31 +282,18 @@ private:
     {
         for (unsigned i = 0; i < K; i++)
         {
-            lcps[i] = knownCommonLcp;
             unsigned nodeIdx = K + i;
-            unsigned contenderIdx = i;
+
+            Node contender;
+            contender.idx = i;
+            contender.lcp = knownCommonLcp;
 
             while (nodeIdx % 2 == 1 && nodeIdx > 1)
             {
                 nodeIdx >>= 1;
-                updateNode(nodes[nodeIdx], contenderIdx);
+                updateNode(contender, nodes[nodeIdx]);
             }
-            nodes[nodeIdx >> 1] = contenderIdx;
-        }
-    }
-
-    inline void
-    removeTopFromStream(unsigned streamIdx)
-    {
-        Stream& stream = streams[streamIdx];
-
-        stream.length--;
-        ++(stream.elements);
-        stream.isEmpty = (stream.length <= 0);
-
-        if (!stream.isEmpty)
-        {
-            lcps[streamIdx] = stream.elements.lcp();
+            nodes[nodeIdx >> 1] = contender;
         }
     }
 
@@ -289,10 +303,11 @@ public:
         for (unsigned i = 0; i < K; i++)
         {
             const std::pair<size_t, size_t> currRange = ranges[i];
-            Stream* curr = streams + i;
-            curr->elements = input + currRange.first;
-            curr->length = currRange.second;
-            curr->isEmpty = (curr->length <= 0);
+
+            Stream& s = streams[i];
+            s.elements = input + currRange.first;
+            s.length = currRange.second;
+            s.isEmpty = (s.length <= 0);
         }
 
         initTree(knownCommonLcp);
@@ -302,22 +317,36 @@ public:
     writeElementsToStream(LcpStringPtr outStream, const size_t length)
     {
         const LcpStringPtr end = outStream + length;
-        unsigned contenderIdx = nodes[0];
 
         while (outStream < end)
         {
-            outStream.set(streams[contenderIdx].elements.str(), lcps[contenderIdx]);
+            // take winner and put into output
+
+            unsigned winnerIdx = nodes[0].idx;
+
+            outStream.set(streams[winnerIdx].elements.str(), nodes[0].lcp);
             ++outStream;
 
-            removeTopFromStream(contenderIdx);
+            // advance winner stream
 
-            for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
+            Stream& stream = streams[winnerIdx];
+
+            stream.length--;
+            ++(stream.elements);
+            stream.isEmpty = (stream.length <= 0);
+
+            // run new items from winner stream up the tree
+
+            Node& contender = nodes[0];
+
+            if (!stream.isEmpty)
+                contender.lcp = streams[winnerIdx].elements.lcp();
+
+            for (unsigned nodeIdx = (K + winnerIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
             {
-                updateNode(nodes[nodeIdx], contenderIdx);
+                updateNode(contender, nodes[nodeIdx]);
             }
         }
-
-        nodes[0] = contenderIdx;
     }
 };
 
@@ -404,4 +433,3 @@ CONTESTANT_REGISTER(lcp_mergesort_16way, "bingmann/lcp_mergesort_16way",
 // namespace bingmann_lcp_mergesort
 
 #endif // BINGMANN_LCP_MERGESORT_H_
-
