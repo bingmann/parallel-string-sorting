@@ -40,7 +40,8 @@ using namespace stringtools;
 static inline void
 lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
             unsigned int b, string inputB, lcp_t lcpB,
-            unsigned int& outSmaller, unsigned int& outLarger, lcp_t& outLcpAB, lcp_t& outLcpSmaller)
+            unsigned int& outSmaller, lcp_t& outLcpSmaller,
+            unsigned int& outLarger, lcp_t& outLcpAB)
 {
     if (lcpA == lcpB)
     { // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
@@ -56,31 +57,31 @@ lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
         if (*sA <= *sB) // CASE 1.1: s1 <= s2
         {
             outSmaller = a;
+            outLcpSmaller = lcpA;
             outLarger = b;
             outLcpAB = h;
-            outLcpSmaller = lcpA;
         }
         else // CASE 1.2: s1 > s2
         {
             outSmaller = b;
+            outLcpSmaller = lcpB;
             outLarger = a;
             outLcpAB = h;
-            outLcpSmaller = lcpB;
         }
     }
     else if (lcpA > lcpB) // CASE 2: lcp1 < lcp2 -> s_1 > s_2
     {
         outSmaller = a;
+        outLcpSmaller = lcpA;
         outLarger = b;
         outLcpAB = lcpB;
-        outLcpSmaller = lcpA;
     }
     else // CASE 3: lcp1 > lcp2 -> s_1 < s_2
     {
         outSmaller = b;
+        outLcpSmaller = lcpB;
         outLarger = a;
         outLcpAB = lcpA;
-        outLcpSmaller = lcpB;
     }
 
     assert( calc_lcp(inputA, inputB) == outLcpAB );
@@ -110,7 +111,7 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
         assert( calc_lcp(prev, *input2) == lcp2 );
 
         lcp_compare(0, *input1, lcp1, 1, *input2, lcp2,
-                    cmpSmaller, cmpLarger, cmpLcp, cmpLcpSmaller);
+                    cmpSmaller, cmpLcpSmaller, cmpLarger, cmpLcp);
 
         if (cmpSmaller == 0)
         {
@@ -268,7 +269,7 @@ private:
 #else
         lcp_compare(contender.idx, contenderStream.elements.str(), contender.lcp,
                     defender.idx, defenderStream.elements.str(), defender.lcp,
-                    contender.idx, defender.idx, defender.lcp, contender.lcp);
+                    contender.idx, contender.lcp, defender.idx, defender.lcp);
 #endif
         assert( scmp(streams[contender.idx].elements.str(),
                      streams[defender.idx].elements.str()) <= 0 );
@@ -280,6 +281,7 @@ private:
     inline void
     initTree(lcp_t knownCommonLcp)
     {
+        //std::cout << "inittree start\n";
         for (unsigned i = 0; i < K; i++)
         {
             unsigned nodeIdx = K + i;
@@ -291,10 +293,14 @@ private:
             while (nodeIdx % 2 == 1 && nodeIdx > 1)
             {
                 nodeIdx >>= 1;
+                //std::cout << "play against " << nodeIdx << "\n";
                 updateNode(contender, nodes[nodeIdx]);
             }
-            nodes[nodeIdx >> 1] = contender;
+            nodeIdx >>= 1;
+            //std::cout << "save as " << nodeIdx << "\n";
+            nodes[nodeIdx] = contender;
         }
+        //std::cout << "inittree done\n";
     }
 
 public:
@@ -422,12 +428,20 @@ lcp_mergesort_16way(string *strings, size_t n)
     lcp_mergesort_kway<16>(strings, n);
 }
 
+static inline void
+lcp_mergesort_128way(string *strings, size_t n)
+{
+    lcp_mergesort_kway<128>(strings, n);
+}
+
 CONTESTANT_REGISTER(lcp_mergesort_4way, "bingmann/lcp_mergesort_4way",
                     "4-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
 CONTESTANT_REGISTER(lcp_mergesort_8way, "bingmann/lcp_mergesort_8way",
                     "8-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
 CONTESTANT_REGISTER(lcp_mergesort_16way, "bingmann/lcp_mergesort_16way",
                     "16-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
+CONTESTANT_REGISTER(lcp_mergesort_128way, "bingmann/lcp_mergesort_128way",
+                    "128-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
 
 }
 // namespace bingmann_lcp_mergesort
