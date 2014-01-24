@@ -87,7 +87,7 @@ static const bool use_work_sharing = true;
 //! set or on the whole string set.
 static const bool use_restsize = false;
 
-//! use LCP insertion sort even for non-LCP pS5
+//! use LCP insertion sort for non-LCP pS5 ?
 static const bool use_lcp_inssort = true;
 
 //! terminate sort after first parallel sample sort step
@@ -1765,7 +1765,10 @@ struct SampleSortStep : public SortStep
     {
         g_statscache >> "l2cache" << size_t(l2cache)
                      >> "splitter_treebits" << size_t(treebits)
-                     >> "numsplitters" << size_t(numsplitters);
+                     >> "numsplitters" << size_t(numsplitters)
+                     >> "use_work_sharing" << use_work_sharing
+                     >> "use_restsize" << use_restsize
+                     >> "use_lcp_inssort" << use_lcp_inssort;
     }
 };
 

@@ -90,7 +90,7 @@ private:
     logger_type m_logger, m_work_logger;
 
 public:
-    //typedef TimerArrayDummy TimerArrayMT;
+    typedef TimerArrayDummy TimerArrayMT;
 
     enum { TM_WORK, TM_IDLE };
 
