@@ -100,7 +100,7 @@ void
 eberle_lcp_inssort(string *strings, size_t n)
 {
     lcp_t* lcps = new lcp_t[n];
-    LcpStringPtr output(strings, lcps);
+    LcpStringPtr output(strings, lcps, n);
 
     inssort_lcp(strings, output, n);
 

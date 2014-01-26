@@ -55,7 +55,11 @@ eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp, co
     for (unsigned i = 0; i < K; i++)
     {
         const size_t offset = ranges[i].first;
-        eberle_mergesort_losertree_lcp_kway<K>(strings + offset, output + offset, tmp + offset, ranges[i].second);
+        const size_t size = ranges[i].second;
+        eberle_mergesort_losertree_lcp_kway<K>(strings + offset,
+                                               output.sub(offset, size),
+                                               tmp.sub(offset, size),
+                                               ranges[i].second);
     }
 
     //merge
@@ -72,8 +76,8 @@ eberle_mergesort_losertree_kway(string *strings, size_t n)
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n];
 
-    LcpStringPtr output(strings, outputLcps);
-    LcpStringPtr tmp(tmpStrings, tmpLcps);
+    LcpStringPtr output(strings, outputLcps, n);
+    LcpStringPtr tmp(tmpStrings, tmpLcps, n);
 
     eberle_mergesort_losertree_lcp_kway<K>(strings, tmp, output, n);
 

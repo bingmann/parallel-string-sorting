@@ -100,7 +100,7 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
     lcp_t lcp1 = *lcps1;
     lcp_t lcp2 = *lcps2;
 
-    //do the merge
+    // do the merge
     while (input1 < end1 && input2 < end2)
     {
         unsigned int cmpSmaller, cmpLarger;
@@ -154,24 +154,31 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
 }
 
 static inline void
-lcp_mergesort_binary(string *strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
+lcp_mergesort_binary(string *strings, const LcpStringPtr& tmp, const LcpStringPtr& out, size_t length)
 {
-    if (length <= 1)
-    {
-        output.set(*strings, 0);
+    if (length == 0) {
+        return;
+    }
+    else if (length == 1) {
+        out.set(*strings, 0);
         return;
     }
 
-    const size_t length1 = length / 2;
-    const size_t length2 = length - length1;
-    const LcpStringPtr tmp2 = tmp + length1;
+    size_t length1 = length / 2;
+    size_t length2 = length - length1;
 
-    lcp_mergesort_binary(strings, output, tmp, length1);
-    lcp_mergesort_binary(strings + length1, output + length1, tmp2, length2);
+    LcpStringPtr out1 = out.sub(0, length1);
+    LcpStringPtr out2 = out.sub(length1, length2);
 
-    lcp_merge_binary(tmp.strings, tmp.lcps, length1,
-                     tmp2.strings, tmp2.lcps, length2,
-                     output.strings, output.lcps);
+    LcpStringPtr tmp1 = tmp.sub(0, length1);
+    LcpStringPtr tmp2 = tmp.sub(length1, length2);
+
+    lcp_mergesort_binary(strings, out1, tmp1, length1);
+    lcp_mergesort_binary(strings + length1, out2, tmp2, length2);
+
+    lcp_merge_binary(tmp1.strings, tmp1.lcps, tmp1.size,
+                     tmp2.strings, tmp2.lcps, tmp2.size,
+                     out.strings, out.lcps);
 }
 
 static inline void
@@ -182,8 +189,8 @@ lcp_mergesort_binary(string *strings, size_t n)
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n];
 
-    LcpStringPtr output(strings, outputLcps);
-    LcpStringPtr tmp(tmpStrings, tmpLcps);
+    LcpStringPtr output(strings, outputLcps, n);
+    LcpStringPtr tmp(tmpStrings, tmpLcps, n);
 
     // execute lcp mergesort
     lcp_mergesort_binary(strings, tmp, output, n);
@@ -191,9 +198,9 @@ lcp_mergesort_binary(string *strings, size_t n)
     // verify result
     stringtools::verify_lcp(strings, output.lcps, n, 0);
 
-    delete[] outputLcps;
-    delete[] tmpStrings;
-    delete[] tmpLcps;
+    delete [] outputLcps;
+    delete [] tmpStrings;
+    delete [] tmpLcps;
 }
 
 CONTESTANT_REGISTER(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
@@ -204,12 +211,7 @@ CONTESTANT_REGISTER(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
 template <unsigned K>
 class LcpLoserTree
 {
-    struct Stream
-    {
-        LcpStringPtr elements;
-        unsigned length;
-        bool isEmpty;
-    };
+    typedef LcpStringPtr Stream;
 
     struct Node
     {
@@ -229,12 +231,12 @@ private:
     {
         const Stream& defenderStream = streams[defender.idx];
 
-        if (defenderStream.isEmpty)
+        if (defenderStream.empty())
             return;
 
         const Stream& contenderStream = streams[contender.idx];
 
-        if (contenderStream.isEmpty)
+        if (contenderStream.empty())
         {
             std::swap(defender, contender);
             return;
@@ -250,8 +252,8 @@ private:
             // CASE 1: compare more characters
             lcp_t lcp = defender.lcp;
 
-            string s1 = defenderStream.elements.str() + lcp;
-            string s2 = contenderStream.elements.str() + lcp;
+            string s1 = defenderStream.str() + lcp;
+            string s2 = contenderStream.str() + lcp;
 
             // check the strings starting after lcp and calculate new lcp
             while (*s1 != 0 && *s1 == *s2)
@@ -267,15 +269,15 @@ private:
             // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
         }
 #else
-        lcp_compare(contender.idx, contenderStream.elements.str(), contender.lcp,
-                    defender.idx, defenderStream.elements.str(), defender.lcp,
+        lcp_compare(contender.idx, contenderStream.str(), contender.lcp,
+                    defender.idx, defenderStream.str(), defender.lcp,
                     contender.idx, contender.lcp, defender.idx, defender.lcp);
 #endif
-        assert( scmp(streams[contender.idx].elements.str(),
-                     streams[defender.idx].elements.str()) <= 0 );
+        assert( scmp(streams[contender.idx].str(),
+                     streams[defender.idx].str()) <= 0 );
 
-        assert( calc_lcp(streams[contender.idx].elements.str(),
-                         streams[defender.idx].elements.str()) == defender.lcp );
+        assert( calc_lcp(streams[contender.idx].str(),
+                         streams[defender.idx].str()) == defender.lcp );
     }
 
     inline void
@@ -310,10 +312,7 @@ public:
         {
             const std::pair<size_t, size_t> currRange = ranges[i];
 
-            Stream& s = streams[i];
-            s.elements = input + currRange.first;
-            s.length = currRange.second;
-            s.isEmpty = (s.length <= 0);
+            streams[i] = input.sub(currRange.first, currRange.second);
         }
 
         initTree(knownCommonLcp);
@@ -322,7 +321,7 @@ public:
     inline void
     writeElementsToStream(LcpStringPtr outStream, const size_t length)
     {
-        const LcpStringPtr end = outStream + length;
+        const LcpStringPtr end = outStream.sub(length, 0);
 
         while (outStream < end)
         {
@@ -330,23 +329,20 @@ public:
 
             unsigned winnerIdx = nodes[0].idx;
 
-            outStream.set(streams[winnerIdx].elements.str(), nodes[0].lcp);
+            outStream.set(streams[winnerIdx].str(), nodes[0].lcp);
             ++outStream;
 
             // advance winner stream
 
             Stream& stream = streams[winnerIdx];
-
-            stream.length--;
-            ++(stream.elements);
-            stream.isEmpty = (stream.length <= 0);
+            ++stream;
 
             // run new items from winner stream up the tree
 
             Node& contender = nodes[0];
 
-            if (!stream.isEmpty)
-                contender.lcp = streams[winnerIdx].elements.lcp();
+            if (!stream.empty())
+                contender.lcp = streams[winnerIdx].lcp();
 
             for (unsigned nodeIdx = (K + winnerIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
             {
@@ -380,7 +376,8 @@ lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp, const LcpStringPtr&
     for (unsigned i = 0; i < K; i++)
     {
         const size_t offset = ranges[i].first;
-        lcp_mergesort_kway<K>(strings + offset, output + offset, tmp + offset, ranges[i].second);
+        const size_t size = ranges[i].second;
+        lcp_mergesort_kway<K>(strings + offset, output.sub(offset, size), tmp.sub(offset, size), size);
     }
 
     // K-way merge
@@ -397,8 +394,8 @@ lcp_mergesort_kway(string *strings, size_t n)
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n+1];
 
-    LcpStringPtr output(strings, outputLcps);
-    LcpStringPtr tmp(tmpStrings, tmpLcps);
+    LcpStringPtr output(strings, outputLcps, n);
+    LcpStringPtr tmp(tmpStrings, tmpLcps, n);
 
     lcp_mergesort_kway<K>(strings, tmp, output, n);
 

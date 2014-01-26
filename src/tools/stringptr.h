@@ -317,23 +317,31 @@ typedef uintptr_t lcp_t;
 
 struct LcpStringPtr
 {
+public:
     string * strings;
     lcp_t* lcps;
+    size_t size;
 
 public:
-    LcpStringPtr() :
-            strings(NULL), lcps(NULL)
+    LcpStringPtr()
+        : strings(NULL), lcps(NULL), size(0)
     {
     }
 
-    LcpStringPtr(string* strings, lcp_t* lcps) :
-            strings(strings), lcps(lcps)
+    LcpStringPtr(string* _strings, lcp_t* _lcps, size_t _size)
+        : strings(_strings), lcps(_lcps), size(_size)
     {
+    }
+
+    inline bool empty() const
+    {
+        return (size == 0);
     }
 
     inline void
     set(string s, lcp_t lcp) const
     {
+        assert(size > 0);
         *strings = s;
         *lcps = lcp;
     }
@@ -348,12 +356,14 @@ public:
     inline string&
     str() const
     {
+        assert(size > 0);
         return *strings;
     }
 
     inline lcp_t&
     lcp() const
     {
+        assert(size > 0);
         return *lcps;
     }
 
@@ -373,6 +383,7 @@ public:
     inline void
     setLcp(size_t position, lcp_t value) const
     {
+        assert(position < size);
         lcps[position] = value;
     }
 
@@ -382,33 +393,29 @@ public:
     {
         ++strings;
         ++lcps;
+        --size;
         return *this;
     }
 
-    friend inline LcpStringPtr
-    operator+(const LcpStringPtr& ptr, size_t delta);
+    inline LcpStringPtr
+    sub(size_t offset, size_t n) const
+    {
+        assert(offset + n <= size);
+        return LcpStringPtr(strings + offset, lcps + offset, n);
+    }
 
-    friend inline size_t
-    operator-(const LcpStringPtr& lhs, const LcpStringPtr& rhs);
+    inline size_t
+    operator-(const LcpStringPtr& rhs) const
+    {
+        return strings - rhs.strings;
+    }
 
     inline bool
-    operator<(const LcpStringPtr& rhs)
+    operator<(const LcpStringPtr& rhs) const
     {
         return strings < rhs.strings;
     }
 };
-
-inline size_t
-operator-(const LcpStringPtr& lhs, const LcpStringPtr& rhs)
-{
-    return lhs.strings - rhs.strings;
-}
-
-inline LcpStringPtr
-operator+(const LcpStringPtr& ptr, size_t delta)
-{
-    return LcpStringPtr(ptr.strings + delta, ptr.lcps + delta);
-}
 
 /// verify LCP array against sorted string array by scanning LCPs
 static inline bool

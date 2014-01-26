@@ -44,14 +44,9 @@ typedef unsigned char* string;
 template<unsigned K>
 class LcpStringLoserTree
 {
-    struct Stream
-    {
-        LcpStringPtr elements;
-        unsigned length;
-        bool isEmpty;
-    };
+    typedef LcpStringPtr Stream;
 
-private:
+protected:
     Stream streams[K];
     unsigned nodes[K];
     lcp_t lcps[K];
@@ -64,7 +59,7 @@ private:
     {
         const Stream& defenderStream = streams[defenderIdx];
 
-        if (defenderStream.isEmpty)
+        if (defenderStream.empty())
             return;
 
         const Stream& contenderStream = streams[contenderIdx];
@@ -72,7 +67,7 @@ private:
         lcp_t& contenderLcp = lcps[contenderIdx];
         lcp_t& defenderLcp = lcps[defenderIdx];
 
-        if (contenderStream.isEmpty || defenderLcp > contenderLcp)
+        if (contenderStream.empty() || defenderLcp > contenderLcp)
         { // CASE 2: curr->lcp > contender->lcp => curr < contender
             std::swap(defenderIdx, contenderIdx);
 
@@ -81,8 +76,8 @@ private:
         { // CASE 1: curr.lcp == contender.lcp
             lcp_t lcp = defenderLcp;
 
-            string s1 = defenderStream.elements.str() + lcp;
-            string s2 = contenderStream.elements.str() + lcp;
+            string s1 = defenderStream.str() + lcp;
+            string s2 = contenderStream.str() + lcp;
 
             // check the strings starting after lcp and calculate new lcp
             while (*s1 != '\0' && *s1 == *s2)
@@ -123,13 +118,11 @@ private:
     {
         Stream& stream = streams[streamIdx];
 
-        stream.length--;
-        ++(stream.elements);
-        stream.isEmpty = (stream.length <= 0);
+        ++stream;
 
-        if (!stream.isEmpty)
+        if (!stream.empty())
         {
-            lcps[streamIdx] = stream.elements.lcp();
+            lcps[streamIdx] = stream.lcp();
         }
     }
 
@@ -140,9 +133,7 @@ public:
         {
             const std::pair<size_t, size_t> currRange = ranges[i];
             Stream* curr = streams + i;
-            curr->elements = input + currRange.first;
-            curr->length = currRange.second;
-            curr->isEmpty = (curr->length <= 0);
+            *curr = input.sub(currRange.first, currRange.second);
         }
 
         initTree(knownCommonLcp);
@@ -167,15 +158,15 @@ public:
         for (unsigned i = 0; i < K; ++i)
         {
             Stream* stream = streams + i;
-            if (stream.length > 0)
+            if (stream->size > 0)
             {
-                std::cout << lcps[i] << "|" << stream->elements.str();
+                std::cout << lcps[i] << "|" << stream->str();
             }
             else
             {
                 std::cout << -1;
             }
-            std::cout << "(" << stream->length << ")  ";
+            std::cout << "(" << stream->size << ")  ";
         }
 
         std::cout << std::endl;
@@ -184,12 +175,12 @@ public:
     inline void
     writeElementsToStream(LcpStringPtr outStream, const size_t length)
     {
-        const LcpStringPtr end = outStream + length;
+        const LcpStringPtr end = outStream.sub(length, 0);
         unsigned contenderIdx = nodes[0];
 
         while (outStream < end)
         {
-            outStream.set(streams[contenderIdx].elements.str(), lcps[contenderIdx]);
+            outStream.set(streams[contenderIdx].str(), lcps[contenderIdx]);
             ++outStream;
 
             removeTopFromStream(contenderIdx);
@@ -211,7 +202,7 @@ public:
 
         while (outStream < end)
         {
-            *outStream = streams[contenderIdx].elements.str();
+            *outStream = streams[contenderIdx].str();
             ++outStream;
 
             removeTopFromStream(contenderIdx);
@@ -230,7 +221,7 @@ public:
     {
         for (unsigned k = 0; k < K; k++)
         {
-            ranges[k] = std::make_pair(size_t(streams[k].elements - inputBase), streams[k].length);
+            ranges[k] = std::make_pair(size_t(streams[k] - inputBase), streams[k].length);
         }
     }
 };

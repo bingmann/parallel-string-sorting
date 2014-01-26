@@ -113,28 +113,35 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
 
 // implementation follows
 static inline void
-eberle_lcp_merge(const LcpStringPtr& input1, size_t length1, const LcpStringPtr& input2, size_t length2, const LcpStringPtr& output)
+eberle_lcp_merge(const LcpStringPtr& input1, const LcpStringPtr& input2, const LcpStringPtr& output)
 {
-    eberle_lcp_merge(input1.strings, input1.lcps, length1, input2.strings, input2.lcps, length2, output.strings, output.lcps);
+    eberle_lcp_merge(input1.strings, input1.lcps, input1.size,
+                     input2.strings, input2.lcps, input2.size,
+                     output.strings, output.lcps);
 }
 
 static inline void
-eberle_lcp_mergesort(string *strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
+eberle_lcp_mergesort(string *strings, size_t length, const LcpStringPtr& tmp, const LcpStringPtr& out)
 {
     if (length <= 1)
     {
-        output.set(*strings, 0);
+        out.set(*strings, 0);
         return;
     }
 
     const size_t length1 = length / 2;
     const size_t length2 = length - length1;
-    const LcpStringPtr tmp2 = tmp + length1;
 
-    eberle_lcp_mergesort(strings, output, tmp, length1);
-    eberle_lcp_mergesort(strings + length1, output + length1, tmp2, length2);
+    const LcpStringPtr out1 = out.sub(0, length1);
+    const LcpStringPtr out2 = out.sub(length1, length2);
 
-    eberle_lcp_merge(tmp, length1, tmp2, length2, output);
+    const LcpStringPtr tmp1 = tmp.sub(0, length1);
+    const LcpStringPtr tmp2 = tmp.sub(length1, length2);
+
+    eberle_lcp_mergesort(strings, length1, out1, tmp1);
+    eberle_lcp_mergesort(strings + length1, length2, out2, tmp2);
+
+    eberle_lcp_merge(tmp1, tmp2, out);
 }
 
 void
@@ -145,11 +152,11 @@ eberle_lcp_mergesort(string *strings, size_t n)
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n];
 
-    LcpStringPtr output(strings, outputLcps);
-    LcpStringPtr tmp(tmpStrings, tmpLcps);
+    LcpStringPtr output(strings, outputLcps, n);
+    LcpStringPtr tmp(tmpStrings, tmpLcps, n);
 
     // execute lcp mergesort
-    eberle_lcp_mergesort(strings, tmp, output, n);
+    eberle_lcp_mergesort(strings, n, tmp, output);
 
     delete[] outputLcps;
     delete[] tmpStrings;
