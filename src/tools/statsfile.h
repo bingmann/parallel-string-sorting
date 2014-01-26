@@ -205,17 +205,31 @@ public:
     }
 };
 
-/// Very simple class to measure runtime of function using clock_gettime.
-template <clockid_t clk_id = CLOCK_MONOTONIC>
-class MeasureTime
+//! very simple class to measure runtime of function using clock_gettime.
+template <clockid_t clk_id>
+class ClockTimerBase
 {
-private:
+protected:
+    //! time of start
+    struct timespec     m_tstart;
 
-    struct timespec     m_tp1, m_tp2;
+    //! call gettime
+    static inline void get_time(struct timespec& ts)
+    {
+        if (clock_gettime(clk_id, &ts)) {
+            perror("Could not clock_gettime()");
+        }
+    }
 
 public:
-    /// return the resolution of the clock used
-    inline double resolution() const
+    //! Initialize and (usually) start clock
+    ClockTimerBase(bool do_start = true)
+    {
+        if (do_start) start();
+    }
+
+    //! return the resolution of the clock used
+    static inline double resolution()
     {
         struct timespec tp_res;
 
@@ -227,27 +241,62 @@ public:
         return tp_res.tv_sec + tp_res.tv_nsec / 1e9;
     }
 
-    /// Start timing
+    //! Start timing
     inline void start()
     {
-        if (clock_gettime(clk_id, &m_tp1)) {
-            perror("Could not clock_gettime()");
-        }
+        get_time(m_tstart);
     }
 
-    /// End timing
+    //! Return time elapsed in seconds between start() and now.
+    inline double elapsed() const
+    {
+        struct timespec now;
+        get_time(now);
+
+        return (now.tv_sec - m_tstart.tv_sec)
+            +  (now.tv_nsec - m_tstart.tv_nsec) / 1e9;
+    }
+};
+
+//! Most simple ClockTimer instance for easy measurements
+typedef ClockTimerBase<CLOCK_MONOTONIC> ClockTimer;
+
+//! Extended class to measure runtime of function using clock_gettime, with
+//! start() - stop() semantics.
+template <clockid_t clk_id>
+class ClockIntervalBase : public ClockTimerBase<clk_id>
+{
+protected:
+    //! type of super class
+    typedef ClockTimerBase<clk_id> super_type;
+
+    //! time of stop
+    struct timespec     m_tstop;
+
+public:
+    //! Initialize, but do not start the clock
+    ClockIntervalBase()
+        : super_type(false)
+    {
+    }
+
+    //! Stop timing
     inline void stop()
     {
-        if (clock_gettime(clk_id, &m_tp2)) {
-            perror("Could not clock_gettime()");
-        }
+        super_type::get_time(m_tstop);
     }
 
-    /// Return delta in seconds between start() and stop().
-    inline double delta()
+    //! Return delta in seconds between start() and stop().
+    inline double delta() const
     {
-        return (m_tp2.tv_sec - m_tp1.tv_sec)
-            +  (m_tp2.tv_nsec - m_tp1.tv_nsec) / 1e9;
+        return (m_tstop.tv_sec - super_type::m_tstart.tv_sec)
+            +  (m_tstop.tv_nsec - super_type::m_tstart.tv_nsec) / 1e9;
+    }
+
+    //! Retrun delta in seconds between start() and now.
+    inline double delta_now() const
+    {
+        return super_type::delta();
     }
 };
 

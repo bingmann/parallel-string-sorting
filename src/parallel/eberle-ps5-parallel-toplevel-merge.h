@@ -499,12 +499,10 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     // do top level merge
     LcpStringPtr lcpStringPtr(tmp, (lcp_t*) shadow);
 
-    MeasureTime<0> timer;
-    timer.start();
+    ClockTimer timer;
     parallelMerge(lcpStringPtr, strings, ranges, n, numNumaNodes);
-    timer.stop();
 
-    DBG(debug_toplevel_merge_duration, std::endl << "top level merge needed: " << timer.delta() << " s" << std::endl);
+    DBG(debug_toplevel_merge_duration, std::endl << "top level merge needed: " << timer.elapsed() << " s" << std::endl);
 
     delete[] shadow;
     delete[] tmp;

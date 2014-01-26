@@ -389,8 +389,7 @@ void Contestant_UCArray::real_run()
     // create unsigned char* array from offsets
     membuffer<string> stringptr( g_string_count );
 
-    MeasureTime<CLOCK_MONOTONIC> strptr_timer;
-    strptr_timer.start();
+    ClockTimer strptr_timer;
 
     if (!gopt_suffixsort)
     {
@@ -412,8 +411,7 @@ void Contestant_UCArray::real_run()
             stringptr[i] = (string)g_string_data + i;
     }
 
-    strptr_timer.stop();
-    std::cout << "Wrote string pointer array in " << strptr_timer.delta() << " seconds" << std::endl;
+    std::cout << "Wrote string pointer array in " << strptr_timer.elapsed() << " seconds" << std::endl;
 
     // save permutation check evaluation result
     PermutationCheck pc;
@@ -430,6 +428,8 @@ void Contestant_UCArray::real_run()
     if (g_smallsort)
         g_statscache >> "smallsort" << g_smallsort;
 
+    // enable nested parallel regions
+    omp_set_nested(true);
     omp_set_num_threads(pss_num_threads);
 
     if (pss_num_threads)
@@ -452,8 +452,8 @@ void Contestant_UCArray::real_run()
     if (m_prepare_func)
         m_prepare_func(stringptr.data(), stringptr.size());
 
-    MeasureTime<CLOCK_MONOTONIC> timer;
-    MeasureTime<CLOCK_PROCESS_CPUTIME_ID> cpu_timer;
+    ClockIntervalBase<CLOCK_MONOTONIC> timer;
+    ClockIntervalBase<CLOCK_PROCESS_CPUTIME_ID> cpu_timer;
 
     if (gopt_repeats_inner == 1)
     {
@@ -868,8 +868,8 @@ int main(int argc, char* argv[])
 
     increase_stacklimit(g_stacklimit);
 
-    std::cout << "Using CLOCK_MONOTONIC with resolution: " << MeasureTime<CLOCK_MONOTONIC>().resolution() << std::endl;
-    std::cout << "Using CLOCK_PROCESS_CPUTIME_ID with resolution: " << MeasureTime<CLOCK_PROCESS_CPUTIME_ID>().resolution() << std::endl;
+    std::cout << "Using CLOCK_MONOTONIC with resolution: " << ClockIntervalBase<CLOCK_MONOTONIC>::resolution() << std::endl;
+    std::cout << "Using CLOCK_PROCESS_CPUTIME_ID with resolution: " << ClockIntervalBase<CLOCK_PROCESS_CPUTIME_ID>::resolution() << std::endl;
 
     if (gopt_inputsize_maxlimit < gopt_inputsize_minlimit)
         gopt_inputsize_maxlimit = gopt_inputsize_minlimit;
