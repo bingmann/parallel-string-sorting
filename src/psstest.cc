@@ -330,6 +330,7 @@ void Contestant_UCArray::run_forked()
 
         g_statscache >> "algo" << m_algoname
                      >> "data" << input::strip_datapath(g_datapath)
+                     >> "memory_type" << gopt_memory_type
                      >> "char_count" << gopt_inputsize;
 
         if (WTERMSIG(status) == SIGALRM)
@@ -422,6 +423,7 @@ void Contestant_UCArray::real_run()
 
     g_statscache >> "algo" << m_algoname
                  >> "data" << g_dataname
+                 >> "memory_type" << gopt_memory_type
                  >> "char_count" << g_string_datasize
                  >> "string_count" << stringptr.size();
 
@@ -569,7 +571,8 @@ void Contestant_UCArray_Parallel::run()
     }
     else
     {
-        int p = (gopt_threads ? 1 : omp_get_num_procs());
+        int nprocs = omp_get_num_procs();
+        int p = (gopt_threads ? 1 : nprocs);
 
         static const int somethreads16[] = { 2, 4, 6, 8, 12, 16, 0 };
         static const int somethreads32[] = { 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 0 };
@@ -580,10 +583,10 @@ void Contestant_UCArray_Parallel::run()
 
         if (gopt_some_threads)
         {
-            if (omp_get_num_procs() == 16) somethreads = somethreads16;
-            else if (omp_get_num_procs() == 32) somethreads = somethreads32;
-            else if (omp_get_num_procs() == 48) somethreads = somethreads48;
-            else if (omp_get_num_procs() == 64) somethreads = somethreads64;
+            if (nprocs == 16) somethreads = somethreads16;
+            else if (nprocs == 32) somethreads = somethreads32;
+            else if (nprocs == 48) somethreads = somethreads48;
+            else if (nprocs == 64) somethreads = somethreads64;
             else
                 gopt_all_threads = 1;
         }
@@ -599,14 +602,14 @@ void Contestant_UCArray_Parallel::run()
                 Contestant_UCArray::run_forked();
             }
 
-            if (p == omp_get_num_procs()) break;
+            if (p == nprocs) break;
 
             if (somethreads)
                 p = *somethreads++;
             else if (!gopt_all_threads)
-                p = std::min( omp_get_num_procs(), 2 * p );
+                p = std::min( nprocs, 2 * p );
             else
-                p = std::min( omp_get_num_procs(), p+1 );
+                p = std::min( nprocs, p+1 );
         }
     }
 }
