@@ -46,8 +46,11 @@ class LcpStringLoserTree
 {
     typedef LcpStringPtr Stream;
 
-protected:
+public:
+    //! allow public access to streams for easier initialization
     Stream streams[K];
+
+protected:
     unsigned nodes[K];
     lcp_t lcps[K];
 
@@ -96,6 +99,52 @@ protected:
     }
 
     inline void
+    removeTopFromStream(unsigned streamIdx)
+    {
+        Stream& stream = streams[streamIdx];
+
+        ++stream;
+
+        if (!stream.empty())
+        {
+            lcps[streamIdx] = stream.lcp();
+        }
+    }
+
+public:
+    LcpStringLoserTree()
+    {
+    }
+
+    LcpStringLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
+    {
+        for (unsigned i = 0; i < K; i++)
+        {
+            const std::pair<size_t, size_t> currRange = ranges[i];
+            Stream* curr = streams + i;
+            *curr = input.sub(currRange.first, currRange.second);
+        }
+
+        initTree(knownCommonLcp);
+    }
+
+    LcpStringLoserTree(const LcpStringPtr* inputs, unsigned numInputs, lcp_t knownCommonLcp = 0)
+    {
+        assert(numInputs <= K);
+
+        for (unsigned i = 0; i < numInputs; i++)
+        {
+            streams[i] = inputs[i];
+        }
+        for (unsigned i = numInputs; i < K; ++i)
+        {
+            streams[i] = LcpStringPtr(NULL, NULL, 0);
+        }
+
+        initTree(knownCommonLcp);
+    }
+
+    inline void
     initTree(lcp_t knownCommonLcp)
     {
         for (unsigned i = 0; i < K; i++)
@@ -111,32 +160,6 @@ protected:
             }
             nodes[nodeIdx >> 1] = contenderIdx;
         }
-    }
-
-    inline void
-    removeTopFromStream(unsigned streamIdx)
-    {
-        Stream& stream = streams[streamIdx];
-
-        ++stream;
-
-        if (!stream.empty())
-        {
-            lcps[streamIdx] = stream.lcp();
-        }
-    }
-
-public:
-    LcpStringLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
-    {
-        for (unsigned i = 0; i < K; i++)
-        {
-            const std::pair<size_t, size_t> currRange = ranges[i];
-            Stream* curr = streams + i;
-            *curr = input.sub(currRange.first, currRange.second);
-        }
-
-        initTree(knownCommonLcp);
     }
 
     void
@@ -173,9 +196,9 @@ public:
     }
 
     inline void
-    writeElementsToStream(LcpStringPtr outStream, const size_t length)
+    writeElementsToStream(LcpStringPtr outStream)
     {
-        const LcpStringPtr end = outStream.sub(length, 0);
+        const LcpStringPtr end = outStream.end();
         unsigned contenderIdx = nodes[0];
 
         while (outStream < end)
@@ -223,6 +246,12 @@ public:
         {
             ranges[k] = std::make_pair(size_t(streams[k] - inputBase), streams[k].length);
         }
+    }
+
+    inline const LcpStringPtr*
+    getRemaining()
+    {
+        return streams;
     }
 };
 

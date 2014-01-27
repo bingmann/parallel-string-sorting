@@ -40,7 +40,8 @@ typedef unsigned char* string;
 
 template<unsigned K>
 static inline void
-eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
+eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp,
+                                    const LcpStringPtr& output, size_t length)
 {
     if (length <= 2 * K)
     {
@@ -64,7 +65,7 @@ eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp, co
 
     //merge
     LcpStringLoserTree<K> loserTree(tmp, ranges);
-    loserTree.writeElementsToStream(output, length);
+    loserTree.writeElementsToStream(output);
 }
 
 // K must be a power of two
@@ -115,10 +116,21 @@ eberle_mergesort_losertree_64way(string *strings, size_t n)
     eberle_mergesort_losertree_kway<64>(strings, n);
 }
 
-CONTESTANT_REGISTER(eberle_mergesort_losertree_4way, "eberle/mergesort_lcp_losertree_4way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_16way, "eberle/mergesort_lcp_losertree_16way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_32way, "eberle/mergesort_lcp_losertree_32way", "Mergesort with lcp aware Losertree by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_mergesort_losertree_64way, "eberle/mergesort_lcp_losertree_64way", "Mergesort with lcp aware Losertree by Andreas Eberle")
+CONTESTANT_REGISTER(eberle_mergesort_losertree_4way,
+    "eberle/mergesort_lcp_losertree_4way",
+    "Mergesort with lcp aware Losertree by Andreas Eberle")
+
+CONTESTANT_REGISTER(eberle_mergesort_losertree_16way,
+    "eberle/mergesort_lcp_losertree_16way",
+    "Mergesort with lcp aware Losertree by Andreas Eberle")
+
+CONTESTANT_REGISTER(eberle_mergesort_losertree_32way,
+    "eberle/mergesort_lcp_losertree_32way",
+    "Mergesort with lcp aware Losertree by Andreas Eberle")
+
+CONTESTANT_REGISTER(eberle_mergesort_losertree_64way,
+    "eberle/mergesort_lcp_losertree_64way",
+    "Mergesort with lcp aware Losertree by Andreas Eberle")
 
 }
  // namespace eberle_mergesort

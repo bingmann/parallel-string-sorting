@@ -397,11 +397,19 @@ public:
         return *this;
     }
 
+    //! return sub-array of (string,lcp) with offset and size
     inline LcpStringPtr
     sub(size_t offset, size_t n) const
     {
         assert(offset + n <= size);
         return LcpStringPtr(strings + offset, lcps + offset, n);
+    }
+
+    //! return empty end array.
+    inline LcpStringPtr
+    end() const
+    {
+        return sub(size, 0);
     }
 
     inline size_t

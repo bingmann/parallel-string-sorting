@@ -96,6 +96,7 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
     const string* end2 = input2 + length2;
 
     string prev = (string)""; // sentinel
+    (void)prev;
 
     lcp_t lcp1 = *lcps1;
     lcp_t lcp2 = *lcps2;
