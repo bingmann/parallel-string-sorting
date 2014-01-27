@@ -56,6 +56,9 @@ using namespace stringtools;
 
 using namespace bingmann_parallel_sample_sort_lcp;
 
+//due to ambigous symbol
+using stringtools::string;
+
 //debugging constants
 static const bool debug_jobtype_on_creation = false;
 static const bool debug_job_details = false;
@@ -441,6 +444,56 @@ createJobs(JobQueue &jobQueue, const LcpStringPtr* inputStreams, unsigned numInp
 
 static inline
 void
+sequentialMerge(const LcpStringPtr* input, unsigned numInputs, string* output, size_t length)
+{
+    DBG(debug_toplevel_merge_duration, "doing sequential merge for " << numInputs << " input streams");
+
+    JobQueue jobQueue;
+
+    switch (numInputs)
+    {
+    case 1:
+    {
+        jobQueue.enqueue(new CopyDataJob(input[0], output, length));
+        break;
+    }
+    case 2:
+    {
+        jobQueue.enqueue(new BinaryMergeJob(input[0], input[0].size,
+                                            input[1], input[1].size, output));
+        break;
+    }
+    case 3: case 4:
+    {
+        static const unsigned K = 4;
+
+        MergeJob<K>* job = new MergeJob<K>(output, length, 0, 1);
+        job->length = 0;
+
+        unsigned k = 0;
+        for (; k < numInputs; ++k)
+        {
+            job->loserTree.streams[k] = input[k];
+            job->length += input[k].size;
+        }
+        for (; k < K; k++)
+        {
+            // this stream is not used
+            job->loserTree.streams[k] = LcpStringPtr(NULL, NULL, 0);
+        }
+
+        jobQueue.enqueue(job);
+        break;
+    }
+    default:
+        abort();
+    }
+
+    jobQueue.numaLoop(-1, 1); // use just one thread
+}
+
+static inline
+void
 parallelMerge(const LcpStringPtr* input, unsigned numInputs, string* output, size_t length)
 {
     JobQueue jobQueue;
@@ -532,6 +585,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     // do top level merge
 
     ClockTimer timer;
+    //sequentialMerge(output, numNumaNodes, strings, n);
     parallelMerge(output, numNumaNodes, strings, n);
 
     DBG(debug_toplevel_merge_duration, std::endl << "top level merge needed: " << timer.elapsed() << " s" << std::endl);
