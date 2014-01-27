@@ -88,7 +88,7 @@ static const bool use_work_sharing = true;
 static const bool use_restsize = false;
 
 //! use LCP insertion sort for non-LCP pS5 ?
-static const bool use_lcp_inssort = true;
+static const bool use_lcp_inssort = false;
 
 //! terminate sort after first parallel sample sort step
 #ifndef PS5_SINGLE_STEP
