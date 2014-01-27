@@ -1933,11 +1933,10 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
     }
 }
 
-
 //! Call for NUMA aware parallel sorting
 void parallel_sample_sort_numa(string *strings, size_t n,
                                int numaNode, int numberOfThreads,
-                               string** _output, lcp_t** _lcparray)
+                               LcpStringPtr& output)
 {
     // tie thread to a NUMA node
     numa_run_on_node(numaNode);
@@ -1951,16 +1950,23 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    SampleSortStep<ClassifyUnrollBoth, StringPtrOut>::put_stats();
+    //SampleSortStep<ClassifyUnrollBoth, StringPtrOut>::put_stats();
 
-    string* shadow = new string[n];
-    string* output = new string[n];
+#if 0
+    output.strings = new string[n];
+    output.lcps    = new lcp_t[n];
 
-    StringPtrOut strptr(strings, shadow, output, n);
+    numa_tonode_memory(output.strings, n * sizeof(string), numaNode);
+    numa_tonode_memory(output.lcps,    n * sizeof(string), numaNode);
+#else
+    output.strings = (string*)numa_alloc_onnode(n * sizeof(string), numaNode);
+    output.lcps =    (lcp_t*)numa_alloc_onnode(n * sizeof(lcp_t), numaNode);
+#endif
+
+    StringPtrOut strptr(strings, (string*)output.lcps, output.strings, n);
 
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
-
 
 #if PS5_ENABLE_RESTSIZE
     assert(ctx.restsize.update().get() == 0);
@@ -1970,10 +1976,7 @@ void parallel_sample_sort_numa(string *strings, size_t n,
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
                  >> "steps_base_sort" << ctx.bs_steps;
 
-    *_output = output;
-    *_lcparray = (lcp_t*)shadow;
 }
-
 
 static inline void
 parallel_sample_sortBTC(string* strings, size_t n)

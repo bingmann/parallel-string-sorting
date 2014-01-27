@@ -9,7 +9,7 @@ using namespace stringtools;
 
 void parallel_sample_sort_numa(string *strings, size_t n,
                                int numaNode, int numberOfThreads,
-                               string** _output, lcp_t** _lcparray);
+                               LcpStringPtr& output);
 
 } // namespace bingmann_parallel_sample_sort_lcp
 

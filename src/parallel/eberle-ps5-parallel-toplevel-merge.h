@@ -495,7 +495,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 
             parallel_sample_sort_numa(strings + start, length,
                                       k % realNumaNodes, numThreadsPerNode,
-                                      &output[k].strings, &output[k].lcps);
+                                      output[k]);
 
             output[k].size = length;
         }
@@ -519,7 +519,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 
             parallel_sample_sort_numa(strings + start, length,
                                       k % realNumaNodes, numThreadsPerNode,
-                                      &output[k].strings, &output[k].lcps);
+                                      output[k]);
 
             output[k].size = length;
 
@@ -538,8 +538,11 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 
     for (int k = 0; k < numNumaNodes; k++)
     {
-        delete[] output[k].strings;
-        delete[] output[k].lcps;
+        //delete [] output[k].strings;
+        //delete [] output[k].lcps;
+
+        numa_free(output[k].strings, ranges[k].second * sizeof(string));
+        numa_free(output[k].lcps, ranges[k].second * sizeof(string));
     }
 }
 
