@@ -92,7 +92,7 @@ bool            gopt_threads = false;      // argument --threads
 bool            gopt_all_threads = false;  // argument --all-threads
 bool            gopt_some_threads = false; // argument --some-threads
 bool            gopt_no_check = false;     // argument --no-check
-bool            gopt_no_mlockall = false;  // argument --no-mlockall
+bool            gopt_mlockall = false;     // argument --mlockall
 
 std::vector<size_t> gopt_threadlist;       // argument --thread-list
 
@@ -376,7 +376,7 @@ void Contestant_UCArray::real_run()
     typedef unsigned char* string;
 
     // lock process into memory (on Linux)
-    if (gopt_no_mlockall) {
+    if (!gopt_mlockall) {
         // skip
     }
     else if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
@@ -645,7 +645,7 @@ void print_usage(const char* prog)
               << "  -i, --input <path>     Write unsorted input strings to file, usually for checking." << std::endl
               << "  -M, --memory <type>    Load string data into <type> memory, see -M list for details." << std::endl
               << "  -N, --no-check         Skip checking of sorted order and distinguishing prefix calculation." << std::endl
-              << "      --no-mlockall      Skip call of mlockall(). Use if locked memory is scarce." << std::endl
+              << "      --mlockall         Perform call of mlockall() to locked program into memory." << std::endl
               << "  -o, --output <path>    Write sorted strings to output file, terminate after first algorithm run." << std::endl
               << "      --parallel         Run only parallelized algorithms." << std::endl
               << "  -r, --repeat <num>     Repeat experiment a number of times." << std::endl
@@ -685,7 +685,7 @@ int main(int argc, char* argv[])
         { "all-threads", no_argument,    0, 5 },
         { "some-threads", no_argument,   0, 6 },
         { "thread-list", required_argument, 0, 7 },
-        { "no-mlockall", no_argument,    0, 8 },
+        { "mlockall", no_argument,       0, 8 },
         { 0,0,0,0 },
     };
 
@@ -849,9 +849,9 @@ int main(int argc, char* argv[])
             }
             break;
         }
-        case 8: // --no-mlockall
-            gopt_no_mlockall = true;
-            std::cout << "Option --no-mlockall: skipping mlockall() to lock memory." << std::endl;
+        case 8: // --mlockall
+            gopt_mlockall = true;
+            std::cout << "Option --mlockall: calling mlockall() to lock memory." << std::endl;
             break;
 
         default:
