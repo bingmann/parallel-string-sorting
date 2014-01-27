@@ -196,6 +196,51 @@ public:
     }
 
     inline void
+    replay(unsigned& contenderIdx)
+    {
+#if 0
+        for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
+        {
+            updateNode(nodes[nodeIdx], contenderIdx);
+        }
+#else
+        unsigned nodeIdx = (K + contenderIdx) >> 1;
+
+        if (K >= 256) {
+            updateNode(nodes[nodeIdx], contenderIdx);
+            nodeIdx >>= 1;
+        }
+        if (K >= 128) {
+            updateNode(nodes[nodeIdx], contenderIdx);
+            nodeIdx >>= 1;
+        }
+        if (K >= 64) {
+            updateNode(nodes[nodeIdx], contenderIdx);
+            nodeIdx >>= 1;
+        }
+        if (K >= 32) {
+            updateNode(nodes[nodeIdx], contenderIdx);
+            nodeIdx >>= 1;
+        }
+        if (K >= 16) {
+            updateNode(nodes[nodeIdx], contenderIdx);
+            nodeIdx >>= 1;
+        }
+        if (K >= 8) {
+            updateNode(nodes[nodeIdx], contenderIdx);
+            nodeIdx >>= 1;
+        }
+        if (K >= 4) {
+            updateNode(nodes[nodeIdx], contenderIdx);
+            nodeIdx >>= 1;
+        }
+        if (K >= 2) {
+            updateNode(nodes[nodeIdx], contenderIdx);
+        }
+#endif
+    }
+
+    inline void
     writeElementsToStream(LcpStringPtr outStream)
     {
         const LcpStringPtr end = outStream.end();
@@ -208,10 +253,7 @@ public:
 
             removeTopFromStream(contenderIdx);
 
-            for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
-            {
-                updateNode(nodes[nodeIdx], contenderIdx);
-            }
+            replay(contenderIdx);
         }
 
         nodes[0] = contenderIdx;
@@ -230,10 +272,7 @@ public:
 
             removeTopFromStream(contenderIdx);
 
-            for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
-            {
-                updateNode(nodes[nodeIdx], contenderIdx);
-            }
+            replay(contenderIdx);
         }
 
         nodes[0] = contenderIdx;
