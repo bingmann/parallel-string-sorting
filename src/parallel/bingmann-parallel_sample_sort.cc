@@ -85,7 +85,7 @@ static const bool use_work_sharing = true;
 
 //! whether the base sequential_threshold() on the remaining unsorted string
 //! set or on the whole string set.
-static const bool use_restsize = false;
+#define PS5_ENABLE_RESTSIZE false
 
 //! use LCP insertion sort for non-LCP pS5 ?
 static const bool use_lcp_inssort = false;
@@ -128,8 +128,10 @@ public:
     //! total size of input
     size_t totalsize;
 
+#if PS5_ENABLE_RESTSIZE
     //! number of remaining strings to sort
     lockfree::lazy_counter<MAXPROCS> restsize;
+#endif
 
     //! number of threads overall
     size_t threadnum;
@@ -148,18 +150,24 @@ public:
     { }
 
     //! return sequential sorting threshold
-    size_t sequential_threshold()
+    inline size_t sequential_threshold()
     {
-        size_t wholesize = use_restsize ? restsize.update().get() : totalsize;
+#if PS5_ENABLE_RESTSIZE
+        size_t wholesize = restsize.update().get();
+#else
+        size_t wholesize = totalsize;
+#endif
         return std::max(g_smallsort_threshold, wholesize / threadnum);
     }
 
     //! decrement number of unordered strings
-    void donesize(size_t n, size_t tid)
+    inline void donesize(size_t n, size_t tid)
     {
-        if (use_restsize) {
-            restsize.add(-n, tid);
-        }
+#if PS5_ENABLE_RESTSIZE
+        restsize.add(-n, tid);
+#else
+        (void)n; (void)tid;
+#endif
     }
 };
 
@@ -804,7 +812,7 @@ struct SmallsortJob : public Job, public SortStep
 
         DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
 
-        thrid = use_restsize ? omp_get_thread_num() : 0;
+        thrid = PS5_ENABLE_RESTSIZE ? omp_get_thread_num() : 0;
 
         // create anonymous wrapper job
         substep_add();
@@ -1668,7 +1676,7 @@ struct SampleSortStep : public SortStep
     {
         DBG(debug_jobs, "Finishing DistributeJob " << this << " with enqueuing subjobs");
 
-        size_t thrid = use_restsize ? omp_get_thread_num() : 0;
+        size_t thrid = PS5_ENABLE_RESTSIZE ? omp_get_thread_num() : 0;
 
         size_t* bkt = this->bkt[0];
         assert(bkt);
@@ -1767,7 +1775,7 @@ struct SampleSortStep : public SortStep
                      >> "splitter_treebits" << size_t(treebits)
                      >> "numsplitters" << size_t(numsplitters)
                      >> "use_work_sharing" << use_work_sharing
-                     >> "use_restsize" << use_restsize
+                     >> "use_restsize" << PS5_ENABLE_RESTSIZE
                      >> "use_lcp_inssort" << use_lcp_inssort;
     }
 };
@@ -1800,7 +1808,9 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 {
     Context ctx;
     ctx.totalsize = n;
+#if PS5_ENABLE_RESTSIZE
     ctx.restsize = n;
+#endif
     ctx.threadnum = omp_get_max_threads();
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
@@ -1817,7 +1827,9 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 
     ctx.timers.stop();
 
-    assert(!use_restsize || ctx.restsize.update().get() == 0);
+#if PS5_ENABLE_RESTSIZE
+    assert(!PS5_ENABLE_RESTSIZE || ctx.restsize.update().get() == 0);
+#endif
 
 #if CALC_LCP
     if (0)
@@ -1861,7 +1873,9 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
 {
     Context ctx;
     ctx.totalsize = n;
+#if PS5_ENABLE_RESTSIZE
     ctx.restsize = n;
+#endif
     ctx.threadnum = omp_get_max_threads();
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
@@ -1878,7 +1892,9 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
 
     ctx.timers.stop();
 
-    assert(!use_restsize || ctx.restsize.update().get() == 0);
+#if PS5_ENABLE_RESTSIZE
+    assert(ctx.restsize.update().get() == 0);
+#endif
 
 #if CALC_LCP
     if (0)
@@ -1929,7 +1945,9 @@ void parallel_sample_sort_numa(string *strings, size_t n,
 
     Context ctx;
     ctx.totalsize = n;
+#if PS5_ENABLE_RESTSIZE
     ctx.restsize = n;
+#endif
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
@@ -1943,7 +1961,10 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
 
-    assert(!use_restsize || ctx.restsize.update().get() == 0);
+
+#if PS5_ENABLE_RESTSIZE
+    assert(ctx.restsize.update().get() == 0);
+#endif
 
     g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
