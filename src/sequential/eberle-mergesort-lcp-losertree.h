@@ -1,5 +1,5 @@
 /******************************************************************************
- * src/eberle/sequential/eberle-mergesort-lcp-losertree.h
+ * src/sequential/eberle-mergesort-lcp-losertree.h
  *
  * LCP aware multiway mergesort using a losertree implementation for merging.
  *
@@ -40,8 +40,8 @@ typedef unsigned char* string;
 
 template<unsigned K>
 static inline void
-eberle_mergesort_losertree_lcp_kway(string* strings, const LcpStringPtr& tmp,
-                                    const LcpStringPtr& output, size_t length)
+eberle_mergesort_losertree_lcp_kway(string* strings, const LcpCacheStringPtr& tmp,
+                                    const LcpCacheStringPtr& output, size_t length)
 {
     if (length <= 2 * K)
     {
@@ -77,8 +77,11 @@ eberle_mergesort_losertree_kway(string *strings, size_t n)
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n];
 
-    LcpStringPtr output(strings, outputLcps, n);
-    LcpStringPtr tmp(tmpStrings, tmpLcps, n);
+    char* outputCache = new char[n];
+    char* tmpCache = new char[n];
+
+    LcpCacheStringPtr output(strings, outputLcps, outputCache, n);
+    LcpCacheStringPtr tmp(tmpStrings, tmpLcps, tmpCache, n);
 
     eberle_mergesort_losertree_lcp_kway<K>(strings, tmp, output, n);
 
@@ -90,6 +93,9 @@ eberle_mergesort_losertree_kway(string *strings, size_t n)
     delete[] outputLcps;
     delete[] tmpStrings;
     delete[] tmpLcps;
+
+    delete[] outputCache;
+    delete[] tmpCache;
 }
 
 void

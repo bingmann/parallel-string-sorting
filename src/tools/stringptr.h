@@ -315,6 +315,131 @@ typedef StringPtrOutBase<true> StringPtrOutNoLcpCalc;
 
 typedef uintptr_t lcp_t;
 
+struct LcpCacheStringPtr
+{
+public:
+    string * strings;
+    lcp_t* lcps;
+    char* cachedChars;
+    size_t size;
+
+public:
+    LcpCacheStringPtr()
+        : strings(NULL), lcps(NULL), cachedChars(NULL), size(0)
+    {
+    }
+
+    LcpCacheStringPtr(string* _strings, lcp_t* _lcps, char* _cachedChars, size_t _size)
+           : strings(_strings), lcps(_lcps), cachedChars(_cachedChars), size(_size)
+    {
+    }
+
+    inline bool empty() const
+    {
+        return (size == 0);
+    }
+
+    inline void
+    set(string s, lcp_t lcp) const
+    {
+        assert(size > 0);
+        *strings = s;
+        *lcps = lcp;
+        *cachedChars = s[lcp];
+    }
+
+    inline void
+    set(string s, lcp_t lcp, char cachedCharacter) const
+    {
+       assert(size > 0);
+       *strings = s;
+       *lcps = lcp;
+       *cachedChars = cachedCharacter;
+    }
+
+    inline void
+    setFirst(LcpCacheStringPtr& ptr)
+    {
+        *strings = *ptr.strings;
+        *lcps = *ptr.lcps;
+        *cachedChars = *ptr.cachedChars;
+    }
+
+    inline string&
+    str() const
+    {
+        assert(size > 0);
+        return *strings;
+    }
+
+    inline lcp_t&
+    lcp() const
+    {
+        assert(size > 0);
+        return *lcps;
+    }
+
+    inline char&
+    cache() const
+    {
+        assert(size > 0);
+        return *cachedChars;
+    }
+
+    inline void
+    copyFrom(LcpCacheStringPtr& other, size_t length) const
+    {
+        memcpy(strings, other.strings, length * sizeof(string));
+        memcpy(lcps, other.lcps, length * sizeof(lcp_t));
+        memcpy(cachedChars, other.cachedChars, length * sizeof(char));
+    }
+
+    inline void
+    copyStringsTo(string* destination, size_t length) const
+    {
+        memcpy(destination, strings, length * sizeof(string));
+    }
+
+    // preincrement
+    inline LcpCacheStringPtr&
+    operator++()
+    {
+        ++strings;
+        ++lcps;
+        ++cachedChars;
+        --size;
+        return *this;
+    }
+
+    //! return sub-array of (string,lcp) with offset and size
+    inline LcpCacheStringPtr
+    sub(size_t offset, size_t n) const
+    {
+        assert(offset + n <= size);
+        return LcpCacheStringPtr(strings + offset, lcps + offset, cachedChars + offset, n);
+    }
+
+    //! return empty end array.
+    inline LcpCacheStringPtr
+    end() const
+    {
+        return sub(size, 0);
+    }
+
+    inline size_t
+    operator-(const LcpCacheStringPtr& rhs) const
+    {
+        return strings - rhs.strings;
+    }
+
+    inline bool
+    operator<(const LcpCacheStringPtr& rhs) const
+    {
+        return strings < rhs.strings;
+    }
+};
+
+
 struct LcpStringPtr
 {
 public:
@@ -330,6 +455,11 @@ public:
 
     LcpStringPtr(string* _strings, lcp_t* _lcps, size_t _size)
         : strings(_strings), lcps(_lcps), size(_size)
+    {
+    }
+
+    LcpStringPtr(const LcpCacheStringPtr& ptr)
+         : strings(ptr.strings), lcps(ptr.lcps), size(ptr.size)
     {
     }
 
@@ -426,14 +556,19 @@ public:
 };
 
 /// verify LCP array against sorted string array by scanning LCPs
+template<bool checkCache>
 static inline bool
-verify_lcp(string* strings, lcp_t* lcps, size_t n, lcp_t expectedFirstLcp)
+verify_lcp_cache(string* strings, lcp_t* lcps, char* cache, size_t n, lcp_t expectedFirstLcp)
 {
     bool allValid = true;
 
     if (lcps[0] != expectedFirstLcp)
     {
         std::cout << "lcp[0] = " << lcps[0] << " excepted " << expectedFirstLcp << std::endl;
+        allValid = false;
+    }
+    if(checkCache && *cache != strings[0][lcps[0]]){
+        std::cout << "cache[0] = " << cache[0] << " excepted " <<  strings[0][lcps[0]] << std::endl;
         allValid = false;
     }
 
@@ -447,14 +582,30 @@ verify_lcp(string* strings, lcp_t* lcps, size_t n, lcp_t expectedFirstLcp)
             std::cout << "lcp[" << i << "] = " << lcps[i] << " excepted " << h << std::endl;
             allValid = false;
         }
+        if (checkCache && cache[i] != s2[lcps[i]])
+        {
+            std::cout << "cache[" << i << "] = " << cache[i] << " excepted " << s2[lcps[i]] << std::endl;
+            allValid = false;
+        }
     }
 
     if (allValid)
-        std::cout << "All LCPs valid!" << std::endl;
+        std::cout << "All LCPs and cache values valid!" << std::endl;
     else
-        std::cout << "Found invalid LCPS!" << std::endl;
+        std::cout << "Found invalid LCPS and/or cache values!" << std::endl;
 
     return allValid;
+}
+
+static inline bool
+verify_lcp(string* strings, lcp_t* lcps, size_t n, lcp_t expectedFirstLcp){
+    return verify_lcp_cache<false>(strings, lcps, NULL, n, expectedFirstLcp);
+}
+
+static inline bool
+verify_lcp_cache(string* strings, lcp_t* lcps, char* cache, size_t n, lcp_t expectedFirstLcp)
+{
+    return verify_lcp_cache<true>(strings, lcps, cache, n, expectedFirstLcp);
 }
 
 } // namespace stringtools

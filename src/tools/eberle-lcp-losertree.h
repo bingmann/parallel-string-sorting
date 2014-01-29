@@ -44,7 +44,7 @@ typedef unsigned char* string;
 template<unsigned K>
 class LcpStringLoserTree
 {
-    typedef LcpStringPtr Stream;
+    typedef LcpCacheStringPtr Stream;
 
 public:
     //! allow public access to streams for easier initialization
@@ -70,30 +70,36 @@ protected:
         lcp_t& contenderLcp = lcps[contenderIdx];
         lcp_t& defenderLcp = lcps[defenderIdx];
 
+
         if (contenderStream.empty() || defenderLcp > contenderLcp)
         { // CASE 2: curr->lcp > contender->lcp => curr < contender
             std::swap(defenderIdx, contenderIdx);
-
         }
+
         else if (defenderLcp == contenderLcp)
         { // CASE 1: curr.lcp == contender.lcp
             lcp_t lcp = defenderLcp;
 
-            string s1 = defenderStream.str() + lcp;
-            string s2 = contenderStream.str() + lcp;
+            char c1 = defenderStream.cache();
+            char c2 = contenderStream.cache();
 
             // check the strings starting after lcp and calculate new lcp
-            while (*s1 != '\0' && *s1 == *s2)
-                s1++, s2++, lcp++;
+            while (c1 != '\0' && c1 == c2) {
+                lcp++;
+                c1 = defenderStream.str()[lcp];
+                c2 = contenderStream.str()[lcp];
+            }
 
-            if (*s1 < *s2)
+            if (c1 < c2)
             { 	// CASE 1.1: curr < contender
                 contenderLcp = lcp;
+                contenderStream.cache() = c2;
                 std::swap(defenderIdx, contenderIdx);
             }
             else
             {	// CASE 1.2: curr >= contender
                 defenderLcp = lcp;
+                defenderStream.cache() = c1;
             }
         } // else // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
     }
@@ -116,7 +122,7 @@ public:
     {
     }
 
-    LcpStringLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
+    LcpStringLoserTree(const Stream& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
     {
         for (unsigned i = 0; i < K; i++)
         {
@@ -128,7 +134,7 @@ public:
         initTree(knownCommonLcp);
     }
 
-    LcpStringLoserTree(const LcpStringPtr* inputs, unsigned numInputs, lcp_t knownCommonLcp = 0)
+    LcpStringLoserTree(const Stream* inputs, unsigned numInputs, lcp_t knownCommonLcp = 0)
     {
         assert(numInputs <= K);
 
@@ -138,7 +144,7 @@ public:
         }
         for (unsigned i = numInputs; i < K; ++i)
         {
-            streams[i] = LcpStringPtr(NULL, NULL, 0);
+            streams[i] = Stream();
         }
 
         initTree(knownCommonLcp);
@@ -150,6 +156,10 @@ public:
         for (unsigned i = 0; i < K; i++)
         {
             lcps[i] = knownCommonLcp;
+
+            if(streams[i].size > 0)
+                streams[i].cache() = streams[i].str()[knownCommonLcp];
+
             unsigned nodeIdx = K + i;
             unsigned contenderIdx = i;
 
@@ -258,7 +268,7 @@ public:
 
         nodes[0] = contenderIdx;
     }
-
+ 
     inline void
     writeElementsToStream(string *outStream, const size_t length)
     {
@@ -287,13 +297,13 @@ public:
         }
     }
 
-    inline const LcpStringPtr*
+    inline const LcpCacheStringPtr*
     getRemaining()
     {
         return streams;
     }
-};
-
+}; 
+ 
 } // namespace eberle_lcp_utils
 
 #endif // LCP_STRING_LOSERTREE_H_
