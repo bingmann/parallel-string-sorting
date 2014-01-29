@@ -110,8 +110,6 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
     }
 }
 
-
-// implementation follows
 static inline void
 eberle_lcp_merge(const LcpStringPtr& input1, const LcpStringPtr& input2, const LcpStringPtr& output)
 {
@@ -236,11 +234,10 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
 }
 
 static inline void
-eberle_lcp_merge(const LcpStringPtr& input1, size_t length1,
-                 const LcpStringPtr& input2, size_t length2, string* output)
+eberle_lcp_merge(const LcpStringPtr& input1, const LcpStringPtr& input2, string* output)
 {
-    eberle_lcp_merge(input1.strings, input1.lcps, length1,
-                     input2.strings, input2.lcps, length2, output);
+    eberle_lcp_merge(input1.strings, input1.lcps, input1.size,
+                     input2.strings, input2.lcps, input2.size, output);
 }
 
 }

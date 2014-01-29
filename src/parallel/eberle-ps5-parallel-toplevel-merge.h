@@ -92,13 +92,12 @@ struct CopyDataJob : public Job
 {
     LcpStringPtr input;
     string* output;
-    size_t length;
 
-    CopyDataJob(const LcpStringPtr& input, string* output, size_t length)
-        : input(input), output(output), length(length)
+    CopyDataJob(const LcpStringPtr& input, string* output)
+        : input(input), output(output)
     {
         DBG(debug_jobtype_on_creation,
-                "CopyDataJob (output: " << (output - g_outputBase) << ", length: " << length << ")");
+                "CopyDataJob (output: " << (output - g_outputBase) << ", length: " << input.size << ")");
     }
 
     virtual bool
@@ -106,7 +105,7 @@ struct CopyDataJob : public Job
     {
         (void) jobQueue;
 
-        input.copyStringsTo(output, length);
+        input.copyStringsTo(output, input.size);
 
         return true;
     }
@@ -115,16 +114,14 @@ struct CopyDataJob : public Job
 struct BinaryMergeJob : public Job
 {
     LcpStringPtr input1;
-    size_t length1;
     LcpStringPtr input2;
-    size_t length2;
     string* output;
 
-    BinaryMergeJob(const LcpStringPtr& input1, size_t length1, const LcpStringPtr& input2, size_t length2, string* output) :
-            input1(input1), length1(length1), input2(input2), length2(length2), output(output)
+    BinaryMergeJob(const LcpStringPtr& input1, const LcpStringPtr& input2, string* output) :
+            input1(input1), input2(input2), output(output)
     {
         DBG(debug_jobtype_on_creation,
-                "BinaryMergeJob (length1: " << length1 << ", length2: " << length2 << ", output: " << (output - g_outputBase) << ")");
+                "BinaryMergeJob (length1: " << input1.size << ", length2: " << input2.size << ", output: " << (output - g_outputBase) << ")");
     }
 
     virtual bool
@@ -133,7 +130,7 @@ struct BinaryMergeJob : public Job
         (void) jobQueue;
         input1.lcp() = 0;
         input2.lcp() = 0;
-        eberle_lcp_merge(input1, length1, input2, length2, output);
+        eberle_lcp_merge(input1, input2, output);
 
         return true;
     }
@@ -336,7 +333,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
             const LcpCacheStringPtr start = inputs[idx];
             length += findNextSplitter(inputs[idx],
                                        baseLcp, maxAllowedLcp, splitterCharacter[idx], keyMask);
-            jobQueue.enqueue(new CopyDataJob(LcpStringPtr(start), output, length));
+            jobQueue.enqueue(new CopyDataJob(LcpStringPtr(start, length), output));
             break;
         }
         case 2:
@@ -353,7 +350,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
                                               baseLcp, maxAllowedLcp, splitterCharacter[idx2],
                                               keyMask);
 
-            jobQueue.enqueue(new BinaryMergeJob(LcpStringPtr(start1), length1, LcpStringPtr(start2), length2, output));
+            jobQueue.enqueue(new BinaryMergeJob(LcpStringPtr(start1, length1), LcpStringPtr(start2, length2), output));
             length = length1 + length2;
             break;
         }
@@ -454,13 +451,12 @@ sequentialMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* outp
     {
     case 1:
     {
-        jobQueue.enqueue(new CopyDataJob(LcpStringPtr(input[0]), output, length));
+        jobQueue.enqueue(new CopyDataJob(LcpStringPtr(input[0]), output));
         break;
     }
     case 2:
     {
-        jobQueue.enqueue(new BinaryMergeJob(LcpStringPtr(input[0]), input[0].size,
-                                           LcpStringPtr(input[1]), input[1].size, output));
+        jobQueue.enqueue(new BinaryMergeJob(LcpStringPtr(input[0]), LcpStringPtr(input[1]), output));
         break;
     }
     case 3: case 4:

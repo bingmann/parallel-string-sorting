@@ -463,6 +463,11 @@ public:
     {
     }
 
+    LcpStringPtr(const LcpCacheStringPtr& ptr, size_t _size)
+            : strings(ptr.strings), lcps(ptr.lcps), size(_size)
+    {
+    }
+
     inline bool empty() const
     {
         return (size == 0);
