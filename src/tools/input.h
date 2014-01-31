@@ -100,6 +100,8 @@ void free_stringdata()
     }
 
     g_string_databuff = NULL;
+
+    numa_set_interleave_mask(numa_all_nodes_ptr);
 }
 
 /// Allocate space in g_string_data
@@ -125,19 +127,29 @@ char* allocate_stringdata(size_t size, const std::string& path)
         }
 
         if (gopt_memory_type == "mmap_interleave")
+        {
             numa_interleave_memory(stringdata, g_string_buffsize, numa_all_cpus_ptr);
+            numa_set_interleave_mask(numa_all_nodes_ptr);
+        }
         if (gopt_memory_type == "mmap_node0")
+        {
             numa_tonode_memory(stringdata, g_string_buffsize, 0);
+            numa_set_preferred(0);
+        }
         if (gopt_memory_type == "mmap_segment")
+        {
             do_numa_segment(stringdata, g_string_buffsize);
+        }
     }
     else if (gopt_memory_type == "interleave")
     {
         stringdata = (char*)numa_alloc_interleaved(g_string_buffsize);
+        numa_set_interleave_mask(numa_all_nodes_ptr);
     }
     else if (gopt_memory_type == "node0")
     {
         stringdata = (char*)numa_alloc_onnode(g_string_buffsize, 0);
+        numa_set_preferred(0);
     }
     else if (gopt_memory_type == "segment")
     {

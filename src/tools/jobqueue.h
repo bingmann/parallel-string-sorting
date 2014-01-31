@@ -41,6 +41,8 @@
 #include "../tools/debug.h"
 #include "../tools/agglogger.h"
 
+extern std::string gopt_memory_type;
+
 namespace jobqueue {
 
 static const bool debug_queue = false;
@@ -175,6 +177,13 @@ public:
 
 #pragma omp parallel
         {
+            if (gopt_memory_type == "mmap_node0" || gopt_memory_type == "node0")
+            {
+                // tie thread to first NUMA node
+                numa_run_on_node(0);
+                numa_set_preferred(0);
+            }
+
             executeThreadWork(cookie);
         } // end omp parallel
 
