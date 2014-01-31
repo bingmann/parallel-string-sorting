@@ -105,7 +105,7 @@ static const size_t MAXPROCS = 2*64+1; // +1 due to round up of processor number
 #endif
 static const size_t l2cache = PS5_L2CACHE;
 
-static const size_t g_smallsort_threshold = 64*1024;
+static const size_t g_smallsort_threshold = 1024*1024;
 static const size_t g_inssort_threshold = 64;
 
 typedef uint64_t key_type;
@@ -569,7 +569,6 @@ insertion_sort(const stringtools::StringPtr& strptr, size_t depth)
     assert(!strptr.flipped());
 
     bingmann_lcp_inssort::lcp_insertion_sort(strptr.output(), strptr.lcparray(), strptr.size(), depth);
-
 }
 
 static inline void
