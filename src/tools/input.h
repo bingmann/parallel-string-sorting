@@ -27,21 +27,24 @@ bool check_memory_type(const std::string& memtype)
 {
     if (memtype == "malloc") return true;
     if (memtype == "mmap") return true;
-    if (memtype == "interleave") return true;
-    if (memtype == "node0") return true;
-    if (memtype == "segment") return true;
     if (memtype == "mmap_interleave") return true;
     if (memtype == "mmap_node0") return true;
     if (memtype == "mmap_segment") return true;
 
     std::cout << "Following --memory types are available:" << std::endl
-              << "  malloc        use plain malloc() call (default)" << std::endl
-              << "  mmap          use mmap() to allocate private memory" << std::endl
-              << "  interleave    use libnuma to interleave onto nodes" << std::endl
-              << "  node0         pin memory to numa node 0" << std::endl
-              << "  segment       segment characters equally onto all numa nodes" << std::endl
-              << "  mmap_{interleave,node0,segment} combination of mmap and numa allocation" << std::endl
+              << "  malloc           use plain malloc() call (default)" << std::endl
+              << "  mmap             use mmap() to allocate shared memory" << std::endl
+              << "  mmap_interleave  use libnuma to interleave onto nodes" << std::endl
+              << "  mmap_node0       pin memory to numa node 0" << std::endl
+              << "  mmap_segment     segment characters equally onto all numa nodes" << std::endl
         ;
+
+    /*
+     * 2014-01-31: removed plain -M memory_types node0,segment,interleave. Use
+     * mmap_xyz memory_type instead!  The plain memory_type does not create
+     * shared mmap() areas, instead when using fork() the private mmap() area
+     * is cloned!
+     */
 
     return false;
 }
@@ -87,12 +90,6 @@ void free_stringdata()
         if (munmap(g_string_databuff, g_string_buffsize)) {
             std::cout << "Error unmapping string data memory: " << strerror(errno) << std::endl;
         }
-    }
-    else if (gopt_memory_type == "interleave" ||
-             gopt_memory_type == "node0" ||
-             gopt_memory_type == "segment")
-    {
-        numa_free(g_string_databuff, g_string_buffsize);
     }
     else // use plain malloc()/free()
     {
@@ -140,21 +137,6 @@ char* allocate_stringdata(size_t size, const std::string& path)
         {
             do_numa_segment(stringdata, g_string_buffsize);
         }
-    }
-    else if (gopt_memory_type == "interleave")
-    {
-        stringdata = (char*)numa_alloc_interleaved(g_string_buffsize);
-        numa_set_interleave_mask(numa_all_nodes_ptr);
-    }
-    else if (gopt_memory_type == "node0")
-    {
-        stringdata = (char*)numa_alloc_onnode(g_string_buffsize, 0);
-        numa_set_preferred(0);
-    }
-    else if (gopt_memory_type == "segment")
-    {
-        stringdata = (char*)numa_alloc(g_string_buffsize);
-        do_numa_segment(stringdata, g_string_buffsize);
     }
     else // use plain malloc()/free()
     {
