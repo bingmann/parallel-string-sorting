@@ -95,9 +95,16 @@ void inssort_lcp(string* strings, const LcpStringPtr& out, size_t length)
     }
 }
 
+
 static inline
-void
-eberle_lcp_inssort(string *strings, size_t n)
+void inssort_lcp(string* strings, const LcpCacheStringPtr& out, size_t length)
+{
+    inssort_lcp(strings, (const LcpStringPtr&) out, length);
+    out.calculateCache();
+}
+
+static inline
+void eberle_lcp_inssort(string *strings, size_t n)
 {
     lcp_t* lcps = new lcp_t[n];
     LcpStringPtr output(strings, lcps, n);
@@ -107,13 +114,35 @@ eberle_lcp_inssort(string *strings, size_t n)
     //check lcps
 #ifdef EBERLE_INSSORT_CHECK_LCPS
     std::cout << "Checking LCPs" << std::endl;
-    stringtools::verify_lcp(output.str(), output.lcp(), n, 0);
+    stringtools::verify_lcp(output.strings, output.lcps, n, 0);
 #endif
 
     delete[] lcps;
 }
 
+static inline
+void eberle_lcp_inssort_cache(string *strings, size_t n)
+{
+    lcp_t* lcps = new lcp_t[n];
+    char* cache = new char[n];
+    LcpCacheStringPtr output(strings, lcps, cache, n);
+
+    inssort_lcp(strings, output, n);
+
+    //check lcps
+#ifdef EBERLE_INSSORT_CHECK_LCPS
+    std::cout << "Checking LCPs" << std::endl;
+    stringtools::verify_lcp_cache(output.strings, output.lcps, output.cachedChars, n, 0);
+#endif
+
+    delete[] lcps;
+    delete[] cache;
+}
+
+
 CONTESTANT_REGISTER(eberle_lcp_inssort, "eberle/lcp_insertion_sort", "LCP aware inssertion sort by Andreas Eberle")
+CONTESTANT_REGISTER(eberle_lcp_inssort_cache, "eberle/lcp_insertion_sort_cache", "LCP aware insertion sort with cached characters calculation by Andreas Eberle")
+
 
 }
  // namespace eberle_inssort_lcp

@@ -400,6 +400,14 @@ public:
         memcpy(destination, strings, length * sizeof(string));
     }
 
+    inline void
+    calculateCache() const
+    {
+        for(unsigned i = 0; i < size; ++i){
+            cachedChars[i] = strings[i][lcps[i]];
+        }
+    }
+
     // preincrement
     inline LcpCacheStringPtr&
     operator++()

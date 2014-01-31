@@ -251,14 +251,15 @@ public:
     }
 
     inline void
-    writeElementsToStream(LcpStringPtr outStream)
+    writeElementsToStream(Stream outStream)
     {
-        const LcpStringPtr end = outStream.end();
+        const Stream end = outStream.end();
         unsigned contenderIdx = nodes[0];
 
         while (outStream < end)
         {
-            outStream.set(streams[contenderIdx].str(), lcps[contenderIdx]);
+            Stream currStream = streams[contenderIdx];
+            outStream.set(currStream.str(), lcps[contenderIdx], currStream.cache());
             ++outStream;
 
             removeTopFromStream(contenderIdx);

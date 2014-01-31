@@ -29,7 +29,7 @@
 #include "../tools/eberle-lcp-losertree.h"
 #include "../sequential/eberle-inssort-lcp.h"
 
-//#define EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
+#define EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 
 namespace eberle_mergesort
 {
@@ -58,14 +58,26 @@ eberle_mergesort_losertree_lcp_kway(string* strings, const LcpCacheStringPtr& tm
         const size_t offset = ranges[i].first;
         const size_t size = ranges[i].second;
         eberle_mergesort_losertree_lcp_kway<K>(strings + offset,
-                                               output.sub(offset, size),
-                                               tmp.sub(offset, size),
-                                               ranges[i].second);
+                output.sub(offset, size), tmp.sub(offset, size), size);
     }
 
     //merge
     LcpStringLoserTree<K> loserTree(tmp, ranges);
     loserTree.writeElementsToStream(output);
+}
+
+template<unsigned K>
+static inline void
+eberle_mergesort_losertree_lcp_kway(string* strings, const LcpCacheStringPtr& outputPtr)
+{
+    size_t length = outputPtr.size;
+    LcpCacheStringPtr tmpPtr(new string[length], new lcp_t[length], new char[length], length);
+
+    eberle_mergesort_losertree_lcp_kway<K>(strings, tmpPtr, outputPtr, length);
+
+    delete[] tmpPtr.strings;
+    delete[] tmpPtr.lcps;
+    delete[] tmpPtr.cachedChars;
 }
 
 // K must be a power of two
@@ -87,7 +99,7 @@ eberle_mergesort_losertree_kway(string *strings, size_t n)
 
 #ifdef EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
     //check lcps
-    eberle_utils::checkLcps(output, n, 0);
+    stringtools::verify_lcp_cache(output.strings, output.lcps, output.cachedChars, output.size, 0);
 #endif //EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 
     delete[] outputLcps;

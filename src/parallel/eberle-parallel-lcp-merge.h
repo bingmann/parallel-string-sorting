@@ -248,6 +248,36 @@ findNextSplitter(LcpCacheStringPtr& inputStream,
     return length;
 }
 
+template <unsigned K>
+static inline unsigned
+createMergeJob(JobQueue &jobQueue, string* output, LcpCacheStringPtr* inputs, unsigned* indexesOfFound,
+        unsigned numberOfFoundBuckets, unsigned baseLcp, unsigned maxAllowedLcp, CHAR_TYPE* splitterCharacter, CHAR_TYPE keyMask)
+{
+    unsigned length = 0;
+    MergeJob<K>* job = new MergeJob<K>(output, 0, baseLcp, maxAllowedLcp + 1);
+
+    unsigned k = 0;
+    for (; k < numberOfFoundBuckets; ++k)
+    {
+        const unsigned idx = indexesOfFound[k];
+        const LcpCacheStringPtr start = inputs[idx];
+        size_t currLength = findNextSplitter(inputs[idx], baseLcp,
+                             maxAllowedLcp, splitterCharacter[idx], keyMask);
+        job->loserTree.streams[k] = start.sub(0, currLength);
+        length += currLength;
+    }
+    for (; k < K; k++)
+    {
+        // this stream is not used
+        job->loserTree.streams[k] = LcpCacheStringPtr(NULL, NULL, NULL, 0);
+    }
+
+    job->length = length;
+    jobQueue.enqueue(job);
+
+    return length;
+}
+
 static inline void
 createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs,
            string* output, size_t numberOfElements, lcp_t baseLcp)
@@ -348,61 +378,33 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
         }
         case 3: case 4:
         {
-            static const unsigned K = 4;
-
-            MergeJob<K>* job = new MergeJob<K>(output, length, baseLcp, maxAllowedLcp + 1);
-
-            unsigned k = 0;
-            for (; k < numberOfFoundBuckets; ++k)
-            {
-                const unsigned idx = indexesOfFound[k];
-                const LcpCacheStringPtr start = inputs[idx];
-                size_t currLength =
-                    findNextSplitter(inputs[idx],
-                                     baseLcp, maxAllowedLcp, splitterCharacter[idx], keyMask);
-                job->loserTree.streams[k] = start.sub(0, currLength);
-                length += currLength;
-            }
-            for (; k < K; k++)
-            {
-                // this stream is not used
-                job->loserTree.streams[k] = LcpCacheStringPtr(NULL, NULL, NULL, 0);
-            }
-
-            job->length = length;
-            jobQueue.enqueue(job);
+            length = createMergeJob<4>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
+                    baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
             break;
         }
         case 5: case 6: case 7: case 8:
         {
-            static const unsigned K = 8;
-
-            MergeJob<K>* job = new MergeJob<K>(output, length, baseLcp, maxAllowedLcp + 1);
-
-            unsigned k = 0;
-            for (; k < numberOfFoundBuckets; ++k)
-            {
-                const unsigned idx = indexesOfFound[k];
-                const LcpCacheStringPtr start = inputs[idx];
-                size_t currLength =
-                    findNextSplitter(inputs[idx],
-                                     baseLcp, maxAllowedLcp, splitterCharacter[idx], keyMask);
-                job->loserTree.streams[k] = start.sub(0, currLength);
-                length += currLength;
-            }
-            for (; k < K; k++)
-            {
-                // this stream is not used
-                job->loserTree.streams[k] = LcpCacheStringPtr(NULL, NULL, NULL, 0);
-            }
-
-            job->length = length;
-            jobQueue.enqueue(job);
+            length = createMergeJob<8>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
+                                baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
+            break;
+        }
+        case 9: case 10: case 11: case 12: case 13: case 14: case 15: case 16:
+        {
+            length = createMergeJob<16>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
+                                baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
             break;
         }
         default:
-            DBG(1, "Found " << numberOfFoundBuckets << ", which is more NUMA nodes than expected, ADD MORE CASES IN SWITCH.");
-            abort();
+            if(numberOfFoundBuckets <= 32){
+                length = createMergeJob<32>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
+                                             baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
+            } else if(numberOfFoundBuckets <= 64){
+                length = createMergeJob<64>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
+                                             baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
+            }else{
+                DBG(1, "Found " << numberOfFoundBuckets << ", which is more NUMA nodes than expected, ADD MORE CASES IN SWITCH.");
+                abort();
+            }
         }
 
         output += length;

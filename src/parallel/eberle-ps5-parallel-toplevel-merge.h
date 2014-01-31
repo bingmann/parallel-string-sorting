@@ -58,13 +58,7 @@ using stringtools::string;
 //debugging constants
 static const bool debug_toplevel_merge_duration = true;
 
-//constants
-static const bool USE_WORK_SHARING = true;
-static const size_t MERGE_BULK_SIZE = 3000;
-static const size_t SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
-
 //method definitions
-
 void
 eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 {
