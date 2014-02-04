@@ -1935,7 +1935,7 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
 //! Call for NUMA aware parallel sorting
 void parallel_sample_sort_numa(string *strings, size_t n,
                                int numaNode, int numberOfThreads,
-                               LcpCacheStringPtr& output)
+                               const LcpCacheStringPtr& output)
 {
     // tie thread to a NUMA node
     numa_run_on_node(numaNode);
@@ -1948,23 +1948,6 @@ void parallel_sample_sort_numa(string *strings, size_t n,
 #endif
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
-
-    //SampleSortStep<ClassifyUnrollBoth, StringPtrOut>::put_stats();
-
-#if 0
-    output.strings     = new string[n];
-    output.lcps        = new lcp_t[n];
-    output.cachedChars = new char[n];
-
-    numa_tonode_memory(output.strings, n * sizeof(string), numaNode);
-    numa_tonode_memory(output.lcps,    n * sizeof(lcp_t), numaNode);
-    numa_tonode_memory(output.char,    n * sizeof(char), numaNode);
-#else
-    output.strings =     (string*)numa_alloc_onnode(n * sizeof(string), numaNode);
-    output.lcps =        (lcp_t*)numa_alloc_onnode(n * sizeof(lcp_t), numaNode);
-    output.cachedChars = (char*)numa_alloc_onnode(n * sizeof(char), numaNode);
-#endif
-    output.size = n;
 
     StringPtrOut strptr(strings, (string*)output.lcps, output.strings, n);
 

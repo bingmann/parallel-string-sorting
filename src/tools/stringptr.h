@@ -30,6 +30,7 @@
 
 #include <assert.h>
 #include "debug.h"
+#include "numa.h"
 
 namespace stringtools {
 
@@ -406,6 +407,33 @@ public:
         for(unsigned i = 0; i < size; ++i){
             cachedChars[i] = strings[i][lcps[i]];
         }
+    }
+
+    inline void
+    allocateNumaMemory(int numaNode, size_t length)
+    {
+#if 0
+        strings     = new string[length];
+        lcps        = new lcp_t[length];
+        cachedChars = new char[length];
+
+        numa_tonode_memory(strings,     length * sizeof(string), numaNode);
+        numa_tonode_memory(lcps,        length * sizeof(lcp_t), numaNode);
+        numa_tonode_memory(cachedChars, length * sizeof(char), numaNode);
+#else
+        strings =     (string*) numa_alloc_onnode(length * sizeof(string), numaNode);
+        lcps =        (lcp_t*)  numa_alloc_onnode(length * sizeof(lcp_t),  numaNode);
+        cachedChars = (char*)   numa_alloc_onnode(length * sizeof(char),   numaNode);
+#endif
+        size = length;
+    }
+
+    inline void
+    freeNumaMemory()
+    {
+        numa_free(strings, size * sizeof(string));
+        numa_free(lcps, size * sizeof(string));
+        numa_free(cachedChars, size * sizeof(char));
     }
 
     // preincrement

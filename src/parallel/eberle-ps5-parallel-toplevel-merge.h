@@ -90,60 +90,45 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     if (numThreadsPerNode == 0)
     {
         DBG(1, "Fewer threads than NUMA nodes detected.");
-        DBG(1, "Strange things will happen now.");
-        DBG(1, "Continuing anyway, at your own peril!");
-
-        // set num threads = 1 for nodes, and limit number of active nodes via
-        // normal num_threads() in next loop
-        numThreadsPerNode = 1;
-
-#pragma omp parallel for schedule(dynamic)
-        for (int k = 0; k < numNumaNodes; k++)
-        {
-            size_t start = ranges[k].first;
-            size_t length = ranges[k].second;
-
-            parallel_sample_sort_numa(strings + start, length,
-                                      k % realNumaNodes, numThreadsPerNode,
-                                      outputs[k]);
-
-            outputs[k].size = length;
-        }
+        DBG(1, "Aborting execution!");
+        abort();
     }
-    else
-    {
-        ClockTimer all_timer;
+
+
+    ClockTimer timer;
 
 #pragma omp parallel for num_threads(numNumaNodes) schedule(static)
-        for (int k = 0; k < numNumaNodes; k++)
-        {
-            size_t start = ranges[k].first;
-            size_t length = ranges[k].second;
+    for (int k = 0; k < numNumaNodes; k++)
+    {
+        size_t start = ranges[k].first;
+        size_t length = ranges[k].second;
 
-            int nodeThreads = numThreadsPerNode;
-            if (k < remainThreads) nodeThreads++; // distribute extra threads
+        int nodeThreads = numThreadsPerNode;
+        int numaNode = k % realNumaNodes;
+        if (k < remainThreads) nodeThreads++; // distribute extra threads
 
-            DBG(1, "node[" << k << "] gets " << nodeThreads << " threads");
+        DBG(1, "node[" << numaNode << "] gets " << nodeThreads << " threads");
 
-            ClockTimer timer;
+        ClockTimer timer;
 
-            parallel_sample_sort_numa(strings + start, length,
-                                      k % realNumaNodes, numThreadsPerNode,
-                                      outputs[k]);
+        outputs[k].allocateNumaMemory(numaNode, length);
+        parallel_sample_sort_numa(strings + start, length, numaNode, numThreadsPerNode, outputs[k]);
 
-            outputs[k].size = length;
-
-            DBG(debug_toplevel_merge_duration, "node[" << k << "] took : " << timer.elapsed() << " s");
-        }
-
-        DBG(debug_toplevel_merge_duration, "all nodes took : " << all_timer.elapsed() << " s");
+        DBG(debug_toplevel_merge_duration, "node[" << k << "] took : " << timer.elapsed() << " s");
     }
+    DBG(debug_toplevel_merge_duration, "all nodes took : " << timer.elapsed() << " s");
+
 
     // calculate cache characters
+    timer.start();
+    omp_set_nested(true);
+
 #pragma omp parallel for num_threads(numNumaNodes) schedule(static)
     for (int k = 0; k < numNumaNodes; k++)
     {
         LcpCacheStringPtr& outputPtr = outputs[k];
+
+#pragma omp parallel for num_threads(numThreadsPerNode) schedule(static)
         for(unsigned i = 0; i < outputPtr.size; i++)
         {
             string s = outputPtr.strings[i];
@@ -151,13 +136,12 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
             char c = s[lcp];
             outputPtr.cachedChars[i] = c;
         }
-
-//        verify_lcp_cache(outputPtr.strings, outputPtr.lcps, outputPtr.cachedChars, outputPtr.size, 0);
     }
+    DBG(debug_toplevel_merge_duration, "creating array with cached characters needed: " << timer.elapsed() << " s" << std::endl);
 
     // do top level merge
 
-    ClockTimer timer;
+    timer.start();
    // eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
     eberle_parallel_lcp_merge::parallelLcpMerge(outputs, numNumaNodes, strings, n);
 
@@ -165,9 +149,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 
     for (int k = 0; k < numNumaNodes; k++)
     {
-        numa_free(outputs[k].strings, ranges[k].second * sizeof(string));
-        numa_free(outputs[k].lcps, ranges[k].second * sizeof(string));
-        numa_free(outputs[k].cachedChars, ranges[k].second * sizeof(char));
+        outputs[k].freeNumaMemory();
     }
 }
 

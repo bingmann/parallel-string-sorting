@@ -29,7 +29,7 @@
 #include "../tools/eberle-lcp-losertree.h"
 #include "../sequential/eberle-inssort-lcp.h"
 
-#define EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
+//#define EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 
 namespace eberle_mergesort
 {

@@ -62,14 +62,16 @@ static const unsigned MERGESORT_BRANCHES = 64;
 void
 eberle_parallel_lcp_mergesort(string *strings, size_t n)
 {
-    // calculate ranges
-    std::pair<size_t, size_t> ranges[MERGESORT_BRANCHES];
-    calculateRanges(ranges, MERGESORT_BRANCHES, n);
+    const unsigned topLevelBranches = omp_get_max_threads();
 
-    LcpCacheStringPtr stringPtr[MERGESORT_BRANCHES];
+    // calculate ranges
+    std::pair<size_t, size_t> ranges[topLevelBranches];
+    calculateRanges(ranges, topLevelBranches, n);
+
+    LcpCacheStringPtr stringPtr[topLevelBranches];
 
 #pragma omp parallel for
-    for(unsigned k = 0; k < MERGESORT_BRANCHES; k++)
+    for(unsigned k = 0; k < topLevelBranches; k++)
     {
         const size_t length = ranges[k].second;
 
@@ -79,19 +81,17 @@ eberle_parallel_lcp_mergesort(string *strings, size_t n)
         stringPtr[k].size = length;
 
         eberle_mergesort::eberle_mergesort_losertree_lcp_kway<MERGESORT_BRANCHES>(strings + ranges[k].first, stringPtr[k]);
-
- //       verify_lcp_cache(stringPtr[k].strings, stringPtr[k].lcps, stringPtr[k].cachedChars, stringPtr[k].size, 0);
     }
 
     // do top level merge
 
     ClockTimer timer;
    // eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
-    eberle_parallel_lcp_merge::parallelLcpMerge(stringPtr, MERGESORT_BRANCHES, strings, n);
+    eberle_parallel_lcp_merge::parallelLcpMerge(stringPtr, topLevelBranches, strings, n);
 
     DBG(debug_toplevel_merge_duration, std::endl << "top level merge needed: " << timer.elapsed() << " s" << std::endl);
 
-    for(unsigned k = 0; k < MERGESORT_BRANCHES; k++)
+    for(unsigned k = 0; k < topLevelBranches; k++)
     {
         delete[] stringPtr[k].lcps;
         delete[] stringPtr[k].cachedChars;
