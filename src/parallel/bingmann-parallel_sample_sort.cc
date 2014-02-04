@@ -1932,6 +1932,7 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
     }
 }
 
+#ifdef CALC_LCP
 //! Call for NUMA aware parallel sorting
 void parallel_sample_sort_numa(string *strings, size_t n,
                                int numaNode, int numberOfThreads,
@@ -1949,7 +1950,10 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    StringOutPtr strptr(strings, (string*)output.lcps, output.strings, n);
+    //StringOutPtr strptr(strings, (string*)output.lcps, output.strings, n);
+    StringShadowLcpCacheOutPtr
+        strptr(strings, (string*)output.lcps, output.strings,
+               output.cachedChars, n);
 
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
@@ -1964,6 +1968,7 @@ void parallel_sample_sort_numa(string *strings, size_t n,
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
                  >> "steps_base_sort" << ctx.bs_steps;
 }
+#endif
 
 static inline void
 parallel_sample_sortBTC(string* strings, size_t n)

@@ -77,7 +77,7 @@ eberle_parallel_lcp_mergesort(string *strings, size_t n)
 
         stringPtr[k].strings = new string[length];
         stringPtr[k].lcps = new lcp_t[length];
-        stringPtr[k].cachedChars = new char[length];
+        stringPtr[k].cachedChars = new char_type[length];
         stringPtr[k].size = length;
 
         eberle_mergesort::eberle_mergesort_losertree_lcp_kway<MERGESORT_BRANCHES>(strings + ranges[k].first, stringPtr[k]);

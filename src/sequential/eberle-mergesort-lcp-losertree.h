@@ -71,7 +71,7 @@ static inline void
 eberle_mergesort_losertree_lcp_kway(string* strings, const LcpCacheStringPtr& outputPtr)
 {
     size_t length = outputPtr.size;
-    LcpCacheStringPtr tmpPtr(new string[length], new lcp_t[length], new char[length], length);
+    LcpCacheStringPtr tmpPtr(new string[length], new lcp_t[length], new char_type[length], length);
 
     eberle_mergesort_losertree_lcp_kway<K>(strings, tmpPtr, outputPtr, length);
 
@@ -89,8 +89,8 @@ eberle_mergesort_losertree_kway(string *strings, size_t n)
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n];
 
-    char* outputCache = new char[n];
-    char* tmpCache = new char[n];
+    char_type* outputCache = new char_type[n];
+    char_type* tmpCache = new char_type[n];
 
     LcpCacheStringPtr output(strings, outputLcps, outputCache, n);
     LcpCacheStringPtr tmp(tmpStrings, tmpLcps, tmpCache, n);

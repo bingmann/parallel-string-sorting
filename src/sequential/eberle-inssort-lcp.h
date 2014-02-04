@@ -124,7 +124,7 @@ static inline
 void eberle_lcp_inssort_cache(string *strings, size_t n)
 {
     lcp_t* lcps = new lcp_t[n];
-    char* cache = new char[n];
+    char_type* cache = new char_type[n];
     LcpCacheStringPtr output(strings, lcps, cache, n);
 
     inssort_lcp(strings, output, n);

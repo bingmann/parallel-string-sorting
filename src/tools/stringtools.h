@@ -29,8 +29,11 @@
 
 namespace stringtools {
 
-/// zero-terminated character strings
+//! zero-terminated character strings
 typedef unsigned char* string;
+
+//! type of characters in strings
+typedef unsigned char char_type;
 
 /// hacky gcc synthesised 128-bit datatype
 typedef unsigned int uint128_t __attribute__((mode(TI)));

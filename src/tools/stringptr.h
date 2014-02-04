@@ -170,7 +170,7 @@ struct LcpCacheStringPtr
 public:
     string * strings;
     lcp_t* lcps;
-    char* cachedChars;
+    char_type* cachedChars;
     size_t size;
 
 public:
@@ -179,7 +179,7 @@ public:
     {
     }
 
-    LcpCacheStringPtr(string* _strings, lcp_t* _lcps, char* _cachedChars, size_t _size)
+    LcpCacheStringPtr(string* _strings, lcp_t* _lcps, char_type* _cachedChars, size_t _size)
            : strings(_strings), lcps(_lcps), cachedChars(_cachedChars), size(_size)
     {
     }
@@ -229,7 +229,7 @@ public:
         return *lcps;
     }
 
-    inline char&
+    inline char_type&
     firstCached() const
     {
         assert(size > 0);
@@ -264,7 +264,7 @@ public:
 #if 0
         strings     = new string[length];
         lcps        = new lcp_t[length];
-        cachedChars = new char[length];
+        cachedChars = new char_type[length];
 
         numa_tonode_memory(strings,     length * sizeof(string), numaNode);
         numa_tonode_memory(lcps,        length * sizeof(lcp_t), numaNode);
@@ -272,7 +272,7 @@ public:
 #else
         strings =     (string*) numa_alloc_onnode(length * sizeof(string), numaNode);
         lcps =        (lcp_t*)  numa_alloc_onnode(length * sizeof(lcp_t),  numaNode);
-        cachedChars = (char*)   numa_alloc_onnode(length * sizeof(char),   numaNode);
+        cachedChars = (char_type*) numa_alloc_onnode(length * sizeof(char),   numaNode);
 #endif
         size = length;
     }
@@ -495,7 +495,7 @@ typedef StringShadowPtrBase<true> StringShadowLcpPtr;
 
 //! Objectified string array pointer and shadow pointer array for out-of-place
 //! swapping of pointers. With separate output array. Use class, do not derive
-//! from StringShadowPtrBase!
+//! from StringShadowPtrBase!, since we must adapt all functions using out()!
 template <bool WithLcp>
 class StringShadowOutPtrBase
 {
@@ -628,10 +628,74 @@ typedef StringShadowOutPtrBase<true> StringShadowLcpOutPtr;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+//! Objectified string array pointer, shadow pointer array for out-of-place
+//! swapping of pointers and lcp output, and character cache of distinguishing
+//! characters.
+class StringShadowLcpCacheOutPtr : public StringShadowLcpOutPtr
+{
+protected:
+    //! our own type
+    typedef StringShadowLcpCacheOutPtr self_type;
+
+    //! encapsuled StringShadowLcpOutPtr type
+    typedef StringShadowLcpOutPtr super_type;
+
+    //! character cache array
+    char_type   *m_charcache;
+
+public:
+    //! constructor specifying all attributes
+    inline StringShadowLcpCacheOutPtr(string* original, string* shadow = NULL, string* output = NULL,
+                                      char_type* charcache = NULL,
+                                      size_t size = 0, bool flipped = false)
+        : super_type(original, shadow, output, size, flipped),
+          m_charcache(charcache)
+    { }
+
+    //! return character cache of distinguishing chars
+    char_type* charcache() const
+    {
+        return m_charcache;
+    }
+
+    //! Advance (all) pointers by given offset, return sub-array
+    inline self_type sub(size_t offset, size_t size) const
+    {
+        assert(offset + size <= this->size());
+        return self_type(active() + offset, shadow() + offset, output() + offset,
+                         m_charcache + offset, size, flipped());
+    }
+
+    //! construct a StringShadowOutPtrBase object specifying a sub-array with flipping to
+    //! other array.
+    inline self_type flip(size_t offset, size_t size) const
+    {
+        assert(offset + size <= this->size());
+        return self_type(shadow() + offset, active() + offset, m_output + offset,
+                         m_charcache + offset, size, !flipped());
+    }
+
+    //! Return the original of this StringPtr for LCP calculation
+    inline self_type original() const
+    {
+        return flipped() ? flip(0, size()) : *this;
+    }
+
+    //! return subarray pointer to n strings in original array, might copy from
+    //! shadow before returning.
+    inline self_type copy_back() const
+    {
+        memcpy(super_type::m_output, active(), size() * sizeof(string));
+        return original();
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
 //! verify LCP array against sorted string array by scanning LCPs
 template<bool checkCache>
 static inline bool
-verify_lcp_cache(string* strings, lcp_t* lcps, char* cache, size_t n, lcp_t expectedFirstLcp)
+verify_lcp_cache(string* strings, lcp_t* lcps, char_type* cache, size_t n, lcp_t expectedFirstLcp)
 {
     bool allValid = true;
 
@@ -676,7 +740,7 @@ verify_lcp(string* strings, lcp_t* lcps, size_t n, lcp_t expectedFirstLcp){
 }
 
 static inline bool
-verify_lcp_cache(string* strings, lcp_t* lcps, char* cache, size_t n, lcp_t expectedFirstLcp)
+verify_lcp_cache(string* strings, lcp_t* lcps, char_type* cache, size_t n, lcp_t expectedFirstLcp)
 {
     return verify_lcp_cache<true>(strings, lcps, cache, n, expectedFirstLcp);
 }
