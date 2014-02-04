@@ -56,6 +56,7 @@ using stringtools::string;
 
 //debugging constants
 static const bool debug_toplevel_merge_duration = true;
+static const bool debug_verify_ps5_lcp_cache = true;
 
 //method definitions
 void
@@ -122,31 +123,22 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     }
     DBG(debug_toplevel_merge_duration, "all nodes took : " << timer.elapsed() << " s");
 
-
-    // calculate cache characters
-    timer.start();
-    omp_set_nested(true);
-
-#pragma omp parallel for num_threads(numNumaNodes) schedule(static)
-    for (int k = 0; k < numNumaNodes; k++)
+    if (debug_verify_ps5_lcp_cache)
     {
-        LcpCacheStringPtr& outputPtr = outputs[k];
-
-#pragma omp parallel for num_threads(numThreadsPerNode) schedule(static)
-        for(unsigned i = 0; i < outputPtr.size; i++)
+        for (int k = 0; k < numNumaNodes; k++)
         {
-            string s = outputPtr.strings[i];
-            lcp_t lcp = outputPtr.lcps[i];
-            char c = s[lcp];
-            outputPtr.cachedChars[i] = c;
+            LcpCacheStringPtr& out = outputs[k];
+
+            stringtools::verify_lcp_cache(
+                out.strings, out.lcps, out.cachedChars,
+                out.size, 0);
         }
     }
-    DBG(debug_toplevel_merge_duration, "creating array with cached characters needed: " << timer.elapsed() << " s");
 
     // do top level merge
 
     timer.start();
-   // eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
+    // eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
     eberle_parallel_lcp_merge::parallelLcpMerge(outputs, numNumaNodes, strings, n);
 
     DBG(debug_toplevel_merge_duration, "top level merge needed: " << timer.elapsed() << " s");

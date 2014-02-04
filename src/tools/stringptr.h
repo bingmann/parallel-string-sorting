@@ -280,9 +280,15 @@ public:
     inline void
     freeNumaMemory()
     {
+#if 0
+        free(strings);
+        free(lcps);
+        free(cachedChars);
+#else
         numa_free(strings, size * sizeof(string));
         numa_free(lcps, size * sizeof(string));
         numa_free(cachedChars, size * sizeof(char));
+#endif
     }
 
     // preincrement
@@ -461,7 +467,16 @@ public:
         if (!WithLcp) return;
 
         for (size_t i = 1; i < m_size; ++i)
+        {
             set_lcp(i, v);
+            set_cache(i, 0);
+        }
+    }
+
+    //! set the i-th distinguishing cache charater to c
+    inline void set_cache(size_t, const char_type&) const
+    {
+        // no-op
     }
 
     //! Return pointer to LCP array
@@ -603,7 +618,16 @@ public:
         if (!WithLcp) return;
 
         for (size_t i = 1; i < size(); ++i)
+        {
             set_lcp(i, v);
+            set_cache(i, 0);
+        }
+    }
+
+    //! set the i-th distinguishing cache charater to c
+    inline void set_cache(size_t, const char_type&) const
+    {
+        // no-op
     }
 
     //! Return pointer to LCP array
@@ -641,38 +665,35 @@ protected:
     typedef StringShadowLcpOutPtr super_type;
 
     //! character cache array
-    char_type   *m_charcache;
+    char_type   *m_cache;
 
 public:
     //! constructor specifying all attributes
     inline StringShadowLcpCacheOutPtr(string* original, string* shadow = NULL, string* output = NULL,
-                                      char_type* charcache = NULL,
+                                      char_type* cache = NULL,
                                       size_t size = 0, bool flipped = false)
         : super_type(original, shadow, output, size, flipped),
-          m_charcache(charcache)
+          m_cache(cache)
     { }
 
     //! return character cache of distinguishing chars
-    char_type* charcache() const
-    {
-        return m_charcache;
-    }
+    char_type* cache() const { return m_cache; }
 
     //! Advance (all) pointers by given offset, return sub-array
     inline self_type sub(size_t offset, size_t size) const
     {
         assert(offset + size <= this->size());
         return self_type(active() + offset, shadow() + offset, output() + offset,
-                         m_charcache + offset, size, flipped());
+                         m_cache + offset, size, flipped());
     }
 
-    //! construct a StringShadowOutPtrBase object specifying a sub-array with flipping to
-    //! other array.
+    //! construct a StringShadowOutPtrBase object specifying a sub-array with
+    //! flipping to other array.
     inline self_type flip(size_t offset, size_t size) const
     {
         assert(offset + size <= this->size());
         return self_type(shadow() + offset, active() + offset, m_output + offset,
-                         m_charcache + offset, size, !flipped());
+                         m_cache + offset, size, !flipped());
     }
 
     //! Return the original of this StringPtr for LCP calculation
@@ -688,6 +709,26 @@ public:
         memcpy(super_type::m_output, active(), size() * sizeof(string));
         return original();
     }
+
+    //! set the i-th distinguishing cache charater to c
+    inline void set_cache(size_t i, const char_type& c) const
+    {
+        assert(i < size());
+        m_cache[i] = c;
+    }
+
+    //! Fill whole LCP array with n times the value v, ! excluding the first
+    //! LCP[0] position
+    inline void fill_lcp(uintptr_t v)
+    {
+        if (!with_lcp()) return;
+
+        for (size_t i = 1; i < size(); ++i)
+        {
+            set_lcp(i, v);
+            set_cache(i, 0);
+        }
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -699,14 +740,18 @@ verify_lcp_cache(string* strings, lcp_t* lcps, char_type* cache, size_t n, lcp_t
 {
     bool allValid = true;
 
-    if (lcps[0] != expectedFirstLcp)
+    if (expectedFirstLcp != (lcp_t)-1)
     {
-        std::cout << "lcp[0] = " << lcps[0] << " excepted " << expectedFirstLcp << std::endl;
-        allValid = false;
-    }
-    if(checkCache && *cache != strings[0][lcps[0]]){
-        std::cout << "cache[0] = " << cache[0] << " excepted " <<  strings[0][lcps[0]] << std::endl;
-        allValid = false;
+        if (lcps[0] != expectedFirstLcp)
+        {
+            std::cout << "lcp[0] = " << lcps[0] << " excepted " << expectedFirstLcp << std::endl;
+            allValid = false;
+        }
+        if (checkCache && *cache != strings[0][lcps[0]])
+        {
+            std::cout << "cache[0] = " << cache[0] << " excepted " <<  strings[0][lcps[0]] << std::endl;
+            allValid = false;
+        }
     }
 
     for (size_t i = 1; i < n; ++i)

@@ -245,6 +245,13 @@ lcpKeyDepth(const key_type& a)
     return sizeof(key_type) - (count_low_zero_bits(a) / 8);
 }
 
+//! return the d-th character in the (swapped) key
+static inline unsigned char
+getCharAtDepth(const key_type& a, unsigned char d)
+{
+    return static_cast<unsigned char>(a >> (8 * (sizeof(key_type)-1 - d)));
+}
+
 //! Recursive TreeBuilder for full-descent and unrolled variants, constructs a
 //! binary tree and the plain splitter array.
 template <size_t numsplitters>
@@ -568,7 +575,8 @@ insertion_sort(const stringtools::StringShadowLcpPtr& strptr, size_t depth)
 {
     assert(!strptr.flipped());
 
-    bingmann_lcp_inssort::lcp_insertion_sort(strptr.output(), strptr.lcparray(), strptr.size(), depth);
+    bingmann_lcp_inssort::lcp_insertion_sort(
+        strptr.output(), strptr.lcparray(), strptr.size(), depth);
 }
 
 static inline void
@@ -587,7 +595,18 @@ insertion_sort(const stringtools::StringShadowLcpOutPtr& strptr, size_t depth)
 {
     assert(!strptr.flipped());
 
-    bingmann_lcp_inssort::lcp_insertion_sort(strptr.output(), strptr.lcparray(), strptr.size(), depth);
+    bingmann_lcp_inssort::lcp_insertion_sort(
+        strptr.output(), strptr.lcparray(), strptr.size(), depth);
+}
+
+static inline void
+insertion_sort(const stringtools::StringShadowLcpCacheOutPtr& strptr, size_t depth)
+{
+    assert(!strptr.flipped());
+
+    bingmann_lcp_inssort::lcp_insertion_sort_cache(
+        strptr.output(), strptr.lcparray(), strptr.cache(),
+        strptr.size(), depth);
 }
 
 // ****************************************************************************
@@ -642,7 +661,10 @@ void sample_sort_lcp(const Classify& classifier, const StringPtr& strptr, size_t
             key_type thiskey = classifier.get_splitter(b/2);
             assert( thiskey == get_char<key_type>(strptr.out(bkt[b]), depth) );
 
-            strptr.set_lcp(bkt[b], depth + lcpKeyType(prevkey, thiskey));
+            int rlcp = lcpKeyType(prevkey, thiskey);
+            strptr.set_lcp(bkt[b], depth + rlcp);
+            strptr.set_cache(bkt[b], getCharAtDepth(thiskey, rlcp));
+
             DBG(debug_lcp, "LCP at odd-bucket " << b << " [" << bkt[b] << "," << bkt[b+1]
                 << ") is " << strptr.lcp(bkt[b]));
 
@@ -656,7 +678,10 @@ void sample_sort_lcp(const Classify& classifier, const StringPtr& strptr, size_t
         {
             key_type thiskey = get_char<key_type>( strptr.out(bkt[b]), depth );
 
-            strptr.set_lcp(bkt[b], depth + lcpKeyType(prevkey, thiskey));
+            int rlcp = lcpKeyType(prevkey, thiskey);
+            strptr.set_lcp(bkt[b], depth + rlcp);
+            strptr.set_cache(bkt[b], getCharAtDepth(thiskey, rlcp));
+
             DBG(debug_lcp, "LCP at even-bucket " << b << " [" << bkt[b] << "," << bkt[b+1]
                 << ") is " << strptr.lcp(bkt[b]));
 
@@ -664,7 +689,6 @@ void sample_sort_lcp(const Classify& classifier, const StringPtr& strptr, size_t
         }
         ++b;
     }
-
 }
 
 // ****************************************************************************
@@ -1066,7 +1090,9 @@ struct SmallsortJob : public Job, public SortStep
             }
             // calculate LCP between group areas
             if (start != 0) {
-                strptr.set_lcp(start, depth + lcpKeyType(cache[start-1], cache[start]));
+                int rlcp = lcpKeyType(cache[start-1], cache[start]);
+                strptr.set_lcp(start, depth + rlcp);
+                strptr.set_cache(start, getCharAtDepth(cache[start], rlcp));
             }
             // sort group areas deeper if needed
             if (bktsize > 1) {
@@ -1081,7 +1107,9 @@ struct SmallsortJob : public Job, public SortStep
         }
         // tail of loop for last item
         if (start != 0) {
-            strptr.set_lcp(start, depth + lcpKeyType(cache[start-1], cache[start]));
+            int rlcp = lcpKeyType(cache[start-1], cache[start]);
+            strptr.set_lcp(start, depth + rlcp);
+            strptr.set_cache(start, getCharAtDepth(cache[start], rlcp));
         }
         if (bktsize > 1) {
             if (cache[start] & 0xFF) // need deeper sort
@@ -1099,6 +1127,7 @@ struct SmallsortJob : public Job, public SortStep
         size_t idx;
         unsigned char eq_recurse;
 #if CALC_LCP_MKQS == 1
+        char_type dchar_eq, dchar_gt;
         unsigned char lcp_lt, lcp_eq, lcp_gt;
 #elif CALC_LCP_MKQS == 2
         key_type pivot;
@@ -1214,6 +1243,7 @@ struct SmallsortJob : public Job, public SortStep
                 assert(max_lt == *std::max_element(cache + 0, cache + num_lt));
 
                 lcp_lt = lcpKeyType(max_lt, pivot);
+                dchar_eq = getCharAtDepth(pivot, lcp_lt);
                 DBG(debug_lcp, "LCP lt with pivot: " << depth + lcp_lt);
             }
 
@@ -1225,6 +1255,7 @@ struct SmallsortJob : public Job, public SortStep
                 assert(min_gt == *std::min_element(cache + num_lt + num_eq, cache + n));
 
                 lcp_gt = lcpKeyType(pivot, min_gt);
+                dchar_gt = getCharAtDepth(min_gt, lcp_gt);
                 DBG(debug_lcp, "LCP pivot with gt: " << depth + lcp_gt);
              }
 #endif
@@ -1235,28 +1266,36 @@ struct SmallsortJob : public Job, public SortStep
         {
 #if CALC_LCP_MKQS == 1
             if (num_lt > 0)
+            {
                 strptr.original().set_lcp(num_lt, depth + lcp_lt);
+                strptr.original().set_cache(num_lt, dchar_eq);
+            }
 
             if (num_gt > 0)
+            {
                 strptr.original().set_lcp(num_lt + num_eq, depth + lcp_gt);
+                strptr.original().set_cache(num_lt + num_eq, dchar_gt);
+            }
 #elif CALC_LCP_MKQS == 2
             if (num_lt > 0)
             {
                 key_type max_lt = get_char<key_type>(strptr.original().out(num_lt-1), depth);
 
-                unsigned int lcp = depth + lcpKeyType(max_lt, pivot);
-                DBG(debug_lcp, "LCP lt with pivot: " << lcp);
+                unsigned int rlcp = lcpKeyType(max_lt, pivot);
+                DBG(debug_lcp, "LCP lt with pivot: " << depth + rlcp);
 
-                strptr.original().set_lcp(num_lt, lcp);
+                strptr.original().set_lcp(num_lt, depth + rlcp);
+                strptr.original().set_cache(num_lt, getCharAtDepth(pivot, rlcp));
             }
             if (num_gt > 0)
             {
                 key_type min_gt = get_char<key_type>(strptr.original().out(num_lt + num_eq), depth);
 
-                unsigned int lcp = depth + lcpKeyType(pivot, min_gt);
-                DBG(debug_lcp, "LCP pivot with gt: " << lcp);
+                unsigned int rlcp = lcpKeyType(pivot, min_gt);
+                DBG(debug_lcp, "LCP pivot with gt: " << depth + rlcp);
 
-                strptr.original().set_lcp(num_lt + num_eq, lcp);
+                strptr.original().set_lcp(num_lt + num_eq, depth + rlcp);
+                strptr.original().set_cache(num_lt + num_eq, getCharAtDepth(min_gt, rlcp));
             }
 #endif
         }
@@ -1950,7 +1989,6 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    //StringOutPtr strptr(strings, (string*)output.lcps, output.strings, n);
     StringShadowLcpCacheOutPtr
         strptr(strings, (string*)output.lcps, output.strings,
                output.cachedChars, n);
@@ -1958,7 +1996,9 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
 
+    // fixup first entry of LCP and charcache
     output.firstLcp() = 0;
+    output.firstCached() = output.firstString()[0];
 
 #if PS5_ENABLE_RESTSIZE
     assert(ctx.restsize.update().get() == 0);

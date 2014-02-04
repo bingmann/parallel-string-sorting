@@ -235,8 +235,24 @@ void test_lcp_insertion_sort(string* strings, size_t n)
     lcp_insertion_sort(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(test_lcp_insertion_sort, "bingmann/lcp_insertion_sort",
-                    "LCP-aware insertion sort")
+CONTESTANT_REGISTER(test_lcp_insertion_sort,
+    "bingmann/lcp_insertion_sort",
+    "LCP-aware insertion sort")
+
+static inline
+void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
+{
+    string* shadow = new string[n]; // allocate shadow pointer array
+    StringShadowPtr strptr(strings, shadow, n);
+
+    lcp_insertion_sort(strptr, 0);
+
+    delete [] shadow;
+}
+
+CONTESTANT_REGISTER(test_lcp_insertion_sort_nolcp,
+    "bingmann/lcp_insertion_sort_nolcp",
+    "LCP-aware insertion sort (without LCP output)")
 
 static inline
 void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
@@ -257,19 +273,161 @@ CONTESTANT_REGISTER(test_lcp_insertion_sort_pseudocode,
     "bingmann/lcp_insertion_sort_pseudocode",
     "LCP-aware insertion sort close to pseudo-code, with checking")
 
+////////////////////////////////////////////////////////////////////////////////
+
+//! LCP insertion sort
 static inline
-void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
+void lcp_insertion_sort_cache(string* str, uintptr_t* lcp, char_type* cache,
+                              size_t n, size_t depth)
 {
-    string* shadow = new string[n]; // allocate shadow pointer array
-    StringShadowPtr strptr(strings, shadow, n);
+    if (n <= 1) return;
 
-    lcp_insertion_sort(strptr, 0);
+    for (size_t j = 0; j < n - 1; ++j)
+    {
+        // insert strings[j] into sorted strings[0..j-1]
 
-    delete [] shadow;
+        string new_str = str[j];
+        char_type new_ch = new_str[depth];
+        size_t new_lcp = depth; // start with LCP depth
+
+        size_t i = j;
+        while (i > 0)
+        {
+            size_t prev_lcp = new_lcp;
+
+            string cur_str = str[i - 1];
+            size_t cur_lcp = lcp[i];
+
+            if (cur_lcp < new_lcp)
+            {
+                // CASE 1: lcp goes down -> insert string
+                break;
+            }
+            else if (cur_lcp == new_lcp)
+            {
+                // CASE 2: compare more characters
+
+                string s2 = cur_str + new_lcp;
+
+                while (new_ch != 0 && new_ch == *s2)
+                {
+                    ++s2, ++new_lcp;
+                    new_ch = new_str[new_lcp];
+                }
+
+                // if (new_str >= curr_str) -> insert string
+                if (new_ch >= *s2)
+                {
+                    // update lcp of prev (smaller string) with inserted string
+                    lcp[i] = new_lcp;
+                    cache[i] = new_ch;
+
+                    // lcp of inserted string with next string
+                    new_lcp = prev_lcp;
+                    break;
+                }
+            }
+            // else (cur_lcp > new_lcp), CASE 3: nothing to do
+
+            str[i] = cur_str;
+            cache[i] = cache[i - 1];
+
+            lcp[i + 1] = cur_lcp;
+
+            --i;
+        }
+
+        str[i] = new_str;
+
+        lcp[i + 1] = new_lcp;
+        cache[i + 1] = str[i + 1][new_lcp];
+    }
+
+    // last loop specialized with checks for out-of-bound access to lcp.
+    {
+        size_t j = n - 1;
+
+        // insert strings[j] into sorted strings[0..j-1]
+
+        string new_str = str[j];
+        char_type new_ch = new_str[depth];
+        size_t new_lcp = depth; // start with LCP depth
+
+        size_t i = j;
+        while (i > 0)
+        {
+            size_t prev_lcp = new_lcp;
+
+            string cur_str = str[i - 1];
+            size_t cur_lcp = lcp[i];
+
+            if (cur_lcp < new_lcp)
+            {
+                // CASE 1: lcp goes down -> insert string
+                break;
+            }
+            else if (cur_lcp == new_lcp)
+            {
+                // CASE 2: compare more characters
+
+                string s2 = cur_str + new_lcp;
+
+                while (new_ch != 0 && new_ch == *s2)
+                {
+                    ++s2, ++new_lcp;
+                    new_ch = new_str[new_lcp];
+                }
+
+                // if (new_str >= curr_str) -> insert string
+                if (new_ch >= *s2)
+                {
+                    // update lcp of prev (smaller string) with inserted string
+                    lcp[i] = new_lcp;
+                    cache[i] = new_ch;
+
+                    // lcp of inserted string with next string
+                    new_lcp = prev_lcp;
+                    break;
+                }
+            }
+            // else (cur_lcp > new_lcp), CASE 3: nothing to do
+
+            str[i] = cur_str;
+            cache[i] = cache[i - 1];
+
+            if (i + 1 < n) // check out-of-bounds copy
+                lcp[i + 1] = cur_lcp;
+
+            --i;
+        }
+
+        str[i] = new_str;
+
+        if (i + 1 < n) // check out-of-bounds save
+        {
+            lcp[i + 1] = new_lcp;
+            cache[i + 1] = str[i + 1][new_lcp];
+        }
+    }
 }
 
-CONTESTANT_REGISTER(test_lcp_insertion_sort_nolcp, "bingmann/lcp_insertion_sort_nolcp",
-                    "LCP-aware insertion sort (without LCP output)")
+static inline
+void test_lcp_insertion_sort_cache(string* strings, size_t n)
+{
+    lcp_t* lcps = new lcp_t[n]; // allocate LCP array
+    char_type* cache = new char_type[n]; // allocate distinguishing char cache
+
+    lcp_insertion_sort_cache(strings, lcps, cache, n, 0);
+
+    stringtools::verify_lcp_cache(strings, lcps, cache, n, -1);
+
+    delete [] lcps;
+    delete [] cache;
+}
+
+CONTESTANT_REGISTER(test_lcp_insertion_sort_cache,
+    "bingmann/lcp_insertion_sort_cache",
+    "LCP-aware insertion sort (with distinguishing character cache)")
 
 } // namespace bingmann_lcp_inssort
 
