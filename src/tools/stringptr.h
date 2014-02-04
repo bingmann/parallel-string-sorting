@@ -77,7 +77,7 @@ public:
     }
 
     inline void
-    set(string s, lcp_t lcp) const
+    setFirst(string s, lcp_t lcp) const
     {
         assert(size > 0);
         *strings = s;
@@ -92,14 +92,14 @@ public:
     }
 
     inline string&
-    str() const
+    firstString() const
     {
         assert(size > 0);
         return *strings;
     }
 
     inline lcp_t&
-    lcp() const
+    firstLcp() const
     {
         assert(size > 0);
         return *lcps;
@@ -190,7 +190,7 @@ public:
     }
 
     inline void
-    set(string s, lcp_t lcp) const
+    setFirst(string s, lcp_t lcp) const
     {
         assert(size > 0);
         *strings = s;
@@ -199,7 +199,7 @@ public:
     }
 
     inline void
-    set(string s, lcp_t lcp, char cachedCharacter) const
+    setFirst(string s, lcp_t lcp, char cachedCharacter) const
     {
        assert(size > 0);
        *strings = s;
@@ -216,21 +216,21 @@ public:
     }
 
     inline string&
-    str() const
+    firstString() const
     {
         assert(size > 0);
         return *strings;
     }
 
     inline lcp_t&
-    lcp() const
+    firstLcp() const
     {
         assert(size > 0);
         return *lcps;
     }
 
     inline char&
-    cache() const
+    firstCached() const
     {
         assert(size > 0);
         return *cachedChars;

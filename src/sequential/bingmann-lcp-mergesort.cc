@@ -161,7 +161,7 @@ lcp_mergesort_binary(string *strings, const LcpStringPtr& tmp, const LcpStringPt
         return;
     }
     else if (length == 1) {
-        out.set(*strings, 0);
+        out.setFirst(*strings, 0);
         return;
     }
 
@@ -253,8 +253,8 @@ private:
             // CASE 1: compare more characters
             lcp_t lcp = defender.lcp;
 
-            string s1 = defenderStream.str() + lcp;
-            string s2 = contenderStream.str() + lcp;
+            string s1 = defenderStream.firstString() + lcp;
+            string s2 = contenderStream.firstString() + lcp;
 
             // check the strings starting after lcp and calculate new lcp
             while (*s1 != 0 && *s1 == *s2)
@@ -270,15 +270,15 @@ private:
             // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
         }
 #else
-        lcp_compare(contender.idx, contenderStream.str(), contender.lcp,
-                    defender.idx, defenderStream.str(), defender.lcp,
+        lcp_compare(contender.idx, contenderStream.firstString(), contender.lcp,
+                    defender.idx, defenderStream.firstString(), defender.lcp,
                     contender.idx, contender.lcp, defender.idx, defender.lcp);
 #endif
-        assert( scmp(streams[contender.idx].str(),
-                     streams[defender.idx].str()) <= 0 );
+        assert( scmp(streams[contender.idx].firstString(),
+                     streams[defender.idx].firstString()) <= 0 );
 
-        assert( calc_lcp(streams[contender.idx].str(),
-                         streams[defender.idx].str()) == defender.lcp );
+        assert( calc_lcp(streams[contender.idx].firstString(),
+                         streams[defender.idx].firstString()) == defender.lcp );
     }
 
     inline void
@@ -330,7 +330,7 @@ public:
 
             unsigned winnerIdx = nodes[0].idx;
 
-            outStream.set(streams[winnerIdx].str(), nodes[0].lcp);
+            outStream.setFirst(streams[winnerIdx].firstString(), nodes[0].lcp);
             ++outStream;
 
             // advance winner stream
@@ -343,7 +343,7 @@ public:
             Node& contender = nodes[0];
 
             if (!stream.empty())
-                contender.lcp = streams[winnerIdx].lcp();
+                contender.lcp = streams[winnerIdx].firstLcp();
 
             for (unsigned nodeIdx = (K + winnerIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
             {

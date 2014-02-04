@@ -1954,7 +1954,7 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
 
-    output.lcp() = 0;
+    output.firstLcp() = 0;
 
 #if PS5_ENABLE_RESTSIZE
     assert(ctx.restsize.update().get() == 0);

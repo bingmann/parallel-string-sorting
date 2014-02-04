@@ -24,7 +24,6 @@
 #ifndef EBERLE_PARALLEL_LCP_MERGE_H_
 #define EBERLE_PARALLEL_LCP_MERGE_H_
 
-#include <iostream>
 #include <limits>
 #include <utility>
 
@@ -55,6 +54,7 @@ using stringtools::string;
 static const bool debug_jobtype_on_creation = false;
 static const bool debug_job_details = false;
 static const bool debug_job_creation = false;
+static const bool debug_splitter_key_mask = false;
 
 static const bool debug_created_jobs_count = true;
 static const bool debug_merge_start_message = true;
@@ -120,8 +120,8 @@ struct BinaryMergeJob : public Job
     run(JobQueue& jobQueue)
     {
         (void) jobQueue;
-        input1.lcp() = 0;
-        input2.lcp() = 0;
+        input1.firstLcp() = 0;
+        input2.firstLcp() = 0;
         eberle_lcp_merge(input1, input2, output);
 
         return true;
@@ -233,11 +233,11 @@ findNextSplitter(LcpCacheStringPtr& inputStream,
 
     for (; inputStream < end; ++inputStream, ++length)
     {
-        lcp_t lcp = inputStream.lcp();
+        lcp_t lcp = inputStream.firstLcp();
 
         if (lcp <= maxAllowedLcp)
         {
-            CHAR_TYPE character = get_char<CHAR_TYPE>(inputStream.str(), baseLcp);
+            CHAR_TYPE character = get_char<CHAR_TYPE>(inputStream.firstString(), baseLcp);
             if ((character & keyMask) != (lastCharacter & keyMask))
             {
                 lastCharacter = character;
@@ -285,7 +285,7 @@ static inline void
 createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs,
            string* output, size_t numberOfElements, lcp_t baseLcp)
 {
-    DBG(debug_job_creation, std::endl << "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements);
+    DBG(debug_job_creation, "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements);
 
     LcpCacheStringPtr inputs[numInputs];
     CHAR_TYPE splitterCharacter[numInputs];
@@ -296,7 +296,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
 
         if (inputStreams[k].size > 0)
         {
-            splitterCharacter[k] = get_char<CHAR_TYPE>(inputs[k].str(), baseLcp);
+            splitterCharacter[k] = get_char<CHAR_TYPE>(inputs[k].firstString(), baseLcp);
         }
         else
         {
@@ -327,7 +327,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
         CHAR_TYPE currBucket = numeric_limits<CHAR_TYPE>::max();
         unsigned numberOfFoundBuckets = 0;
 
-        std::cout << std::hex << keyMask << "\n";
+        DBG(debug_splitter_key_mask, std::hex << keyMask);
 
         for (unsigned k = 0; k < numInputs; ++k)
         {

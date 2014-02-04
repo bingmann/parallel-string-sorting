@@ -25,7 +25,6 @@
 #ifndef EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
 #define EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
 
-#include <iostream>
 #include <utility>
 
 #include "eberle-parallel-lcp-merge.h"
@@ -142,7 +141,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
             outputPtr.cachedChars[i] = c;
         }
     }
-    DBG(debug_toplevel_merge_duration, "creating array with cached characters needed: " << timer.elapsed() << " s" << std::endl);
+    DBG(debug_toplevel_merge_duration, "creating array with cached characters needed: " << timer.elapsed() << " s");
 
     // do top level merge
 
@@ -150,7 +149,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
    // eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
     eberle_parallel_lcp_merge::parallelLcpMerge(outputs, numNumaNodes, strings, n);
 
-    DBG(debug_toplevel_merge_duration, std::endl << "top level merge needed: " << timer.elapsed() << " s" << std::endl);
+    DBG(debug_toplevel_merge_duration, "top level merge needed: " << timer.elapsed() << " s");
 
     for (int k = 0; k < numNumaNodes; k++)
     {

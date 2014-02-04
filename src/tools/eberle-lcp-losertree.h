@@ -80,26 +80,26 @@ protected:
         { // CASE 1: curr.lcp == contender.lcp
             lcp_t lcp = defenderLcp;
 
-            char c1 = defenderStream.cache();
-            char c2 = contenderStream.cache();
+            char c1 = defenderStream.firstCached();
+            char c2 = contenderStream.firstCached();
 
             // check the strings starting after lcp and calculate new lcp
             while (c1 != '\0' && c1 == c2) {
                 lcp++;
-                c1 = defenderStream.str()[lcp];
-                c2 = contenderStream.str()[lcp];
+                c1 = defenderStream.firstString()[lcp];
+                c2 = contenderStream.firstString()[lcp];
             }
 
             if (c1 < c2)
             { 	// CASE 1.1: curr < contender
                 contenderLcp = lcp;
-                contenderStream.cache() = c2;
+                contenderStream.firstCached() = c2;
                 std::swap(defenderIdx, contenderIdx);
             }
             else
             {	// CASE 1.2: curr >= contender
                 defenderLcp = lcp;
-                defenderStream.cache() = c1;
+                defenderStream.firstCached() = c1;
             }
         } // else // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
     }
@@ -113,7 +113,7 @@ protected:
 
         if (!stream.empty())
         {
-            lcps[streamIdx] = stream.lcp();
+            lcps[streamIdx] = stream.firstLcp();
         }
     }
 
@@ -158,7 +158,7 @@ public:
             lcps[i] = knownCommonLcp;
 
             if(streams[i].size > 0)
-                streams[i].cache() = streams[i].str()[knownCommonLcp];
+                streams[i].firstCached() = streams[i].firstString()[knownCommonLcp];
 
             unsigned nodeIdx = K + i;
             unsigned contenderIdx = i;
@@ -190,16 +190,16 @@ public:
 
         for (unsigned i = 0; i < K; ++i)
         {
-            Stream* stream = streams + i;
-            if (stream->size > 0)
+            const Stream& stream = streams [i];
+            if (stream.size > 0)
             {
-                std::cout << lcps[i] << "|" << stream->str();
+                std::cout << lcps[i] << "|" << stream.firstString();
             }
             else
             {
                 std::cout << -1;
             }
-            std::cout << "(" << stream->size << ")  ";
+            std::cout << "(" << stream.size << ")  ";
         }
 
         std::cout << std::endl;
@@ -259,7 +259,7 @@ public:
         while (outStream < end)
         {
             Stream currStream = streams[contenderIdx];
-            outStream.set(currStream.str(), lcps[contenderIdx], currStream.cache());
+            outStream.setFirst(currStream.firstString(), lcps[contenderIdx], currStream.firstCached());
             ++outStream;
 
             removeTopFromStream(contenderIdx);
@@ -278,7 +278,7 @@ public:
 
         while (outStream < end)
         {
-            *outStream = streams[contenderIdx].str();
+            *outStream = streams[contenderIdx].firstString();
             ++outStream;
 
             removeTopFromStream(contenderIdx);

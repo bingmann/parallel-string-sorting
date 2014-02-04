@@ -123,7 +123,7 @@ eberle_lcp_mergesort(string *strings, size_t length, const LcpStringPtr& tmp, co
 {
     if (length <= 1)
     {
-        out.set(*strings, 0);
+        out.setFirst(*strings, 0);
         return;
     }
 
