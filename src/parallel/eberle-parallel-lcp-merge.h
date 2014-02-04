@@ -220,6 +220,8 @@ struct InitialSplitJob : public Job
     }
 };
 
+// Search forward in input streams, skip all strings with larger LCP, test
+// equal positions if they still match the splitter.
 static inline size_t
 findNextSplitter(LcpCacheStringPtr& inputStream,
                  lcp_t baseLcp, lcp_t maxAllowedLcp, CHAR_TYPE& lastCharacter, CHAR_TYPE keyMask)
@@ -248,6 +250,7 @@ findNextSplitter(LcpCacheStringPtr& inputStream,
     return length;
 }
 
+// Create K-way MergeJob for the selected input streams.
 template <unsigned K>
 static inline unsigned
 createMergeJob(JobQueue &jobQueue, string* output, LcpCacheStringPtr* inputs, unsigned* indexesOfFound,
@@ -315,35 +318,42 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
     while (true)
     {
         lcp_t maxAllowedLcp = baseLcp + keyWidth - 1;
+
+        // construct current splitter mask
         CHAR_TYPE keyMask = numeric_limits<CHAR_TYPE>::max() << ((key_traits<CHAR_TYPE>::add_depth - keyWidth) * 8);
+
+        // *** Select input streams with smallest current splitter ***
 
         CHAR_TYPE currBucket = numeric_limits<CHAR_TYPE>::max();
         unsigned numberOfFoundBuckets = 0;
 
+        std::cout << std::hex << keyMask << "\n";
+
         for (unsigned k = 0; k < numInputs; ++k)
         {
             CHAR_TYPE splitter = splitterCharacter[k] & keyMask;
-            if (splitter <= currBucket)
-            {
-                if (splitter < currBucket)
-                {
-                    currBucket = splitter;
 
-                    indexesOfFound[0] = k;
-                    numberOfFoundBuckets = 1;
-                }
-                else
-                {
-                    indexesOfFound[numberOfFoundBuckets] = k;
-                    numberOfFoundBuckets++;
-                }
+            if (splitter < currBucket) // smaller splitter found, reset.
+            {
+                currBucket = splitter;
+
+                indexesOfFound[0] = k;
+                numberOfFoundBuckets = 1;
+            }
+            else if (splitter == currBucket) // additional splitter found
+            {
+                indexesOfFound[numberOfFoundBuckets] = k;
+                numberOfFoundBuckets++;
             }
         }
 
+        // TODO 2014-tb: this doesnt work for 0xFF in the input, right?
         if (currBucket == (numeric_limits<CHAR_TYPE>::max() & keyMask))
         {
             break;
         }
+
+        // *** Create Job to Merge Buckets, Depending on Input Streams ***
 
         size_t length = 0;
 
@@ -379,30 +389,32 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
         case 3: case 4:
         {
             length = createMergeJob<4>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
-                    baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
+                                       baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
             break;
         }
         case 5: case 6: case 7: case 8:
         {
             length = createMergeJob<8>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
-                                baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
+                                       baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
             break;
         }
         case 9: case 10: case 11: case 12: case 13: case 14: case 15: case 16:
         {
             length = createMergeJob<16>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
-                                baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
+                                        baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
             break;
         }
         default:
-            if(numberOfFoundBuckets <= 32){
+            if (numberOfFoundBuckets <= 32) {
                 length = createMergeJob<32>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
-                                             baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
-            } else if(numberOfFoundBuckets <= 64){
+                                            baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
+            }
+            else if (numberOfFoundBuckets <= 64) {
                 length = createMergeJob<64>(jobQueue, output, inputs, indexesOfFound, numberOfFoundBuckets,
-                                             baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
-            }else{
-                DBG(1, "Found " << numberOfFoundBuckets << ", which is more NUMA nodes than expected, ADD MORE CASES IN SWITCH.");
+                                            baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
+            }
+            else {
+                DBG(1, "Found " << numberOfFoundBuckets << ", which is more input streams than expected, ADD MORE CASES IN SWITCH.");
                 abort();
             }
         }
@@ -411,18 +423,20 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
         elementsProcessed += length;
         createdJobsCtr++;
 
+        // *** Heuristic to Adapt Size of Splitter Keys ***
+
         const unsigned expectedCreatedJobs = elementsProcessed / expectedJobLength;
         const int diffExpectedReal = int(expectedCreatedJobs) - int(createdJobsCtr);
 
-        const int tollerance = expectedCreatedJobs / 30 + 5;
+        const int tolerance = expectedCreatedJobs / 30 + 5;
 
-        if (diffExpectedReal <= -tollerance)
+        if (diffExpectedReal <= -tolerance)
         {
             keyWidth = std::max(unsigned(1), keyWidth - 1);
 
             DBG(debug_job_creation, "decreased key to " << keyWidth << "  diff: " << diffExpectedReal);
         }
-        else if (diffExpectedReal >= tollerance)
+        else if (diffExpectedReal >= tolerance)
         {
             keyWidth = std::min(unsigned(8), keyWidth + 1);
 
@@ -430,7 +444,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
         }
     }
 
-    DBG(debug_created_jobs_count, "Created " << createdJobsCtr << " Jobs!");
+    DBG(debug_created_jobs_count, "Created " << createdJobsCtr << " jobs!");
 }
 
 static inline

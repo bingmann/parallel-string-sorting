@@ -73,9 +73,14 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 
     g_statscache >> "num_numa_nodes" << realNumaNodes;
 
-    // this max ensures a parallel merge on developer machine
+    // maybe raise number of used NUMA nodes for developement
     int numNumaNodes = realNumaNodes;
-    numNumaNodes = std::max(4, realNumaNodes);
+
+    if (1)
+    {
+        numNumaNodes = std::max(4, realNumaNodes);
+        DBG(1, "!!! WARNING !!! emulating 4 NUMA nodes! Remove this for REAL EXPERIMENTS.");
+    }
 
     // calculate ranges
     std::pair<size_t, size_t> ranges[numNumaNodes];
