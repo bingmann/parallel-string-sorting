@@ -553,7 +553,7 @@ struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
 // *** Insertion Sort Type-Switch
 
 static inline void
-insertion_sort(const stringtools::StringPtrNoLcpCalc& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowPtr& strptr, size_t depth)
 {
     assert(!strptr.flipped());
 
@@ -564,7 +564,7 @@ insertion_sort(const stringtools::StringPtrNoLcpCalc& strptr, size_t depth)
 }
 
 static inline void
-insertion_sort(const stringtools::StringPtr& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowLcpPtr& strptr, size_t depth)
 {
     assert(!strptr.flipped());
 
@@ -572,7 +572,7 @@ insertion_sort(const stringtools::StringPtr& strptr, size_t depth)
 }
 
 static inline void
-insertion_sort(const stringtools::StringPtrOutNoLcpCalc& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowOutPtr& strptr, size_t depth)
 {
     assert(!strptr.flipped());
 
@@ -583,7 +583,7 @@ insertion_sort(const stringtools::StringPtrOutNoLcpCalc& strptr, size_t depth)
 }
 
 static inline void
-insertion_sort(const stringtools::StringPtrOut& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowLcpOutPtr& strptr, size_t depth)
 {
     assert(!strptr.flipped());
 
@@ -1795,11 +1795,11 @@ void Enqueue(Context& ctx, SortStep* pstep,
 }
 
 #if CALC_LCP
-typedef stringtools::StringPtr StringPtr;
-typedef stringtools::StringPtrOut StringPtrOut;
+typedef stringtools::StringShadowLcpPtr StringPtr;
+typedef stringtools::StringShadowLcpOutPtr StringOutPtr;
 #else
-typedef stringtools::StringPtrNoLcpCalc StringPtr;
-typedef stringtools::StringPtrOutNoLcpCalc StringPtrOut;
+typedef stringtools::StringShadowPtr StringPtr;
+typedef stringtools::StringShadowOutPtr StringOutPtr;
 #endif
 
 template <template <size_t> class Classify>
@@ -1878,11 +1878,11 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
     ctx.threadnum = omp_get_max_threads();
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    SampleSortStep<Classify, StringPtrOut>::put_stats();
+    SampleSortStep<Classify, StringOutPtr>::put_stats();
 
     string* shadow = new string[n]; // allocate shadow pointer array
 
-    StringPtrOut strptr(strings, shadow, output, n);
+    StringOutPtr strptr(strings, shadow, output, n);
 
     ctx.timers.start(ctx.threadnum);
 
@@ -1949,7 +1949,7 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     ctx.threadnum = numberOfThreads;
     ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    StringPtrOut strptr(strings, (string*)output.lcps, output.strings, n);
+    StringOutPtr strptr(strings, (string*)output.lcps, output.strings, n);
 
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);

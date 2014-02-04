@@ -216,15 +216,15 @@ void lcp_insertion_sort(string* str, size_t n, size_t depth)
 }
 
 static inline
-void lcp_insertion_sort(StringPtr& str, size_t depth)
+void lcp_insertion_sort(StringShadowPtr& str, size_t depth)
 {
-    return lcp_insertion_sort(str.active(), str.lcparray(), str.size(), depth);
+    return lcp_insertion_sort(str.active(), str.size(), depth);
 }
 
 static inline
-void lcp_insertion_sort(StringPtrNoLcpCalc& str, size_t depth)
+void lcp_insertion_sort(StringShadowLcpPtr& str, size_t depth)
 {
-    return lcp_insertion_sort(str.active(), str.size(), depth);
+    return lcp_insertion_sort(str.active(), str.lcparray(), str.size(), depth);
 }
 
 // *** Registered Test Functions ***
@@ -242,7 +242,7 @@ static inline
 void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
 {
     string* shadow = new string[n+1]; // allocate shadow pointer array
-    StringPtr strptr(strings, shadow, n);
+    StringShadowLcpPtr strptr(strings, shadow, n);
 
     strptr.lcp(0) = 42; // must keep lcp[0] unchanged
 
@@ -261,7 +261,7 @@ static inline
 void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
 {
     string* shadow = new string[n]; // allocate shadow pointer array
-    StringPtrNoLcpCalc strptr(strings, shadow, n);
+    StringShadowPtr strptr(strings, shadow, n);
 
     lcp_insertion_sort(strptr, 0);
 

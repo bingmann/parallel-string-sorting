@@ -64,6 +64,7 @@ static const bool debug_jobs = false;
 static const bool use_work_sharing = true;
 
 typedef unsigned char* string;
+typedef StringShadowPtr StringPtr;
 
 static const size_t g_inssort_threshold = 64;
 

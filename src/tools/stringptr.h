@@ -43,7 +43,11 @@
 
 namespace stringtools {
 
+typedef uintptr_t lcp_t;
+
 ////////////////////////////////////////////////////////////////////////////////
+
+struct LcpCacheStringPtr;
 
 struct LcpStringPtr
 {
@@ -63,15 +67,9 @@ public:
     {
     }
 
-    LcpStringPtr(const LcpCacheStringPtr& ptr)
-         : strings(ptr.strings), lcps(ptr.lcps), size(ptr.size)
-    {
-    }
+    LcpStringPtr(const LcpCacheStringPtr& ptr);
 
-    LcpStringPtr(const LcpCacheStringPtr& ptr, size_t _size)
-            : strings(ptr.strings), lcps(ptr.lcps), size(_size)
-    {
-    }
+    LcpStringPtr(const LcpCacheStringPtr& ptr, size_t _size);
 
     inline bool empty() const
     {
@@ -166,8 +164,6 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-
-typedef uintptr_t lcp_t;
 
 struct LcpCacheStringPtr
 {
@@ -328,12 +324,22 @@ public:
     }
 };
 
+inline LcpStringPtr::LcpStringPtr(const LcpCacheStringPtr& ptr)
+    : strings(ptr.strings), lcps(ptr.lcps), size(ptr.size)
+{
+}
+
+inline LcpStringPtr::LcpStringPtr(const LcpCacheStringPtr& ptr, size_t _size)
+    : strings(ptr.strings), lcps(ptr.lcps), size(_size)
+{
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 //! Objectified string array pointer and shadow pointer array for out-of-place
 //! swapping of pointers.
-template <bool NoLcpCalc>
-class StringPtrBase
+template <bool WithLcp>
+class StringShadowPtrBase
 {
 protected:
     //! strings (front) and temporary shadow (back) array
@@ -347,7 +353,8 @@ protected:
 
 public:
     //! constructor specifying all attributes
-    inline StringPtrBase(string* original, string* shadow = NULL, size_t size = 0, bool flipped = false)
+    inline StringShadowPtrBase(string* original, string* shadow = NULL,
+                               size_t size = 0, bool flipped = false)
         : m_active(original), m_shadow(shadow), m_size(size), m_flipped(flipped)
     {
     }
@@ -365,35 +372,35 @@ public:
     inline size_t size() const { return m_size; }
 
     //! ostream-able
-    friend inline std::ostream& operator << (std::ostream& os, const StringPtrBase& sp)
+    friend inline std::ostream& operator << (std::ostream& os, const StringShadowPtrBase& sp)
     {
         return os << '(' << sp.active() << '/' << sp.shadow() << '|' << sp.flipped() << ':' << sp.size() << ')';
     }
 
     //! Advance (both) pointers by given offset, return sub-array
-    inline StringPtrBase sub(size_t offset, size_t size) const
+    inline StringShadowPtrBase sub(size_t offset, size_t size) const
     {
         assert(offset + size <= m_size);
-        return StringPtrBase(m_active + offset, m_shadow + offset, size, m_flipped);
+        return StringShadowPtrBase(m_active + offset, m_shadow + offset, size, m_flipped);
     }
 
-    //! construct a StringPtrBase object specifying a sub-array with flipping to
+    //! construct a StringShadowPtrBase object specifying a sub-array with flipping to
     //! other array.
-    inline StringPtrBase flip(size_t offset, size_t size) const
+    inline StringShadowPtrBase flip(size_t offset, size_t size) const
     {
         assert(offset + size <= m_size);
-        return StringPtrBase(m_shadow + offset, m_active + offset, size, !m_flipped);
+        return StringShadowPtrBase(m_shadow + offset, m_active + offset, size, !m_flipped);
     }
 
-    //! Return the original for this StringPtr for LCP calculation
-    inline StringPtrBase original() const
+    //! Return the original for this StringShadowPtr for LCP calculation
+    inline StringShadowPtrBase original() const
     {
         return m_flipped ? flip(0, m_size) : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
     //! shadow before returning.
-    inline StringPtrBase copy_back() const
+    inline StringShadowPtrBase copy_back() const
     {
         if (!m_flipped) {
             return *this;
@@ -419,10 +426,16 @@ public:
         return m_active[i];
     }
 
+    //! if we want to save the LCPs
+    static inline bool with_lcp()
+    {
+        return WithLcp;
+    }
+
     //! return reference to the i-th lcp
     inline uintptr_t& lcp(size_t i) const
     {
-        if (NoLcpCalc) assert(0);
+        if (!WithLcp) assert(0);
 
         assert(!m_flipped);
         assert(i < m_size);
@@ -432,7 +445,7 @@ public:
     //! set the i-th lcp to v and check its value
     inline void set_lcp(size_t i, const uintptr_t& v) const
     {
-        if (NoLcpCalc) return;
+        if (!WithLcp) return;
 
         assert(i > 0);
         assert(i < m_size);
@@ -445,7 +458,7 @@ public:
     //! LCP[0] position
     inline void fill_lcp(uintptr_t v)
     {
-        if (NoLcpCalc) return;
+        if (!WithLcp) return;
 
         for (size_t i = 1; i < m_size; ++i)
             set_lcp(i, v);
@@ -454,7 +467,7 @@ public:
     //! Return pointer to LCP array
     inline uintptr_t* lcparray() const
     {
-        if (NoLcpCalc) assert(0);
+        if (!WithLcp) assert(0);
 
         assert(!m_flipped);
         return (uintptr_t*)m_shadow;
@@ -475,22 +488,22 @@ public:
     }
 };
 
-typedef StringPtrBase<false> StringPtr;
-typedef StringPtrBase<true> StringPtrNoLcpCalc;
+typedef StringShadowPtrBase<false> StringShadowPtr;
+typedef StringShadowPtrBase<true> StringShadowLcpPtr;
 
 ////////////////////////////////////////////////////////////////////////////////
 
 //! Objectified string array pointer and shadow pointer array for out-of-place
 //! swapping of pointers. With separate output array. Use class, do not derive
-//! from StringPtrBase!
-template <bool NoLcpCalc>
-class StringPtrOutBase
+//! from StringShadowPtrBase!
+template <bool WithLcp>
+class StringShadowOutPtrBase
 {
 protected:
-    //! encapsuled StringPtrBase type
-    typedef StringPtrBase<NoLcpCalc> base_type;
+    //! encapsuled StringShadowPtrBase type
+    typedef StringShadowPtrBase<WithLcp> base_type;
 
-    //! encapsuled StringPtrBase
+    //! encapsuled StringShadowPtrBase
     base_type   sp;
 
     //! output string array
@@ -498,7 +511,7 @@ protected:
 
 public:
     //! constructor specifying all attributes
-    inline StringPtrOutBase(string* original, string* shadow = NULL, string* output = NULL,
+    inline StringShadowOutPtrBase(string* original, string* shadow = NULL, string* output = NULL,
                             size_t size = 0, bool flipped = false)
         : sp(original, shadow, size, flipped),
           m_output(output)
@@ -517,38 +530,38 @@ public:
     inline size_t size() const { return sp.size(); }
 
     //! ostream-able
-    friend inline std::ostream& operator << (std::ostream& os, const StringPtrOutBase& sp)
+    friend inline std::ostream& operator << (std::ostream& os, const StringShadowOutPtrBase& sp)
     {
         return os << '(' << sp.active() << '/' << sp.shadow() << '/' << sp.output()
                   << '|' << sp.flipped() << ':' << sp.size() << ')';
     }
 
     //! Advance (both) pointers by given offset, return sub-array
-    inline StringPtrOutBase sub(size_t offset, size_t size) const
+    inline StringShadowOutPtrBase sub(size_t offset, size_t size) const
     {
         assert(offset + size <= sp.size());
-        return StringPtrOutBase(active() + offset, shadow() + offset, m_output + offset,
+        return StringShadowOutPtrBase(active() + offset, shadow() + offset, m_output + offset,
                                 size, flipped());
     }
 
-    //! construct a StringPtrOutBase object specifying a sub-array with flipping to
+    //! construct a StringShadowOutPtrBase object specifying a sub-array with flipping to
     //! other array.
-    inline StringPtrOutBase flip(size_t offset, size_t size) const
+    inline StringShadowOutPtrBase flip(size_t offset, size_t size) const
     {
         assert(offset + size <= sp.size());
-        return StringPtrOutBase(shadow() + offset, active() + offset, m_output + offset,
+        return StringShadowOutPtrBase(shadow() + offset, active() + offset, m_output + offset,
                                 size, !flipped());
     }
 
-    //! Return the original for this StringPtrOut for LCP calculation
-    inline StringPtrOutBase original() const
+    //! Return the original for this StringShadowOutPtr for LCP calculation
+    inline StringShadowOutPtrBase original() const
     {
         return flipped() ? flip(0, size()) : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
     //! shadow before returning.
-    inline StringPtrOutBase copy_back() const
+    inline StringShadowOutPtrBase copy_back() const
     {
         memcpy(m_output, active(), size() * sizeof(string));
         return original();
@@ -565,13 +578,16 @@ public:
     //! Return i-th string pointer from m_active
     inline string& str(size_t i) const { return sp.str(i); }
 
+    //! if we want to save the LCPs
+    static inline bool with_lcp() { return base_type::with_lcp(); }
+
     //! return reference to the i-th lcp
     inline uintptr_t& lcp(size_t i) const { return sp.lcp(i); }
 
     //! set the i-th lcp to v and check its value
     inline void set_lcp(size_t i, const uintptr_t& v) const
     {
-        if (NoLcpCalc) return;
+        if (!WithLcp) return;
 
         assert(i > 0);
         assert(i < size());
@@ -584,7 +600,7 @@ public:
     //! LCP[0] position
     inline void fill_lcp(uintptr_t v)
     {
-        if (NoLcpCalc) return;
+        if (!WithLcp) return;
 
         for (size_t i = 1; i < size(); ++i)
             set_lcp(i, v);
@@ -607,8 +623,8 @@ public:
     }
 };
 
-typedef StringPtrOutBase<false> StringPtrOut;
-typedef StringPtrOutBase<true> StringPtrOutNoLcpCalc;
+typedef StringShadowOutPtrBase<false> StringShadowOutPtr;
+typedef StringShadowOutPtrBase<true> StringShadowLcpOutPtr;
 
 ////////////////////////////////////////////////////////////////////////////////
 
