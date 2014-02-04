@@ -294,7 +294,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
     {
         inputs[k] = inputStreams[k];
 
-        if (inputStreams[k].size > 0)
+        if (!inputs[k].empty())
         {
             splitterCharacter[k] = get_char<CHAR_TYPE>(inputs[k].firstString(), baseLcp);
         }
@@ -470,6 +470,28 @@ sequentialLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* o
     case 3: case 4:
     {
         static const unsigned K = 4;
+
+        MergeJob<K>* job = new MergeJob<K>(output, length, 0, 1);
+        job->length = 0;
+
+        unsigned k = 0;
+        for (; k < numInputs; ++k)
+        {
+            job->loserTree.streams[k] = input[k];
+            job->length += input[k].size;
+        }
+        for (; k < K; k++)
+        {
+            // this stream is not used
+            job->loserTree.streams[k] = LcpCacheStringPtr(NULL, NULL, NULL, 0);
+        }
+
+        jobQueue.enqueue(job);
+        break;
+    }
+    case 5: case 6: case 7: case 8:
+    {
+        static const unsigned K = 8;
 
         MergeJob<K>* job = new MergeJob<K>(output, length, 0, 1);
         job->length = 0;

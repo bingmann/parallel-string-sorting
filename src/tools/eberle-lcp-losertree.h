@@ -80,11 +80,11 @@ protected:
         { // CASE 1: curr.lcp == contender.lcp
             lcp_t lcp = defenderLcp;
 
-            char c1 = defenderStream.firstCached();
-            char c2 = contenderStream.firstCached();
+            char_type c1 = defenderStream.firstCached();
+            char_type c2 = contenderStream.firstCached();
 
             // check the strings starting after lcp and calculate new lcp
-            while (c1 != '\0' && c1 == c2) {
+            while (c1 != 0 && c1 == c2) {
                 lcp++;
                 c1 = defenderStream.firstString()[lcp];
                 c2 = contenderStream.firstString()[lcp];

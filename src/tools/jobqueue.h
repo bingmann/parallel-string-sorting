@@ -86,7 +86,6 @@ private:
     //! SizeLogger or a dummy class
     typedef AggregateLogger<unsigned int> IntLogger;
     //typedef IntLogger::LockingAverageLogger logger_type;
-    //typedef IntLogger::LockingMinLogger logger_type;
     typedef IntLogger::DummyLogger logger_type;
 
     logger_type m_logger, m_work_logger;

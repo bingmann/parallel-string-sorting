@@ -56,7 +56,7 @@ using stringtools::string;
 
 //debugging constants
 static const bool debug_toplevel_merge_duration = true;
-static const bool debug_verify_ps5_lcp_cache = true;
+static const bool debug_verify_ps5_lcp_cache = false;
 
 //method definitions
 void
@@ -138,7 +138,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     // do top level merge
 
     timer.start();
-    // eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
+    //eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
     eberle_parallel_lcp_merge::parallelLcpMerge(outputs, numNumaNodes, strings, n);
 
     DBG(debug_toplevel_merge_duration, "top level merge needed: " << timer.elapsed() << " s");

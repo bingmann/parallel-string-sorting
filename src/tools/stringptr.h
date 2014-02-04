@@ -268,11 +268,11 @@ public:
 
         numa_tonode_memory(strings,     length * sizeof(string), numaNode);
         numa_tonode_memory(lcps,        length * sizeof(lcp_t), numaNode);
-        numa_tonode_memory(cachedChars, length * sizeof(char), numaNode);
+        numa_tonode_memory(cachedChars, length * sizeof(char_type), numaNode);
 #else
-        strings =     (string*) numa_alloc_onnode(length * sizeof(string), numaNode);
-        lcps =        (lcp_t*)  numa_alloc_onnode(length * sizeof(lcp_t),  numaNode);
-        cachedChars = (char_type*) numa_alloc_onnode(length * sizeof(char),   numaNode);
+        strings =     (string*)    numa_alloc_onnode(length * sizeof(string), numaNode);
+        lcps =        (lcp_t*)     numa_alloc_onnode(length * sizeof(lcp_t), numaNode);
+        cachedChars = (char_type*) numa_alloc_onnode(length * sizeof(char_type), numaNode);
 #endif
         size = length;
     }
@@ -281,9 +281,9 @@ public:
     freeNumaMemory()
     {
 #if 0
-        free(strings);
-        free(lcps);
-        free(cachedChars);
+        delete [] strings;
+        delete [] lcps;
+        delete [] cachedChars;
 #else
         numa_free(strings, size * sizeof(string));
         numa_free(lcps, size * sizeof(string));
