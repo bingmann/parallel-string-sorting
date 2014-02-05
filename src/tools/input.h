@@ -51,10 +51,15 @@ bool check_memory_type(const std::string& memtype)
 
 void do_numa_segment(char* buff, size_t buffsize)
 {
-    int numnodes = numa_num_configured_nodes();
-    size_t segsize = (buffsize + numnodes-1) / numnodes;
+    int numNodes = g_numa_nodes;
+    if (numNodes < 1) numNodes = 1;
 
-    std::cout << "Segmenting string characters onto " << numnodes << " NUMA nodes, about "
+    int numRealNodes = numa_num_configured_nodes();
+    if (numRealNodes < 1) numRealNodes = 1;
+
+    size_t segsize = (buffsize + numNodes-1) / numNodes;
+
+    std::cout << "Segmenting string characters onto " << numNodes << " NUMA nodes, about "
               << segsize << " characters each." << std::endl;
 
     int pagesize = sysconf(_SC_PAGE_SIZE);
@@ -63,16 +68,29 @@ void do_numa_segment(char* buff, size_t buffsize)
     segsize += pagesize - (segsize % pagesize);
     assert(segsize % pagesize == 0);
 
-    for (int n = 0; n < numnodes-1; ++n)
+    for (int n = 0; n < numNodes; ++n)
     {
-        char* p = buff + n * segsize;
+        size_t offset = n * segsize;
+        g_numa_chars.push_back(offset);
 
         // segsize need not be page aligned
-        numa_tonode_memory(p, segsize, n);
+        size_t size = std::min(segsize, buffsize-offset);
+
+        numa_tonode_memory(buff + offset, size, n % numRealNodes);
     }
 
-    size_t offset = (numnodes-1)*segsize;
-    numa_tonode_memory(buff + offset, buffsize-offset, numnodes-1);
+    // output for debugging
+    if (1)
+    {
+        for (size_t i = 0; i < g_numa_chars.size(); ++i)
+        {
+            size_t end = i == g_numa_chars.size()-1 ? buffsize : g_numa_chars[i+1];
+
+            std::cout << "NUMA segment " << i << " = "
+                      << "[" << g_numa_chars[i] << "," << end << ") = "
+                      << (end - g_numa_chars[i]) << std::endl;
+        }
+    }
 
     std::cout << "NUMA segmenting finished." << std::endl;
 }

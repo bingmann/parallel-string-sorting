@@ -113,6 +113,14 @@ const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
 
 std::string     gopt_memory_type; // argument -M, --memory, see tools/input.h
 
+// for NUMA segmenting and algorithms
+size_t          g_numa_nodes;   // number of NUMA nodes (may be faked by cmdline)
+
+// for -M mmap_segment:
+std::vector<size_t> g_numa_chars;          // offsets of character on NUMA nodes
+std::vector<size_t> g_numa_strings;        // number to first strings on NUMA nodes
+std::vector<size_t> g_numa_string_count;   // pointer to strings on NUMA nodes
+
 // *** Tools and Algorithms
 
 #include "tools/debug.h"
@@ -392,15 +400,39 @@ void Contestant_UCArray::real_run()
 
     ClockTimer strptr_timer;
 
+    // make sure sentinels are there
+    if (g_numa_chars.size() == 0)
+        g_numa_chars.push_back(0);
+    if (g_numa_chars.back() != g_string_datasize)
+        g_numa_chars.push_back(g_string_datasize);
+
+    ssize_t numNumaNodes = g_numa_nodes;
+    if (numNumaNodes < 1) numNumaNodes = 1;
+
+    // set up NUMA string set variables
+    ssize_t numaNode = -1;
+    g_numa_strings.resize(numNumaNodes);
+    g_numa_string_count.resize(numNumaNodes);
+
     if (!gopt_suffixsort)
     {
         size_t j = 0;
-        stringptr[j++] = (string)g_string_data;
         for (size_t i = 0; i < g_string_datasize; ++i)
         {
-            if (g_string_data[i] == 0 && i+1 < g_string_datasize) {
+            if (i == 0 || g_string_data[i-1] == 0) {
                 assert(j < stringptr.size());
-                stringptr[j++] = (string)g_string_data + i+1;
+                stringptr[j] = (string)g_string_data + i;
+
+                // stepped over boundary to next NUMA node
+                while (i >= g_numa_chars[numaNode+1]) {
+                    numaNode++;
+                    g_numa_strings[numaNode] = j;
+                    g_numa_string_count[numaNode] = 0;
+                }
+                assert(numaNode >= 0 && numaNode < numNumaNodes);
+                g_numa_string_count[numaNode]++;
+
+                ++j;
             }
         }
         assert(j == g_string_count);
@@ -409,10 +441,40 @@ void Contestant_UCArray::real_run()
     {
         assert(g_string_count == g_string_datasize);
         for (size_t i = 0; i < g_string_datasize; ++i)
+        {
             stringptr[i] = (string)g_string_data + i;
+
+            // stepped over boundary to next NUMA node
+            while (i >= g_numa_chars[numaNode+1]) {
+                numaNode++;
+                g_numa_strings[numaNode] = i;
+                g_numa_string_count[numaNode] = 0;
+            }
+            assert(numaNode >= 0 && numaNode < numNumaNodes);
+            g_numa_string_count[numaNode]++;
+        }
     }
 
-    std::cout << "Wrote string pointer array in " << strptr_timer.elapsed() << " seconds" << std::endl;
+    std::cout << "Wrote string pointer array in " << strptr_timer.elapsed()
+              << " seconds" << std::endl;
+
+    if (gopt_memory_type == "mmap_segment")
+    {
+        size_t sum = 0;
+
+        for (size_t n = 0; n < g_numa_strings.size(); ++n)
+        {
+            std::cout << "NUMA string set[" << n << "] ="
+                      << " string offset " << g_numa_strings[n]
+                      << " count " << g_numa_string_count[n]
+                      << " char offset "
+                      << stringptr[ g_numa_strings[n] ] - (string)g_string_data
+                      << std::endl;
+            sum += g_numa_string_count[n];
+        }
+
+        assert(sum == g_string_count);
+    }
 
     // save permutation check evaluation result
     PermutationCheck pc;
@@ -645,8 +707,9 @@ void print_usage(const char* prog)
               << "  -F, --fork             Fork before running algorithm, but load data before fork!" << std::endl
               << "  -i, --input <path>     Write unsorted input strings to file, usually for checking." << std::endl
               << "  -M, --memory <type>    Load string data into <type> memory, see -M list for details." << std::endl
-              << "  -N, --no-check         Skip checking of sorted order and distinguishing prefix calculation." << std::endl
               << "      --mlockall         Perform call of mlockall() to locked program into memory." << std::endl
+              << "  -N, --no-check         Skip checking of sorted order and distinguishing prefix calculation." << std::endl
+              << "      --numa-nodes <n>   Fake number of NUMA nodes on system." << std::endl
               << "  -o, --output <path>    Write sorted strings to output file, terminate after first algorithm run." << std::endl
               << "      --parallel         Run only parallelized algorithms." << std::endl
               << "  -r, --repeat <num>     Repeat experiment a number of times." << std::endl
@@ -687,6 +750,7 @@ int main(int argc, char* argv[])
         { "some-threads", no_argument,   0, 6 },
         { "thread-list", required_argument, 0, 7 },
         { "mlockall", no_argument,       0, 8 },
+        { "numa-nodes", required_argument, 0, 9 },
         { 0,0,0,0 },
     };
 
@@ -705,6 +769,8 @@ int main(int argc, char* argv[])
             std::cout << " " << argv[i];
         std::cout << std::endl;
     }
+
+    g_numa_nodes = numa_num_configured_nodes();
 
 #ifdef MALLOC_COUNT
     if (truncate(memprofile_path, 0)) {
@@ -853,6 +919,11 @@ int main(int argc, char* argv[])
         case 8: // --mlockall
             gopt_mlockall = true;
             std::cout << "Option --mlockall: calling mlockall() to lock memory." << std::endl;
+            break;
+
+        case 9: // --numa-nodes <n>
+            g_numa_nodes = atoi(optarg);
+            std::cout << "Option --numa-nodes: set number of (fake) NUMA nodes to " << g_numa_nodes << "." << std::endl;
             break;
 
         default:

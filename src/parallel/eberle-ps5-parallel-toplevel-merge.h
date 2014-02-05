@@ -74,18 +74,16 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     g_statscache >> "num_numa_nodes" << realNumaNodes;
 
     // maybe raise number of used NUMA nodes for developement
-    int numNumaNodes = realNumaNodes;
+    int numNumaNodes = g_numa_nodes;
+    if (numNumaNodes < 1) numNumaNodes = 1;
 
-    if (0)
+    if (numNumaNodes != realNumaNodes || g_numa_nodes == 0)
     {
-        numNumaNodes = std::max(4, realNumaNodes);
-        DBG(1, "!!! WARNING !!! emulating 4 NUMA nodes! Remove this for REAL EXPERIMENTS.");
+        DBG(1, "!!! WARNING !!! emulating " << numNumaNodes << " NUMA nodes! "
+            << "Remove --numa-nodes for REAL EXPERIMENTS.");
     }
 
-    // calculate ranges
-    std::pair<size_t, size_t> ranges[numNumaNodes];
-    calculateRanges(ranges, numNumaNodes, n);
-
+    // create outputs
     LcpCacheStringPtr outputs[numNumaNodes];
 
     // distribute threads amoung NUMA nodes
@@ -106,8 +104,8 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 #pragma omp parallel for schedule(dynamic)
         for (int k = 0; k < numNumaNodes; k++)
         {
-            size_t start = ranges[k].first;
-            size_t length = ranges[k].second;
+            size_t start = g_numa_strings[k];
+            size_t length = g_numa_string_count[k];
 
             int nodeThreads = 1;
             int numaNode = k % realNumaNodes;
@@ -128,8 +126,8 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
 #pragma omp parallel for num_threads(numNumaNodes) schedule(static)
         for (int k = 0; k < numNumaNodes; k++)
         {
-            size_t start = ranges[k].first;
-            size_t length = ranges[k].second;
+            size_t start = g_numa_strings[k];
+            size_t length = g_numa_string_count[k];
 
             int nodeThreads = numThreadsPerNode;
             int numaNode = k % realNumaNodes;
