@@ -76,7 +76,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     // maybe raise number of used NUMA nodes for developement
     int numNumaNodes = realNumaNodes;
 
-    if (1)
+    if (0)
     {
         numNumaNodes = std::max(4, realNumaNodes);
         DBG(1, "!!! WARNING !!! emulating 4 NUMA nodes! Remove this for REAL EXPERIMENTS.");
@@ -92,35 +92,63 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
     int numThreadsPerNode = omp_get_max_threads() / numNumaNodes;
     int remainThreads = omp_get_max_threads() % numNumaNodes;
 
+    ClockTimer timer;
+
     if (numThreadsPerNode == 0)
     {
         DBG(1, "Fewer threads than NUMA nodes detected.");
-        DBG(1, "Aborting execution!");
-        abort();
+        DBG(1, "Strange things will happen now.");
+        DBG(1, "Continuing anyway, at your own peril!");
+
+        // set num threads = 1 for nodes, and limit number of active nodes via
+        // normal num_threads() in next loop
+
+#pragma omp parallel for schedule(dynamic)
+        for (int k = 0; k < numNumaNodes; k++)
+        {
+            size_t start = ranges[k].first;
+            size_t length = ranges[k].second;
+
+            int nodeThreads = 1;
+            int numaNode = k % realNumaNodes;
+
+            ClockTimer timer;
+
+            outputs[k].allocateNumaMemory(numaNode, length);
+
+            parallel_sample_sort_numa(strings + start, length,
+                                      numaNode, nodeThreads,
+                                      outputs[k]);
+
+            DBG(debug_toplevel_merge_duration, "node[" << k << "] took : " << timer.elapsed() << " s");
+        }
     }
-
-
-    ClockTimer timer;
-
-#pragma omp parallel for num_threads(numNumaNodes) schedule(static)
-    for (int k = 0; k < numNumaNodes; k++)
+    else
     {
-        size_t start = ranges[k].first;
-        size_t length = ranges[k].second;
+#pragma omp parallel for num_threads(numNumaNodes) schedule(static)
+        for (int k = 0; k < numNumaNodes; k++)
+        {
+            size_t start = ranges[k].first;
+            size_t length = ranges[k].second;
 
-        int nodeThreads = numThreadsPerNode;
-        int numaNode = k % realNumaNodes;
-        if (k < remainThreads) nodeThreads++; // distribute extra threads
+            int nodeThreads = numThreadsPerNode;
+            int numaNode = k % realNumaNodes;
+            if (k < remainThreads) nodeThreads++; // distribute extra threads
 
-        DBG(1, "node[" << numaNode << "] gets " << nodeThreads << " threads");
+            DBG(1, "node[" << numaNode << "] gets " << nodeThreads << " threads");
 
-        ClockTimer timer;
+            ClockTimer timer;
 
-        outputs[k].allocateNumaMemory(numaNode, length);
-        parallel_sample_sort_numa(strings + start, length, numaNode, numThreadsPerNode, outputs[k]);
+            outputs[k].allocateNumaMemory(numaNode, length);
 
-        DBG(debug_toplevel_merge_duration, "node[" << k << "] took : " << timer.elapsed() << " s");
+            parallel_sample_sort_numa(strings + start, length,
+                                      numaNode, nodeThreads,
+                                      outputs[k]);
+
+            DBG(debug_toplevel_merge_duration, "node[" << k << "] took : " << timer.elapsed() << " s");
+        }
     }
+
     DBG(debug_toplevel_merge_duration, "all nodes took : " << timer.elapsed() << " s");
 
     if (debug_verify_ps5_lcp_cache)
