@@ -65,6 +65,8 @@ public:
     virtual bool run(cookie_type& cookie) = 0;
 };
 
+//! Define JobQueue with templatized cookie parameter, which is passed to run()
+//! functions.
 template <typename CookieType>
 class JobQueueT
 {
@@ -130,43 +132,40 @@ public:
 
         while (m_idle_count != numthrs)
         {
-            if (m_queue.try_pop(job))
+            while (m_queue.try_pop(job))
             {
                 m_logger << m_queue.unsafe_size();
 
                 if (job->run(cookie))
                     delete job;
             }
-            else
-            {
-                DBG(debug_queue, "Queue is empty");
 
-                m_timers.change(TM_IDLE);
-                ++m_idle_count;
+            DBG(debug_queue, "My queue is empty");
 
-                m_logger << m_queue.unsafe_size();
-                m_work_logger << (numthrs - m_idle_count);
+            // no more jobs -> switch to idle
+            m_timers.change(TM_IDLE);
+            ++m_idle_count;
 
-                while (!m_queue.try_pop(job))
-                {
-                    DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
-
-                    if (m_idle_count == numthrs)
-                        return;
-                }
-
-                // got a new job -> not idle anymore
-                m_timers.change(TM_WORK);
-                --m_idle_count;
-
-                m_logger << m_queue.unsafe_size();
-                m_work_logger << (numthrs - m_idle_count);
-
-                if (job->run(cookie))
-                    delete job;
-            }
-
+            m_logger << m_queue.unsafe_size();
             m_work_logger << (numthrs - m_idle_count);
+
+            while (!m_queue.try_pop(job))
+            {
+                DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
+
+                if (m_idle_count == numthrs)
+                    return;
+            }
+
+            // got a new job -> not idle anymore
+            m_timers.change(TM_WORK);
+            --m_idle_count;
+
+            m_logger << m_queue.unsafe_size();
+            m_work_logger << (numthrs - m_idle_count);
+
+            if (job->run(cookie))
+                delete job;
         }
     }
 
@@ -210,6 +209,8 @@ public:
     }
 };
 
+//! Define "standard" JobQueue, which passes a reference to itself as cookie
+//! parameter to each run() call.
 class JobQueue : public JobQueueT<JobQueue>
 {
 public:
@@ -226,6 +227,7 @@ public:
     }
 };
 
+//! Define "standard" Job for "standard" JobQueue.
 typedef JobT<JobQueue> Job;
 
 } // namespace jobqueue
