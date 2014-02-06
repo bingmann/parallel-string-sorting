@@ -72,16 +72,19 @@ protected:
 
 
         if (contenderStream.empty() || defenderLcp > contenderLcp)
-        { // CASE 2: curr->lcp > contender->lcp => curr < contender
+        { // CASE 2: defender->lcp > contender->lcp => defender < contender
             std::swap(defenderIdx, contenderIdx);
         }
 
         else if (defenderLcp == contenderLcp)
-        { // CASE 1: curr.lcp == contender.lcp
+        { // CASE 1: defender.lcp == contender.lcp
             lcp_t lcp = defenderLcp;
 
             char_type c1 = defenderStream.firstCached();
             char_type c2 = contenderStream.firstCached();
+
+            assert(c1 == defenderStream.firstString()[lcp]);
+            assert(c2 == contenderStream.firstString()[lcp]);
 
             // check the strings starting after lcp and calculate new lcp
             while (c1 != 0 && c1 == c2) {
@@ -91,17 +94,19 @@ protected:
             }
 
             if (c1 < c2)
-            { 	// CASE 1.1: curr < contender
+            { 	// CASE 1.1: defender < contender
                 contenderLcp = lcp;
                 contenderStream.firstCached() = c2;
                 std::swap(defenderIdx, contenderIdx);
             }
             else
-            {	// CASE 1.2: curr >= contender
+            {	// CASE 1.2: defender >= contender
                 defenderLcp = lcp;
                 defenderStream.firstCached() = c1;
             }
-        } // else // CASE 3: curr->lcp < contender->lcp => contender < curr  => nothing to do
+        }
+        // else
+        // CASE 3: defender->lcp < contender->lcp => contender < defender  => nothing to do
     }
 
     inline void
