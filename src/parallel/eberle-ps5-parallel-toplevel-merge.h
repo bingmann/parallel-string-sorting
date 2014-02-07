@@ -228,7 +228,7 @@ eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n)
 
     parallel_sample_sort_numa2(inputs, numNumaNodes);
 
-    if (debug_verify_ps5_lcp_cache || 1)
+    if (debug_verify_ps5_lcp_cache)
     {
         for (int k = 0; k < numNumaNodes; k++)
         {

@@ -2024,7 +2024,7 @@ void parallel_sample_sort_numa(string *strings, size_t n,
 }
 
 //! Call for NUMA aware parallel sorting
-void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* input,
+void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* strptr,
                                 unsigned numInputs)
 {
     typedef Context<NumaJobQueueGroup> context_type;
@@ -2038,15 +2038,15 @@ void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* input,
     {
         ctx[i] = new context_type(&group);
 
-        ctx[i]->totalsize = input[i].size();
+        ctx[i]->totalsize = strptr[i].size();
 #if PS5_ENABLE_RESTSIZE
-        ctx[i]->restsize = input[i].size();
+        ctx[i]->restsize = strptr[i].size();
 #endif
         ctx[i]->threadnum = group.calcThreadNum(i, numInputs);
         if (ctx[i]->threadnum == 0)
             ctx[i]->threadnum = 1;
 
-        Enqueue<ClassifyUnrollBoth>(*ctx[i], NULL, input[i], 0);
+        Enqueue<ClassifyUnrollBoth>(*ctx[i], NULL, strptr[i], 0);
 
         group.add_jobqueue(&ctx[i]->jobqueue);
     }
@@ -2056,8 +2056,8 @@ void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* input,
     for (unsigned i = 0; i < numInputs; ++i)
     {
         // fixup first entry of LCP and charcache
-        input[i].lcparray()[0] = 0;
-        //output.firstCached() = output.firstString()[0];
+        strptr[i].lcparray()[0] = 0;
+        strptr[i].set_cache(0, strptr[i].out(0)[0]);
 
 #if PS5_ENABLE_RESTSIZE
         assert(ctx[i].restsize.update().get() == 0);
