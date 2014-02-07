@@ -47,6 +47,8 @@ public:
 
     void run_contest(const char* path); // implemented in main.cc
 
+    bool exist_contestant(const char* algoname); // implemented in main.cc
+
     void list_contentants(); // implemented in main.cc
 };
 

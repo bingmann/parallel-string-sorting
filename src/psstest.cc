@@ -262,14 +262,21 @@ void Contest::run_contest(const char* path)
     }
 }
 
-void Contest::register_contestant(Contestant* c)
+bool Contest::exist_contestant(const char* algoname)
 {
     for (size_t i = 0; i < m_list.size(); ++i) {
-        if (strcmp(m_list[i]->m_algoname, c->m_algoname) == 0) {
-            // duplicate registeration
-            return;
-        }
+        if (strcmp(m_list[i]->m_algoname, algoname) == 0)
+            return true;
     }
+
+    return false;
+}
+
+void Contest::register_contestant(Contestant* c)
+{
+    if (exist_contestant(c->m_algoname))
+        // duplicate registration
+        return;
 
     m_list.push_back(c);
 }
@@ -805,6 +812,11 @@ int main(int argc, char* argv[])
             if (strcmp(optarg,"list") == 0)
             {
                 getContestSingleton()->list_contentants();
+                return 0;
+            }
+            if (!getContestSingleton()->exist_contestant(optarg))
+            {
+                std::cout << "Option -A: unknown algorithm " << optarg << std::endl;
                 return 0;
             }
             gopt_algorithm_full.push_back(optarg);
