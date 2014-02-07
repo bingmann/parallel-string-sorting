@@ -67,10 +67,6 @@ public:
     {
     }
 
-    LcpStringPtr(const LcpCacheStringPtr& ptr);
-
-    LcpStringPtr(const LcpCacheStringPtr& ptr, size_t _size);
-
     inline bool empty() const
     {
         return (size == 0);
@@ -310,6 +306,16 @@ public:
         return LcpCacheStringPtr(strings + offset, lcps + offset, cachedChars + offset, n);
     }
 
+    //! return sub-array of (string,lcp) with offset and size, but remove
+    //! cachedChars
+    inline LcpStringPtr
+    subNoCache(size_t offset, size_t n) const
+    {
+        assert(offset + n <= size);
+        return LcpStringPtr(strings + offset, lcps + offset, n);
+    }
+
+
     //! return empty end array.
     inline LcpCacheStringPtr
     end() const
@@ -329,16 +335,6 @@ public:
         return strings < rhs.strings;
     }
 };
-
-inline LcpStringPtr::LcpStringPtr(const LcpCacheStringPtr& ptr)
-    : strings(ptr.strings), lcps(ptr.lcps), size(ptr.size)
-{
-}
-
-inline LcpStringPtr::LcpStringPtr(const LcpCacheStringPtr& ptr, size_t _size)
-    : strings(ptr.strings), lcps(ptr.lcps), size(_size)
-{
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 

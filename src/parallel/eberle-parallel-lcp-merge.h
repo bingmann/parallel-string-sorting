@@ -105,11 +105,11 @@ struct CopyDataJob : public Job
 
 struct BinaryMergeJob : public Job
 {
-    LcpStringPtr input1;
-    LcpStringPtr input2;
+    LcpCacheStringPtr input1;
+    LcpCacheStringPtr input2;
     string* output;
 
-    BinaryMergeJob(const LcpStringPtr& input1, const LcpStringPtr& input2, string* output) :
+    BinaryMergeJob(const LcpCacheStringPtr& input1, const LcpCacheStringPtr& input2, string* output) :
             input1(input1), input2(input2), output(output)
     {
         DBG(debug_jobtype_on_creation,
@@ -359,7 +359,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
             const LcpCacheStringPtr start = inputs[idx];
             length += findNextSplitter(inputs[idx],
                                        baseLcp, maxAllowedLcp, splitterCharacter[idx], keyMask);
-            jobQueue.enqueue(new CopyDataJob(LcpStringPtr(start, length), output));
+            jobQueue.enqueue(new CopyDataJob(start.subNoCache(0, length), output));
             break;
         }
         case 2:
@@ -376,7 +376,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
                                               baseLcp, maxAllowedLcp, splitterCharacter[idx2],
                                               keyMask);
 
-            jobQueue.enqueue(new BinaryMergeJob(LcpStringPtr(start1, length1), LcpStringPtr(start2, length2), output));
+            jobQueue.enqueue(new BinaryMergeJob(start1.sub(0, length1), start2.sub(0, length2), output));
             length = length1 + length2;
             break;
         }
@@ -453,12 +453,12 @@ sequentialLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* o
     {
     case 1:
     {
-        jobQueue.enqueue(new CopyDataJob(LcpStringPtr(input[0]), output));
+        jobQueue.enqueue(new CopyDataJob(input[0].subNoCache(0, length), output));
         break;
     }
     case 2:
     {
-        jobQueue.enqueue(new BinaryMergeJob(LcpStringPtr(input[0]), LcpStringPtr(input[1]), output));
+        jobQueue.enqueue(new BinaryMergeJob(input[0], input[1], output));
         break;
     }
     case 3: case 4:
