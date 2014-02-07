@@ -122,6 +122,7 @@ typedef ::ScopedTimerKeeperDummy ScopedTimerKeeperMT;
 // ****************************************************************************
 // *** Global Parallel Super Scalar String Sample Sort Context
 
+template <template <typename> class JobQueueGroupType = DefaultJobQueueGroup>
 class Context
 {
 public:
@@ -142,11 +143,23 @@ public:
     //! timers for individual sorting steps
     TimerArrayMT timers;
 
+    //! type of job queue group (usually a No-Op Class)
+    typedef JobQueueGroupType<Context> jobqueuegroup_type;
+
+    //! type of job queue
+    typedef typename jobqueuegroup_type::jobqueue_type jobqueue_type;
+
+    //! typedef of compatible job type
+    typedef typename jobqueue_type::job_type job_type;
+
     //! job queue
-    JobQueueT<Context> jobqueue;
+    jobqueue_type jobqueue;
 
     //! context constructor
-    Context() : timers(16)
+    Context(jobqueuegroup_type* jqg = NULL)
+        : para_ss_steps(0), seq_ss_steps(0), bs_steps(0),
+          timers(16),
+          jobqueue(*this, jqg)
     { }
 
     //! return sequential sorting threshold
@@ -170,8 +183,6 @@ public:
 #endif
     }
 };
-
-typedef JobT<Context> Job;
 
 // ****************************************************************************
 // *** SortStep to Keep Track of Substeps
@@ -694,11 +705,12 @@ void sample_sort_lcp(const Classify& classifier, const StringPtr& strptr, size_t
 // ****************************************************************************
 // *** SampleSort non-recursive in-place sequential sample sort for small sorts
 
-template <template <size_t> class Classify, typename StringPtr>
+template <template <size_t> class Classify, typename Context, typename StringPtr>
 void Enqueue(Context& ctx, SortStep* sstep, const StringPtr& strptr, size_t depth);
 
-template <template <size_t> class Classify, typename StringPtr, typename BktSizeType>
-struct SmallsortJob : public Job, public SortStep
+template <typename Context, template <size_t> class Classify, typename StringPtr,
+          typename BktSizeType>
+struct SmallsortJob : public Context::job_type, public SortStep
 {
     //! parent sort step
     SortStep*   pstep;
@@ -1498,7 +1510,7 @@ struct SmallsortJob : public Job, public SortStep
 // ****************************************************************************
 // *** SampleSortStep out-of-place parallel sample sort with separate Jobs
 
-template <template <size_t> class Classify, typename StringPtr>
+template <typename Context, template <size_t> class Classify, typename StringPtr>
 struct SampleSortStep : public SortStep
 {
 #if 0
@@ -1511,6 +1523,9 @@ struct SampleSortStep : public SortStep
     static const size_t numsplitters = (1 << treebits) - 1;
 
     static const size_t bktnum = 2 * numsplitters + 1;
+
+    //! type of Job
+    typedef typename Context::job_type job_type;
 
     //! parent sort step notification
     SortStep*           pstep;
@@ -1538,7 +1553,7 @@ struct SampleSortStep : public SortStep
 
     // *** Classes for JobQueue
 
-    struct SampleJob : public Job
+    struct SampleJob : public job_type
     {
         SampleSortStep*     step;
 
@@ -1554,7 +1569,7 @@ struct SampleSortStep : public SortStep
         }
     };
 
-    struct CountJob : public Job
+    struct CountJob : public job_type
     {
         SampleSortStep*     step;
         unsigned int        p;
@@ -1571,7 +1586,7 @@ struct SampleSortStep : public SortStep
         }
     };
 
-    struct DistributeJob : public Job
+    struct DistributeJob : public job_type
     {
         SampleSortStep*     step;
         unsigned int        p;
@@ -1818,18 +1833,20 @@ struct SampleSortStep : public SortStep
     }
 };
 
-template <template <size_t> class Classify, typename StringPtr>
+template <template <size_t> class Classify, typename Context, typename StringPtr>
 void Enqueue(Context& ctx, SortStep* pstep,
              const StringPtr& strptr, size_t depth)
 {
     if (strptr.size() > ctx.sequential_threshold() || use_only_first_sortstep) {
-        new SampleSortStep<Classify, StringPtr>(ctx, pstep, strptr, depth);
+        new SampleSortStep<Context, Classify, StringPtr>(ctx, pstep, strptr, depth);
     }
     else {
         if (strptr.size() < ((uint64_t)1 << 32))
-            new SmallsortJob<Classify, StringPtr, uint32_t>(ctx, pstep, strptr, depth);
+            new SmallsortJob<Context, Classify, StringPtr, uint32_t>
+                (ctx, pstep, strptr, depth);
         else
-            new SmallsortJob<Classify, StringPtr, uint64_t>(ctx, pstep, strptr, depth);
+            new SmallsortJob<Context, Classify, StringPtr, uint64_t>
+                (ctx, pstep, strptr, depth);
     }
 }
 
@@ -1844,15 +1861,14 @@ typedef stringtools::StringShadowOutPtr StringOutPtr;
 template <template <size_t> class Classify>
 void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 {
-    Context ctx;
+    Context<> ctx;
     ctx.totalsize = n;
 #if PS5_ENABLE_RESTSIZE
     ctx.restsize = n;
 #endif
     ctx.threadnum = omp_get_max_threads();
-    ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    SampleSortStep<Classify, StringPtr>::put_stats();
+    SampleSortStep<Context<>, Classify, StringPtr>::put_stats();
 
     string* shadow = new string[n]; // allocate shadow pointer array
 
@@ -1861,7 +1877,7 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
     ctx.timers.start(ctx.threadnum);
 
     Enqueue<Classify>(ctx, NULL, strptr, depth);
-    ctx.jobqueue.loop(ctx);
+    ctx.jobqueue.loop();
 
     ctx.timers.stop();
 
@@ -1909,15 +1925,14 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 template <template <size_t> class Classify>
 void parallel_sample_sort_out_base(string* strings, string* output, size_t n, size_t depth)
 {
-    Context ctx;
+    Context<> ctx;
     ctx.totalsize = n;
 #if PS5_ENABLE_RESTSIZE
     ctx.restsize = n;
 #endif
     ctx.threadnum = omp_get_max_threads();
-    ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
-    SampleSortStep<Classify, StringOutPtr>::put_stats();
+    SampleSortStep<Context<>, Classify, StringOutPtr>::put_stats();
 
     string* shadow = new string[n]; // allocate shadow pointer array
 
@@ -1926,7 +1941,7 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
     ctx.timers.start(ctx.threadnum);
 
     Enqueue<Classify>(ctx, NULL, strptr, depth);
-    ctx.jobqueue.loop(ctx);
+    ctx.jobqueue.loop();
 
     ctx.timers.stop();
 
@@ -1981,20 +1996,19 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     numa_run_on_node(numaNode);
     numa_set_preferred(numaNode);
 
-    Context ctx;
+    Context<> ctx;
     ctx.totalsize = n;
 #if PS5_ENABLE_RESTSIZE
     ctx.restsize = n;
 #endif
     ctx.threadnum = numberOfThreads;
-    ctx.para_ss_steps = ctx.seq_ss_steps = ctx.bs_steps = 0;
 
     StringShadowLcpCacheOutPtr
         strptr(strings, (string*)output.lcps, output.strings,
                output.cachedChars, n);
 
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
-    ctx.jobqueue.numaLoop(numaNode, numberOfThreads, ctx);
+    ctx.jobqueue.numaLoop(numaNode, numberOfThreads);
 
     // fixup first entry of LCP and charcache
     output.firstLcp() = 0;
@@ -2007,6 +2021,54 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
                  >> "steps_seq_sample_sort" << ctx.seq_ss_steps
                  >> "steps_base_sort" << ctx.bs_steps;
+}
+
+//! Call for NUMA aware parallel sorting
+void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* input,
+                                unsigned numInputs)
+{
+    typedef Context<NumaJobQueueGroup> context_type;
+
+    context_type::jobqueuegroup_type group;
+
+    // construct one Context per input
+    context_type* ctx[numInputs];
+
+    for (unsigned i = 0; i < numInputs; ++i)
+    {
+        ctx[i] = new context_type(&group);
+
+        ctx[i]->totalsize = input[i].size();
+#if PS5_ENABLE_RESTSIZE
+        ctx[i]->restsize = input[i].size();
+#endif
+        ctx[i]->threadnum = group.calcThreadNum(i, numInputs);
+        if (ctx[i]->threadnum == 0)
+            ctx[i]->threadnum = 1;
+
+        Enqueue<ClassifyUnrollBoth>(*ctx[i], NULL, input[i], 0);
+
+        group.add_jobqueue(&ctx[i]->jobqueue);
+    }
+
+    group.numaLaunch();
+
+    for (unsigned i = 0; i < numInputs; ++i)
+    {
+        // fixup first entry of LCP and charcache
+        input[i].lcparray()[0] = 0;
+        //output.firstCached() = output.firstString()[0];
+
+#if PS5_ENABLE_RESTSIZE
+        assert(ctx[i].restsize.update().get() == 0);
+#endif
+
+        g_statscache >> "steps_para_sample_sort" << ctx[i]->para_ss_steps
+                     >> "steps_seq_sample_sort" << ctx[i]->seq_ss_steps
+                     >> "steps_base_sort" << ctx[i]->bs_steps;
+
+        delete ctx[i];
+    }
 }
 #endif
 

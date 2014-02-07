@@ -179,6 +179,85 @@ CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge,
     "eberle/ps5-parallel-toplevel-merge",
     "NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle")
 
+void
+eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n)
+{
+    int realNumaNodes = numa_num_configured_nodes();
+    if (realNumaNodes < 1) realNumaNodes = 1;
+
+    if (realNumaNodes == 1) {
+        DBG(1, "No or just one NUMA nodes detected on the system.");
+        DBG(1, "pS5-LCP-Mergesort is designed for NUMA systems.");
+        DBG(1, "Continuing anyway, at your own peril!");
+    }
+
+    g_statscache >> "num_numa_nodes" << realNumaNodes;
+
+    // maybe raise number of used NUMA nodes for developement
+    int numNumaNodes = g_numa_nodes;
+    if (numNumaNodes < 1) numNumaNodes = 1;
+
+    if (numNumaNodes != realNumaNodes || g_numa_nodes == 0)
+    {
+        DBG(1, "!!! WARNING !!! emulating " << numNumaNodes << " NUMA nodes! "
+            << "Remove --numa-nodes for REAL EXPERIMENTS.");
+    }
+
+    ClockTimer timer;
+
+    // create outputs
+    LcpCacheStringPtr outputs[numNumaNodes];
+
+    // create in/output StringPtrs
+    StringShadowLcpCacheOutPtr inputs[numNumaNodes];
+
+    for (int k = 0; k < numNumaNodes; k++)
+    {
+        size_t start = g_numa_strings[k];
+        size_t length = g_numa_string_count[k];
+
+        outputs[k].allocateNumaMemory(k % realNumaNodes, length);
+
+        inputs[k] = StringShadowLcpCacheOutPtr(
+            strings + start,
+            (string*)outputs[k].lcps, outputs[k].strings, outputs[k].cachedChars,
+            length);
+    }
+
+    DBG(debug_toplevel_merge_duration, "allocation needed: " << timer.elapsed() << " s");
+
+    parallel_sample_sort_numa2(inputs, numNumaNodes);
+
+    if (debug_verify_ps5_lcp_cache || 1)
+    {
+        for (int k = 0; k < numNumaNodes; k++)
+        {
+            LcpCacheStringPtr& out = outputs[k];
+
+            stringtools::verify_lcp_cache(
+                out.strings, out.lcps, out.cachedChars,
+                out.size, 0);
+        }
+    }
+
+    // do top level merge
+
+    timer.start();
+    //eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
+    eberle_parallel_lcp_merge::parallelLcpMerge(outputs, numNumaNodes, strings, n);
+
+    DBG(debug_toplevel_merge_duration, "top level merge needed: " << timer.elapsed() << " s");
+
+    for (int k = 0; k < numNumaNodes; k++)
+    {
+        outputs[k].freeNumaMemory();
+    }
+}
+
+CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_assisting,
+    "eberle/ps5-parallel-toplevel-merge-assisting",
+    "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
+
 } // namespace eberle_ps5_parallel_toplevel_merge
 
 #endif // EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_

@@ -11,6 +11,9 @@ void parallel_sample_sort_numa(string *strings, size_t n,
                                int numaNode, int numberOfThreads,
                                const LcpCacheStringPtr& output);
 
+void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* input,
+                                unsigned numInputs);
+
 } // namespace bingmann_parallel_sample_sort_lcp
 
 #endif // BINGMANN_PARALLEL_SAMPLE_SORT_H_

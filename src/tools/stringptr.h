@@ -669,7 +669,7 @@ protected:
 
 public:
     //! constructor specifying all attributes
-    inline StringShadowLcpCacheOutPtr(string* original, string* shadow = NULL, string* output = NULL,
+    inline StringShadowLcpCacheOutPtr(string* original = NULL, string* shadow = NULL, string* output = NULL,
                                       char_type* cache = NULL,
                                       size_t size = 0, bool flipped = false)
         : super_type(original, shadow, output, size, flipped),
