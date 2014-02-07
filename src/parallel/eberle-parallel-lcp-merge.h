@@ -246,7 +246,6 @@ findNextSplitter(LcpCacheStringPtr& inputStream,
         }
     }
 
-    lastCharacter = numeric_limits<CHAR_TYPE>::max();
     return length;
 }
 
@@ -298,10 +297,6 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
         {
             splitterCharacter[k] = get_char<CHAR_TYPE>(inputs[k].firstString(), baseLcp);
         }
-        else
-        {
-            splitterCharacter[k] = numeric_limits<CHAR_TYPE>::max();
-        }
     }
 
     const unsigned overProvFactor = 500;
@@ -331,6 +326,8 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
 
         for (unsigned k = 0; k < numInputs; ++k)
         {
+            if (inputs[k].empty()) continue;
+
             CHAR_TYPE splitter = splitterCharacter[k] & keyMask;
 
             if (splitter < currBucket) // smaller splitter found, reset.
@@ -347,11 +344,8 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
             }
         }
 
-        // TODO 2014-tb: this doesnt work for 0xFF in the input, right?
-        if (currBucket == (numeric_limits<CHAR_TYPE>::max() & keyMask))
-        {
+        if (numberOfFoundBuckets == 0)
             break;
-        }
 
         // *** Create Job to Merge Buckets, Depending on Input Streams ***
 
