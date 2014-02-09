@@ -324,6 +324,17 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, char_type* cache1, size_t length1
 static inline void
 eberle_lcp_merge(const LcpCacheStringPtr& input1, const LcpCacheStringPtr& input2, string* output)
 {
+    if (0)
+    {
+        stringtools::verify_lcp_cache(
+            input1.strings, input1.lcps, input1.cachedChars,
+            input1.size, -1);
+
+        stringtools::verify_lcp_cache(
+            input2.strings, input2.lcps, input2.cachedChars,
+            input2.size, -1);
+    }
+
 #if 1
     eberle_lcp_merge(input1.strings, input1.lcps, input1.cachedChars, input1.size,
                      input2.strings, input2.lcps, input2.cachedChars, input2.size,
