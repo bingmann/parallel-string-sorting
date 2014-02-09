@@ -203,9 +203,13 @@ public:
             {
                 DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
 
-                if (!m_group->assist(m_id) &&
+                if (//!m_group->assist(m_id) &&
                     m_idle_count == m_numthrs)
+                {
+                    // assist other JobQueues before terminating.
+                    while (m_group->assist(m_id)) { }
                     return;
+                }
             }
 
             // got a new job -> not idle anymore
