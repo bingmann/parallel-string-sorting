@@ -61,8 +61,8 @@ static const bool debug_merge_start_message = true;
 
 //constants
 static const bool USE_WORK_SHARING = true;
-static const size_t MERGE_BULK_SIZE = 3000;
-static const size_t SHARE_WORK_THRESHOLD = 3 * MERGE_BULK_SIZE;
+static const size_t MERGE_BULK_SIZE = 4 * 1024;
+static const size_t SHARE_WORK_THRESHOLD = 4 * MERGE_BULK_SIZE;
 
 //method definitions
 
@@ -306,7 +306,7 @@ createJobs(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned n
         }
     }
 
-    const unsigned overProvFactor = 500;
+    const unsigned overProvFactor = 100;
     const size_t expectedJobLength = std::max(MERGE_BULK_SIZE, numberOfElements / (overProvFactor * numa_num_configured_cpus()));
 
     DBG(debug_job_creation, "Expected job length: " << expectedJobLength);
