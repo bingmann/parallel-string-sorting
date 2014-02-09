@@ -149,7 +149,7 @@ bool check_sorted_order(const membuffer<unsigned char*>& stringptr, const Permut
     return true;
 }
 
-size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr)
+size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr, size_t& lcpsum)
 {
     size_t D = 0;
     size_t pdepth = 0;
@@ -159,7 +159,11 @@ size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr)
         size_t depth = 0;
         while ( stringptr[i-1][depth] == stringptr[i][depth] &&
                 stringptr[i-1][depth] != 0 ) ++depth;
+
         // depth == LCP of prev and this
+        lcpsum += depth;
+
+        // add distinguishing character
         depth++;
 
         if (pdepth < depth) {

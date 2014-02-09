@@ -83,6 +83,7 @@ char*           g_string_databuff = NULL; // pointer to data buffer with padding
 size_t          g_string_buffsize = 0;  // total size of string data with padding
 size_t          g_string_count = 0;     // number of strings.
 size_t          g_string_dprefix = 0;   // calculated distinguishing prefix
+size_t          g_string_lcpsum = 0;    // sum over LCP array
 
 const char*     gopt_inputwrite = NULL; // argument -i, --input
 const char*     gopt_output = NULL; // argument -o, --output
@@ -245,6 +246,7 @@ void Contest::run_contest(const char* path)
             return;
 
         g_string_dprefix = 0;
+        g_string_lcpsum = 0;
 
         maybe_inputwrite();
         std::cout << "Sorting " << g_string_count << " strings composed of " << g_string_datasize << " bytes." << std::endl;
@@ -321,6 +323,7 @@ void Contestant_UCArray::run_forked()
                 return;
 
             g_string_dprefix = 0;
+            g_string_lcpsum = 0;
 
             maybe_inputwrite();
             std::cout << "Sorting " << g_string_count << " strings composed of " << g_string_datasize << " bytes." << std::endl;
@@ -587,10 +590,12 @@ void Contestant_UCArray::real_run()
         }
 
         if (!g_string_dprefix)
-            g_string_dprefix = calc_distinguishing_prefix(stringptr);
+            g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_lcpsum);
 
         g_statscache >> "dprefix" << g_string_dprefix
-                     >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize);
+                     >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize)
+                     >> "lcpsum" << g_string_lcpsum
+                     >> "avg-lcpsum" << g_string_lcpsum / (double)g_string_count;
     }
     else
     {
