@@ -92,6 +92,8 @@ void do_numa_segment(char* buff, size_t buffsize)
         }
     }
 
+    numa_set_interleave_mask(numa_all_nodes_ptr);
+
     std::cout << "NUMA segmenting finished." << std::endl;
 }
 
