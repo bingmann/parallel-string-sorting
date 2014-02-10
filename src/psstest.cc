@@ -309,6 +309,14 @@ void Contest::list_contentants()
 
 void Contestant_UCArray::run_forked()
 {
+    if (gopt_memory_type == "mmap_segment" &&
+        pss_num_threads < (int)g_numa_nodes)
+    {
+        std::cout << "Skipping because threads=" << pss_num_threads
+                  << " less than numa_nodes=" << g_numa_nodes << std::endl;
+        return;
+    }
+
     if (!gopt_forkrun) return real_run();
 
     pid_t p = fork();
