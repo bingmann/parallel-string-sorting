@@ -44,6 +44,7 @@
 
 #include "../tools/agglogger.h"
 #include "../tools/timer.h"
+#include "../tools/timer_array.h"
 
 extern std::string gopt_memory_type;
 extern size_t g_numa_nodes;

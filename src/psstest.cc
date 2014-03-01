@@ -56,6 +56,7 @@
 
 #include "tools/stats_writer.h"
 #include "tools/timer.h"
+#include "tools/timer_array.h"
 
 #ifdef MALLOC_COUNT
 #include "tools/malloc_count.h"
