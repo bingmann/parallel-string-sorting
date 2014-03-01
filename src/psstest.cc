@@ -55,7 +55,7 @@
 #include "src/config.h"
 
 #include "tools/stats_writer.h"
-#include "tools/clock_timer.h"
+#include "tools/timer.h"
 
 #ifdef MALLOC_COUNT
 #include "tools/malloc_count.h"

@@ -1,5 +1,5 @@
 /******************************************************************************
- * src/tools/clock_timer.h
+ * src/tools/timer.h
  *
  * Class to output statistics in a flexible text file as key=value pairs.
  *

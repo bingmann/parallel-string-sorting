@@ -43,7 +43,7 @@
 #define DBGX DBGX_OMP
 
 #include "../tools/agglogger.h"
-#include "../tools/clock_timer.h"
+#include "../tools/timer.h"
 
 extern std::string gopt_memory_type;
 extern size_t g_numa_nodes;
