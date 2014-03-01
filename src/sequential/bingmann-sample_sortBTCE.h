@@ -490,8 +490,8 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
 void bingmann_sample_sortBTCE2(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     sample_sortBTCE2<ClassifySimple>(strings,n,0);
     sample_sort_post();
 }
@@ -502,8 +502,8 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE2, "bingmann/sample_sortBTCE2",
 void bingmann_sample_sortBTCE2A(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     sample_sortBTCE2<ClassifyAssembler>(strings,n,0);
     sample_sort_post();
 }
@@ -514,8 +514,8 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE2A, "bingmann/sample_sortBTCE2A",
 void bingmann_sample_sortBTCE2U(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     sample_sortBTCE2<ClassifyUnroll>(strings,n,0);
     sample_sort_post();
 }
@@ -883,8 +883,8 @@ public:
 void bingmann_sample_sortBTCE3(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     SampleSortBTCE3::sort<ClassifySimple>(strings,n,0);
     sample_sort_post();
 }
@@ -895,8 +895,8 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE3, "bingmann/sample_sortBTCE3",
 void bingmann_sample_sortBTCE3A(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     SampleSortBTCE3::sort<ClassifyAssembler>(strings,n,0);
     sample_sort_post();
 }
@@ -907,8 +907,8 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE3A, "bingmann/sample_sortBTCE3A",
 void bingmann_sample_sortBTCE3U(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     SampleSortBTCE3::sort<ClassifyUnroll>(strings,n,0);
     sample_sort_post();
 }

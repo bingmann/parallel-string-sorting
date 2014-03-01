@@ -1218,7 +1218,7 @@ void parallel_mkqs(string* strings, size_t n)
     g_threadnum = omp_get_max_threads();
     g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
 
-    g_statscache >> "block_size" << block_size;
+    g_stats >> "block_size" << block_size;
 
     JobQueue jobqueue;
     new ParallelMKQS<BlockSourceInput>(jobqueue, strings, n, 0);

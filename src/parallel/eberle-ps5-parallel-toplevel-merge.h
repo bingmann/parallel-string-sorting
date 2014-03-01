@@ -71,7 +71,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n)
         DBG(1, "Continuing anyway, at your own peril!");
     }
 
-    g_statscache >> "num_numa_nodes" << realNumaNodes;
+    g_stats >> "num_numa_nodes" << realNumaNodes;
 
     // maybe raise number of used NUMA nodes for developement
     int numNumaNodes = g_numa_nodes;
@@ -191,7 +191,7 @@ eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n)
         DBG(1, "Continuing anyway, at your own peril!");
     }
 
-    g_statscache >> "num_numa_nodes" << realNumaNodes;
+    g_stats >> "num_numa_nodes" << realNumaNodes;
 
     // maybe raise number of used NUMA nodes for developement
     int numNumaNodes = g_numa_nodes;

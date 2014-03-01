@@ -1824,12 +1824,12 @@ struct SampleSortStep : public SortStep
 
     static inline void put_stats()
     {
-        g_statscache >> "l2cache" << size_t(l2cache)
-                     >> "splitter_treebits" << size_t(treebits)
-                     >> "numsplitters" << size_t(numsplitters)
-                     >> "use_work_sharing" << use_work_sharing
-                     >> "use_restsize" << PS5_ENABLE_RESTSIZE
-                     >> "use_lcp_inssort" << use_lcp_inssort;
+        g_stats >> "l2cache" << size_t(l2cache)
+                >> "splitter_treebits" << size_t(treebits)
+                >> "numsplitters" << size_t(numsplitters)
+                >> "use_work_sharing" << use_work_sharing
+                >> "use_restsize" << PS5_ENABLE_RESTSIZE
+                >> "use_lcp_inssort" << use_lcp_inssort;
     }
 };
 
@@ -1905,20 +1905,20 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 
     delete [] shadow;
 
-    g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
-                 >> "steps_seq_sample_sort" << ctx.seq_ss_steps
-                 >> "steps_base_sort" << ctx.bs_steps;
+    g_stats >> "steps_para_sample_sort" << ctx.para_ss_steps
+            >> "steps_seq_sample_sort" << ctx.seq_ss_steps
+            >> "steps_base_sort" << ctx.bs_steps;
 
     if (ctx.timers.is_real)
     {
-        g_statscache >> "tm_waiting" << ctx.timers.get(TM_WAITING)
-                     >> "tm_jq_work" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_WORK)
-                     >> "tm_jq_idle" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_IDLE)
-                     >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
-                     >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
-                     >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
-                     >> "tm_inssort" << ctx.timers.get(TM_INSSORT)
-                     >> "tm_sum" << ctx.timers.get_sum();
+        g_stats >> "tm_waiting" << ctx.timers.get(TM_WAITING)
+                >> "tm_jq_work" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_WORK)
+                >> "tm_jq_idle" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_IDLE)
+                >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
+                >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
+                >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
+                >> "tm_inssort" << ctx.timers.get(TM_INSSORT)
+                >> "tm_sum" << ctx.timers.get_sum();
     }
 }
 
@@ -1969,20 +1969,20 @@ void parallel_sample_sort_out_base(string* strings, string* output, size_t n, si
 
     delete [] shadow;
 
-    g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
-                 >> "steps_seq_sample_sort" << ctx.seq_ss_steps
-                 >> "steps_base_sort" << ctx.bs_steps;
+    g_stats >> "steps_para_sample_sort" << ctx.para_ss_steps
+            >> "steps_seq_sample_sort" << ctx.seq_ss_steps
+            >> "steps_base_sort" << ctx.bs_steps;
 
     if (ctx.timers.is_real)
     {
-        g_statscache >> "tm_waiting" << ctx.timers.get(TM_WAITING)
-                     >> "tm_jq_work" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_WORK)
-                     >> "tm_jq_idle" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_IDLE)
-                     >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
-                     >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
-                     >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
-                     >> "tm_inssort" << ctx.timers.get(TM_INSSORT)
-                     >> "tm_sum" << ctx.timers.get_sum();
+        g_stats >> "tm_waiting" << ctx.timers.get(TM_WAITING)
+                >> "tm_jq_work" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_WORK)
+                >> "tm_jq_idle" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_IDLE)
+                >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
+                >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
+                >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
+                >> "tm_inssort" << ctx.timers.get(TM_INSSORT)
+                >> "tm_sum" << ctx.timers.get_sum();
     }
 }
 
@@ -2018,9 +2018,9 @@ void parallel_sample_sort_numa(string *strings, size_t n,
     assert(ctx.restsize.update().get() == 0);
 #endif
 
-    g_statscache >> "steps_para_sample_sort" << ctx.para_ss_steps
-                 >> "steps_seq_sample_sort" << ctx.seq_ss_steps
-                 >> "steps_base_sort" << ctx.bs_steps;
+    g_stats >> "steps_para_sample_sort" << ctx.para_ss_steps
+            >> "steps_seq_sample_sort" << ctx.seq_ss_steps
+            >> "steps_base_sort" << ctx.bs_steps;
 }
 
 //! Call for NUMA aware parallel sorting
@@ -2063,9 +2063,9 @@ void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* strptr,
         assert(ctx[i].restsize.update().get() == 0);
 #endif
 
-        g_statscache >> "steps_para_sample_sort" << ctx[i]->para_ss_steps
-                     >> "steps_seq_sample_sort" << ctx[i]->seq_ss_steps
-                     >> "steps_base_sort" << ctx[i]->bs_steps;
+        g_stats >> "steps_para_sample_sort" << ctx[i]->para_ss_steps
+                >> "steps_seq_sample_sort" << ctx[i]->seq_ss_steps
+                >> "steps_base_sort" << ctx[i]->bs_steps;
 
         delete ctx[i];
     }

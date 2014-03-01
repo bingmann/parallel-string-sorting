@@ -27,9 +27,9 @@
 #include <string.h>
 #include <vector>
 
-#include "statsfile.h"
+#include "stats_writer.h"
 
-extern StatsCache g_statscache;
+extern stats_writer g_stats;
 
 extern int pss_num_threads;
 extern size_t g_small_sort;

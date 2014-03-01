@@ -54,7 +54,8 @@
 
 #include "src/config.h"
 
-#include "tools/statsfile.h"
+#include "tools/stats_writer.h"
+#include "tools/clock_timer.h"
 
 #ifdef MALLOC_COUNT
 #include "tools/malloc_count.h"
@@ -97,10 +98,7 @@ bool            gopt_mlockall = false;     // argument --mlockall
 
 std::vector<size_t> gopt_threadlist;       // argument --thread-list
 
-StatsCache      g_statscache;
-
-// file name of statistics output
-static const char* statsfile = "pss-runs1.txt";
+stats_writer    g_stats;
 
 size_t          g_smallsort = 0;
 
@@ -355,47 +353,45 @@ void Contestant_UCArray::run_forked()
 
         // write out exit status information to results file
 
-        g_statscache >> "algo" << m_algoname
-                     >> "data" << input::strip_datapath(g_datapath)
-                     >> "memory_type" << gopt_memory_type
-                     >> "char_count" << gopt_inputsize;
+        g_stats >> "algo" << m_algoname
+                >> "data" << input::strip_datapath(g_datapath)
+                >> "memory_type" << gopt_memory_type
+                >> "char_count" << gopt_inputsize;
 
         if (WTERMSIG(status) == SIGALRM)
         {
-            g_statscache >> "status" << "timeout"
-                         >> "timeout" << gopt_timeout;
+            g_stats >> "status" << "timeout"
+                    >> "timeout" << gopt_timeout;
         }
         else if (WTERMSIG(status) == SIGSEGV)
         {
-            g_statscache >> "status" << "segfault";
+            g_stats >> "status" << "segfault";
         }
         else if (WTERMSIG(status) == SIGABRT)
         {
-            g_statscache >> "status" << "aborted";
+            g_stats >> "status" << "aborted";
         }
         else
         {
-            std::ostringstream oss;
-            oss << "SIG" << WTERMSIG(status);
-            g_statscache >> "status" << oss.str();
+            g_stats >> "status" << "SIG" << WTERMSIG(status);
         }
 
-        StatsWriter(statsfile).append_stats(g_statscache);
+        std::cout << g_stats << std::endl;
     }
     else {
         std::cout << "Child wait returned with status " << status << std::endl;
 
-        g_statscache >> "algo" << m_algoname
-                     >> "data" << g_dataname
-                     >> "char_count" << g_string_datasize
-                     >> "string_count" << g_string_count
-                     >> "status" << "weird";
+        g_stats >> "algo" << m_algoname
+                >> "data" << g_dataname
+                >> "char_count" << g_string_datasize
+                >> "string_count" << g_string_count
+                >> "status" << "weird";
 
-        StatsWriter(statsfile).append_stats(g_statscache);
+        std::cout << g_stats << std::endl;
     }
 
     if (gopt_output) exit(0);
-    g_statscache.clear();
+    g_stats.clear();
 }
 
 void Contestant_UCArray::real_run()
@@ -500,14 +496,14 @@ void Contestant_UCArray::real_run()
 
     std::cout << "Running " << m_algoname << " - " << m_description << std::endl;
 
-    g_statscache >> "algo" << m_algoname
-                 >> "data" << g_dataname
-                 >> "memory_type" << gopt_memory_type
-                 >> "char_count" << g_string_datasize
-                 >> "string_count" << stringptr.size();
+    g_stats >> "algo" << m_algoname
+            >> "data" << g_dataname
+            >> "memory_type" << gopt_memory_type
+            >> "char_count" << g_string_datasize
+            >> "string_count" << stringptr.size();
 
     if (g_smallsort)
-        g_statscache >> "smallsort" << g_smallsort;
+        g_stats >> "smallsort" << g_smallsort;
 
     // enable nested parallel regions
     omp_set_nested(true);
@@ -571,8 +567,8 @@ void Contestant_UCArray::real_run()
     std::cout << "Max heap usage: " << malloc_count_peak() - memuse << std::endl;
     //memprofile.finish();
 
-    g_statscache >> "heapuse" << (malloc_count_peak() - memuse)
-                 >> "stackuse" << stack_count_usage(stack);
+    g_stats >> "heapuse" << (malloc_count_peak() - memuse)
+            >> "stackuse" << stack_count_usage(stack);
 
     if (memuse < malloc_count_current())
     {
@@ -580,30 +576,30 @@ void Contestant_UCArray::real_run()
     }
 #endif
 
-    g_statscache >> "time" << timer.delta() / gopt_repeats_inner
-                 >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
+    g_stats >> "time" << timer.delta() / gopt_repeats_inner
+            >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
     (std::cout << timer.delta() << "\tchecking ").flush();
 
     if (gopt_repeats_inner != 1)
-        g_statscache >> "repeats_inner" << gopt_repeats_inner;
+        g_stats >> "repeats_inner" << gopt_repeats_inner;
 
     if (!gopt_no_check)
     {
         if (check_sorted_order(stringptr, pc)) {
             std::cout << "ok" << std::endl;
-            g_statscache >> "status" << "ok";
+            g_stats >> "status" << "ok";
         }
         else {
-            g_statscache >> "status" << "failed";
+            g_stats >> "status" << "failed";
         }
 
         if (!g_string_dprefix)
             g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_lcpsum);
 
-        g_statscache >> "dprefix" << g_string_dprefix
-                     >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize)
-                     >> "lcpsum" << g_string_lcpsum
-                     >> "avg-lcpsum" << g_string_lcpsum / (double)g_string_count;
+        g_stats >> "dprefix" << g_string_dprefix
+                >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize)
+                >> "lcpsum" << g_string_lcpsum
+                >> "avg-lcpsum" << g_string_lcpsum / (double)g_string_count;
     }
     else
     {
@@ -611,8 +607,8 @@ void Contestant_UCArray::real_run()
     }
 
     // print timing data out to results file
-    StatsWriter(statsfile).append_stats(g_statscache);
-    g_statscache.clear();
+    std::cout << g_stats << std::endl;
+    g_stats.clear();
 
     if (gopt_output)
     {
@@ -646,7 +642,7 @@ void Contestant_UCArray_Parallel::run()
             {
                 pss_num_threads = p;
                 std::cout << "threads=" << p << std::endl;
-                g_statscache >> "threads" << p;
+                g_stats >> "threads" << p;
 
                 Contestant_UCArray::run_forked();
             }
@@ -680,7 +676,7 @@ void Contestant_UCArray_Parallel::run()
             {
                 pss_num_threads = p;
                 std::cout << "threads=" << p << std::endl;
-                g_statscache >> "threads" << p;
+                g_stats >> "threads" << p;
 
                 Contestant_UCArray::run_forked();
             }

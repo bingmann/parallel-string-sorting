@@ -474,8 +474,8 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 void bingmann_sample_sortBTC(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     sample_sortBTC<ClassifySimple>(strings,n,0);
     sample_sort_post();
 }
@@ -486,8 +486,8 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTC, "bingmann/sample_sortBTC",
 void bingmann_sample_sortBTCA(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     sample_sortBTC<ClassifyAssembler>(strings,n,0);
     sample_sort_post();
 }
@@ -498,8 +498,8 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCA, "bingmann/sample_sortBTCA",
 void bingmann_sample_sortBTCU(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     sample_sortBTC<ClassifyUnroll>(strings,n,0);
     sample_sort_post();
 }
@@ -639,8 +639,8 @@ struct ClassifyEqualAssembler
 void bingmann_sample_sortBTCE1(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     sample_sortBTC<ClassifyEqualSimple>(strings,n,0);
     sample_sort_post();
 }
@@ -651,8 +651,8 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE1, "bingmann/sample_sortBTCE1",
 void bingmann_sample_sortBTCE1A(string* strings, size_t n)
 {
     sample_sort_pre();
-    g_statscache >> "numsplitters" << numsplitters
-                 >> "splitter_treebits" << treebits;
+    g_stats >> "numsplitters" << numsplitters
+            >> "splitter_treebits" << treebits;
     sample_sortBTC<ClassifyEqualAssembler>(strings,n,0);
     sample_sort_post();
 }

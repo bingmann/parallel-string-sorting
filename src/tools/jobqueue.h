@@ -43,6 +43,7 @@
 #define DBGX DBGX_OMP
 
 #include "../tools/agglogger.h"
+#include "../tools/clock_timer.h"
 
 extern std::string gopt_memory_type;
 extern size_t g_numa_nodes;
@@ -338,7 +339,7 @@ public:
             DBG(1, "Continuing anyway, at your own peril!");
         }
 
-        g_statscache >> "num_real_numa_nodes" << realNumaNodes;
+        g_stats >> "num_real_numa_nodes" << realNumaNodes;
 
         if ((int)m_queues.size() != realNumaNodes || g_numa_nodes == 0)
         {
@@ -346,7 +347,7 @@ public:
                 << "Remove --numa-nodes for REAL EXPERIMENTS.");
         }
 
-        g_statscache >> "num_jobqueues" << m_queues.size();
+        g_stats >> "num_jobqueues" << m_queues.size();
 
         // distribute threads among NUMA job queues
         int numJobQueues = m_queues.size();

@@ -24,7 +24,7 @@
 #define EBERLE_MERGESORT_LCP_H_
 
 #include "../tools/stringtools.h"
-#include "../tools/statsfile.h"
+#include "../tools/stats_writer.h"
 
 namespace eberle_mergesort_lcp
 {

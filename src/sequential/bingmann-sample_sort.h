@@ -51,17 +51,17 @@ static inline void sample_sort_pre()
 
 static inline void sample_sort_post()
 {
-    g_statscache >> "l2cache" << l2cache
-                 >> "steps_sample_sort" << g_ss_steps
-                 >> "steps_base_sort" << g_rs_steps;
+    g_stats >> "l2cache" << l2cache
+            >> "steps_sample_sort" << g_ss_steps
+            >> "steps_base_sort" << g_rs_steps;
 
-    g_statscache >> "tm_general" << g_timer.get(TM_GENERAL)
-                 >> "tm_make_sample" << g_timer.get(TM_MAKE_SAMPLE)
-                 >> "tm_make_splitter" << g_timer.get(TM_MAKE_SPLITTER)
-                 >> "tm_classify" << g_timer.get(TM_CLASSIFY)
-                 >> "tm_prefixsum" << g_timer.get(TM_PREFIXSUM)
-                 >> "tm_permute" << g_timer.get(TM_PERMUTE)
-                 >> "tm_smallsort" << g_timer.get(TM_SMALLSORT);
+    g_stats >> "tm_general" << g_timer.get(TM_GENERAL)
+            >> "tm_make_sample" << g_timer.get(TM_MAKE_SAMPLE)
+            >> "tm_make_splitter" << g_timer.get(TM_MAKE_SPLITTER)
+            >> "tm_classify" << g_timer.get(TM_CLASSIFY)
+            >> "tm_prefixsum" << g_timer.get(TM_PREFIXSUM)
+            >> "tm_permute" << g_timer.get(TM_PERMUTE)
+            >> "tm_smallsort" << g_timer.get(TM_SMALLSORT);
 }
 
 } // namespace bingmann_sample_sort
