@@ -400,49 +400,4 @@ public:
     }
 };
 
-/// Class to read /proc/<pid>/smaps for memory usage
-struct SMapsInfo
-{
-    size_t      size, rss, pss;
-    size_t      referenced, anonymous, locked;
-
-    void read()
-    {
-        size = rss = pss = 0;
-        referenced = anonymous = locked = 0;
-
-        std::ifstream in("/proc/self/smaps");
-        std::string line;
-
-        while ( std::getline(in, line) )
-        {
-            unsigned long mem_from, mem_to, mem_size;
-            char mem_info[65];
-
-            if (sscanf(line.c_str(), "%lx-%lx", &mem_from, &mem_to) == 2) {
-                //std::cout << "new area " << mem_from << " - " << mem_to << std::endl;
-            }
-            else if (sscanf(line.c_str(), "%64[^:]: %lu kB", mem_info, &mem_size) == 2)
-            {
-                std::string info = mem_info;
-                if (info == "Size") size += mem_size;
-                else if (info == "Rss") rss += mem_size;
-                else if (info == "Pss") pss += mem_size;
-                else if (info == "Referenced") referenced += mem_size;
-                else if (info == "Anonymous") anonymous += mem_size;
-                else if (info == "Locked") locked += mem_size;
-                else {
-                    //std::cout << "type " << mem_info << " - " << mem_size << std::endl;
-                }
-            }
-        }
-    }
-};
-
-static inline size_t smaps_delta(const size_t& start, const size_t& end)
-{
-    if (end < start) return 0;
-    else return end - start;
-}
-
 #endif // TOOLS_STATSFILE_H
