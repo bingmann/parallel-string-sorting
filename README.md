@@ -2,7 +2,7 @@
 
 This source code archive contains our test framework for parallel and
 sequential string sorting algorithms, as described in our technical report and
-paper "Parallel String Sample Sort". See the project web page
+paper "Engineering Parallel Sorting". See the project web page
 <http://panthema.net/2013/parallel-string-sorting/> for more information.
 
 ## Source Code Overview
@@ -28,9 +28,11 @@ Ranjan Sinha's copy-burstsort variants are located in
 framework via the glue.cc source file.
 
 All parallel string sorting implementations, including our fastest one,
-**pS^5**, is located in `src/parallel/`. The new algorithm with highest
-speedups "pS^5-Unroll" is located in
-`src/parallel/bingmann-parallel_sample_sortBTC.cc`
+**pS^5**, is located in `src/parallel/`. The new algorithm with highest speedups
+"pS^5-Unroll" is located in `src/parallel/bingmann-parallel_sample_sort.cc`. For
+NUMA systems we developed multiway LCP-mergesort, which is located in
+`src/parallel/eberle-ps5-parallel-toplevel-merge.h` and uses the LCP-losertree
+in `src/tools/eberle-lcp-losertree.h`.
 
 Only one binary program `psstest` is built when compiling with default options,
 which contains all implementations in the collection. The main source code file
@@ -51,9 +53,10 @@ string sorting algorithms. Running the program without arguments will print a
 command line help.
 
 The algorithms implementation are selected using the "`-a`" switch. Run `-a
-list` for a (long) list of string sorting algorithms. For example `-a mkqs`
-will select all algorithms *containing* "mkqs". You can use `-a` multiple times
-to select different sets (multiple `-a` are logically inclusive).
+list` for a (long) list of string sorting algorithms. For example `-a mkqs` will
+select all algorithms *containing* "mkqs". You can use `-a` multiple times to
+select different sets (multiple `-a` are logically inclusive). To select an
+algorithm name fully matching a string, use the "`-A`" switch.
 
 The input is selected by giving a file name or artificial random source
 name. Available random inputs are "`randomASCII`", "`random10`", "`random4`"
@@ -118,15 +121,24 @@ information at
 
 ## Exits
 
-Written 2013-05-02 by Timo Bingmann
+Written 2013-05-02 by Timo Bingmann, updated 2014-03-09
 
 ## Appendix: List of String Sorting Implementations
 
 ```
-Running parallel-string-sorting test on i10host
+Running parallel-string-sorting 0a2c4fa89c1c2148dfd6a0903bd225141a158c5b on i10host
 Called as ./psstest -a list
 Available string sorting algorithms:
 akiba/parallel_radix_sort                               Parallel MSD radix sort by Takuya Akiba
+bingmann/lcp_insertion_sort                             LCP-aware insertion sort
+bingmann/lcp_insertion_sort_cache                       LCP-aware insertion sort (with distinguishing character cache)
+bingmann/lcp_insertion_sort_nolcp                       LCP-aware insertion sort (without LCP output)
+bingmann/lcp_insertion_sort_pseudocode                  LCP-aware insertion sort close to pseudo-code, with checking
+bingmann/lcp_mergesort_128way                           128-way LCP-Mergesort by Andreas Eberle and Timo Bingmann
+bingmann/lcp_mergesort_16way                            16-way LCP-Mergesort by Andreas Eberle and Timo Bingmann
+bingmann/lcp_mergesort_4way                             4-way LCP-Mergesort by Andreas Eberle and Timo Bingmann
+bingmann/lcp_mergesort_8way                             8-way LCP-Mergesort by Andreas Eberle and Timo Bingmann
+bingmann/lcp_mergesort_binary                           Binary Mergesort with LCP-merge by Andreas Eberle and Timo Bingmann
 bingmann/msd_CE                                         bingmann/msd_CE (rantala CE original)
 bingmann/msd_CE2                                        bingmann/msd_CE2 (CE with reused prefix sum)
 bingmann/msd_CE3                                        bingmann/msd_CE3 (CE2 with iterators)
@@ -144,12 +156,30 @@ bingmann/msd_CI_nr3                                     bingmann/msd_CI_nr3 (CI 
 bingmann/parallel_mkqs                                  Parallel MKQS with blocks and cache8
 bingmann/parallel_radix_sort_16bit                      Parallel MSD Radix sort with load balancing, 16-bit BigSorts
 bingmann/parallel_radix_sort_8bit                       Parallel MSD Radix sort with load balancing, 8-bit BigSorts
-bingmann/parallel_sample_sortBSC                        bingmann/parallel_sample_sortBSC: binary search, bktcache
-bingmann/parallel_sample_sortBTC                        bingmann/parallel_sample_sortBTC: binary tree, bktcache
-bingmann/parallel_sample_sortBTCE                       bingmann/parallel_sample_sortBTCE: binary tree, equality, bktcache
-bingmann/parallel_sample_sortBTCEU1                     bingmann/parallel_sample_sortBTCEU1: binary tree, equality, bktcache, unroll tree
-bingmann/parallel_sample_sortBTCU1                      bingmann/parallel_sample_sortBTCU1: binary tree, bktcache, unroll tree
-bingmann/parallel_sample_sortBTCU2                      bingmann/parallel_sample_sortBTCU2: binary tree, bktcache, unroll tree and strings
+bingmann/parallel_sample_sortBSC                        pS5: binary search, bktcache
+bingmann/parallel_sample_sortBSC_lcp                    pS5: binary search, bktcache_lcp
+bingmann/parallel_sample_sortBTC                        pS5: binary tree, bktcache
+bingmann/parallel_sample_sortBTCE                       pS5: binary tree, equality, bktcache
+bingmann/parallel_sample_sortBTCEU1                     pS5: binary tree, equality, bktcache, unroll tree
+bingmann/parallel_sample_sortBTCEU1_lcp                 pS5: binary tree, equality, bktcache, unroll tree_lcp
+bingmann/parallel_sample_sortBTCE_lcp                   pS5: binary tree, equality, bktcache_lcp
+bingmann/parallel_sample_sortBTCT                       pS5: binary tree, bktcache, tree calc
+bingmann/parallel_sample_sortBTCTU1                     pS5: binary tree, bktcache, unroll tree, tree calc
+bingmann/parallel_sample_sortBTCTU1_lcp                 pS5: binary tree, bktcache, unroll tree, tree calc_lcp
+bingmann/parallel_sample_sortBTCTU2                     pS5: binary tree, bktcache, unroll tree and strings, tree calc
+bingmann/parallel_sample_sortBTCTU2_lcp                 pS5: binary tree, bktcache, unroll tree and strings, tree calc_lcp
+bingmann/parallel_sample_sortBTCT_lcp                   pS5: binary tree, bktcache, tree calc_lcp
+bingmann/parallel_sample_sortBTCU1                      pS5: binary tree, bktcache, unroll tree
+bingmann/parallel_sample_sortBTCU1_lcp                  pS5: binary tree, bktcache, unroll tree_lcp
+bingmann/parallel_sample_sortBTCU2                      pS5: binary tree, bktcache, unroll tree and strings
+bingmann/parallel_sample_sortBTCU2_lcp                  pS5: binary tree, bktcache, unroll tree and strings_lcp
+bingmann/parallel_sample_sortBTCU2_out                  pS5: binary tree, bktcache, unroll tree and strings, separate output
+bingmann/parallel_sample_sortBTCU2_out_lcp              pS5: binary tree, bktcache, unroll tree and strings, separate output_lcp
+bingmann/parallel_sample_sortBTC_lcp                    pS5: binary tree, bktcache_lcp
+bingmann/qsort1                                         Run stdlib qsort with string comparsions (bytewise)
+bingmann/qsort4                                         Run stdlib qsort with string comparsions (4 bytewise)
+bingmann/qsort8                                         Run stdlib qsort with string comparsions (8 bytewise)
+bingmann/qsort_strcmp                                   Run stdlib qsort with strcmp comparsion
 bingmann/sample_sortBS                                  bingmann/sample_sortBS (binary search, no cache)
 bingmann/sample_sortBSC                                 bingmann/sample_sortBSC (binary search, bkt cache)
 bingmann/sample_sortBSCA                                bingmann/sample_sortBSCA (binary search, assembler CMOV, bkt cache)
@@ -168,7 +198,21 @@ bingmann/sample_sortBTCU                                bingmann/sample_sortBTCU
 bingmann/sample_sortRBTCE                               bingmann/sample_sortRBTCE (adapt binary tree equal, bkt cache)
 bingmann/sample_sortRBTCEA                              bingmann/sample_sortRBTCEA (adapt binary tree equal, asm CMOV, bkt cache)
 bingmann/sequential_mkqs_cache8                         multikey_cache with 8byte cache (non-recursive)
+bingmann/stdsort1                                       Run std::sort with string comparsions (bytewise)
+bingmann/stdsort4                                       Run std::sort with string comparsions (4 bytewise)
+bingmann/stdsort8                                       Run std::sort with string comparsions (8 bytewise)
 bs/mkqsort                                              bs_mkqs Original Multikey-Quicksort
+eberle/lcp_insertion_sort                               LCP aware inssertion sort by Andreas Eberle
+eberle/lcp_insertion_sort_cache                         LCP aware insertion sort with cached characters calculation by Andreas Eberle
+eberle/mergesort_lcp_binary                             Binary Mergesort with LCP-usage by Andreas Eberle
+eberle/mergesort_lcp_losertree_16way                    Mergesort with lcp aware Losertree by Andreas Eberle
+eberle/mergesort_lcp_losertree_32way                    Mergesort with lcp aware Losertree by Andreas Eberle
+eberle/mergesort_lcp_losertree_4way                     Mergesort with lcp aware Losertree by Andreas Eberle
+eberle/mergesort_lcp_losertree_64way                    Mergesort with lcp aware Losertree by Andreas Eberle
+eberle/parallel-lcp-mergesort                           parallel LCP aware mergesort by Andreas Eberle
+eberle/ps5-parallel-toplevel-merge                      NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle
+eberle/ps5-parallel-toplevel-merge-assisting            pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann
+insertion_sort                                          String Insertion-Sort
 mbm/radixsort                                           MSD Radix Sort by P. M. McIlroy, K. Bostic, and M. D. McIlroy
 ng/cradix                                               CRadix Original by Waihong Ng and Katsuhiko Kakehi
 ng/lcpmergesort                                         LCP-Mergesort Original by Waihong Ng and Katsuhiko Kakehi
