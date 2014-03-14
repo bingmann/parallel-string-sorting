@@ -27,6 +27,7 @@
 #include <utility>
 
 #include "eberle-parallel-lcp-merge.h"
+#include "eberle-parallel-lcp-merge-standard-splitting.h"
 #include "../sequential/eberle-mergesort-lcp-losertree.h"
 
 #include "../tools/eberle-utilities.h"
@@ -87,7 +88,7 @@ eberle_parallel_lcp_mergesort(string *strings, size_t n)
 
     ClockTimer timer;
    // eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
-    eberle_parallel_lcp_merge::parallelLcpMerge(stringPtr, topLevelBranches, strings, n);
+    eberle_parallel_lcp_merge::parallelLcpMergeStandardSplitting(stringPtr, topLevelBranches, strings, n);
 
     DBG(debug_toplevel_merge_duration, std::endl << "top level merge needed: " << timer.elapsed() << " s" << std::endl);
 

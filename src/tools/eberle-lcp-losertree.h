@@ -294,6 +294,17 @@ public:
         nodes[0] = contenderIdx;
     }
 
+    inline string
+    deleteMin()
+    {
+        unsigned contenderIdx = nodes[0];
+        string min = streams[contenderIdx].firstString();
+        removeTopFromStream(contenderIdx);
+        replay(contenderIdx);
+
+        return min;
+    }
+
     inline void
     getRangesOfRemaining(std::pair<size_t, size_t>* ranges, const LcpStringPtr& inputBase)
     {

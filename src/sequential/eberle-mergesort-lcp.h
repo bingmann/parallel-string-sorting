@@ -184,7 +184,7 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1,
 
             // check the strings starting after lcp and calculate new lcp
             while (*s1 != '\0' && *s1 == *s2)
-            s1++, s2++;
+                s1++, s2++;
 
             const lcp_t lcp = s1 - *input1;
 
