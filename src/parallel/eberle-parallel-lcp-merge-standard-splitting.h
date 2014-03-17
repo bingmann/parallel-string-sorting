@@ -183,15 +183,13 @@ enqueueJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, unsigned numInpu
     }
 }
 
-static  void
+static inline void
 createJobsWithStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
 {
     DBG(1, "CREATING JOBS for numberOfElements: " << numberOfElements);
 
-    unsigned char maxString[2] = {0xFF, 0x0};
-
-    const unsigned numSplittersPerStream = 2;
-    const unsigned numSplitters = numSplittersPerStream * numInputs + 1;
+    const unsigned numSplittersPerStream = 20;
+    const unsigned numSplitters = numSplittersPerStream * numInputs;
 
     string splitters[numSplitters];
     LcpCacheStringPtr streams[numSplitters];
@@ -215,17 +213,20 @@ createJobsWithStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inp
 
             for(unsigned n = 0; n < numSplittersPerStream; n++)
             {
-                splitters[offset + n] = maxString;
+                splitters[offset + n] = (unsigned char*)"";
             }
         }
     }
-    splitters[numSplitters - 1] = maxString;
 
     eberle_mergesort_lcp::eberle_lcp_mergesort(splitters, numSplitters);
 
     for(unsigned job = 0; job < numSplitters; job++)
     {
         string splitterString = splitters[job];
+
+        if(splitterString[0] == '\0') // skip empty strings used as default value
+            continue;
+
 
 DBG(debug, "Job: " << job << ", splitterString: " << splitterString);
 
@@ -280,11 +281,21 @@ DBG(debug, "Found at [" << idx << "]: ");
         output += jobLength;
     }
 
+    // create job for the last part with elements bigger than the biggest splitter
+    LcpCacheStringPtr jobStreams[numInputs];
+    unsigned nonEmptyCtr = 0;
+    unsigned jobLength = 0;
 
     for(unsigned i = 0; i < numInputs; i++)
     {
-        assert(streams[i].empty());
+        if(!streams[i].empty())
+        {
+            jobStreams[nonEmptyCtr] = streams[i];
+            nonEmptyCtr++;
+            jobLength += streams[i].size;
+        }
     }
+    enqueueJob(jobQueue, jobStreams, nonEmptyCtr, output, jobLength);
 }
 
 

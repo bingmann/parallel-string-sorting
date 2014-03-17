@@ -61,7 +61,7 @@ static const unsigned MERGESORT_BRANCHES = 64;
 //method definitions
 
 void
-eberle_parallel_lcp_mergesort(string *strings, size_t n)
+eberle_parallel_lcp_mergesort(string *strings, size_t n, void (*parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
 {
     const unsigned topLevelBranches = omp_get_max_threads();
 
@@ -88,9 +88,9 @@ eberle_parallel_lcp_mergesort(string *strings, size_t n)
 
     ClockTimer timer;
    // eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
-    eberle_parallel_lcp_merge::parallelLcpMergeStandardSplitting(stringPtr, topLevelBranches, strings, n);
+    parallelMerge(stringPtr, topLevelBranches, strings, n);
 
-    DBG(debug_toplevel_merge_duration, std::endl << "top level merge needed: " << timer.elapsed() << " s" << std::endl);
+    DBG(debug_toplevel_merge_duration, "top level merge needed: " << timer.elapsed() << " s" << std::endl);
 
     for(unsigned k = 0; k < topLevelBranches; k++)
     {
@@ -99,8 +99,22 @@ eberle_parallel_lcp_mergesort(string *strings, size_t n)
     }
 }
 
-CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort,
-    "eberle/parallel-lcp-mergesort",
+void eberle_parallel_lcp_mergesort_lcp_splitting(string* strings, size_t n)
+{
+    eberle_parallel_lcp_mergesort(strings, n, eberle_parallel_lcp_merge::parallelLcpMerge);
+}
+
+void eberle_parallel_lcp_mergesort_standard_splitting(string* strings, size_t n)
+{
+    eberle_parallel_lcp_mergesort(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeStandardSplitting);
+}
+
+CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_lcp_splitting,
+    "eberle/parallel-lcp-mergesort-lcp-splitting",
+    "parallel LCP aware mergesort by Andreas Eberle")
+
+CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_standard_splitting,
+    "eberle/parallel-lcp-mergesort-standard-splitting",
     "parallel LCP aware mergesort by Andreas Eberle")
 
 } // namespace eberle_parallel_lcp_mergesort
