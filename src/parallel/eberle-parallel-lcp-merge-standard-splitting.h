@@ -303,12 +303,17 @@ DBG(debug, "Found at [" << idx << "]: ");
 static inline void
 parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
 {
+	ClockTimer timer;
+	timer.start();
+
     g_outputBase = output;
 
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads with standard splitting");
     jobQueue.enqueue(new InitialStandardSplitJob(input, numInputs, output, length));
     jobQueue.numaLoop(-1, omp_get_max_threads());
+	
+	g_stats >> "parallelTopLevelMergeStandardSplitting" << timer.elapsed();
 }
 
 

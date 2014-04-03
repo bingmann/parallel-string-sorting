@@ -55,7 +55,7 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
             const lcp_t lcp = s1 - *input1;
 
             if (*s1 <= *s2)
-            { 	// CASE 1.1: lcp1 <= lcp2
+            { 	// CASE 1.1: input1 <= input2
                 *output = *input1;
                 *outputLcps = lcp1;
                 ++input1;
@@ -64,7 +64,7 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
                 lcp2 = lcp;
             }
             else
-            { 	// CASE 1.2: lcp1 > lcp2
+            { 	// CASE 1.2: input1 > input2
                 *output = *input2;
                 *outputLcps = lcp2;
                 ++input2;
@@ -75,7 +75,7 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
         }
 
         else if (lcp1 < lcp2)
-        {   // CASE 2: lcp1 > lcp2
+        {   // CASE 2: input1 > input2
             *output = *input2;
             *outputLcps = lcp2;
             ++input2;
@@ -84,7 +84,7 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
         }
 
         else
-        {   // CASE 3: lcp1 < lcp2
+        {   // CASE 3: input1 < input2
             *output = *input1;
             *outputLcps = lcp1;
             ++input1;

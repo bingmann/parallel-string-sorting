@@ -524,10 +524,16 @@ static inline
 void
 parallelLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
 {
+	ClockTimer timer;
+	timer.start();
+
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads");
     jobQueue.enqueue(new InitialSplitJob(input, numInputs, output, length));
     jobQueue.numaLoop(-1, omp_get_max_threads());
+	
+	
+	g_stats >> "parallelTopLevelMergeLCPSplitting" << timer.elapsed();
 }
 
 
