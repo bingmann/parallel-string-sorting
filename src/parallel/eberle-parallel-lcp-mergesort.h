@@ -94,6 +94,7 @@ eberle_parallel_lcp_mergesort(string *strings, size_t n, void (*parallelMerge)(c
 
     for(unsigned k = 0; k < topLevelBranches; k++)
     {
+        delete[] stringPtr[k].strings;
         delete[] stringPtr[k].lcps;
         delete[] stringPtr[k].cachedChars;
     }

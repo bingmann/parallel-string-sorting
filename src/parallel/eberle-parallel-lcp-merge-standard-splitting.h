@@ -313,7 +313,7 @@ parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numIn
     jobQueue.enqueue(new InitialStandardSplitJob(input, numInputs, output, length));
     jobQueue.numaLoop(-1, omp_get_max_threads());
 	
-	g_stats >> "parallelTopLevelMergeStandardSplitting" << timer.elapsed();
+	g_stats >> "toplevelmerge" << timer.elapsed();
 }
 
 
