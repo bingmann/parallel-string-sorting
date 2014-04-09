@@ -188,8 +188,9 @@ createJobsWithStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inp
 {
     DBG(1, "CREATING JOBS for numberOfElements: " << numberOfElements);
 
-    const unsigned numSplittersPerStream = 20;
-    const unsigned numSplitters = numSplittersPerStream * numInputs;
+    const unsigned numSplitters = 10 * omp_get_max_threads();
+    const unsigned numSplittersPerStream = numSplitters / numInputs;
+
 
     string splitters[numSplitters];
     LcpCacheStringPtr streams[numSplitters];
