@@ -641,6 +641,7 @@ void Contestant_UCArray_Parallel::run()
 
             for (size_t r = 0; r < gopt_repeats; ++r)
             {
+				g_stats.clear();
                 pss_num_threads = p;
                 std::cout << "threads=" << p << std::endl;
                 g_stats >> "threads" << p;
@@ -675,6 +676,7 @@ void Contestant_UCArray_Parallel::run()
         {
             for (size_t r = 0; r < gopt_repeats; ++r)
             {
+				g_stats.clear();
                 pss_num_threads = p;
                 std::cout << "threads=" << p << std::endl;
                 g_stats >> "threads" << p;
