@@ -53,6 +53,7 @@ public:
 protected:
     unsigned nodes[K];
     lcp_t lcps[K];
+    char_type cached[K];
 
     /*
      * Returns the winner of all games.
@@ -80,8 +81,8 @@ protected:
         { // CASE 1: defender.lcp == contender.lcp
             lcp_t lcp = defenderLcp;
 
-            char_type c1 = defenderStream.firstCached();
-            char_type c2 = contenderStream.firstCached();
+            char_type c1 = cached[defenderIdx];
+            char_type c2 = cached[contenderIdx];
 
             assert(c1 == defenderStream.firstString()[lcp]);
             assert(c2 == contenderStream.firstString()[lcp]);
@@ -96,13 +97,13 @@ protected:
             if (c1 < c2)
             { 	// CASE 1.1: defender < contender
                 contenderLcp = lcp;
-                contenderStream.firstCached() = c2;
+                cached[contenderIdx] = c2;
                 std::swap(defenderIdx, contenderIdx);
             }
             else
             {	// CASE 1.2: defender >= contender
                 defenderLcp = lcp;
-                defenderStream.firstCached() = c1;
+                cached[defenderIdx] = c1;
             }
         }
         // else
@@ -119,6 +120,7 @@ protected:
         if (!stream.empty())
         {
             lcps[streamIdx] = stream.firstLcp();
+            cached[streamIdx]= stream.firstCached();
         }
     }
 
@@ -163,7 +165,7 @@ public:
             lcps[i] = knownCommonLcp;
 
             if(streams[i].size > 0)
-                streams[i].firstCached() = streams[i].firstString()[knownCommonLcp];
+                cached[i] = streams[i].firstString()[knownCommonLcp];
 
             unsigned nodeIdx = K + i;
             unsigned contenderIdx = i;
@@ -198,7 +200,7 @@ public:
             const Stream& stream = streams [i];
             if (stream.size > 0)
             {
-                std::cout << lcps[i] << "|" << stream.firstString();
+                std::cout << lcps[i] << "|" << cached[i] << "|" << stream.firstString();
             }
             else
             {
@@ -263,8 +265,7 @@ public:
 
         while (outStream < end)
         {
-            Stream currStream = streams[contenderIdx];
-            outStream.setFirst(currStream.firstString(), lcps[contenderIdx], currStream.firstCached());
+            outStream.setFirst(streams[contenderIdx].firstString(), lcps[contenderIdx], cached[contenderIdx]);
             ++outStream;
 
             removeTopFromStream(contenderIdx);
