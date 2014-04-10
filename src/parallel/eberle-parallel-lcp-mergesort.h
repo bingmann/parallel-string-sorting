@@ -26,7 +26,7 @@
 #include <iostream>
 #include <utility>
 
-#include "eberle-parallel-lcp-merge.h"
+#include "eberle-parallel-lcp-merge-lcp-splitting.h"
 #include "eberle-parallel-lcp-merge-standard-splitting.h"
 #include "../sequential/eberle-mergesort-lcp-losertree.h"
 

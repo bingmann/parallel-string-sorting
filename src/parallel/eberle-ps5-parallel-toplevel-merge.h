@@ -27,7 +27,7 @@
 
 #include <utility>
 
-#include "eberle-parallel-lcp-merge.h"
+#include "eberle-parallel-lcp-merge-lcp-splitting.h"
 #include "eberle-parallel-lcp-merge-standard-splitting.h"
 #include "bingmann-parallel_sample_sort.h"
 

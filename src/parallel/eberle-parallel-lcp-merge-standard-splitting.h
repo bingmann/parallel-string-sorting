@@ -23,16 +23,7 @@
 #ifndef EBERLE_PARALLEL_LCP_MERGE_STANDARD_SPLITTING_H_
 #define EBERLE_PARALLEL_LCP_MERGE_STANDARD_SPLITTING_H_
 
-#include <limits>
-#include <utility>
-
 #include "eberle-parallel-lcp-merge.h"
-
-#include "../sequential/eberle-mergesort-lcp.h"
-#include "../tools/eberle-lcp-losertree.h"
-
-#include "../tools/jobqueue.h"
-#include "../tools/stringtools.h"
 
 #include "../tools/debug.h"
 #undef DBGX
@@ -40,30 +31,13 @@
 
 namespace eberle_parallel_lcp_merge
 {
-using std::numeric_limits;
 
-using namespace eberle_lcp_utils;
+// debugging constants
+static const bool debug_standard_splitting = false;
 
-using namespace jobqueue;
-using namespace stringtools;
-
-//due to ambigous symbol
-using stringtools::string;
-
-//debugging constants
-
-
-//constants
-
-static const bool debug = false;
-
-
-//method definitions
-
+// method definitions
 static inline void
-createJobsWithStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams,
-        unsigned numInputs, string* output, size_t numberOfElements);
-
+createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements);
 
 //structs defining the jobs
 template <unsigned K>
@@ -77,7 +51,7 @@ struct MergeJobStandardSplitting : public Job
     MergeJobStandardSplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length)
         :  loserTree(inputs, numInputs), output(output), length(length)
     {
-        DBG(debug, "MergeJobStandardSplitting<" << K << "> (output: " << (output - g_outputBase) << ", length: " << length << ")");
+        DBG(debug_jobtype_on_creation, "MergeJobStandardSplitting<" << K << "> (output: " << (output - g_outputBase) << ", length: " << length << ")");
     }
 
     /*
@@ -120,7 +94,7 @@ struct MergeJobStandardSplitting : public Job
         {
             // share work by splitting remaining streams
 
-            createJobsWithStandardSplitting(jobQueue, loserTree.getRemaining(), K, output, length);
+            createJobsStandardSplitting(jobQueue, loserTree.getRemaining(), K, output, length);
 
             if (g_lengthOfLongestJob == length)
                 g_lengthOfLongestJob = 0;
@@ -130,36 +104,39 @@ struct MergeJobStandardSplitting : public Job
     }
 };
 
-struct InitialStandardSplitJob : public Job
+struct InitialJobStandardSplitting : public Job
 {
     const LcpCacheStringPtr* input;
     unsigned numInputs;
     string* output;
     size_t length;
 
-    InitialStandardSplitJob(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
+    InitialJobStandardSplitting(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
         : input(input), numInputs(numInputs), output(output), length(length)
     {
         g_lengthOfLongestJob = length; // prevents that the first MergeJob immediately starts splitting itself
-
         g_outputBase = output;
     }
 
     virtual bool
     run(JobQueue& jobQueue)
     {
-        createJobsWithStandardSplitting(jobQueue, input, numInputs, output, length);
+        createJobsStandardSplitting(jobQueue, input, numInputs, output, length);
 
         g_lengthOfLongestJob = 0;
         return true;
     }
 };
 
+
 static inline void
 enqueueJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t jobLength)
 {
-    if(numInputs <= 2)
-        jobQueue.enqueue(new MergeJobStandardSplitting<2>(inputs, numInputs, output, jobLength));
+    if(numInputs == 1)
+        jobQueue.enqueue(new CopyDataJob(inputs[0], output));
+
+    else if(numInputs <= 2)
+        jobQueue.enqueue(new BinaryMergeJob(inputs[0], inputs[1], 0, output));
 
     else if(numInputs <= 4)
         jobQueue.enqueue(new MergeJobStandardSplitting<4>(inputs, numInputs, output, jobLength));
@@ -184,7 +161,7 @@ enqueueJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, unsigned numInpu
 }
 
 static inline void
-createJobsWithStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
+createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
 {
     DBG(1, "CREATING JOBS for numberOfElements: " << numberOfElements);
 
@@ -229,7 +206,7 @@ createJobsWithStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inp
             continue;
 
 
-DBG(debug, "Job: " << job << ", splitterString: " << splitterString);
+DBG(debug_standard_splitting, "Job: " << job << ", splitterString: " << splitterString);
 
         LcpCacheStringPtr jobStreams[numInputs];
         unsigned nonEmptyCtr = 0;
@@ -274,7 +251,7 @@ DBG(debug, "Job: " << job << ", splitterString: " << splitterString);
 
                 streams[i] = stream.sub(idx, stream.size - idx);
 
-DBG(debug, "Found at [" << idx << "]: ");
+DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
             }
         }
 
@@ -311,7 +288,7 @@ parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numIn
 
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads with standard splitting");
-    jobQueue.enqueue(new InitialStandardSplitJob(input, numInputs, output, length));
+    jobQueue.enqueue(new InitialJobStandardSplitting(input, numInputs, output, length));
     jobQueue.numaLoop(-1, omp_get_max_threads());
 	
 	g_stats >> "toplevelmerge" << timer.elapsed();
