@@ -196,7 +196,7 @@ CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_standard_splitti
 
 
 void
-eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n)
+eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n, void (*parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
 {
     int realNumaNodes = numa_num_configured_nodes();
     if (realNumaNodes < 1) realNumaNodes = 1;
@@ -260,7 +260,7 @@ eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n)
 
     timer.start();
     //eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
-    eberle_parallel_lcp_merge::parallelLcpMerge(outputs, numNumaNodes, strings, n);
+    parallelMerge(outputs, numNumaNodes, strings, n);
 
     DBG(debug_toplevel_merge_duration, "top level merge needed: " << timer.elapsed() << " s");
 
@@ -270,9 +270,24 @@ eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n)
     }
 }
 
-CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_assisting,
-    "eberle/ps5-parallel-toplevel-merge-assisting",
+void eberle_ps5_parallel_toplevel_merge_assisting_lcp_splitting(string* strings, size_t n)
+{
+    eberle_ps5_parallel_toplevel_merge_assisting(strings, n, eberle_parallel_lcp_merge::parallelLcpMerge);
+}
+
+void eberle_ps5_parallel_toplevel_merge_assisting_standard_splitting(string* strings, size_t n)
+{
+    eberle_ps5_parallel_toplevel_merge_assisting(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeStandardSplitting);
+}
+
+CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_assisting_lcp_splitting,
+    "eberle/ps5-parallel-toplevel-merge-assisting-lcp-splitting",
     "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
+
+CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_assisting_standard_splitting,
+    "eberle/ps5-parallel-toplevel-merge-assisting-standard-splitting",
+    "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
+
 
 } // namespace eberle_ps5_parallel_toplevel_merge
 
