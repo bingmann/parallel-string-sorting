@@ -28,6 +28,7 @@
 
 #include "eberle-parallel-lcp-merge-lcp-splitting.h"
 #include "eberle-parallel-lcp-merge-standard-splitting.h"
+#include "eberle-parallel-lcp-merge-binary-splitting.h"
 #include "../sequential/eberle-mergesort-lcp-losertree.h"
 
 #include "../tools/eberle-utilities.h"
@@ -110,6 +111,11 @@ void eberle_parallel_lcp_mergesort_standard_splitting(string* strings, size_t n)
     eberle_parallel_lcp_mergesort(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeStandardSplitting);
 }
 
+void eberle_parallel_lcp_mergesort_binary_splitting(string* strings, size_t n)
+{
+    eberle_parallel_lcp_mergesort(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeBinarySplitting);
+}
+
 CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_lcp_splitting,
     "eberle/parallel-lcp-mergesort-lcp-splitting",
     "parallel LCP aware mergesort by Andreas Eberle")
@@ -117,6 +123,11 @@ CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_lcp_splitting,
 CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_standard_splitting,
     "eberle/parallel-lcp-mergesort-standard-splitting",
     "parallel LCP aware mergesort by Andreas Eberle")
+
+CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_binary_splitting,
+    "eberle/parallel-lcp-mergesort-binary-splitting",
+    "parallel LCP aware mergesort by Andreas Eberle")
+
 
 } // namespace eberle_parallel_lcp_mergesort
 

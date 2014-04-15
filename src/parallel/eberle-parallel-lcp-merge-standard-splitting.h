@@ -130,7 +130,7 @@ struct InitialJobStandardSplitting : public Job
 
 
 static inline void
-enqueueJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t jobLength)
+enqueueStandardSplittingJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t jobLength)
 {
     if(numInputs == 1)
         jobQueue.enqueue(new CopyDataJob(inputs[0], output));
@@ -169,14 +169,15 @@ createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputSt
     const unsigned numSplitters = numSplittersPerStream * numInputs;
 
     string splitters[numSplitters];
-    LcpCacheStringPtr streams[numSplitters];
+    LcpCacheStringPtr streams[numInputs];
 
     for(unsigned i = 0; i < numInputs; i++)
     {
         streams[i] = inputStreams[i];
+        const unsigned offset = i * numSplittersPerStream;
+
         if(!streams[i].empty())
         {
-            const unsigned offset = i * numSplittersPerStream;
             size_t stepWidth = streams[i].size / (numSplittersPerStream + 1);
 
             for(unsigned n = 0; n < numSplittersPerStream; n++)
@@ -186,8 +187,6 @@ createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputSt
         }
         else
         {
-            const unsigned offset = i * numSplittersPerStream;
-
             for(unsigned n = 0; n < numSplittersPerStream; n++)
             {
                 splitters[offset + n] = (unsigned char*)"";
@@ -254,7 +253,7 @@ DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
             }
         }
 
-        enqueueJob(jobQueue, jobStreams, nonEmptyCtr, output, jobLength);
+        enqueueStandardSplittingJob(jobQueue, jobStreams, nonEmptyCtr, output, jobLength);
         output += jobLength;
     }
 
@@ -272,7 +271,7 @@ DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
             jobLength += streams[i].size;
         }
     }
-    enqueueJob(jobQueue, jobStreams, nonEmptyCtr, output, jobLength);
+    enqueueStandardSplittingJob(jobQueue, jobStreams, nonEmptyCtr, output, jobLength);
 }
 
 
