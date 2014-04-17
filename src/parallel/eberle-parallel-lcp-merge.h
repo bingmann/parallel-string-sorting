@@ -55,8 +55,12 @@ static const bool debug_jobtype_on_creation = false;
 static const bool debug_merge_start_message = true;
 
 // global variables
-string * g_outputBase; // used for debugging as base pointer to create delta output
-size_t g_lengthOfLongestJob = 0;
+static string * g_outputBase; // used for debugging as base pointer to create delta output
+static size_t g_lengthOfLongestJob = 0;
+
+static unsigned g_splittingsExecuted;
+static unsigned g_mergeJobsCreated;
+static double g_splittingTime;
 
 // constants
 static const bool USE_WORK_SHARING = true;
@@ -72,6 +76,7 @@ struct CopyDataJob : public Job
     CopyDataJob(const LcpCacheStringPtr& input, string* output)
         : input(input), output(output)
     {
+        g_mergeJobsCreated++;
         DBG(debug_jobtype_on_creation,
                 "CopyDataJob (output: " << (output - g_outputBase) << ", length: " << input.size << ")");
     }
@@ -97,6 +102,7 @@ struct BinaryMergeJob : public Job
     BinaryMergeJob(const LcpCacheStringPtr& input1, const LcpCacheStringPtr& input2, lcp_t firstLcp, string* output) :
         input1(input1), input2(input2), firstLcp(firstLcp), output(output)
     {
+        g_mergeJobsCreated++;
         DBG(debug_jobtype_on_creation,
                 "BinaryMergeJob (length1: " << input1.size << ", length2: " << input2.size << ", output: " << (output - g_outputBase) << ")");
     }

@@ -36,9 +36,6 @@ namespace eberle_parallel_lcp_merge
 static const bool debug_binary_splitting = false;
 static const bool debug_binary_splitting_splits_count = true;
 
-//global variables
-static unsigned g_splittingsExecuted;
-
 // method definitions
 static inline void
 createJobsBinarySplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements);
@@ -56,6 +53,7 @@ struct MergeJobBinarySplitting : public Job
     MergeJobBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length, bool splittable)
         :  loserTree(inputs, numInputs), output(output), length(length), splittable(splittable)
     {
+        g_mergeJobsCreated++;
         DBG(debug_jobtype_on_creation, "MergeJobStandardSplitting<" << K << "> (output: " << (output - g_outputBase) << ", length: " << length << ")");
     }
 
@@ -184,6 +182,8 @@ createJobsBinarySplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStre
 {
 DBG(debug_binary_splitting, "CREATING JOBS for numberOfElements: " << numberOfElements);
     g_splittingsExecuted++;
+    ClockTimer splittingTimer;
+    splittingTimer.start();
 
     const unsigned numSplitters = numInputs;
 
@@ -245,6 +245,8 @@ DBG(debug_binary_splitting, "Found at [" << idx << "]: ");
         // only splittable, if we already split this job (think of long equal string sequences)
 	    enqueueBinarySplittingJob(jobQueue, jobStreams[1], nonEmptyCtr[1], output, jobLength[1], jobLength[0] > 0);
 	}
+
+	g_splittingTime += splittingTimer.elapsed();
 }
 
 
@@ -252,19 +254,25 @@ DBG(debug_binary_splitting, "Found at [" << idx << "]: ");
 static inline void
 parallelLcpMergeBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length)
 {
-	ClockTimer timer;
-	timer.start();
-
     g_outputBase = output;
     g_splittingsExecuted = 0;
+    g_mergeJobsCreated = 0;
+    g_splittingTime = 0;
+
+	ClockTimer timer;
+	timer.start();
 
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads with binary splitting");
     enqueueBinarySplittingJob(jobQueue, inputs, numInputs,  output, length, true);
     jobQueue.numaLoop(-1, omp_get_max_threads());
 	
-	g_stats >> "toplevelmerge" << timer.elapsed();
-	DBG(debug_binary_splitting_splits_count, "Binary Splitting executed " << g_splittingsExecuted << " splittings");
+	DBG(debug_binary_splitting_splits_count, "Binary Splitting executed " << g_splittingsExecuted << " splittings; created " << g_mergeJobsCreated << " jobs");
+
+    g_stats >> "toplevelmerge_time" << timer.elapsed();
+    g_stats >> "splittings_executed" << g_splittingsExecuted;
+    g_stats >> "mergejobs_created" << g_mergeJobsCreated;
+    g_stats >> "splitting_time" << g_splittingTime;
 }
 
 

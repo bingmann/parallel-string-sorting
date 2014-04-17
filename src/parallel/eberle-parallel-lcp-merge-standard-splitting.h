@@ -51,6 +51,7 @@ struct MergeJobStandardSplitting : public Job
     MergeJobStandardSplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length)
         :  loserTree(inputs, numInputs), output(output), length(length)
     {
+        g_mergeJobsCreated++;
         DBG(debug_jobtype_on_creation, "MergeJobStandardSplitting<" << K << "> (output: " << (output - g_outputBase) << ", length: " << length << ")");
     }
 
@@ -164,6 +165,9 @@ static inline void
 createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
 {
     DBG(1, "CREATING JOBS for numberOfElements: " << numberOfElements);
+    g_splittingsExecuted++;
+    ClockTimer splittingTimer;
+    splittingTimer.start();
 
     const unsigned numSplittersPerStream = (10 * omp_get_max_threads()) / numInputs;
     const unsigned numSplitters = numSplittersPerStream * numInputs;
@@ -272,6 +276,8 @@ DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
         }
     }
     enqueueStandardSplittingJob(jobQueue, jobStreams, nonEmptyCtr, output, jobLength);
+
+    g_splittingTime += splittingTimer.elapsed();
 }
 
 
@@ -279,6 +285,11 @@ DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
 static inline void
 parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
 {
+    g_outputBase = output;
+    g_splittingsExecuted = 0;
+    g_mergeJobsCreated = 0;
+    g_splittingTime = 0;
+
 	ClockTimer timer;
 	timer.start();
 
@@ -289,7 +300,10 @@ parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numIn
     jobQueue.enqueue(new InitialJobStandardSplitting(input, numInputs, output, length));
     jobQueue.numaLoop(-1, omp_get_max_threads());
 	
-	g_stats >> "toplevelmerge" << timer.elapsed();
+    g_stats >> "toplevelmerge_time" << timer.elapsed();
+    g_stats >> "splittings_executed" << g_splittingsExecuted;
+    g_stats >> "mergejobs_created" << g_mergeJobsCreated;
+    g_stats >> "splitting_time" << g_splittingTime;
 }
 
 

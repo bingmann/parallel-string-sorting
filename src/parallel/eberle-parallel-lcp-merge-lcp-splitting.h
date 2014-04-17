@@ -63,6 +63,7 @@ struct MergeJobLcpSplitting : public Job
     MergeJobLcpSplitting(string* output, size_t length, lcp_t baseLcp, lcp_t nextBaseLcp)
         : output(output), length(length), baseLcp(baseLcp), nextBaseLcp(nextBaseLcp)
     {
+        g_mergeJobsCreated++;
         DBG(debug_jobtype_on_creation, "MergeJobLcpSplitting<" << K << "> (output: " << (output - g_outputBase) << ", baseLcp: " << baseLcp << ", nextBaseLcp: " << nextBaseLcp << ", length: " << length << ")");
     }
 
@@ -206,6 +207,9 @@ createJobsLcpSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams
            string* output, size_t numberOfElements, lcp_t baseLcp)
 {
     DBG(debug_job_creation, "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements);
+    g_splittingsExecuted++;
+    ClockTimer splittingTimer;
+    splittingTimer.start();
 
     LcpCacheStringPtr inputs[numInputs];
     CHAR_TYPE splitterCharacter[numInputs];
@@ -361,6 +365,7 @@ createJobsLcpSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams
     }
 
     DBG(debug_created_jobs_count, "Created " << createdJobsCtr << " jobs!");
+    g_splittingTime += splittingTimer.elapsed();
 }
 
 static inline
@@ -438,6 +443,11 @@ static inline
 void
 parallelLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
 {
+    g_outputBase = output;
+    g_splittingsExecuted = 0;
+    g_mergeJobsCreated = 0;
+    g_splittingTime = 0;
+
 	ClockTimer timer;
 	timer.start();
 
@@ -447,7 +457,10 @@ parallelLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* out
     jobQueue.numaLoop(-1, omp_get_max_threads());
 	
 	
-	g_stats >> "toplevelmerge" << timer.elapsed();
+    g_stats >> "toplevelmerge_time" << timer.elapsed();
+    g_stats >> "splittings_executed" << g_splittingsExecuted;
+    g_stats >> "mergejobs_created" << g_mergeJobsCreated;
+    g_stats >> "splitting_time" << g_splittingTime;
 }
 
 
