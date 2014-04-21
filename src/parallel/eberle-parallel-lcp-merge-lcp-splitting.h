@@ -454,7 +454,7 @@ parallelLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* out
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads");
     jobQueue.enqueue(new InitialJobLcpSplitting(input, numInputs, output, length));
-    jobQueue.numaLoop(-1, omp_get_max_threads());
+    jobQueue.loop();
 	
 	
     g_stats >> "toplevelmerge_time" << timer.elapsed();

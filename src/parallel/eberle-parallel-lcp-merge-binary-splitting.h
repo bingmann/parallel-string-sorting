@@ -202,8 +202,7 @@ DBG(debug_binary_splitting, "CREATING JOBS for numberOfElements: " << numberOfEl
         }
     }
 
-    eberle_mergesort_lcp::eberle_lcp_mergesort(splitters, nonEmptyStreams);
-    string splitterString = splitters[nonEmptyStreams / 2];
+    string splitterString = splitters[unsigned(rand() % nonEmptyStreams)];
 
 
 DBG(debug_binary_splitting, "SplitterString: " << splitterString);
@@ -265,7 +264,7 @@ parallelLcpMergeBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInp
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads with binary splitting");
     enqueueBinarySplittingJob(jobQueue, inputs, numInputs,  output, length, true);
-    jobQueue.numaLoop(-1, omp_get_max_threads());
+    jobQueue.loop();
 	
 	DBG(debug_binary_splitting_splits_count, "Binary Splitting executed " << g_splittingsExecuted << " splittings; created " << g_mergeJobsCreated << " jobs");
 
