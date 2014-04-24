@@ -264,7 +264,7 @@ parallelLcpMergeBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInp
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads with binary splitting");
     enqueueBinarySplittingJob(jobQueue, inputs, numInputs,  output, length, true);
-    jobQueue.loop();
+    jobQueue.numaLoop(-1, omp_get_max_threads());
 	
 	DBG(debug_binary_splitting_splits_count, "Binary Splitting executed " << g_splittingsExecuted << " splittings; created " << g_mergeJobsCreated << " jobs");
 

@@ -225,7 +225,7 @@ createJobsLcpSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams
     }
 
     const unsigned overProvFactor = 100;
-    const size_t expectedJobLength = std::max(MERGE_BULK_SIZE, numberOfElements / (overProvFactor * numa_num_configured_cpus()));
+    const size_t expectedJobLength = std::max(MERGE_BULK_SIZE, numberOfElements / (overProvFactor * omp_get_max_threads()));
 
     DBG(debug_job_creation, "Expected job length: " << expectedJobLength);
 
@@ -454,8 +454,7 @@ parallelLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* out
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads");
     jobQueue.enqueue(new InitialJobLcpSplitting(input, numInputs, output, length));
-    jobQueue.loop();
-	
+    jobQueue.numaLoop(-1, omp_get_max_threads());	
 	
     g_stats >> "toplevelmerge_time" << timer.elapsed();
     g_stats >> "splittings_executed" << g_splittingsExecuted;

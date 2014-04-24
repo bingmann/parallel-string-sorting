@@ -295,6 +295,7 @@ void eberle_ps5_parallel_toplevel_merge_assisting_binary_splitting(string* strin
     eberle_ps5_parallel_toplevel_merge_assisting(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeBinarySplitting);
 }
 
+
 CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_assisting_lcp_splitting,
     "eberle/ps5-parallel-toplevel-merge-assisting-lcp-splitting",
     "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
