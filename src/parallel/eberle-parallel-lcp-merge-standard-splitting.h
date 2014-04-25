@@ -161,6 +161,7 @@ enqueueStandardSplittingJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs,
     }
 }
 
+
 static inline void
 createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
 {
@@ -216,35 +217,11 @@ DBG(debug_standard_splitting, "Job: " << job << ", splitterString: " << splitter
 
         for(unsigned i = 0; i < numInputs; i++)
         {
-            LcpCacheStringPtr stream = streams[i];
+            const LcpCacheStringPtr& stream = streams[i];
 
             if(!stream.empty())
             {
-                size_t idx;
-                size_t l = 0;
-                size_t r = stream.size - 1;
-
-                if(scmp(splitterString, stream.strings[0]) <= 0)
-                {
-                    idx = 0;
-                }
-                else if(scmp(splitterString, stream.strings[r]) > 0)
-                {
-                    idx = stream.size;
-                }
-                else
-                {
-                    while ((r - l) > 1)
-                    {
-                        size_t m = (l + r) / 2;
-
-                        if(scmp(splitterString, stream.strings[m]) <= 0)
-                            r = m;
-                        else
-                            l = m;
-                    }
-                    idx = r;
-                }
+                size_t idx = stream.binarySearch(splitterString);
 
 
                 jobStreams[nonEmptyCtr] = stream.sub(0, idx);

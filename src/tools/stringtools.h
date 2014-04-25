@@ -77,6 +77,17 @@ static inline int scmp(const string _s1, const string _s2)
     return (*s1 - *s2);
 }
 
+// compare strings by scanning. Start at given lcp, which also returns the final lcp.
+static inline int
+scmp(const string _s1, const string _s2, size_t& lcp)
+{
+    string s1 = _s1 + lcp, s2 = _s2 + lcp;
+
+    while (*s1 != 0 && *s1 == *s2)
+        s1++, s2++, lcp++;
+    return (*s1 - *s2);
+}
+
 /// calculate lcp by scanning
 static inline unsigned int calc_lcp(const string _s1, const string _s2)
 {

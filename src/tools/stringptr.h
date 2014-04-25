@@ -334,6 +334,47 @@ public:
     {
         return strings < rhs.strings;
     }
+
+    inline size_t
+    binarySearch(string searched) const
+    {
+        size_t idx;
+        size_t l = 0;
+        size_t r = size - 1;
+        size_t hl = 0, hr = 0;
+
+        if(scmp(searched, strings[0], hl) <= 0)
+        {
+            return 0;
+        }
+        else if(scmp(searched, strings[r], hr) > 0)
+        {
+            return size;
+        }
+        else
+        {
+            while ((r - l) > 1)
+            {
+                size_t m = (l + r) / 2;
+
+                size_t h = std::min(hl, hr);
+
+                if(scmp(searched, strings[m], h) <= 0)
+                {
+                    r = m;
+                    hr = h;
+                }
+                else
+                {
+                    l = m;
+                    hl = h;
+                }
+            }
+            idx = r;
+        }
+
+        return idx;
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

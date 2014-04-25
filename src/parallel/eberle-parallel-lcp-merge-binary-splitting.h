@@ -145,38 +145,6 @@ enqueueBinarySplittingJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, u
     }
 }
 
-static inline size_t
-findSplitterIndex(const LcpCacheStringPtr& stream, string splitterString)
-{
-    size_t idx;
-    size_t l = 0;
-    size_t r = stream.size - 1;
-
-    if(scmp(splitterString, stream.strings[0]) <= 0)
-    {
-        idx = 0;
-    }
-    else if(scmp(splitterString, stream.strings[r]) > 0)
-    {
-        idx = stream.size;
-    }
-    else
-    {
-        while ((r - l) > 1)
-        {
-            size_t m = (l + r) / 2;
-
-            if(scmp(splitterString, stream.strings[m]) <= 0)
-                r = m;
-            else
-                l = m;
-        }
-        idx = r;
-    }
-
-    return idx;
-}
-
 static inline void
 createJobsBinarySplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
 {
@@ -217,7 +185,7 @@ DBG(debug_binary_splitting, "SplitterString: " << splitterString);
 
         if(!stream.empty())
         {
-            const size_t idx = findSplitterIndex(stream, splitterString);
+            const size_t idx = stream.binarySearch(splitterString);
 
             jobStreams[0][nonEmptyCtr[0]] = stream.sub(0, idx);
             nonEmptyCtr[0]++;
