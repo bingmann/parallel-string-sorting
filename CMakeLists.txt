@@ -10,12 +10,13 @@ cmake_minimum_required(VERSION 2.8)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-option(WITH_MALLOC_COUNT "Use malloc_count for memory profiling" OFF)
+set(PSSLIB_VERSION "0.6")
+set(PSSLIB_SOVERSION "0")
 
+# custom cmake scripts
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-# disallow in-source builds
-
+# prohibit in-source builds
 if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
    message(SEND_ERROR "In-source builds are not allowed.")
 endif("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
@@ -32,6 +33,12 @@ endif()
 # compilation options 
 
 option(BUILD_ALL "Build different test programs" OFF)
+
+option(WITH_MALLOC_COUNT "Use malloc_count for memory profiling" OFF)
+
+option(PSS_BINARY "build project as parallel-string-sorting benchmarking tool" ON)
+option(PSS_STATIC "build parallel-string-sorting static library" OFF)
+option(PSS_SHARED "build parallel-string-sorting shared library" OFF)
 
 # Enable warnings
 
