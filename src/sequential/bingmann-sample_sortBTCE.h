@@ -1,11 +1,11 @@
-/******************************************************************************
+/*******************************************************************************
  * src/sequential/bingmann-sample_sortBTCE.h
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *
  * Binary tree search with equality branch and bucket cache.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -20,7 +20,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
+
+#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTCE_HEADER
+#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTCE_HEADER
 
 namespace bingmann_sample_sortBTCE {
 
@@ -39,7 +42,7 @@ static const size_t numsplitters = (1 << treebits) - 1;
 
 //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
 //static const size_t numsplitters2 = l2cache / sizeof(key_type);
-static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (2 * sizeof(size_t));
+static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 
 //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
 
@@ -58,24 +61,24 @@ struct ClassifySimple
 
     // search in splitter tree for bucket number
     static inline unsigned int
-    find_bkt(const key_type& key, const key_type* splitter_tree0)
+                        find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
         // binary tree traversal without left branch
 
         const key_type* splitter_tree = splitter_tree0 - 1;
         unsigned int i = 1;
 
-        while ( i <= numsplitters )
+        while (i <= numsplitters)
         {
             if (key == splitter_tree[i])
                 return 2 * TreeCalculations<treebits>::level_to_inorder(i) - 1;
             else if (key < splitter_tree[i])
-                i = 2*i + 0;
-            else // (key > splitter_tree[i])
-                i = 2*i + 1;
+                i = 2 * i + 0;
+            else    // (key > splitter_tree[i])
+                i = 2 * i + 1;
         }
 
-        i -= numsplitters+1;
+        i -= numsplitters + 1;
 
         return 2 * i; // < or > bucket
     }
@@ -88,43 +91,43 @@ struct ClassifyAssembler
 
     // binary search on splitter array for bucket number
     static inline unsigned int
-    find_bkt(const key_type& key, const key_type* splitter_tree0)
+                        find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
         const key_type* splitter_tree = splitter_tree0 - 1;
         unsigned int i;
 
         // hand-coded assembler binary tree traversal with equality
-        asm("mov    $1, %%rax \n"             // rax = i
-            // body of while loop
-            "1: \n"
-            "cmpq	(%[splitter_tree],%%rax,8), %[key] \n"
-            "je     2f \n"
-            "lea    (%%rax,%%rax), %%rax \n"
-            "lea    1(%%rax), %%rcx \n"
-            "cmova  %%rcx, %%rax \n"             // CMOV rax = 2 * i + 1
-            "cmp    %[numsplitters1], %%rax \n"  // i < numsplitters+1
-            "jb     1b \n"
-            "sub    %[numsplitters1], %%rax \n"  // i -= numsplitters+1;
-            "lea    (%%rax,%%rax), %%rax \n"     // i = i*2
-            "jmp    3f \n"
-            "2: \n"
-            "bsr    %%rax, %%rdx \n"             // dx = bit number of highest one
-            "mov    %[treebits], %%rcx \n"
-            "sub    %%rdx, %%rcx \n"             // cx = treebits - highest
-            "shl    %%cl, %%rax \n"              // shift ax to left
-            "and    %[numsplitters], %%rax \n"   // mask off other bits
-            "lea    -1(%%rcx), %%rcx \n"
-            "mov    $1, %%rdx \n"                // dx = (1 << (hi-1))
-            "shl    %%cl, %%rdx \n"              //
-            "or     %%rdx, %%rax \n"             // ax = OR of both
-            "lea    -1(%%rax,%%rax), %%rax \n"    // i = i * 2 - 1
-            "3: \n"
-            : "=&a" (i)
-            : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
-              [numsplitters1] "g" (numsplitters+1),
-              [treebits] "g" (treebits),
-              [numsplitters] "g" (numsplitters)
-            : "rcx", "rdx");
+        asm ("mov    $1, %%rax \n"             // rax = i
+             // body of while loop
+             "1: \n"
+             "cmpq	(%[splitter_tree],%%rax,8), %[key] \n"
+             "je     2f \n"
+             "lea    (%%rax,%%rax), %%rax \n"
+             "lea    1(%%rax), %%rcx \n"
+             "cmova  %%rcx, %%rax \n"            // CMOV rax = 2 * i + 1
+             "cmp    %[numsplitters1], %%rax \n" // i < numsplitters+1
+             "jb     1b \n"
+             "sub    %[numsplitters1], %%rax \n" // i -= numsplitters+1;
+             "lea    (%%rax,%%rax), %%rax \n"    // i = i*2
+             "jmp    3f \n"
+             "2: \n"
+             "bsr    %%rax, %%rdx \n"            // dx = bit number of highest one
+             "mov    %[treebits], %%rcx \n"
+             "sub    %%rdx, %%rcx \n"            // cx = treebits - highest
+             "shl    %%cl, %%rax \n"             // shift ax to left
+             "and    %[numsplitters], %%rax \n"  // mask off other bits
+             "lea    -1(%%rcx), %%rcx \n"
+             "mov    $1, %%rdx \n"               // dx = (1 << (hi-1))
+             "shl    %%cl, %%rdx \n"             //
+             "or     %%rdx, %%rax \n"            // ax = OR of both
+             "lea    -1(%%rax,%%rax), %%rax \n"  // i = i * 2 - 1
+             "3: \n"
+             : "=&a" (i)
+             :[key] "r" (key), [splitter_tree] "r" (splitter_tree),
+             [numsplitters1] "g" (numsplitters + 1),
+             [treebits] "g" (treebits),
+             [numsplitters] "g" (numsplitters)
+             : "rcx", "rdx");
 
         return i;
     }
@@ -133,31 +136,31 @@ struct ClassifyAssembler
 template <size_t treebits>
 struct ClassifyUnroll
 {
-#define SPLITTER_TREE_STEP                                              \
-    /* inside the tree */                                               \
-    "cmpq   (%[splitter_tree],%%rax,8), %[key] \n"                      \
-    "je     2f \n"                                                      \
-    "lea    (%%rax,%%rax), %%rax \n"                                    \
-    "lea    1(%%rax), %%rcx \n"                                         \
+#define SPLITTER_TREE_STEP                         \
+    /* inside the tree */                          \
+    "cmpq   (%[splitter_tree],%%rax,8), %[key] \n" \
+    "je     2f \n"                                 \
+    "lea    (%%rax,%%rax), %%rax \n"               \
+    "lea    1(%%rax), %%rcx \n"                    \
     "cmova  %%rcx, %%rax \n"             /* CMOV rax = 2 * i + 1 */
 
-#define SPLITTER_TREE_END                                               \
-    /* at leaf level */                                                 \
-    "sub    %[numsplitters1], %%rax \n"  /* i -= numsplitters+1; */     \
-    "lea    (%%rax,%%rax), %%rax \n"     /* i = i*2 */                  \
-    "jmp    3f \n"                                                      \
-    "2: \n"                                                             \
+#define SPLITTER_TREE_END                                                     \
+    /* at leaf level */                                                       \
+    "sub    %[numsplitters1], %%rax \n"  /* i -= numsplitters+1; */           \
+    "lea    (%%rax,%%rax), %%rax \n"     /* i = i*2 */                        \
+    "jmp    3f \n"                                                            \
+    "2: \n"                                                                   \
     "bsr    %%rax, %%rdx \n"             /* dx = bit number of highest one */ \
-    "mov    %[treebits], %%rcx \n"                                      \
-    "sub    %%rdx, %%rcx \n"             /* cx = treebits - highest */  \
-    "shl    %%cl, %%rax \n"              /* shift ax to left */         \
-    "and    %[numsplitters], %%rax \n"   /* mask off other bits */      \
-    "lea    -1(%%rcx), %%rcx \n"                                        \
-    "mov    $1, %%rdx \n"                /* dx = (1 << (hi-1)) */       \
-    "shl    %%cl, %%rdx \n"                                             \
-    "or     %%rdx, %%rax \n"             /* ax = OR of both */          \
-    "lea    -1(%%rax,%%rax), %%rax \n"   /* i = i * 2 - 1 */            \
-            "3: \n"
+    "mov    %[treebits], %%rcx \n"                                            \
+    "sub    %%rdx, %%rcx \n"             /* cx = treebits - highest */        \
+    "shl    %%cl, %%rax \n"              /* shift ax to left */               \
+    "and    %[numsplitters], %%rax \n"   /* mask off other bits */            \
+    "lea    -1(%%rcx), %%rcx \n"                                              \
+    "mov    $1, %%rdx \n"                /* dx = (1 << (hi-1)) */             \
+    "shl    %%cl, %%rdx \n"                                                   \
+    "or     %%rdx, %%rax \n"             /* ax = OR of both */                \
+    "lea    -1(%%rax,%%rax), %%rax \n"   /* i = i * 2 - 1 */                  \
+    "3: \n"
 };
 
 template <>
@@ -174,29 +177,29 @@ struct ClassifyUnroll<11>
         unsigned int i;
 
         // hand-coded assembler binary tree traversal with equality, using CMOV
-        asm("mov    $1, %%rax \n"             // rax = i
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
+        asm ("mov    $1, %%rax \n"             // rax = i
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_END
+             SPLITTER_TREE_END
 
-            : "=&a" (i)
-            : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
-              [numsplitters1] "g" (numsplitters+1),
-              [treebits] "g" (treebits),
-              [numsplitters] "g" (numsplitters)
-            : "rcx", "rdx");
+             : "=&a" (i)
+             :[key] "r" (key), [splitter_tree] "r" (splitter_tree),
+             [numsplitters1] "g" (numsplitters + 1),
+             [treebits] "g" (treebits),
+             [numsplitters] "g" (numsplitters)
+             : "rcx", "rdx");
 
         return i;
     }
@@ -216,30 +219,30 @@ struct ClassifyUnroll<12>
         unsigned int i;
 
         // hand-coded assembler binary tree traversal with equality, using CMOV
-        asm("mov    $1, %%rax \n"             // rax = i
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
+        asm ("mov    $1, %%rax \n"             // rax = i
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_END
+             SPLITTER_TREE_END
 
-            : "=&a" (i)
-            : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
-              [numsplitters1] "g" (numsplitters+1),
-              [treebits] "g" (treebits),
-              [numsplitters] "g" (numsplitters)
-            : "rcx", "rdx");
+             : "=&a" (i)
+             :[key] "r" (key), [splitter_tree] "r" (splitter_tree),
+             [numsplitters1] "g" (numsplitters + 1),
+             [treebits] "g" (treebits),
+             [numsplitters] "g" (numsplitters)
+             : "rcx", "rdx");
 
         return i;
     }
@@ -259,31 +262,31 @@ struct ClassifyUnroll<13>
         unsigned int i;
 
         // hand-coded assembler binary tree traversal with equality, using CMOV
-        asm("mov    $1, %%rax \n"             // rax = i
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
+        asm ("mov    $1, %%rax \n"             // rax = i
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
-            SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
+             SPLITTER_TREE_STEP
 
-            SPLITTER_TREE_END
+             SPLITTER_TREE_END
 
-            : "=&a" (i)
-            : [key] "r" (key), [splitter_tree] "r" (splitter_tree),
-              [numsplitters1] "g" (numsplitters+1),
-              [treebits] "g" (treebits),
-              [numsplitters] "g" (numsplitters)
-            : "rcx", "rdx");
+             : "=&a" (i)
+             :[key] "r" (key), [splitter_tree] "r" (splitter_tree),
+             [numsplitters1] "g" (numsplitters + 1),
+             [treebits] "g" (treebits),
+             [numsplitters] "g" (numsplitters)
+             : "rcx", "rdx");
 
         return i;
     }
@@ -312,13 +315,13 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
 
     const size_t samplesize = oversample_factor * numsplitters;
 
-    static key_type samples[ samplesize ];
+    static key_type samples[samplesize];
 
     LCGRandom rng(&strings);
 
     for (unsigned int i = 0; i < samplesize; ++i)
     {
-        samples[i] = get_char<key_type>(strings[ rng() % n ], depth);
+        samples[i] = get_char<key_type>(strings[rng() % n], depth);
     }
 
     std::sort(samples, samples + samplesize);
@@ -338,19 +341,19 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
             idx <<= 1;
         }
 
-        key_type* splitter_tree1 = splitter_tree-1;
+        key_type* splitter_tree1 = splitter_tree - 1;
         key_type prevsplitter = 0;
 
         DBG(debug_splitter, "splitter:");
         splitter_lcp[0] = 0; // sentinel for first < everything bucket
-        for (size_t i = 0, j = oversample_factor/2; i < numsplitters; ++i)
+        for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
         {
             const key_type& splitter = samples[j];
 
-            int l = __builtin_ctz(i+1);
+            int l = __builtin_ctz(i + 1);
             DBG(debug_splitter, "splitter[" << i << "] on level " << l
-                << " = tree[" << treelvl[l] << "] = key " << toHex(splitter));
-            splitter_tree1[ treelvl[l]++ ] = samples[j];
+                                            << " = tree[" << treelvl[l] << "] = key " << toHex(splitter));
+            splitter_tree1[treelvl[l]++] = samples[j];
 
             if (i != 0) {
                 key_type xorSplit = prevsplitter ^ splitter;
@@ -358,10 +361,10 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
                 DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
 
                 DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                     << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                                                                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                 splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8)
-                    | ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
+                                  | ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
             }
 
             prevsplitter = splitter;
@@ -384,7 +387,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
 
     uint16_t* bktcache = new uint16_t[n];
 
-    static const size_t bktnum = 2*numsplitters+1;
+    static const size_t bktnum = 2 * numsplitters + 1;
 
     for (size_t si = 0; si < n; ++si)
     {
@@ -398,13 +401,13 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
         bktcache[si] = b;
     }
 
-    delete [] splitter_tree;
+    delete[] splitter_tree;
 
     size_t* bktsize = new size_t[bktnum];
     memset(bktsize, 0, bktnum * sizeof(size_t));
 
     for (size_t si = 0; si < n; ++si)
-        ++bktsize[ bktcache[si] ];
+        ++bktsize[bktcache[si]];
 
     if (debug_bucketsize)
     {
@@ -422,55 +425,55 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     size_t bktindex[bktnum];
     bktindex[0] = bktsize[0];
     size_t last_bkt_size = bktsize[0];
-    for (unsigned int i=1; i < bktnum; ++i) {
-        bktindex[i] = bktindex[i-1] + bktsize[i];
+    for (unsigned int i = 1; i < bktnum; ++i) {
+        bktindex[i] = bktindex[i - 1] + bktsize[i];
         if (bktsize[i]) last_bkt_size = bktsize[i];
     }
-    assert(bktindex[bktnum-1] == n);
+    assert(bktindex[bktnum - 1] == n);
 
     // step 4: premute in-place
     g_timer.change(TM_PERMUTE);
 
-    for (size_t i=0, j; i < n - last_bkt_size; )
+    for (size_t i = 0, j; i < n - last_bkt_size; )
     {
         string perm = strings[i];
         uint16_t permbkt = bktcache[i];
 
-        while ( (j = --bktindex[ permbkt ]) > i )
+        while ((j = --bktindex[permbkt]) > i)
         {
             std::swap(perm, strings[j]);
             std::swap(permbkt, bktcache[j]);
         }
 
         strings[i] = perm;
-        i += bktsize[ permbkt ];
+        i += bktsize[permbkt];
     }
 
-    delete [] bktcache;
+    delete[] bktcache;
 
     // step 5: recursion
     g_timer.change(TM_GENERAL);
 
     size_t i = 0, bsum = 0;
-    while (i < bktnum-1)
+    while (i < bktnum - 1)
     {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2] & 0x7F));
-            sample_sortBTCE2<Classify>(strings+bsum, bktsize[i], depth + (splitter_lcp[i/2] & 0x7F));
+            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2] & 0x7F));
+            sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth + (splitter_lcp[i / 2] & 0x7F));
         }
         bsum += bktsize[i++];
 
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if ( splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
+            if (splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
             }
             else {
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sortBTCE2<Classify>(strings+bsum, bktsize[i], depth + sizeof(key_type));
+                sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i++];
@@ -478,21 +481,21 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     if (bktsize[i] > 0)
     {
         DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
-        sample_sortBTCE2<Classify>(strings+bsum, bktsize[i], depth);
+        sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth);
     }
     bsum += bktsize[i++];
     assert(i == bktnum && bsum == n);
 
-    delete [] splitter_lcp;
-    delete [] bktsize;
+    delete[] splitter_lcp;
+    delete[] bktsize;
 }
 
 void bingmann_sample_sortBTCE2(string* strings, size_t n)
 {
     sample_sort_pre();
     g_stats >> "numsplitters" << numsplitters
-            >> "splitter_treebits" << treebits;
-    sample_sortBTCE2<ClassifySimple>(strings,n,0);
+        >> "splitter_treebits" << treebits;
+    sample_sortBTCE2<ClassifySimple>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -503,8 +506,8 @@ void bingmann_sample_sortBTCE2A(string* strings, size_t n)
 {
     sample_sort_pre();
     g_stats >> "numsplitters" << numsplitters
-            >> "splitter_treebits" << treebits;
-    sample_sortBTCE2<ClassifyAssembler>(strings,n,0);
+        >> "splitter_treebits" << treebits;
+    sample_sortBTCE2<ClassifyAssembler>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -515,8 +518,8 @@ void bingmann_sample_sortBTCE2U(string* strings, size_t n)
 {
     sample_sort_pre();
     g_stats >> "numsplitters" << numsplitters
-            >> "splitter_treebits" << treebits;
-    sample_sortBTCE2<ClassifyUnroll>(strings,n,0);
+        >> "splitter_treebits" << treebits;
+    sample_sortBTCE2<ClassifyUnroll>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -531,14 +534,13 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE2U, "bingmann/sample_sortBTCE2U",
 class SampleSortBTCE3
 {
 public:
-
     struct SplitterTree
     {
-        key_type splitter_tree[numsplitters+1];
+        key_type      splitter_tree[numsplitters + 1];
         unsigned char splitter_lcp[numsplitters];
 
-        key_type rec_buildtree(key_type* samples, size_t lo, size_t hi, unsigned int treeidx,
-                               key_type& rec_prevkey, size_t& iter)
+        key_type      rec_buildtree(key_type* samples, size_t lo, size_t hi, unsigned int treeidx,
+                                    key_type& rec_prevkey, size_t& iter)
         {
             DBG(debug_splitter, "rec_buildtree(" << lo << "," << hi << ", treeidx=" << treeidx << ")");
 
@@ -546,20 +548,20 @@ public:
             size_t mid = (lo + hi) >> 1;
 
             DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << mid << "] = "
-                << toHex(samples[mid]));
+                                        << toHex(samples[mid]));
 
             key_type mykey = splitter_tree[treeidx] = samples[mid];
 #if 1
             size_t midlo = mid;
-            while (lo < midlo && samples[midlo-1] == mykey) midlo--;
+            while (lo < midlo && samples[midlo - 1] == mykey) midlo--;
 
-            size_t midhi = mid+1;
+            size_t midhi = mid + 1;
             while (midhi < hi && samples[midhi] == mykey) midhi++;
 
             if (midhi - midlo > 1)
                 DBG(0, "key range = [" << midlo << "," << midhi << ")");
 #else
-            const size_t midlo = mid, midhi = mid+1;
+            const size_t midlo = mid, midhi = mid + 1;
 #endif
             if (2 * treeidx < numsplitters)
             {
@@ -568,11 +570,11 @@ public:
                 key_type xorSplit = prevkey ^ mykey;
 
                 DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
-                    << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                                                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                 splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8)
-                    | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+                                       | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
                 return rec_buildtree(samples, midhi, hi, 2 * treeidx + 1, mykey, iter);
             }
@@ -581,11 +583,11 @@ public:
                 key_type xorSplit = rec_prevkey ^ mykey;
 
                 DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
-                    << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                                                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                 splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8)
-                    | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+                                       | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
                 return mykey;
             }
@@ -594,16 +596,15 @@ public:
 
     struct TreeBuilder
     {
-        key_type*       m_tree;
-        unsigned char*  m_lcp_iter;
-        key_type*       m_samples;
+        key_type     * m_tree;
+        unsigned char* m_lcp_iter;
+        key_type     * m_samples;
 
         TreeBuilder(SplitterTree& st, key_type* samples, size_t samplesize)
-            : m_tree( st.splitter_tree ),
-              m_lcp_iter( st.splitter_lcp ),
-              m_samples( samples )
+            : m_tree(st.splitter_tree),
+              m_lcp_iter(st.splitter_lcp),
+              m_samples(samples)
         {
-
             key_type sentinel = 0;
             recurse(samples, samples + samplesize, 1, sentinel);
 
@@ -611,35 +612,35 @@ public:
             st.splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
         }
 
-        ptrdiff_t snum(key_type* s) const
+        ptrdiff_t    snum(key_type* s) const
         {
             return (ptrdiff_t)(s - m_samples);
         }
 
-        key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                         key_type& rec_prevkey)
+        key_type     recurse(key_type* lo, key_type* hi, unsigned int treeidx,
+                             key_type& rec_prevkey)
         {
             DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
-                << ", treeidx=" << treeidx << ")");
+                                                 << ", treeidx=" << treeidx << ")");
 
             // pick middle element as splitter
             key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
 
             DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                << toHex(*mid));
+                                        << toHex(*mid));
 
             key_type mykey = m_tree[treeidx] = *mid;
 #if 1
             key_type* midlo = mid;
-            while (lo < midlo && *(midlo-1) == mykey) midlo--;
+            while (lo < midlo && *(midlo - 1) == mykey) midlo--;
 
             key_type* midhi = mid;
-            while (midhi+1 < hi && *midhi == mykey) midhi++;
+            while (midhi + 1 < hi && *midhi == mykey) midhi++;
 
             if (midhi - midlo > 1)
                 DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
 #else
-            key_type *midlo = mid, *midhi = mid+1;
+            key_type* midlo = mid, * midhi = mid + 1;
 #endif
             if (2 * treeidx < numsplitters)
             {
@@ -648,11 +649,11 @@ public:
                 key_type xorSplit = prevkey ^ mykey;
 
                 DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
-                    << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                                                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-                *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                    | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+                * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                                 | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
                 return recurse(midhi, hi, 2 * treeidx + 1, mykey);
             }
@@ -661,11 +662,11 @@ public:
                 key_type xorSplit = rec_prevkey ^ mykey;
 
                 DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
-                    << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                                                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-                *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                    | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+                * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                                 | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
                 return mykey;
             }
@@ -693,13 +694,13 @@ public:
 
         const size_t samplesize = oversample_factor * numsplitters;
 
-        static key_type samples[ samplesize ];
+        static key_type samples[samplesize];
 
         LCGRandom rng(&strings);
 
         for (unsigned int i = 0; i < samplesize; ++i)
         {
-            samples[i] = get_char<key_type>(strings[ rng() % n ], depth);
+            samples[i] = get_char<key_type>(strings[rng() % n], depth);
         }
 
         std::sort(samples, samples + samplesize);
@@ -721,7 +722,7 @@ public:
 #endif
 
 #if 0
-        key_type splitter_tree[numsplitters+1];
+        key_type splitter_tree[numsplitters + 1];
         unsigned char splitter_lcp[numsplitters];
 
         {
@@ -738,14 +739,14 @@ public:
 
             DBG(debug_splitter, "splitter:");
             splitter_lcp[0] = 0; // sentinel for first < everything bucket
-            for (size_t i = 0, j = oversample_factor/2; i < numsplitters; ++i)
+            for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
             {
                 const key_type& splitter = samples[j];
 
-                int l = __builtin_ctz(i+1);
+                int l = __builtin_ctz(i + 1);
                 DBG(debug_splitter, "splitter[" << i << "] on level " << l
-                    << " = tree[" << treelvl[l] << "] = key " << toHex(splitter));
-                splitter_tree[ treelvl[l]++ ] = splitter;
+                                                << " = tree[" << treelvl[l] << "] = key " << toHex(splitter));
+                splitter_tree[treelvl[l]++] = splitter;
 
                 if (i != 0) {
                     key_type xorSplit = prevsplitter ^ splitter;
@@ -753,10 +754,10 @@ public:
                     DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
 
                     DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                         << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                                                                        << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                     splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8)
-                        | ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
+                                      | ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
                 }
 
                 prevsplitter = splitter;
@@ -764,10 +765,10 @@ public:
             }
         }
 
-        for(size_t i = 0; i < numsplitters; ++i)
+        for (size_t i = 0; i < numsplitters; ++i)
         {
-            DBG(1, "splitter_tree[" << i+1 << "] = " << tree.splitter_tree[i+1] << " -? " << splitter_tree[i+1]);
-            assert(tree.splitter_tree[i+1] == splitter_tree[i+1]);
+            DBG(1, "splitter_tree[" << i + 1 << "] = " << tree.splitter_tree[i + 1] << " -? " << splitter_tree[i + 1]);
+            assert(tree.splitter_tree[i + 1] == splitter_tree[i + 1]);
 
             DBG(1, "splitter_lcp[" << i << "] = " << int(tree.splitter_lcp[i]) << " -? " << int(splitter_lcp[i]));
             assert(tree.splitter_lcp[i] == splitter_lcp[i]);
@@ -779,14 +780,14 @@ public:
 
         uint16_t* bktcache = new uint16_t[n];
 
-        static const size_t bktnum = 2*numsplitters+1;
+        static const size_t bktnum = 2 * numsplitters + 1;
 
         for (size_t si = 0; si < n; ++si)
         {
             // binary search in splitter with equal check
             key_type key = get_char<key_type>(strings[si], depth);
 
-            unsigned int b = Classify<treebits>::find_bkt(key, tree.splitter_tree+1);
+            unsigned int b = Classify<treebits>::find_bkt(key, tree.splitter_tree + 1);
 
             assert(b < bktnum);
 
@@ -797,7 +798,7 @@ public:
         memset(bktsize, 0, bktnum * sizeof(size_t));
 
         for (size_t si = 0; si < n; ++si)
-            ++bktsize[ bktcache[si] ];
+            ++bktsize[bktcache[si]];
 
         if (debug_bucketsize)
         {
@@ -815,55 +816,55 @@ public:
         size_t bktindex[bktnum];
         bktindex[0] = bktsize[0];
         size_t last_bkt_size = bktsize[0];
-        for (unsigned int i=1; i < bktnum; ++i) {
-            bktindex[i] = bktindex[i-1] + bktsize[i];
+        for (unsigned int i = 1; i < bktnum; ++i) {
+            bktindex[i] = bktindex[i - 1] + bktsize[i];
             if (bktsize[i]) last_bkt_size = bktsize[i];
         }
-        assert(bktindex[bktnum-1] == n);
+        assert(bktindex[bktnum - 1] == n);
 
         // step 4: premute in-place
         g_timer.change(TM_PERMUTE);
 
-        for (size_t i=0, j; i < n - last_bkt_size; )
+        for (size_t i = 0, j; i < n - last_bkt_size; )
         {
             string perm = strings[i];
             uint16_t permbkt = bktcache[i];
 
-            while ( (j = --bktindex[ permbkt ]) > i )
+            while ((j = --bktindex[permbkt]) > i)
             {
                 std::swap(perm, strings[j]);
                 std::swap(permbkt, bktcache[j]);
             }
 
             strings[i] = perm;
-            i += bktsize[ permbkt ];
+            i += bktsize[permbkt];
         }
 
-        delete [] bktcache;
+        delete[] bktcache;
 
         // step 5: recursion
         g_timer.change(TM_GENERAL);
 
         size_t i = 0, bsum = 0;
-        while (i < bktnum-1)
+        while (i < bktnum - 1)
         {
             // i is even -> bkt[i] is less-than bucket
             if (bktsize[i] > 1)
             {
-                DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(tree.splitter_lcp[i/2] & 0x7F));
-                sort<Classify>(strings+bsum, bktsize[i], depth + (tree.splitter_lcp[i/2] & 0x7F));
+                DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(tree.splitter_lcp[i / 2] & 0x7F));
+                sort<Classify>(strings + bsum, bktsize[i], depth + (tree.splitter_lcp[i / 2] & 0x7F));
             }
             bsum += bktsize[i++];
 
             // i is odd -> bkt[i] is equal bucket
             if (bktsize[i] > 1)
             {
-                if ( tree.splitter_lcp[i/2] & 0x80 ) { // equal-bucket has NULL-terminated key, done.
+                if (tree.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
                 }
                 else {
                     DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                    sort<Classify>(strings+bsum, bktsize[i], depth + sizeof(key_type));
+                    sort<Classify>(strings + bsum, bktsize[i], depth + sizeof(key_type));
                 }
             }
             bsum += bktsize[i++];
@@ -871,12 +872,12 @@ public:
         if (bktsize[i] > 0)
         {
             DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
-            sort<Classify>(strings+bsum, bktsize[i], depth);
+            sort<Classify>(strings + bsum, bktsize[i], depth);
         }
         bsum += bktsize[i++];
         assert(i == bktnum && bsum == n);
 
-        delete [] bktsize;
+        delete[] bktsize;
     }
 };
 
@@ -884,8 +885,8 @@ void bingmann_sample_sortBTCE3(string* strings, size_t n)
 {
     sample_sort_pre();
     g_stats >> "numsplitters" << numsplitters
-            >> "splitter_treebits" << treebits;
-    SampleSortBTCE3::sort<ClassifySimple>(strings,n,0);
+        >> "splitter_treebits" << treebits;
+    SampleSortBTCE3::sort<ClassifySimple>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -896,8 +897,8 @@ void bingmann_sample_sortBTCE3A(string* strings, size_t n)
 {
     sample_sort_pre();
     g_stats >> "numsplitters" << numsplitters
-            >> "splitter_treebits" << treebits;
-    SampleSortBTCE3::sort<ClassifyAssembler>(strings,n,0);
+        >> "splitter_treebits" << treebits;
+    SampleSortBTCE3::sort<ClassifyAssembler>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -908,8 +909,8 @@ void bingmann_sample_sortBTCE3U(string* strings, size_t n)
 {
     sample_sort_pre();
     g_stats >> "numsplitters" << numsplitters
-            >> "splitter_treebits" << treebits;
-    SampleSortBTCE3::sort<ClassifyUnroll>(strings,n,0);
+        >> "splitter_treebits" << treebits;
+    SampleSortBTCE3::sort<ClassifyUnroll>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -919,3 +920,7 @@ CONTESTANT_REGISTER(bingmann_sample_sortBTCE3U, "bingmann/sample_sortBTCE3U",
 // ----------------------------------------------------------------------------
 
 } // namespace bingmann_sample_sortBTCE
+
+#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTCE_HEADER
+
+/******************************************************************************/

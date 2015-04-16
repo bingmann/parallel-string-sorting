@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/memprofile.h
  *
  * Class to write the datafile for a memory profile plot.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,29 +18,28 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef _MEM_PROFILE_H_
-#define _MEM_PROFILE_H_
+#ifndef PSS_SRC_TOOLS_MEMPROFILE_HEADER
+#define PSS_SRC_TOOLS_MEMPROFILE_HEADER
 
-#include <stdio.h>
+#include <cstdio>
 
 class MemProfile
 {
 protected:
-    double      m_base_ts;
-    size_t      m_base_use;
-    uint8_t*    m_stack_base;
+    double m_base_ts;
+    size_t m_base_use;
+    uint8_t* m_stack_base;
 
-    double      m_prev_ts;
-    size_t      m_prev_use;
-    size_t      m_max;
+    double m_prev_ts;
+    size_t m_prev_use;
+    size_t m_max;
 
-    FILE*       m_file;
+    FILE* m_file;
     const char* m_funcname;
 
 protected:
-
     template <typename Type>
     static inline Type absdiff(const Type& a, const Type& b)
     {
@@ -62,7 +61,7 @@ protected:
         double ts = omp_get_wtime();
         if (m_max < use) m_max = use;
 
-        if (ts - m_prev_ts > 0.01 || absdiff(use, m_prev_use) > 16*1024 )
+        if (ts - m_prev_ts > 0.01 || absdiff(use, m_prev_use) > 16 * 1024)
         {
             output(ts, m_max);
             m_max = 0;
@@ -77,11 +76,11 @@ protected:
     }
 
 public:
-
     MemProfile(const char* funcname, const char* filepath)
         : m_funcname(funcname)
     {
-        uint8_t stack; m_stack_base = &stack;
+        uint8_t stack;
+        m_stack_base = &stack;
         m_file = fopen(filepath, "a");
         malloc_count_set_callback(MemProfile::static_callback, this);
         clear();
@@ -106,9 +105,11 @@ public:
     {
         m_prev_ts = 0;
         m_prev_use = 0;
-        callback( malloc_count_current() );
+        callback(malloc_count_current());
         malloc_count_set_callback(NULL, NULL);
     }
 };
 
-#endif // _MEM_PROFILE_H_
+#endif // !PSS_SRC_TOOLS_MEMPROFILE_HEADER
+
+/******************************************************************************/

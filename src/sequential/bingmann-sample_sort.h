@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/sequential/bingmann-sample_sort.h
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,7 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
+
+#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_HEADER
+#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_HEADER
 
 namespace bingmann_sample_sort {
 
@@ -32,9 +35,9 @@ using namespace stringtools;
 
 typedef uint64_t key_type;
 
-static const size_t l2cache = 256*1024;
+static const size_t l2cache = 256 * 1024;
 
-static const size_t g_samplesort_smallsort = 32*1024;
+static const size_t g_samplesort_smallsort = 32 * 1024;
 
 static const size_t oversample_factor = 2;
 
@@ -52,16 +55,20 @@ static inline void sample_sort_pre()
 static inline void sample_sort_post()
 {
     g_stats >> "l2cache" << l2cache
-            >> "steps_sample_sort" << g_ss_steps
-            >> "steps_base_sort" << g_rs_steps;
+        >> "steps_sample_sort" << g_ss_steps
+        >> "steps_base_sort" << g_rs_steps;
 
     g_stats >> "tm_general" << g_timer.get(TM_GENERAL)
-            >> "tm_make_sample" << g_timer.get(TM_MAKE_SAMPLE)
-            >> "tm_make_splitter" << g_timer.get(TM_MAKE_SPLITTER)
-            >> "tm_classify" << g_timer.get(TM_CLASSIFY)
-            >> "tm_prefixsum" << g_timer.get(TM_PREFIXSUM)
-            >> "tm_permute" << g_timer.get(TM_PERMUTE)
-            >> "tm_smallsort" << g_timer.get(TM_SMALLSORT);
+        >> "tm_make_sample" << g_timer.get(TM_MAKE_SAMPLE)
+        >> "tm_make_splitter" << g_timer.get(TM_MAKE_SPLITTER)
+        >> "tm_classify" << g_timer.get(TM_CLASSIFY)
+        >> "tm_prefixsum" << g_timer.get(TM_PREFIXSUM)
+        >> "tm_permute" << g_timer.get(TM_PERMUTE)
+        >> "tm_smallsort" << g_timer.get(TM_SMALLSORT);
 }
 
 } // namespace bingmann_sample_sort
+
+#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_HEADER
+
+/******************************************************************************/

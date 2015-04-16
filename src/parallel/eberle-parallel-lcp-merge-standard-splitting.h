@@ -1,9 +1,9 @@
-/******************************************************************************
- * src/parallel/eberle-parallel-lcp-merge.h
+/*******************************************************************************
+ * src/parallel/eberle-parallel-lcp-merge-standard-splitting.h
  *
  * Parallel LCP aware merge implementation.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2014 Andreas Eberle <email@andreas-eberle.com>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,10 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef EBERLE_PARALLEL_LCP_MERGE_STANDARD_SPLITTING_H_
-#define EBERLE_PARALLEL_LCP_MERGE_STANDARD_SPLITTING_H_
+#ifndef PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_STANDARD_SPLITTING_HEADER
+#define PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_STANDARD_SPLITTING_HEADER
 
 #include "eberle-parallel-lcp-merge.h"
 
@@ -29,15 +29,14 @@
 #undef DBGX
 #define DBGX DBGX_OMP
 
-namespace eberle_parallel_lcp_merge
-{
+namespace eberle_parallel_lcp_merge {
 
 // debugging constants
 static const bool debug_standard_splitting = false;
 
 // method definitions
 static inline void
-createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements);
+createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements);
 
 //structs defining the jobs
 template <unsigned K>
@@ -45,11 +44,11 @@ struct MergeJobStandardSplitting : public Job
 {
     LcpStringLoserTree<K> loserTree;
 
-    string* output;
-    size_t length;
+    string                * output;
+    size_t                length;
 
     MergeJobStandardSplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length)
-        :  loserTree(inputs, numInputs), output(output), length(length)
+        : loserTree(inputs, numInputs), output(output), length(length)
     {
         g_mergeJobsCreated++;
         DBG(debug_jobtype_on_creation, "MergeJobStandardSplitting<" << K << "> (output: " << (output - g_outputBase) << ", length: " << length << ")");
@@ -108,9 +107,9 @@ struct MergeJobStandardSplitting : public Job
 struct InitialJobStandardSplitting : public Job
 {
     const LcpCacheStringPtr* input;
-    unsigned numInputs;
-    string* output;
-    size_t length;
+    unsigned               numInputs;
+    string                 * output;
+    size_t                 length;
 
     InitialJobStandardSplitting(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
         : input(input), numInputs(numInputs), output(output), length(length)
@@ -129,29 +128,28 @@ struct InitialJobStandardSplitting : public Job
     }
 };
 
-
 static inline void
-enqueueStandardSplittingJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t jobLength)
+enqueueStandardSplittingJob(JobQueue& jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t jobLength)
 {
-    if(numInputs == 1)
+    if (numInputs == 1)
         jobQueue.enqueue(new CopyDataJob(inputs[0], output));
 
-    else if(numInputs <= 2)
+    else if (numInputs <= 2)
         jobQueue.enqueue(new BinaryMergeJob(inputs[0], inputs[1], 0, output));
 
-    else if(numInputs <= 4)
+    else if (numInputs <= 4)
         jobQueue.enqueue(new MergeJobStandardSplitting<4>(inputs, numInputs, output, jobLength));
 
-    else if(numInputs <= 8)
+    else if (numInputs <= 8)
         jobQueue.enqueue(new MergeJobStandardSplitting<8>(inputs, numInputs, output, jobLength));
 
-    else if(numInputs <= 16)
+    else if (numInputs <= 16)
         jobQueue.enqueue(new MergeJobStandardSplitting<16>(inputs, numInputs, output, jobLength));
 
-    else if(numInputs <= 32)
+    else if (numInputs <= 32)
         jobQueue.enqueue(new MergeJobStandardSplitting<32>(inputs, numInputs, output, jobLength));
 
-    else if(numInputs <= 64)
+    else if (numInputs <= 64)
         jobQueue.enqueue(new MergeJobStandardSplitting<64>(inputs, numInputs, output, jobLength));
 
     else
@@ -161,9 +159,8 @@ enqueueStandardSplittingJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs,
     }
 }
 
-
 static inline void
-createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
+createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
 {
     DBG(1, "CREATING JOBS for numberOfElements: " << numberOfElements);
     g_splittingsExecuted++;
@@ -176,23 +173,23 @@ createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputSt
     string splitters[numSplitters];
     LcpCacheStringPtr streams[numInputs];
 
-    for(unsigned i = 0; i < numInputs; i++)
+    for (unsigned i = 0; i < numInputs; i++)
     {
         streams[i] = inputStreams[i];
         const unsigned offset = i * numSplittersPerStream;
 
-        if(!streams[i].empty())
+        if (!streams[i].empty())
         {
             size_t stepWidth = streams[i].size / (numSplittersPerStream + 1);
 
-            for(unsigned n = 0; n < numSplittersPerStream; n++)
+            for (unsigned n = 0; n < numSplittersPerStream; n++)
             {
                 splitters[offset + n] = streams[i].strings[(n + 1) * stepWidth];
             }
         }
         else
         {
-            for(unsigned n = 0; n < numSplittersPerStream; n++)
+            for (unsigned n = 0; n < numSplittersPerStream; n++)
             {
                 splitters[offset + n] = (unsigned char*)"";
             }
@@ -201,28 +198,26 @@ createJobsStandardSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputSt
 
     eberle_mergesort_lcp::eberle_lcp_mergesort(splitters, numSplitters);
 
-    for(unsigned job = 0; job < numSplitters; job++)
+    for (unsigned job = 0; job < numSplitters; job++)
     {
         string splitterString = splitters[job];
 
-        if(splitterString[0] == '\0') // skip empty strings used as default value
+        if (splitterString[0] == '\0') // skip empty strings used as default value
             continue;
 
-
-DBG(debug_standard_splitting, "Job: " << job << ", splitterString: " << splitterString);
+        DBG(debug_standard_splitting, "Job: " << job << ", splitterString: " << splitterString);
 
         LcpCacheStringPtr jobStreams[numInputs];
         unsigned nonEmptyCtr = 0;
         unsigned jobLength = 0;
 
-        for(unsigned i = 0; i < numInputs; i++)
+        for (unsigned i = 0; i < numInputs; i++)
         {
             const LcpCacheStringPtr& stream = streams[i];
 
-            if(!stream.empty())
+            if (!stream.empty())
             {
                 size_t idx = stream.binarySearch(splitterString);
-
 
                 jobStreams[nonEmptyCtr] = stream.sub(0, idx);
                 nonEmptyCtr++;
@@ -230,7 +225,7 @@ DBG(debug_standard_splitting, "Job: " << job << ", splitterString: " << splitter
 
                 streams[i] = stream.sub(idx, stream.size - idx);
 
-DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
+                DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
             }
         }
 
@@ -243,9 +238,9 @@ DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
     unsigned nonEmptyCtr = 0;
     unsigned jobLength = 0;
 
-    for(unsigned i = 0; i < numInputs; i++)
+    for (unsigned i = 0; i < numInputs; i++)
     {
-        if(!streams[i].empty())
+        if (!streams[i].empty())
         {
             jobStreams[nonEmptyCtr] = streams[i];
             nonEmptyCtr++;
@@ -257,8 +252,6 @@ DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
     g_splittingTime += splittingTimer.elapsed();
 }
 
-
-
 static inline void
 parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
 {
@@ -267,8 +260,8 @@ parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numIn
     g_mergeJobsCreated = 0;
     g_splittingTime = 0;
 
-	ClockTimer timer;
-	timer.start();
+    ClockTimer timer;
+    timer.start();
 
     g_outputBase = output;
 
@@ -276,14 +269,15 @@ parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numIn
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads with standard splitting");
     jobQueue.enqueue(new InitialJobStandardSplitting(input, numInputs, output, length));
     jobQueue.numaLoop(-1, omp_get_max_threads());
-	
+
     g_stats >> "toplevelmerge_time" << timer.elapsed();
     g_stats >> "splittings_executed" << g_splittingsExecuted;
     g_stats >> "mergejobs_created" << g_mergeJobsCreated;
     g_stats >> "splitting_time" << g_splittingTime;
 }
 
-
 } // namespace eberle_parallel_lcp_merge
 
-#endif // EBERLE_PARALLEL_LCP_MERGE_STANDARD_SPLITTING_H_
+#endif // !PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_STANDARD_SPLITTING_HEADER
+
+/******************************************************************************/

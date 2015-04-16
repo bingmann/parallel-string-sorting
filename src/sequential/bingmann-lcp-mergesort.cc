@@ -1,10 +1,10 @@
-/******************************************************************************
- * src/sequential/bingmann-lcp-mergesort.h
+/*******************************************************************************
+ * src/sequential/bingmann-lcp-mergesort.cc
  *
  * LCP aware binary and k-way mergesort, implemented to verify pseudo-code in
  * journal.  Not necessarily the fastest implementations.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
  * Copyright (C) 2014 Timo Bingmann <tb@panthema.net>
  *
@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
 #ifndef BINGMANN_LCP_MERGESORT_H_
 #define BINGMANN_LCP_MERGESORT_H_
@@ -32,8 +32,7 @@
 #include "../tools/contest.h"
 #include "bingmann-lcp_inssort.h"
 
-namespace bingmann_lcp_mergesort
-{
+namespace bingmann_lcp_mergesort {
 
 using namespace stringtools;
 
@@ -44,7 +43,7 @@ lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
             unsigned int& outLarger, lcp_t& outLcpAB)
 {
     if (lcpA == lcpB)
-    { // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
+    {       // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
         string sA = inputA + lcpA;
         string sB = inputB + lcpA;
 
@@ -84,7 +83,7 @@ lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
         outLcpAB = lcpA;
     }
 
-    assert( calc_lcp(inputA, inputB) == outLcpAB );
+    assert(calc_lcp(inputA, inputB) == outLcpAB);
 }
 
 static inline void
@@ -108,8 +107,8 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
         lcp_t cmpLcp, cmpLcpSmaller;
 
         //std::cout << "prev = " << prev << " - input1 = " << *input1 << "\n";
-        assert( calc_lcp(prev, *input1) == lcp1 );
-        assert( calc_lcp(prev, *input2) == lcp2 );
+        assert(calc_lcp(prev, *input1) == lcp1);
+        assert(calc_lcp(prev, *input2) == lcp2);
 
         lcp_compare(0, *input1, lcp1, 1, *input2, lcp2,
                     cmpSmaller, cmpLcpSmaller, cmpLarger, cmpLcp);
@@ -141,7 +140,7 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
     }
 
     if (input1 < end1)
-    {   // if there are remaining elements in stream1, copy them to the end
+    {       // if there are remaining elements in stream1, copy them to the end
         memcpy(output, input1, (end1 - input1) * sizeof(string));
         memcpy(outputLcps, lcps1, (end1 - input1) * sizeof(lcp_t));
         *outputLcps = lcp1;
@@ -155,7 +154,7 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
 }
 
 static inline void
-lcp_mergesort_binary(string *strings, const LcpStringPtr& tmp, const LcpStringPtr& out, size_t length)
+lcp_mergesort_binary(string* strings, const LcpStringPtr& tmp, const LcpStringPtr& out, size_t length)
 {
     if (length == 0) {
         return;
@@ -183,7 +182,7 @@ lcp_mergesort_binary(string *strings, const LcpStringPtr& tmp, const LcpStringPt
 }
 
 static inline void
-lcp_mergesort_binary(string *strings, size_t n)
+lcp_mergesort_binary(string* strings, size_t n)
 {
     // Allocate memory for LCPs and temporary string array
     lcp_t* outputLcps = new lcp_t[n];
@@ -199,13 +198,13 @@ lcp_mergesort_binary(string *strings, size_t n)
     // verify result
     stringtools::verify_lcp(strings, output.lcps, n, 0);
 
-    delete [] outputLcps;
-    delete [] tmpStrings;
-    delete [] tmpLcps;
+    delete[] outputLcps;
+    delete[] tmpStrings;
+    delete[] tmpLcps;
 }
 
 CONTESTANT_REGISTER(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
-    "Binary Mergesort with LCP-merge by Andreas Eberle and Timo Bingmann")
+                    "Binary Mergesort with LCP-merge by Andreas Eberle and Timo Bingmann")
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -217,7 +216,7 @@ class LcpLoserTree
     struct Node
     {
         unsigned int idx;
-        lcp_t lcp;
+        lcp_t        lcp;
     };
 
 private:
@@ -274,11 +273,11 @@ private:
                     defender.idx, defenderStream.firstString(), defender.lcp,
                     contender.idx, contender.lcp, defender.idx, defender.lcp);
 #endif
-        assert( scmp(streams[contender.idx].firstString(),
-                     streams[defender.idx].firstString()) <= 0 );
+        assert(scmp(streams[contender.idx].firstString(),
+                    streams[defender.idx].firstString()) <= 0);
 
-        assert( calc_lcp(streams[contender.idx].firstString(),
-                         streams[defender.idx].firstString()) == defender.lcp );
+        assert(calc_lcp(streams[contender.idx].firstString(),
+                        streams[defender.idx].firstString()) == defender.lcp);
     }
 
     inline void
@@ -389,11 +388,11 @@ lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp, const LcpStringPtr&
 // K must be a power of two
 template <unsigned K>
 static inline void
-lcp_mergesort_kway(string *strings, size_t n)
+lcp_mergesort_kway(string* strings, size_t n)
 {
-    lcp_t* outputLcps = new lcp_t[n+1];
+    lcp_t* outputLcps = new lcp_t[n + 1];
     string* tmpStrings = new string[n];
-    lcp_t* tmpLcps = new lcp_t[n+1];
+    lcp_t* tmpLcps = new lcp_t[n + 1];
 
     LcpStringPtr output(strings, outputLcps, n);
     LcpStringPtr tmp(tmpStrings, tmpLcps, n);
@@ -409,25 +408,25 @@ lcp_mergesort_kway(string *strings, size_t n)
 }
 
 static inline void
-lcp_mergesort_4way(string *strings, size_t n)
+lcp_mergesort_4way(string* strings, size_t n)
 {
     lcp_mergesort_kway<4>(strings, n);
 }
 
 static inline void
-lcp_mergesort_8way(string *strings, size_t n)
+lcp_mergesort_8way(string* strings, size_t n)
 {
     lcp_mergesort_kway<8>(strings, n);
 }
 
 static inline void
-lcp_mergesort_16way(string *strings, size_t n)
+lcp_mergesort_16way(string* strings, size_t n)
 {
     lcp_mergesort_kway<16>(strings, n);
 }
 
 static inline void
-lcp_mergesort_128way(string *strings, size_t n)
+lcp_mergesort_128way(string* strings, size_t n)
 {
     lcp_mergesort_kway<128>(strings, n);
 }
@@ -441,7 +440,8 @@ CONTESTANT_REGISTER(lcp_mergesort_16way, "bingmann/lcp_mergesort_16way",
 CONTESTANT_REGISTER(lcp_mergesort_128way, "bingmann/lcp_mergesort_128way",
                     "128-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
 
-}
-// namespace bingmann_lcp_mergesort
+} // namespace bingmann_lcp_mergesort
 
 #endif // BINGMANN_LCP_MERGESORT_H_
+
+/******************************************************************************/

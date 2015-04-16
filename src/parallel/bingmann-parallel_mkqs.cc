@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/parallel/bingmann-parallel_mkqs.cc
  *
  * Parallel multikey-quicksort.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,10 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 #include <iostream>
 #include <vector>
@@ -62,7 +62,7 @@ size_t g_totalsize;             // total size of input
 size_t g_sequential_threshold;  // calculated threshold for sequential sorting
 size_t g_threadnum;             // number of threads overall
 
-static const unsigned int block_size = 128*1024;
+static const unsigned int block_size = 128 * 1024;
 
 /// output string ranges for debugging
 
@@ -80,9 +80,9 @@ static inline std::string srange(string* str, size_t n)
 struct StrCache
 {
     uint64_t key;
-    string str;
+    string   str;
 
-    friend std::ostream& operator<< (std::ostream& os, const StrCache& sc)
+    friend std::ostream& operator << (std::ostream& os, const StrCache& sc)
     {
         return os << toHex(sc.key);
     }
@@ -90,16 +90,16 @@ struct StrCache
 
 struct StrCacheBlock
 {
-    unsigned int fill;
-    StrCache    cache[block_size];
+    unsigned int      fill;
+    StrCache          cache[block_size];
 
-    inline string& str(unsigned int i)
+    inline string &   str(unsigned int i)
     {
         assert(i < block_size);
         return cache[i].str;
     }
 
-    inline uint64_t& key(unsigned int i)
+    inline uint64_t & key(unsigned int i)
     {
         assert(i < block_size);
         return cache[i].key;
@@ -114,7 +114,7 @@ template <typename CharT>
 static inline const CharT&
 med3char(const CharT& a, const CharT& b, const CharT& c)
 {
-    if (a == b)           return a;
+    if (a == b) return a;
     if (c == a || c == b) return c;
     if (a < b) {
         if (b < c) return b;
@@ -130,7 +130,7 @@ template <typename CharT>
 static inline CharT&
 med3charC(CharT& a, CharT& b, CharT& c)
 {
-    if (cmp(a, b) == 0)                   return a;
+    if (cmp(a, b) == 0) return a;
     if (cmp(c, a) == 0 || cmp(c, b) == 0) return c;
     if (cmp(a, b) < 0) {
         if (cmp(b, c) < 0) return b;
@@ -162,17 +162,17 @@ static inline int cmp(const StrCache& a, const StrCache& b)
 static inline void
 insertion_sort_nocache(StrCache* cache, int n, size_t depth)
 {
-    StrCache *pi, *pj;
-    unsigned char *s, *t;
+    StrCache* pi, * pj;
+    unsigned char* s, * t;
     for (pi = cache + 1; --n > 0; ++pi) {
         unsigned char* tmp = pi->str;
         for (pj = pi; pj > cache; --pj) {
-            for (s=(pj-1)->str+depth, t=tmp+depth; *s==*t && *s!=0;
+            for (s = (pj - 1)->str + depth, t = tmp + depth; *s == *t && *s != 0;
                  ++s, ++t)
                 ;
             if (*s <= *t)
                 break;
-            pj->str = (pj-1)->str;
+            pj->str = (pj - 1)->str;
         }
         pj->str = tmp;
     }
@@ -182,13 +182,13 @@ insertion_sort_nocache(StrCache* cache, int n, size_t depth)
 static inline void
 insertion_sort_cache_block(StrCache* cache, int n)
 {
-    StrCache *pi, *pj;
+    StrCache* pi, * pj;
     for (pi = cache + 1; --n > 0; ++pi) {
         StrCache tmp = *pi;
         for (pj = pi; pj > cache; --pj) {
-            if (cmp((pj-1)->key, tmp.key) <= 0)
+            if (cmp((pj - 1)->key, tmp.key) <= 0)
                 break;
-            *pj = *(pj-1);
+            *pj = *(pj - 1);
         }
         *pj = tmp;
     }
@@ -203,9 +203,9 @@ insertion_sort(StrCache* cache, int n, size_t depth)
 
     insertion_sort_cache_block(cache, n);
 
-    size_t start=0, cnt=1;
-    for (int i=0; i < n-1; ++i) {
-        if (cmp(cache[i], cache[i+1]) == 0) {
+    size_t start = 0, cnt = 1;
+    for (int i = 0; i < n - 1; ++i) {
+        if (cmp(cache[i], cache[i + 1]) == 0) {
             ++cnt;
             continue;
         }
@@ -213,10 +213,10 @@ insertion_sort(StrCache* cache, int n, size_t depth)
             insertion_sort_nocache(cache + start, cnt,
                                    depth + sizeof(key_type));
         cnt = 1;
-        start = i+1;
+        start = i + 1;
     }
     if (cnt > 1 && cache[start].key & 0xFF)
-        insertion_sort_nocache(cache+start, cnt, depth + sizeof(key_type));
+        insertion_sort_nocache(cache + start, cnt, depth + sizeof(key_type));
 }
 
 // ****************************************************************************
@@ -225,36 +225,37 @@ insertion_sort(StrCache* cache, int n, size_t depth)
 struct MKQSStep
 {
     StrCache* cache;
-    size_t num_lt, num_eq, num_gt, n, depth;
-    size_t idx;
-    bool eq_recurse;
+    size_t  num_lt, num_eq, num_gt, n, depth;
+    size_t  idx;
+    bool    eq_recurse;
 
     MKQSStep(StrCache* cache, size_t n, size_t depth, bool CacheDirty)
     {
         if (CacheDirty)
         {
-            for (size_t i=0; i < n; ++i) {
+            for (size_t i = 0; i < n; ++i) {
                 cache[i].key = get_char<key_type>(cache[i].str, depth);
             }
         }
         // Move pivot to first position to avoid wrapping the unsigned values
         // we are using in the main loop from zero to max.
         std::swap(cache[0], med3charC(
-                      med3charC(cache[0],       cache[n/8],     cache[n/4]),
-                      med3charC(cache[n/2-n/8], cache[n/2],     cache[n/2+n/8]),
-                      med3charC(cache[n-1-n/4], cache[n-1-n/8], cache[n-3])
+                      med3charC(cache[0], cache[n / 8], cache[n / 4]),
+                      med3charC(cache[n / 2 - n / 8], cache[n / 2], cache[n / 2 + n / 8]),
+                      med3charC(cache[n - 1 - n / 4], cache[n - 1 - n / 8], cache[n - 3])
                       ));
         StrCache pivot = cache[0];
-        size_t first   = 1;
-        size_t last    = n-1;
+        size_t first = 1;
+        size_t last = n - 1;
         size_t beg_ins = 1;
-        size_t end_ins = n-1;
+        size_t end_ins = n - 1;
         while (true) {
             while (first <= last) {
                 const int res = cmp(cache[first], pivot);
                 if (res > 0) {
                     break;
-                } else if (res == 0) {
+                }
+                else if (res == 0) {
                     std::swap(cache[beg_ins++], cache[first]);
                 }
                 ++first;
@@ -263,7 +264,8 @@ struct MKQSStep
                 const int res = cmp(cache[last], pivot);
                 if (res < 0) {
                     break;
-                } else if (res == 0) {
+                }
+                else if (res == 0) {
                     std::swap(cache[end_ins--], cache[last]);
                 }
                 --last;
@@ -276,17 +278,17 @@ struct MKQSStep
         }
         // Some calculations to make the code more readable.
         const size_t num_eq_beg = beg_ins;
-        const size_t num_eq_end = n-1-end_ins;
-                     num_eq     = num_eq_beg+num_eq_end;
-                     num_lt     = first-beg_ins;
-                     num_gt     = end_ins-last;
+        const size_t num_eq_end = n - 1 - end_ins;
+        num_eq = num_eq_beg + num_eq_end;
+        num_lt = first - beg_ins;
+        num_gt = end_ins - last;
 
         // Swap the equal pointers from the beginning to proper position.
         const size_t size1 = std::min(num_eq_beg, num_lt);
-        std::swap_ranges(cache, cache+size1, cache+first-size1);
+        std::swap_ranges(cache, cache + size1, cache + first - size1);
         // Swap the equal pointers from the end to proper position.
         const size_t size2 = std::min(num_eq_end, num_gt);
-        std::swap_ranges(cache+first, cache+first+size2, cache+n-size2);
+        std::swap_ranges(cache + first, cache + first + size2, cache + n - size2);
 
         // Save offsets for recursive sorting
         this->cache = cache;
@@ -305,35 +307,35 @@ struct MKQSStep
 
 // magic deleter class for tr1::shared_ptr to delete [] array instead of delete
 // array.
-template<typename T>
+template <typename T>
 struct shared_ptr_array_deleter {
-    void operator()(T* p) {
-        delete [] p;
+    void operator () (T* p)
+    {
+        delete[] p;
     }
 };
 
 template <bool CacheDirty>
 struct SequentialMKQS : public Job
 {
-    string*             strings;
-    size_t              n, depth;
+    string          * strings;
+    size_t          n, depth;
 
-    BlockQueueType*     block_queue;
+    BlockQueueType  * block_queue;
 
-    StrCache*           cache;
+    StrCache        * cache;
 
     // reference counted pointer to base_cache, which might be shared among
     // threads due to work sharing.
     typedef std::tr1::shared_ptr<StrCache> StrCachePtrType;
-    StrCachePtrType     cache_base;
+    StrCachePtrType cache_base;
 
     // *** Constructors
 
     SequentialMKQS(string* _strings, size_t _n, size_t _depth, StrCache* _cache)
         : strings(_strings), n(_n), depth(_depth),
           cache(_cache), cache_base(_cache)
-    {
-    }
+    { }
 
     SequentialMKQS(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth,
                    BlockQueueType* _block_queue)
@@ -361,10 +363,10 @@ struct SequentialMKQS : public Job
         {
             if (n == 1) // nothing to sort
             {
-                DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings,n));
+                DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings, n));
 
                 StrCacheBlock* scb = NULL;
-                while ( block_queue->try_pop(scb) )
+                while (block_queue->try_pop(scb))
                 {
                     assert(scb && (scb->fill == 0 || scb->fill == 1));
                     if (scb->fill == 1) {
@@ -373,7 +375,7 @@ struct SequentialMKQS : public Job
                     delete scb;
                 }
 
-                while ( block_queue->try_pop(scb) )
+                while (block_queue->try_pop(scb))
                 {
                     assert(scb && scb->fill == 0);
                     delete scb;
@@ -394,7 +396,7 @@ struct SequentialMKQS : public Job
             StrCacheBlock* scb;
             size_t o = 0;
 
-            while ( block_queue->try_pop(scb) )
+            while (block_queue->try_pop(scb))
             {
                 for (unsigned int i = 0; i < scb->fill; ++i, ++o)
                 {
@@ -421,14 +423,14 @@ struct SequentialMKQS : public Job
     inline void
     sequential_mkqs(JobQueue& jobqueue)
     {
-        DBG(debug_seqjobs, "SequentialMKQS on area " << srange(strings,n) << " @ job " << this);
+        DBG(debug_seqjobs, "SequentialMKQS on area " << srange(strings, n) << " @ job " << this);
 
         if (n < g_inssort_threshold)
         {
             insertion_sort<true>(cache, n, depth);
 
-            DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings,n) << " @ job " << this);
-            for (size_t i=0; i < n; ++i)
+            DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings, n) << " @ job " << this);
+            for (size_t i = 0; i < n; ++i)
                 strings[i] = cache[i].str;
 
             return;
@@ -437,15 +439,15 @@ struct SequentialMKQS : public Job
         // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
         size_t pop_front = 0;
         std::vector<MKQSStep> stack;
-        stack.push_back( MKQSStep(cache,n,depth,CacheDirty) );
+        stack.push_back(MKQSStep(cache, n, depth, CacheDirty));
 
         // for output, save pointer to finished entry
         StrCache* cache_finished = cache + n;
 
-    jumpout:
-        while ( stack.size() > pop_front )
+jumpout:
+        while (stack.size() > pop_front)
         {
-            while ( stack.back().idx < 3 )
+            while (stack.back().idx < 3)
             {
                 if (use_work_sharing && jobqueue.has_idle())
                 {
@@ -455,10 +457,10 @@ struct SequentialMKQS : public Job
                     string* st_strings = strings + (st.cache - cache);
 
                     DBG(debug_seqjobs, "Queueing front of SequentialMKQS's stack level " << pop_front << ", idx " << st.idx
-                        << ", areas lt " << srange(st_strings, st.num_lt)
-                        << " eq " << srange(st_strings + st.num_lt, st.num_eq)
-                        << " gt " << srange(st_strings + st.num_lt + st.num_eq, st.num_gt)
-                        << " @ job " << this);
+                                                                                         << ", areas lt " << srange(st_strings, st.num_lt)
+                                                                                         << " eq " << srange(st_strings + st.num_lt, st.num_eq)
+                                                                                         << " gt " << srange(st_strings + st.num_lt + st.num_eq, st.num_gt)
+                                                                                         << " @ job " << this);
 
                     if (st.idx == 0 && st.num_lt != 0)
                     {
@@ -481,7 +483,7 @@ struct SequentialMKQS : public Job
                             DBG(debug_seqjobs, "copy result to output string ptrs " << srange(st_strings + st.num_lt, st.num_eq) << " - no recurse equal @ job " << this);
 
                             // seems overkill to create an extra thread job for this:
-                            for (size_t i=st.num_lt; i < st.num_lt+st.num_eq; ++i)
+                            for (size_t i = st.num_lt; i < st.num_lt + st.num_eq; ++i)
                                 st_strings[i] = st.cache[i].str;
                         }
                     }
@@ -521,7 +523,7 @@ struct SequentialMKQS : public Job
                     else if (ms.num_lt < g_inssort_threshold)
                         insertion_sort<false>(ms.cache, ms.num_lt, ms.depth);
                     else
-                        stack.push_back( MKQSStep(ms.cache, ms.num_lt, ms.depth, false) );
+                        stack.push_back(MKQSStep(ms.cache, ms.num_lt, ms.depth, false));
                 }
                 // process the eq-subsequence
                 else if (ms.idx == 2)
@@ -532,8 +534,8 @@ struct SequentialMKQS : public Job
                         insertion_sort<true>(ms.cache + ms.num_lt, ms.num_eq,
                                              ms.depth + sizeof(key_type));
                     else
-                        stack.push_back( MKQSStep(ms.cache + ms.num_lt, ms.num_eq,
-                                                  ms.depth + sizeof(key_type), true) );
+                        stack.push_back(MKQSStep(ms.cache + ms.num_lt, ms.num_eq,
+                                                 ms.depth + sizeof(key_type), true));
                 }
                 // process the gt-subsequence
                 else
@@ -545,8 +547,8 @@ struct SequentialMKQS : public Job
                         insertion_sort<false>(ms.cache + ms.num_lt + ms.num_eq, ms.num_gt,
                                               ms.depth);
                     else
-                        stack.push_back( MKQSStep(ms.cache + ms.num_lt + ms.num_eq, ms.num_gt,
-                                                  ms.depth, false) );
+                        stack.push_back(MKQSStep(ms.cache + ms.num_lt + ms.num_eq, ms.num_gt,
+                                                 ms.depth, false));
                 }
             }
 
@@ -558,7 +560,7 @@ struct SequentialMKQS : public Job
             size_t n_finished = cache_finished - cache;
 
             DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings, n_finished) << " @ job " << this);
-            for (size_t i=0; i < n_finished; ++i)
+            for (size_t i = 0; i < n_finished; ++i)
                 strings[i] = cache[i].str;
         }
     }
@@ -568,7 +570,7 @@ static inline void
 bingmann_sequential_mkqs_cache8(string* strings, size_t n)
 {
     StrCache* cache = new StrCache[n];
-    for (size_t i=0; i < n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         cache[i].str = strings[i];
     }
     JobQueue jobqueue;
@@ -584,39 +586,38 @@ CONTESTANT_REGISTER(bingmann_sequential_mkqs_cache8,
 
 struct BlockSourceInput
 {
-    string*             strings;
-    size_t              n, depth;
+    string                    * strings;
+    size_t                    n, depth;
 
     /// number of block in input
-    unsigned int        block_count;
+    unsigned int              block_count;
 
     /// atomic index to currently unprocessed block of input
     std::atomic<unsigned int> block_current;
 
     BlockSourceInput(string* _strings, size_t _n, size_t _depth)
         : strings(_strings), n(_n), depth(_depth),
-          block_count( (n + block_size-1) / block_size ), // round-up
-          block_current( 0 )
-    {
-    }
+          block_count((n + block_size - 1) / block_size), // round-up
+          block_current(0)
+    { }
 
-    key_type get_direct(size_t i) const
+    key_type                  get_direct(size_t i) const
     {
         assert(i < n);
         return get_char<uint64_t>(strings[i], depth);
     }
 
-    key_type select_pivot()
+    key_type                  select_pivot()
     {
         // select pivot from median of 9
         return med3char(
-            med3char(get_direct(0),       get_direct(n/8),     get_direct(n/4)),
-            med3char(get_direct(n/2-n/8), get_direct(n/2),     get_direct(n/2+n/8)),
-            med3char(get_direct(n-1-n/4), get_direct(n-1-n/8), get_direct(n-3))
+            med3char(get_direct(0), get_direct(n / 8), get_direct(n / 4)),
+            med3char(get_direct(n / 2 - n / 8), get_direct(n / 2), get_direct(n / 2 + n / 8)),
+            med3char(get_direct(n - 1 - n / 4), get_direct(n - 1 - n / 8), get_direct(n - 3))
             );
     }
 
-    StrCacheBlock* get_block(unsigned int &fill)
+    StrCacheBlock             * get_block(unsigned int& fill)
     {
         unsigned int blk;
 
@@ -625,10 +626,10 @@ struct BlockSourceInput
             DBG(debug_blocks, "current input block: " << blk);
 
             // if block_current == block_count -> no block left.
-            if ( blk == block_count ) return NULL;
+            if (blk == block_count) return NULL;
 
             // atomic swap in incremented block, which reserves blk
-        } while ( !block_current.compare_exchange_weak(blk, blk+1) );
+        } while (!block_current.compare_exchange_weak(blk, blk + 1));
 
         fill = std::min<size_t>(block_size, n - blk * block_size);
 
@@ -651,32 +652,31 @@ struct BlockSourceInput
 
 struct BlockSourceQueueUnequal
 {
-    string*             strings;
-    size_t              n, depth;
+    string           * strings;
+    size_t           n, depth;
 
-    BlockQueueType*     block_queue;
-    PivotKeyQueueType*  pivot_queue;
+    BlockQueueType   * block_queue;
+    PivotKeyQueueType* pivot_queue;
 
     BlockSourceQueueUnequal(string* _strings, size_t _n, size_t _depth,
                             BlockQueueType* _blocks, PivotKeyQueueType* _pivots)
         : strings(_strings), n(_n), depth(_depth),
           block_queue(_blocks), pivot_queue(_pivots)
-    {
-    }
+    { }
 
     ~BlockSourceQueueUnequal()
     {
         delete block_queue;
     }
 
-    key_type select_pivot()
+    key_type         select_pivot()
     {
         // extract all cached pivot keys
         std::vector<key_type> pivots;
-        pivots.reserve( n / block_size + 1 );
+        pivots.reserve(n / block_size + 1);
 
         key_type k;
-        while( pivot_queue->try_pop(k) ) {
+        while (pivot_queue->try_pop(k)) {
             pivots.push_back(k);
         }
         delete pivot_queue;
@@ -684,13 +684,13 @@ struct BlockSourceQueueUnequal
         size_t p = pivots.size();
 
         return med3char(
-            med3char(pivots[0],       pivots[p/8],     pivots[p/4]),
-            med3char(pivots[p/2-p/8], pivots[p/2],     pivots[p/2+p/8]),
-            med3char(pivots[p-1-p/4], pivots[p-1-p/8], pivots[p-3])
+            med3char(pivots[0], pivots[p / 8], pivots[p / 4]),
+            med3char(pivots[p / 2 - p / 8], pivots[p / 2], pivots[p / 2 + p / 8]),
+            med3char(pivots[p - 1 - p / 4], pivots[p - 1 - p / 8], pivots[p - 3])
             );
     }
 
-    StrCacheBlock* get_block(unsigned int &fill)
+    StrCacheBlock * get_block(unsigned int& fill)
     {
         StrCacheBlock* blk;
         if (!block_queue->try_pop(blk)) return NULL;
@@ -704,46 +704,45 @@ struct BlockSourceQueueUnequal
 
 struct BlockSourceQueueEqual
 {
-    string*             strings;
-    size_t              n, depth;
+    string           * strings;
+    size_t           n, depth;
 
-    BlockQueueType*     block_queue;
-    PivotStrQueueType*  pivot_queue;
+    BlockQueueType   * block_queue;
+    PivotStrQueueType* pivot_queue;
 
     BlockSourceQueueEqual(string* _strings, size_t _n, size_t _depth,
                           BlockQueueType* _blocks, PivotStrQueueType* _pivots)
         : strings(_strings), n(_n), depth(_depth),
           block_queue(_blocks), pivot_queue(_pivots)
-    {
-    }
+    { }
 
     ~BlockSourceQueueEqual()
     {
         delete block_queue;
     }
 
-    key_type select_pivot()
+    key_type         select_pivot()
     {
         // extract all cached pivot keys
         std::vector<key_type> pivots;
-        pivots.reserve( n / block_size + 1 );
+        pivots.reserve(n / block_size + 1);
 
         string s = NULL;
-        while( pivot_queue->try_pop(s) ) {
-            pivots.push_back( get_char<key_type>(s, depth) );
+        while (pivot_queue->try_pop(s)) {
+            pivots.push_back(get_char<key_type>(s, depth));
         }
         delete pivot_queue;
 
         size_t p = pivots.size();
 
         return med3char(
-            med3char(pivots[0],       pivots[p/8],     pivots[p/4]),
-            med3char(pivots[p/2-p/8], pivots[p/2],     pivots[p/2+p/8]),
-            med3char(pivots[p-1-p/4], pivots[p-1-p/8], pivots[p-3])
+            med3char(pivots[0], pivots[p / 8], pivots[p / 4]),
+            med3char(pivots[p / 2 - p / 8], pivots[p / 2], pivots[p / 2 + p / 8]),
+            med3char(pivots[p - 1 - p / 4], pivots[p - 1 - p / 8], pivots[p - 3])
             );
     }
 
-    StrCacheBlock* get_block(unsigned int &fill)
+    StrCacheBlock * get_block(unsigned int& fill)
     {
         StrCacheBlock* blk;
         if (!block_queue->try_pop(blk)) return NULL;
@@ -771,18 +770,18 @@ struct ParallelMKQS
 {
     // *** Class Attributes
 
-    BlockSource         blks;
-    uint64_t            pivot;
+    BlockSource                  blks;
+    uint64_t                     pivot;
 
-    unsigned int        procs;
-    std::atomic<unsigned int> pwork;
+    unsigned int                 procs;
+    std::atomic<unsigned int>    pwork;
 
     // *** PartitionJob for JobQueue
 
     struct PartitionJob : public Job
     {
-        ParallelMKQS*       step;
-        unsigned int        p;
+        ParallelMKQS * step;
+        unsigned int p;
 
         inline PartitionJob(ParallelMKQS* _step, unsigned int _p)
             : step(_step), p(_p) { }
@@ -797,12 +796,12 @@ struct ParallelMKQS
     // *** Lock-free Queues for Finished Blocks
 
     // block queues
-    BlockQueueType      *oblk_lt, *oblk_eq, *oblk_gt;
+    BlockQueueType      * oblk_lt, * oblk_eq, * oblk_gt;
 
     // queue for one potential pivot from each block
-    PivotKeyQueueType*  oblk_lt_pivot;
-    PivotStrQueueType*  oblk_eq_pivot;
-    PivotKeyQueueType*  oblk_gt_pivot;
+    PivotKeyQueueType   * oblk_lt_pivot;
+    PivotStrQueueType   * oblk_eq_pivot;
+    PivotKeyQueueType   * oblk_gt_pivot;
 
     // counters for determinting final output position
     std::atomic<size_t> count_lt, count_eq;
@@ -811,14 +810,14 @@ struct ParallelMKQS
 
     inline ParallelMKQS(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
         : blks(strings, n, depth),
-          pivot( blks.select_pivot() ),
+          pivot(blks.select_pivot()),
           // contruct queues
-          oblk_lt( new BlockQueueType() ),
-          oblk_eq( new BlockQueueType() ),
-          oblk_gt( new BlockQueueType() ),
-          oblk_lt_pivot( new PivotKeyQueueType() ),
-          oblk_eq_pivot( new PivotStrQueueType() ),
-          oblk_gt_pivot( new PivotKeyQueueType() ),
+          oblk_lt(new BlockQueueType()),
+          oblk_eq(new BlockQueueType()),
+          oblk_gt(new BlockQueueType()),
+          oblk_lt_pivot(new PivotKeyQueueType()),
+          oblk_eq_pivot(new PivotStrQueueType()),
+          oblk_gt_pivot(new PivotKeyQueueType()),
           count_lt(0), count_eq(0)
     {
         enqueue_jobs(jobqueue);
@@ -828,14 +827,14 @@ struct ParallelMKQS
     inline ParallelMKQS(JobQueue& jobqueue, string* strings, size_t n, size_t depth,
                         BlockQueueType* iblk, PivotKeyQueueType* iblk_pivot)
         : blks(strings, n, depth, iblk, iblk_pivot),
-          pivot( blks.select_pivot() ),
+          pivot(blks.select_pivot()),
           // contruct queues
-          oblk_lt( new BlockQueueType() ),
-          oblk_eq( new BlockQueueType() ),
-          oblk_gt( new BlockQueueType() ),
-          oblk_lt_pivot( new PivotKeyQueueType() ),
-          oblk_eq_pivot( new PivotStrQueueType() ),
-          oblk_gt_pivot( new PivotKeyQueueType() ),
+          oblk_lt(new BlockQueueType()),
+          oblk_eq(new BlockQueueType()),
+          oblk_gt(new BlockQueueType()),
+          oblk_lt_pivot(new PivotKeyQueueType()),
+          oblk_eq_pivot(new PivotStrQueueType()),
+          oblk_gt_pivot(new PivotKeyQueueType()),
           count_lt(0), count_eq(0)
     {
         enqueue_jobs(jobqueue);
@@ -845,20 +844,20 @@ struct ParallelMKQS
     inline ParallelMKQS(JobQueue& jobqueue, string* strings, size_t n, size_t depth,
                         BlockQueueType* iblk, PivotStrQueueType* iblk_pivot)
         : blks(strings, n, depth, iblk, iblk_pivot),
-          pivot( blks.select_pivot() ),
+          pivot(blks.select_pivot()),
           // contruct queues
-          oblk_lt( new BlockQueueType() ),
-          oblk_eq( new BlockQueueType() ),
-          oblk_gt( new BlockQueueType() ),
-          oblk_lt_pivot( new PivotKeyQueueType() ),
-          oblk_eq_pivot( new PivotStrQueueType() ),
-          oblk_gt_pivot( new PivotKeyQueueType() ),
+          oblk_lt(new BlockQueueType()),
+          oblk_eq(new BlockQueueType()),
+          oblk_gt(new BlockQueueType()),
+          oblk_lt_pivot(new PivotKeyQueueType()),
+          oblk_eq_pivot(new PivotStrQueueType()),
+          oblk_gt_pivot(new PivotKeyQueueType()),
           count_lt(0), count_eq(0)
     {
         enqueue_jobs(jobqueue);
     }
 
-    void enqueue_jobs(JobQueue& jobqueue)
+    void        enqueue_jobs(JobQueue& jobqueue)
     {
         procs = blks.n / g_sequential_threshold;
         if (procs == 0) procs = 1;
@@ -868,7 +867,7 @@ struct ParallelMKQS
         // create partition jobs
         pwork = procs;
         for (unsigned int p = 0; p < procs; ++p)
-            jobqueue.enqueue( new PartitionJob(this, p) );
+            jobqueue.enqueue(new PartitionJob(this, p));
     }
 
     // *** Helper to Output to One of the oblk Queues
@@ -878,16 +877,16 @@ struct ParallelMKQS
         // hopefully this function will be optimized, a templated version is very obfuscated.
         if (type == LT) {
             count_lt += blk->fill;
-            oblk_lt_pivot->push( blk->key(blk->fill/2) );
+            oblk_lt_pivot->push(blk->key(blk->fill / 2));
             oblk_lt->push(blk);
         }
         else if (type == EQ) {
             count_eq += blk->fill;
-            oblk_eq_pivot->push( blk->str(blk->fill/2) );
+            oblk_eq_pivot->push(blk->str(blk->fill / 2));
             oblk_eq->push(blk);
         }
         else {
-            oblk_gt_pivot->push( blk->key(blk->fill/2) );
+            oblk_gt_pivot->push(blk->key(blk->fill / 2));
             oblk_gt->push(blk);
         }
     }
@@ -904,7 +903,7 @@ struct PartitionBlock
 {
     unsigned int pos, fill;
     StrCacheBlock* blk;
-    bool partial;
+    bool         partial;
 
     PartitionBlock() : pos(0), fill(0), blk(NULL) { }
 
@@ -945,22 +944,22 @@ struct PartitionBlock
         partial = true;
     }
 
-    inline StrCache& front_cache()
+    inline StrCache &       front_cache()
     {
         assert(blk && pos < fill && pos < block_size);
         return blk->cache[pos];
     }
 
-    inline const key_type& front_key() const
+    inline const key_type & front_key() const
     {
         assert(blk && pos < fill && pos < block_size);
         return blk->key(pos);
     }
 
-    inline StrCache& back_cache()
+    inline StrCache &       back_cache()
     {
-        assert(blk && fill > 0 && fill-1 < block_size);
-        return blk->cache[fill-1];
+        assert(blk && fill > 0 && fill - 1 < block_size);
+        return blk->cache[fill - 1];
     }
 
     template <int type>
@@ -993,36 +992,36 @@ struct PartitionBlock
 
         key_type& pivot = mkqs.pivot;
 
-        while ( pos < fill )
+        while (pos < fill)
         {
             int res = cmp(front_key(), pivot);
-            if (res < 0) { // < than pivot
+            if (res < 0) {        // < than pivot
                 DBG(debug_cmp2, "blk[" << pos << "] = " << front_key() << " < pivot " << toHex(pivot) << ".");
 
                 if (type == LT) { // good.
                     pos++;
                 }
-                else { // need to move to LT.
+                else {            // need to move to LT.
                     lt.swap_or_move_to<LT>(mkqs, *this);
                 }
             }
-            else if (res == 0) { // = pivot
+            else if (res == 0) {  // = pivot
                 DBG(debug_cmp2, "blk[" << pos << "] = " << front_key() << " = pivot " << toHex(pivot) << ".");
 
                 if (type == EQ) { // good.
                     pos++;
                 }
-                else { // need to move to EQ.
+                else {            // need to move to EQ.
                     eq.swap_or_move_to<EQ>(mkqs, *this);
                 }
             }
-            else { // > than pivot
+            else {                // > than pivot
                 DBG(debug_cmp2, "blk[" << pos << "] = " << front_key() << " > pivot " << toHex(pivot) << ".");
 
                 if (type == GT) { // good.
                     pos++;
                 }
-                else { // need to move to GT.
+                else {            // need to move to GT.
                     gt.swap_or_move_to<GT>(mkqs, *this);
                 }
             }
@@ -1043,10 +1042,10 @@ void ParallelMKQS<BlockSource>::partition(unsigned int p, JobQueue& jobqueue)
 
     while (1)
     {
-        while ( lt.template has_src_block<LT>(*this) && eq.template has_src_block<EQ>(*this) )
+        while (lt.template has_src_block<LT>(*this) && eq.template has_src_block<EQ>(*this))
         {
             int res = cmp(lt.front_key(), pivot);
-            if (res < 0) { // < than pivot
+            if (res < 0) {       // < than pivot
                 DBG(debug_cmp1, "blk_lt[" << lt.pos << "] = " << lt.front_key() << " < pivot " << toHex(pivot) << ", continue.");
                 lt.pos++;
             }
@@ -1055,18 +1054,18 @@ void ParallelMKQS<BlockSource>::partition(unsigned int p, JobQueue& jobqueue)
                 std::swap(lt.front_cache(), eq.front_cache());
                 eq.pos++;
             }
-            else { // > than pivot
+            else {  // > than pivot
                 DBG(debug_cmp1, "blk_lt[" << lt.pos << "] = " << lt.front_key() << " > pivot " << toHex(pivot) << ", break.");
                 goto jump1;
             }
         }
         break;
 
-    jump1:
-        while ( gt.template has_src_block<GT>(*this) && eq.template has_src_block<EQ>(*this) )
+jump1:
+        while (gt.template has_src_block<GT>(*this) && eq.template has_src_block<EQ>(*this))
         {
             int res = cmp(gt.front_key(), pivot);
-            if (res < 0) { // < than pivot
+            if (res < 0) {       // < than pivot
                 DBG(debug_cmp1, "blk_gt[" << gt.pos << "] = " << gt.front_key() << " < pivot " << toHex(pivot) << ", break.");
                 goto jump2;
             }
@@ -1075,18 +1074,18 @@ void ParallelMKQS<BlockSource>::partition(unsigned int p, JobQueue& jobqueue)
                 std::swap(gt.front_cache(), eq.front_cache());
                 eq.pos++;
             }
-            else { // > than pivot
+            else {  // > than pivot
                 DBG(debug_cmp1, "blk_gt[" << gt.pos << "] = " << gt.front_key() << " > pivot " << toHex(pivot) << ", continue.");
                 gt.pos++;
             }
         }
         break;
 
-    jump2:
+jump2:
         DBG(debug_cmp1, "swap blk_lt[" << lt.pos << "] = " << lt.front_key()
-            <<          " and blk_gt[" << gt.pos << "] = " << gt.front_key());
+                                       << " and blk_gt[" << gt.pos << "] = " << gt.front_key());
 
-        assert( lt.front_key() > pivot && gt.front_key() < pivot );
+        assert(lt.front_key() > pivot && gt.front_key() < pivot);
         std::swap(lt.front_cache(), gt.front_cache());
         lt.pos++, gt.pos++;
     }
@@ -1115,14 +1114,14 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
 {
     DBG(debug_parajobs, "finished PartitionJobs @ " << this);
     DBG(debug_parajobs, "finished partitioning - " << count_lt << " lt "
-        << count_eq << " eq " << blks.n - count_lt - count_eq << " gt - total " << blks.n);
+                                                   << count_eq << " eq " << blks.n - count_lt - count_eq << " gt - total " << blks.n);
 
     if (debug_selfcheck)
     {
         size_t count = 0;
 
-        for(BlockQueueType::iterator it = oblk_lt->unsafe_begin();
-            it != oblk_lt->unsafe_end(); ++it)
+        for (BlockQueueType::iterator it = oblk_lt->unsafe_begin();
+             it != oblk_lt->unsafe_end(); ++it)
         {
             std::cout << "fill_lt : " << (*it)->fill << "\n";
             for (unsigned int i = 0; i < (*it)->fill; ++i)
@@ -1133,8 +1132,8 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
         }
         assert(count == count_lt);
 
-        for(BlockQueueType::iterator it = oblk_eq->unsafe_begin();
-            it != oblk_eq->unsafe_end(); ++it)
+        for (BlockQueueType::iterator it = oblk_eq->unsafe_begin();
+             it != oblk_eq->unsafe_end(); ++it)
         {
             std::cout << "fill_eq : " << (*it)->fill << "\n";
             for (unsigned int i = 0; i < (*it)->fill; ++i)
@@ -1145,8 +1144,8 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
         }
         assert(count == count_lt + count_eq);
 
-        for(BlockQueueType::iterator it = oblk_gt->unsafe_begin();
-            it != oblk_gt->unsafe_end(); ++it)
+        for (BlockQueueType::iterator it = oblk_gt->unsafe_begin();
+             it != oblk_gt->unsafe_end(); ++it)
         {
             std::cout << "fill_gt : " << (*it)->fill << "\n";
             for (unsigned int i = 0; i < (*it)->fill; ++i)
@@ -1162,50 +1161,47 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
     // *** Create Recursive Jobs
 
     // recurse into lt-queue
-    if (count_lt == 0) {
-    }
+    if (count_lt == 0) { }
     else if (count_lt <= g_sequential_threshold) {
         new SequentialMKQS<false>
             (jobqueue, blks.strings, count_lt, blks.depth,
-             oblk_lt);
+            oblk_lt);
         delete oblk_lt_pivot;
     }
     else {
         new ParallelMKQS<BlockSourceQueueUnequal>
             (jobqueue, blks.strings, count_lt, blks.depth,
-             oblk_lt, oblk_lt_pivot);
+            oblk_lt, oblk_lt_pivot);
     }
 
     // recurse into eq-queue
-    if (count_eq == 0) {
-    }
+    if (count_eq == 0) { }
     else if (count_eq <= g_sequential_threshold) {
         new SequentialMKQS<true>
             (jobqueue, blks.strings + count_lt, count_eq, blks.depth + sizeof(key_type),
-             oblk_eq);
+            oblk_eq);
         delete oblk_eq_pivot;
     }
     else {
         new ParallelMKQS<BlockSourceQueueEqual>
             (jobqueue, blks.strings + count_lt, count_eq, blks.depth + sizeof(key_type),
-             oblk_eq, oblk_eq_pivot);
+            oblk_eq, oblk_eq_pivot);
     }
 
     // recurse into gt-queue
     size_t count_lteq = count_lt + count_eq;
     size_t count_gt = blks.n - count_lteq;
-    if (count_gt == 0) {
-    }
+    if (count_gt == 0) { }
     else if (count_gt <= g_sequential_threshold) {
         new SequentialMKQS<false>
             (jobqueue, blks.strings + count_lteq, count_gt, blks.depth,
-             oblk_gt);
+            oblk_gt);
         delete oblk_gt_pivot;
     }
     else {
         new ParallelMKQS<BlockSourceQueueUnequal>
             (jobqueue, blks.strings + count_lteq, count_gt, blks.depth,
-             oblk_gt, oblk_gt_pivot);
+            oblk_gt, oblk_gt_pivot);
     }
 
     delete this;
@@ -1230,3 +1226,5 @@ CONTESTANT_REGISTER_PARALLEL(parallel_mkqs,
                              "Parallel MKQS with blocks and cache8")
 
 } // namespace bingmann_parallel_mkqs
+
+/******************************************************************************/

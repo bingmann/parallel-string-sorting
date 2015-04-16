@@ -1,4 +1,4 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/agglogger.h
  *
  * Class to write aggregated measurement values into gnuplottable text format.
@@ -16,7 +16,7 @@
  * average, the minimum or maximum of all measured values since the last
  * output.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -31,10 +31,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef TOOLS_AGGLOGGER_H
-#define TOOLS_AGGLOGGER_H
+#ifndef PSS_SRC_TOOLS_AGGLOGGER_HEADER
+#define PSS_SRC_TOOLS_AGGLOGGER_HEADER
 
 #include <fstream>
 #include <iomanip>
@@ -64,30 +64,29 @@ protected:
     class TemplateLogger
     {
     protected:
-
         //! log output file
-        std::ofstream       m_logfile;
+        std::ofstream m_logfile;
 
         //! begin timestamp of current time range
-        double              m_begintime;
+        double m_begintime;
 
         //! end timestamp of current time range
-        double              m_endtime;
+        double m_endtime;
 
         //! timestamp defined as zero time, output is relative to this
-        double              m_zerotime;
+        double m_zerotime;
 
         //! count of samples in current time range
-        size_t              m_count;
+        size_t m_count;
 
         //! current aggregate value
-        value_type          m_aggregate;
+        value_type m_aggregate;
 
         //! maximum duration between two outputted values
-        double              m_max_interval;
+        double m_max_interval;
 
         //! maximum number of values over which an output is aggregated
-        size_t              m_max_count;
+        size_t m_max_count;
 
         //! output aggregated value
         inline void output()
@@ -99,7 +98,6 @@ protected:
         }
 
     public:
-
         //! initialize logger with logname, and maximum interval/count between
         //! writes
         TemplateLogger(const char* logname, double max_interval = 0.01,
@@ -109,11 +107,10 @@ protected:
               m_zerotime(timestamp()),
               m_max_interval(max_interval),
               m_max_count(max_count)
-        {
-        }
+        { }
 
         //! Define current timestamp as zero.
-        TemplateLogger& start()
+        TemplateLogger & start()
         {
             m_zerotime = timestamp();
             return *this;
@@ -160,17 +157,17 @@ protected:
 
     struct MaxLoggerFunctor
     {
-        static inline value_type initial()
+        static inline value_type         initial()
         {
             return std::numeric_limits<value_type>::min();
         }
 
-        static inline value_type aggregate(const value_type& prev, const value_type& sample)
+        static inline value_type         aggregate(const value_type& prev, const value_type& sample)
         {
             return std::max(prev, sample);
         }
 
-        static inline const value_type& output(const value_type& aggregate, size_t /* count */)
+        static inline const value_type & output(const value_type& aggregate, size_t /* count */)
         {
             return aggregate;
         }
@@ -178,17 +175,17 @@ protected:
 
     struct MinLoggerFunctor
     {
-        static inline value_type initial()
+        static inline value_type         initial()
         {
             return std::numeric_limits<value_type>::max();
         }
 
-        static inline value_type aggregate(const value_type& prev, const value_type& sample)
+        static inline value_type         aggregate(const value_type& prev, const value_type& sample)
         {
             return std::min(prev, sample);
         }
 
-        static inline const value_type& output(const value_type& aggregate, size_t /* count */)
+        static inline const value_type & output(const value_type& aggregate, size_t /* count */)
         {
             return aggregate;
         }
@@ -206,14 +203,13 @@ protected:
             return prev + sample;
         }
 
-        static inline double output(const value_type& aggregate, size_t count)
+        static inline double     output(const value_type& aggregate, size_t count)
         {
             return aggregate / (double)count;
         }
     };
 
 public:
-
     typedef TemplateLogger<MaxLoggerFunctor> MaximumLogger;
     typedef TemplateLogger<MaxLoggerFunctor> MaxLogger;
 
@@ -229,14 +225,12 @@ protected:
     class LockingLogger : protected BaseLogger
     {
     public:
-
         LockingLogger(const char* logname, double max_interval = 0.01,
                       size_t max_count = 1000, bool append = false)
             : BaseLogger(logname, max_interval, max_count, append)
-        {
-        }
+        { }
 
-        LockingLogger& start()
+        LockingLogger & start()
         {
             BaseLogger::start();
             return *this;
@@ -265,22 +259,22 @@ protected:
     class DummyLogger
     {
     public:
-
         DummyLogger(const char* /* logname */, double /* max_interval */ = 0,
                     double /* max_count */ = 0, bool /* append */ = false)
         { }
 
-        DummyLogger& start()
+        DummyLogger & start()
         {
             return *this;
         }
 
-        DummyLogger& operator<< (const value_type& /* value */)
+        DummyLogger& operator << (const value_type& /* value */)
         {
             return *this;
         }
     };
-
 }; // class AggregateLogger
 
-#endif // TOOLS_AGGLOGGER_H
+#endif // !PSS_SRC_TOOLS_AGGLOGGER_HEADER
+
+/******************************************************************************/

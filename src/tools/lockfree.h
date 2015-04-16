@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/lockfree.h
  *
  * Lock-free auxiliary data structures
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,10 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef LOCKFREE_H_
-#define LOCKFREE_H_
+#ifndef PSS_SRC_TOOLS_LOCKFREE_HEADER
+#define PSS_SRC_TOOLS_LOCKFREE_HEADER
 
 namespace lockfree {
 
@@ -29,28 +29,26 @@ template <unsigned MaxThreads>
 class lazy_counter
 {
 protected:
-
     //! per thread information, spaced out onto cache-lines
     struct PerThread
     {
         std::atomic<ssize_t> delta;
-        char    filled[64 - sizeof(ssize_t)];
+        char                 filled[64 - sizeof(ssize_t)];
     };
 
     //! per thread aggregated delta.
     struct PerThread m_thr[MaxThreads];
 
     //! lazy counter value, updated only on request
-    std::atomic<ssize_t>        m_counter;
+    std::atomic<ssize_t> m_counter;
 
     //! boolean whether any thread changed a value
     std::atomic<bool> m_changed;
 
     //! number of valid threads
-    size_t      m_nthr;
+    size_t m_nthr;
 
 public:
-
     lazy_counter(ssize_t initial = 0, size_t nthr = omp_get_num_procs())
         : m_counter(initial),
           m_changed(false),
@@ -60,7 +58,7 @@ public:
     }
 
     //! direct assignment (unsafe)
-    lazy_counter& operator= (ssize_t initial)
+    lazy_counter& operator = (ssize_t initial)
     {
         m_counter = initial;
         m_changed = false;
@@ -69,7 +67,7 @@ public:
     }
 
     //! lazy adding of a delta
-    lazy_counter& add(ssize_t delta, size_t thr)
+    lazy_counter & add(ssize_t delta, size_t thr)
     {
         m_thr[thr].delta.fetch_add(delta, std::memory_order_relaxed);
         m_changed.store(true, std::memory_order_relaxed);
@@ -77,13 +75,13 @@ public:
     }
 
     //! lazy adding of a delta
-    lazy_counter& add(ssize_t delta)
+    lazy_counter & add(ssize_t delta)
     {
         return add(delta, omp_get_thread_num());
     }
 
     //! update the lazy couter
-    lazy_counter& update()
+    lazy_counter & update()
     {
         if (!m_changed) return *this;
 
@@ -117,4 +115,6 @@ public:
 
 } // namespace lockfree
 
-#endif // LOCKFREE_H_
+#endif // !PSS_SRC_TOOLS_LOCKFREE_HEADER
+
+/******************************************************************************/

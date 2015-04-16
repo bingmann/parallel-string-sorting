@@ -1,5 +1,5 @@
-/******************************************************************************
- * examples/stats_writer.h
+/*******************************************************************************
+ * src/tools/stats_writer.h
  *
  * Class to collect and output statistics as key=value pairs.
  *
@@ -11,7 +11,7 @@
  * After the program was run, the stats are formatted as a RESULT line using
  * get(), which can be outputted to a file or stdout.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012-2014 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -26,16 +26,16 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef SQLPLOTS_STATS_WRITER_H
-#define SQLPLOTS_STATS_WRITER_H
+#ifndef PSS_SRC_TOOLS_STATS_WRITER_HEADER
+#define PSS_SRC_TOOLS_STATS_WRITER_HEADER
 
 #include <string>
 #include <sstream>
+#include <ctime>
 
 #include <unistd.h>
-#include <time.h>
 
 /*!
  * Collect key=value pairs, which are given by operator >> and operator <<
@@ -44,9 +44,8 @@
 class stats_writer
 {
 protected:
-
     //! All collected key=value values.
-    std::ostringstream  m_line;
+    std::ostringstream m_line;
 
     //! An internal class to collect key=value pairs as a sequence of >> and <<
     //! operator calls.
@@ -60,7 +59,6 @@ protected:
         std::string m_key, m_value;
 
     public:
-
         //! Start entry collection for the given key
         entry(stats_writer& sw, const std::string& key)
             : m_sw(sw), m_key(key)
@@ -88,7 +86,8 @@ protected:
         {
             // put key=value into writer before returning next entry
             m_sw.put(m_key, m_value);
-            m_key.clear(); m_value.clear();
+            m_key.clear();
+            m_value.clear();
             return m_sw.operator >> (v);
         }
 
@@ -101,7 +100,6 @@ protected:
     };
 
 public:
-
     //! Clear all data in the stats writer.
     void clear()
     {
@@ -124,7 +122,7 @@ public:
     }
 
     //! Append a (key,value) pair as strings
-    stats_writer& put(const std::string& k, const std::string& v)
+    stats_writer & put(const std::string& k, const std::string& v)
     {
 #if _OPENMP
 #pragma omp critical
@@ -135,10 +133,11 @@ public:
 
     //! Append a (key,value) pair with automatic conversion to strings
     template <typename KeyType, typename ValueType>
-    stats_writer& put(const KeyType& k, const ValueType& v)
+    stats_writer & put(const KeyType& k, const ValueType& v)
     {
         std::ostringstream kstr, vstr;
-        kstr << k; vstr << v;
+        kstr << k;
+        vstr << v;
         return put(kstr.str(), vstr.str());
     }
 
@@ -153,7 +152,7 @@ public:
         char datetime[64];
         time_t tnow = time(NULL);
 
-        strftime(datetime,sizeof(datetime),"%Y-%m-%d %H:%M:%S", localtime(&tnow));
+        strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&tnow));
         out << "\tdatetime=" << datetime;
 
         char hostname[128];
@@ -175,4 +174,6 @@ public:
     }
 };
 
-#endif // SQLPLOTS_STATS_WRITER_H
+#endif // !PSS_SRC_TOOLS_STATS_WRITER_HEADER
+
+/******************************************************************************/

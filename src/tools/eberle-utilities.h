@@ -1,9 +1,9 @@
-/******************************************************************************
- * src/eberle/utils/utility-functions.h
+/*******************************************************************************
+ * src/tools/eberle-utilities.h
  *
  * Header for utility functions used by src/eberle/ algorithms.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,15 +18,14 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef UTILITY_FUNCTIONS_H_
-#define UTILITY_FUNCTIONS_H_
+#ifndef PSS_SRC_TOOLS_EBERLE_UTILITIES_HEADER
+#define PSS_SRC_TOOLS_EBERLE_UTILITIES_HEADER
 
 #include <utility>
 
-namespace eberle_utils
-{
+namespace eberle_utils {
 
 static inline
 void
@@ -40,7 +39,8 @@ calculateRanges(std::pair<size_t, size_t>* ranges, unsigned numberOfSplits, size
     ranges[numberOfSplits - 1] = std::make_pair((numberOfSplits - 1) * split, lengthToSplit - (numberOfSplits - 1) * split);
 }
 
-}
-// namespace eberle_utils
+} // namespace eberle_utils
 
-#endif // UTILITY_FUNCTIONS_H_
+#endif // !PSS_SRC_TOOLS_EBERLE_UTILITIES_HEADER
+
+/******************************************************************************/

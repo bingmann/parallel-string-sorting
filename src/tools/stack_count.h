@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * stack_count.h
  *
  * Header containing two functions to monitor stack usage of a program.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,7 +23,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- *****************************************************************************/
+ ******************************************************************************/
 
 #ifndef _STACK_COUNT_H_
 #define _STACK_COUNT_H_
@@ -46,4 +46,4 @@ extern size_t stack_count_usage(void* lastbase);
 
 #endif /* _STACK_COUNT_H_ */
 
-/*****************************************************************************/
+/******************************************************************************/

@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/sequential/bingmann-lcp_inssort.h
  *
  * LCP-aware insertion sort, used in parallel variants as base case.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,15 +18,15 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#include <string.h>
+#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_LCP_INSSORT_HEADER
+#define PSS_SRC_SEQUENTIAL_BINGMANN_LCP_INSSORT_HEADER
+
+#include <cstring>
 
 #include "../tools/stringtools.h"
 #include "../tools/contest.h"
-
-#ifndef BINGMANN_LCP_INSSORT_H_
-#define BINGMANN_LCP_INSSORT_H_
 
 namespace bingmann_lcp_inssort {
 
@@ -236,8 +236,8 @@ void test_lcp_insertion_sort(string* strings, size_t n)
 }
 
 CONTESTANT_REGISTER(test_lcp_insertion_sort,
-    "bingmann/lcp_insertion_sort",
-    "LCP-aware insertion sort")
+                    "bingmann/lcp_insertion_sort",
+                    "LCP-aware insertion sort")
 
 static inline
 void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
@@ -247,31 +247,31 @@ void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
 
     lcp_insertion_sort(strptr, 0);
 
-    delete [] shadow;
+    delete[] shadow;
 }
 
 CONTESTANT_REGISTER(test_lcp_insertion_sort_nolcp,
-    "bingmann/lcp_insertion_sort_nolcp",
-    "LCP-aware insertion sort (without LCP output)")
+                    "bingmann/lcp_insertion_sort_nolcp",
+                    "LCP-aware insertion sort (without LCP output)")
 
 static inline
 void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
 {
-    string* shadow = new string[n+1]; // allocate shadow pointer array
+    string* shadow = new string[n + 1]; // allocate shadow pointer array
     StringShadowLcpPtr strptr(strings, shadow, n);
 
-    strptr.lcp(0) = 42; // must keep lcp[0] unchanged
+    strptr.lcp(0) = 42;                 // must keep lcp[0] unchanged
 
     lcp_insertion_sort_pseudocode(strptr.active(), strptr.lcparray(), n, 0);
 
     stringtools::verify_lcp(strptr.active(), strptr.lcparray(), n, 42);
 
-    delete [] shadow;
+    delete[] shadow;
 }
 
 CONTESTANT_REGISTER(test_lcp_insertion_sort_pseudocode,
-    "bingmann/lcp_insertion_sort_pseudocode",
-    "LCP-aware insertion sort close to pseudo-code, with checking")
+                    "bingmann/lcp_insertion_sort_pseudocode",
+                    "LCP-aware insertion sort close to pseudo-code, with checking")
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -414,21 +414,23 @@ void lcp_insertion_sort_cache(string* str, uintptr_t* lcp, char_type* cache,
 static inline
 void test_lcp_insertion_sort_cache(string* strings, size_t n)
 {
-    lcp_t* lcps = new lcp_t[n]; // allocate LCP array
+    lcp_t* lcps = new lcp_t[n];          // allocate LCP array
     char_type* cache = new char_type[n]; // allocate distinguishing char cache
 
     lcp_insertion_sort_cache(strings, lcps, cache, n, 0);
 
     stringtools::verify_lcp_cache(strings, lcps, cache, n, -1);
 
-    delete [] lcps;
-    delete [] cache;
+    delete[] lcps;
+    delete[] cache;
 }
 
 CONTESTANT_REGISTER(test_lcp_insertion_sort_cache,
-    "bingmann/lcp_insertion_sort_cache",
-    "LCP-aware insertion sort (with distinguishing character cache)")
+                    "bingmann/lcp_insertion_sort_cache",
+                    "LCP-aware insertion sort (with distinguishing character cache)")
 
 } // namespace bingmann_lcp_inssort
 
-#endif // BINGMANN_LCP_INSSORT_H_
+#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_LCP_INSSORT_HEADER
+
+/******************************************************************************/

@@ -1,9 +1,9 @@
-/******************************************************************************
- * src/eberle/utils/lcp-string-losertree.h
+/*******************************************************************************
+ * src/tools/eberle-lcp-losertree.h
  *
  * Implementation of a LCP aware multiway losertree.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
  * Copyright (C) 2014 Timo Bingmann <tb@panthema.net>
  *
@@ -19,11 +19,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-
-#ifndef LCP_STRING_LOSERTREE_H_
-#define LCP_STRING_LOSERTREE_H_
+#ifndef PSS_SRC_TOOLS_EBERLE_LCP_LOSERTREE_HEADER
+#define PSS_SRC_TOOLS_EBERLE_LCP_LOSERTREE_HEADER
 
 #include <iostream>
 #include <algorithm>
@@ -31,8 +30,7 @@
 
 #include "../tools/stringtools.h"
 
-namespace eberle_lcp_utils
-{
+namespace eberle_lcp_utils {
 
 using namespace stringtools;
 
@@ -41,7 +39,7 @@ typedef unsigned char* string;
 
 //implementation follows
 
-template<unsigned K>
+template <unsigned K>
 class LcpStringLoserTree
 {
     typedef LcpCacheStringPtr Stream;
@@ -59,7 +57,7 @@ protected:
      * Returns the winner of all games.
      */
     inline void
-    updateNode(unsigned &defenderIdx, unsigned &contenderIdx)
+    updateNode(unsigned& defenderIdx, unsigned& contenderIdx)
     {
         const Stream& defenderStream = streams[defenderIdx];
 
@@ -71,12 +69,10 @@ protected:
         lcp_t& contenderLcp = lcps[contenderIdx];
         lcp_t& defenderLcp = lcps[defenderIdx];
 
-
         if (contenderStream.empty() || defenderLcp > contenderLcp)
         { // CASE 2: defender->lcp > contender->lcp => defender < contender
             std::swap(defenderIdx, contenderIdx);
         }
-
         else if (defenderLcp == contenderLcp)
         { // CASE 1: defender.lcp == contender.lcp
             lcp_t lcp = defenderLcp;
@@ -95,13 +91,13 @@ protected:
             }
 
             if (c1 < c2)
-            { 	// CASE 1.1: defender < contender
+            {       // CASE 1.1: defender < contender
                 contenderLcp = lcp;
                 cached[contenderIdx] = c2;
                 std::swap(defenderIdx, contenderIdx);
             }
             else
-            {	// CASE 1.2: defender >= contender
+            {       // CASE 1.2: defender >= contender
                 defenderLcp = lcp;
                 cached[defenderIdx] = c1;
             }
@@ -120,14 +116,13 @@ protected:
         if (!stream.empty())
         {
             lcps[streamIdx] = stream.firstLcp();
-            cached[streamIdx]= stream.firstCached();
+            cached[streamIdx] = stream.firstCached();
         }
     }
 
 public:
     LcpStringLoserTree()
-    {
-    }
+    { }
 
     LcpStringLoserTree(const Stream& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
     {
@@ -164,7 +159,7 @@ public:
         {
             lcps[i] = knownCommonLcp;
 
-            if(streams[i].size > 0)
+            if (streams[i].size > 0)
                 cached[i] = streams[i].firstString()[knownCommonLcp];
 
             unsigned nodeIdx = K + i;
@@ -197,7 +192,7 @@ public:
 
         for (unsigned i = 0; i < K; ++i)
         {
-            const Stream& stream = streams [i];
+            const Stream& stream = streams[i];
             if (stream.size > 0)
             {
                 std::cout << lcps[i] << "|" << cached[i] << "|" << stream.firstString();
@@ -275,9 +270,9 @@ public:
 
         nodes[0] = contenderIdx;
     }
- 
+
     inline void
-    writeElementsToStream(string *outStream, const size_t length)
+    writeElementsToStream(string* outStream, const size_t length)
     {
         const string* end = outStream + length;
         unsigned contenderIdx = nodes[0];
@@ -320,8 +315,10 @@ public:
     {
         return streams;
     }
-}; 
- 
+};
+
 } // namespace eberle_lcp_utils
 
-#endif // LCP_STRING_LOSERTREE_H_
+#endif // !PSS_SRC_TOOLS_EBERLE_LCP_LOSERTREE_HEADER
+
+/******************************************************************************/

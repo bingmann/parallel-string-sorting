@@ -1,4 +1,8 @@
+################################################################################
+# src/CMakeLists.txt
+#
 # Simple CMake file
+################################################################################
 
 include_directories("${PROJECT_SOURCE_DIR}/minitbb/")
 include_directories("${PROJECT_BINARY_DIR}/")
@@ -65,3 +69,5 @@ if(BUILD_ALL)
   endforeach(BPARAM)
 
 endif(BUILD_ALL)
+
+################################################################################

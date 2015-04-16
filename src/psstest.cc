@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/psstest.cc
  *
  * Parallel string sorting test program
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,19 +18,14 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <inttypes.h>
-#include <string.h>
-#include <errno.h>
-#include <math.h>
-#include <sys/wait.h>
-#include <sys/mman.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <cerrno>
+#include <cmath>
 #include <string>
 #include <vector>
 #include <list>
@@ -42,6 +37,11 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+
+#include <sys/wait.h>
+#include <sys/mman.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include <omp.h>
 #include <getopt.h>
@@ -68,58 +68,58 @@ static const char* memprofile_path = "memprofile.txt";
 
 // *** Global Input Data Structures ***
 
-size_t          gopt_inputsize = 0;
-size_t          gopt_inputsize_minlimit = 0;
-size_t          gopt_inputsize_maxlimit = 0;
-size_t          gopt_repeats = 1;
-size_t          gopt_repeats_inner = 1;
+size_t gopt_inputsize = 0;
+size_t gopt_inputsize_minlimit = 0;
+size_t gopt_inputsize_maxlimit = 0;
+size_t gopt_repeats = 1;
+size_t gopt_repeats_inner = 1;
 std::vector<const char*> gopt_algorithm;
 std::vector<const char*> gopt_algorithm_full;
-int             gopt_timeout = 0;
+int gopt_timeout = 0;
 
-const char*     g_datapath = NULL;      // path of input
-std::string     g_dataname;             // stripped name of input
-const char*     g_string_data = NULL;   // pointer to first string
-size_t          g_string_datasize = 0;  // total size of string data (without padding)
-char*           g_string_databuff = NULL; // pointer to data buffer with padding
-size_t          g_string_buffsize = 0;  // total size of string data with padding
-size_t          g_string_count = 0;     // number of strings.
-size_t          g_string_dprefix = 0;   // calculated distinguishing prefix
-size_t          g_string_lcpsum = 0;    // sum over LCP array
+const char* g_datapath = NULL;       // path of input
+std::string g_dataname;              // stripped name of input
+const char* g_string_data = NULL;    // pointer to first string
+size_t g_string_datasize = 0;        // total size of string data (without padding)
+char* g_string_databuff = NULL;      // pointer to data buffer with padding
+size_t g_string_buffsize = 0;        // total size of string data with padding
+size_t g_string_count = 0;           // number of strings.
+size_t g_string_dprefix = 0;         // calculated distinguishing prefix
+size_t g_string_lcpsum = 0;          // sum over LCP array
 
-const char*     gopt_inputwrite = NULL; // argument -i, --input
-const char*     gopt_output = NULL; // argument -o, --output
+const char* gopt_inputwrite = NULL;  // argument -i, --input
+const char* gopt_output = NULL;      // argument -o, --output
 
-bool            gopt_suffixsort = false;   // argument --suffix
-bool            gopt_threads = false;      // argument --threads
-bool            gopt_all_threads = false;  // argument --all-threads
-bool            gopt_some_threads = false; // argument --some-threads
-bool            gopt_no_check = false;     // argument --no-check
-bool            gopt_mlockall = false;     // argument --mlockall
+bool gopt_suffixsort = false;        // argument --suffix
+bool gopt_threads = false;           // argument --threads
+bool gopt_all_threads = false;       // argument --all-threads
+bool gopt_some_threads = false;      // argument --some-threads
+bool gopt_no_check = false;          // argument --no-check
+bool gopt_mlockall = false;          // argument --mlockall
 
-std::vector<size_t> gopt_threadlist;       // argument --thread-list
+std::vector<size_t> gopt_threadlist; // argument --thread-list
 
-stats_writer    g_stats;
+stats_writer g_stats;
 
-size_t          g_smallsort = 0;
+size_t g_smallsort = 0;
 
-bool            gopt_forkrun = false;
-bool            gopt_forkdataload = false;
+bool gopt_forkrun = false;
+bool gopt_forkdataload = false;
 
-bool            gopt_sequential_only = false; // argument --sequential
-bool            gopt_parallel_only = false; // argument --parallel
+bool gopt_sequential_only = false;            // argument --sequential
+bool gopt_parallel_only = false;              // argument --parallel
 
-const size_t    g_stacklimit = 64*1024*1024; // increase from 8 MiB
+const size_t g_stacklimit = 64 * 1024 * 1024; // increase from 8 MiB
 
-std::string     gopt_memory_type; // argument -M, --memory, see tools/input.h
+std::string gopt_memory_type;                 // argument -M, --memory, see tools/input.h
 
 // for NUMA segmenting and algorithms
-size_t          g_numa_nodes;   // number of NUMA nodes (may be faked by cmdline)
+size_t g_numa_nodes;                          // number of NUMA nodes (may be faked by cmdline)
 
 // for -M mmap_segment:
-std::vector<size_t> g_numa_chars;          // offsets of character on NUMA nodes
-std::vector<size_t> g_numa_strings;        // number to first strings on NUMA nodes
-std::vector<size_t> g_numa_string_count;   // pointer to strings on NUMA nodes
+std::vector<size_t> g_numa_chars;             // offsets of character on NUMA nodes
+std::vector<size_t> g_numa_strings;           // number to first strings on NUMA nodes
+std::vector<size_t> g_numa_string_count;      // pointer to strings on NUMA nodes
 
 // *** Tools and Algorithms
 
@@ -177,7 +177,7 @@ std::vector<size_t> g_numa_string_count;   // pointer to strings on NUMA nodes
 
 int pss_num_threads = 0;
 
-Contest* getContestSingleton()
+Contest * getContestSingleton()
 {
     static Contest* c = NULL;
     if (!c) c = new Contest;
@@ -223,7 +223,7 @@ static inline void maybe_inputwrite()
         {
             if (g_string_data[i] == 0) {
                 f << sbegin << "\n";
-                sbegin = g_string_data + i+1;
+                sbegin = g_string_data + i + 1;
             }
         }
     }
@@ -292,7 +292,7 @@ void Contest::list_contentants()
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
         if (!gopt_algorithm_select(*c)) continue;
-        w_algoname = std::max(w_algoname, strlen( (*c)->m_algoname ));
+        w_algoname = std::max(w_algoname, strlen((*c)->m_algoname));
     }
 
     // iterate over all contestants
@@ -355,14 +355,14 @@ void Contestant_UCArray::run_forked()
         // write out exit status information to results file
 
         g_stats >> "algo" << m_algoname
-                >> "data" << input::strip_datapath(g_datapath)
-                >> "memory_type" << gopt_memory_type
-                >> "char_count" << gopt_inputsize;
+            >> "data" << input::strip_datapath(g_datapath)
+            >> "memory_type" << gopt_memory_type
+            >> "char_count" << gopt_inputsize;
 
         if (WTERMSIG(status) == SIGALRM)
         {
             g_stats >> "status" << "timeout"
-                    >> "timeout" << gopt_timeout;
+                >> "timeout" << gopt_timeout;
         }
         else if (WTERMSIG(status) == SIGSEGV)
         {
@@ -383,10 +383,10 @@ void Contestant_UCArray::run_forked()
         std::cout << "Child wait returned with status " << status << std::endl;
 
         g_stats >> "algo" << m_algoname
-                >> "data" << g_dataname
-                >> "char_count" << g_string_datasize
-                >> "string_count" << g_string_count
-                >> "status" << "weird";
+            >> "data" << g_dataname
+            >> "char_count" << g_string_datasize
+            >> "string_count" << g_string_count
+            >> "status" << "weird";
 
         std::cout << g_stats << std::endl;
     }
@@ -411,7 +411,7 @@ void Contestant_UCArray::real_run()
     }
 
     // create unsigned char* array from offsets
-    membuffer<string> stringptr( g_string_count );
+    membuffer<string> stringptr(g_string_count);
 
     ClockTimer strptr_timer;
 
@@ -434,12 +434,12 @@ void Contestant_UCArray::real_run()
         size_t j = 0;
         for (size_t i = 0; i < g_string_datasize; ++i)
         {
-            if (i == 0 || g_string_data[i-1] == 0) {
+            if (i == 0 || g_string_data[i - 1] == 0) {
                 assert(j < stringptr.size());
                 stringptr[j] = (string)g_string_data + i;
 
                 // stepped over boundary to next NUMA node
-                while (i >= g_numa_chars[numaNode+1]) {
+                while (i >= g_numa_chars[numaNode + 1]) {
                     numaNode++;
                     g_numa_strings[numaNode] = j;
                     g_numa_string_count[numaNode] = 0;
@@ -460,7 +460,7 @@ void Contestant_UCArray::real_run()
             stringptr[i] = (string)g_string_data + i;
 
             // stepped over boundary to next NUMA node
-            while (i >= g_numa_chars[numaNode+1]) {
+            while (i >= g_numa_chars[numaNode + 1]) {
                 numaNode++;
                 g_numa_strings[numaNode] = i;
                 g_numa_string_count[numaNode] = 0;
@@ -483,7 +483,7 @@ void Contestant_UCArray::real_run()
                       << " string offset " << g_numa_strings[n]
                       << " count " << g_numa_string_count[n]
                       << " char offset "
-                      << stringptr[ g_numa_strings[n] ] - (string)g_string_data
+                      << stringptr[g_numa_strings[n]] - (string)g_string_data
                       << std::endl;
             sum += g_numa_string_count[n];
         }
@@ -498,10 +498,10 @@ void Contestant_UCArray::real_run()
     std::cout << "Running " << m_algoname << " - " << m_description << std::endl;
 
     g_stats >> "algo" << m_algoname
-            >> "data" << g_dataname
-            >> "memory_type" << gopt_memory_type
-            >> "char_count" << g_string_datasize
-            >> "string_count" << stringptr.size();
+        >> "data" << g_dataname
+        >> "memory_type" << gopt_memory_type
+        >> "char_count" << g_string_datasize
+        >> "string_count" << stringptr.size();
 
     if (g_smallsort)
         g_stats >> "smallsort" << g_smallsort;
@@ -569,7 +569,7 @@ void Contestant_UCArray::real_run()
     //memprofile.finish();
 
     g_stats >> "heapuse" << (malloc_count_peak() - memuse)
-            >> "stackuse" << stack_count_usage(stack);
+        >> "stackuse" << stack_count_usage(stack);
 
     if (memuse < malloc_count_current())
     {
@@ -578,7 +578,7 @@ void Contestant_UCArray::real_run()
 #endif
 
     g_stats >> "time" << timer.delta() / gopt_repeats_inner
-            >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
+        >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
     (std::cout << timer.delta() << "\tchecking ").flush();
 
     if (gopt_repeats_inner != 1)
@@ -598,9 +598,9 @@ void Contestant_UCArray::real_run()
             g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_lcpsum);
 
         g_stats >> "dprefix" << g_string_dprefix
-                >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize)
-                >> "lcpsum" << g_string_lcpsum
-                >> "avg-lcpsum" << g_string_lcpsum / (double)g_string_count;
+            >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize)
+            >> "lcpsum" << g_string_lcpsum
+            >> "avg-lcpsum" << g_string_lcpsum / (double)g_string_count;
     }
     else
     {
@@ -641,7 +641,7 @@ void Contestant_UCArray_Parallel::run()
 
             for (size_t r = 0; r < gopt_repeats; ++r)
             {
-				g_stats.clear();
+                g_stats.clear();
                 pss_num_threads = p;
                 std::cout << "threads=" << p << std::endl;
                 g_stats >> "threads" << p;
@@ -676,7 +676,7 @@ void Contestant_UCArray_Parallel::run()
         {
             for (size_t r = 0; r < gopt_repeats; ++r)
             {
-				g_stats.clear();
+                g_stats.clear();
                 pss_num_threads = p;
                 std::cout << "threads=" << p << std::endl;
                 g_stats >> "threads" << p;
@@ -689,9 +689,9 @@ void Contestant_UCArray_Parallel::run()
             if (somethreads)
                 p = *somethreads++;
             else if (!gopt_all_threads)
-                p = std::min( nprocs, 2 * p );
+                p = std::min(nprocs, 2 * p);
             else
-                p = std::min( nprocs, p+1 );
+                p = std::min(nprocs, p + 1);
         }
     }
 }
@@ -741,36 +741,36 @@ void print_usage(const char* prog)
               << "  -T, --timeout <sec>    Abort algorithms after this timeout (default: disabled)." << std::endl
               << "      --threads          Run tests with doubling number of threads from 1 to max_processors." << std::endl
               << "      --thread-list <#>  Run tests with number of threads in list (comma or space separated)." << std::endl
-        ;
+    ;
 }
 
 int main(int argc, char* argv[])
 {
     static const struct option longopts[] = {
-        { "help",    no_argument,        0, 'h' },
-        { "algo",    required_argument,  0, 'a' },
+        { "help", no_argument, 0, 'h' },
+        { "algo", required_argument, 0, 'a' },
         { "algoname", required_argument, 0, 'A' },
-        { "fork",    no_argument,        0, 'F' },
-        { "datafork", no_argument,       0, 'D' },
-        { "input",   required_argument,  0, 'i' },
-        { "memory",  required_argument,  0, 'M' },
-        { "no-check", no_argument,       0, 'N' },
-        { "output",  required_argument,  0, 'o' },
-        { "repeat",  required_argument,  0, 'r' },
-        { "repeat-inner",required_argument,  0, 'R' },
-        { "size",    required_argument,  0, 's' },
-        { "maxsize", required_argument,  0, 'S' },
-        { "timeout", required_argument,  0, 'T' },
-        { "suffix",  no_argument,        0, 1 },
-        { "sequential", no_argument,     0, 2 },
-        { "parallel", no_argument,       0, 3 },
-        { "threads", no_argument,        0, 4 },
-        { "all-threads", no_argument,    0, 5 },
-        { "some-threads", no_argument,   0, 6 },
+        { "fork", no_argument, 0, 'F' },
+        { "datafork", no_argument, 0, 'D' },
+        { "input", required_argument, 0, 'i' },
+        { "memory", required_argument, 0, 'M' },
+        { "no-check", no_argument, 0, 'N' },
+        { "output", required_argument, 0, 'o' },
+        { "repeat", required_argument, 0, 'r' },
+        { "repeat-inner", required_argument, 0, 'R' },
+        { "size", required_argument, 0, 's' },
+        { "maxsize", required_argument, 0, 'S' },
+        { "timeout", required_argument, 0, 'T' },
+        { "suffix", no_argument, 0, 1 },
+        { "sequential", no_argument, 0, 2 },
+        { "parallel", no_argument, 0, 3 },
+        { "threads", no_argument, 0, 4 },
+        { "all-threads", no_argument, 0, 5 },
+        { "some-threads", no_argument, 0, 6 },
         { "thread-list", required_argument, 0, 7 },
-        { "mlockall", no_argument,       0, 8 },
+        { "mlockall", no_argument, 0, 8 },
         { "numa-nodes", required_argument, 0, 9 },
-        { 0,0,0,0 },
+        { 0, 0, 0, 0 },
     };
 
 #ifndef GIT_VERSION_SHA1
@@ -811,7 +811,7 @@ int main(int argc, char* argv[])
             return 0;
 
         case 'a':
-            if (strcmp(optarg,"list") == 0)
+            if (strcmp(optarg, "list") == 0)
             {
                 getContestSingleton()->list_contentants();
                 return 0;
@@ -821,7 +821,7 @@ int main(int argc, char* argv[])
             break;
 
         case 'A':
-            if (strcmp(optarg,"list") == 0)
+            if (strcmp(optarg, "list") == 0)
             {
                 getContestSingleton()->list_contentants();
                 return 0;
@@ -931,8 +931,8 @@ int main(int argc, char* argv[])
         case 7: // --thread-list
         {
             char* endptr = optarg;
-            while ( *endptr ) {
-                size_t p = strtoul(endptr,&endptr,10);
+            while (*endptr) {
+                size_t p = strtoul(endptr, &endptr, 10);
                 if (!endptr) break;
                 gopt_threadlist.push_back(p);
                 std::cout << "Option --thread-list: added p = " << p << " to list of thread counts." << std::endl;
@@ -972,7 +972,7 @@ int main(int argc, char* argv[])
 
     numa_set_strict(1);
 
-    for (; optind < argc; ++optind)
+    for ( ; optind < argc; ++optind)
     {
         // iterate over input size range
         for (gopt_inputsize = gopt_inputsize_minlimit; gopt_inputsize <= gopt_inputsize_maxlimit;
@@ -992,3 +992,5 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+
+/******************************************************************************/

@@ -1,11 +1,11 @@
-/******************************************************************************
+/*******************************************************************************
  * src/sequential/bingmann-sample_sortBS.h
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *
  * Binary search on splitters without bucket cache.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -20,7 +20,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
+
+#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
+#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
 
 namespace bingmann_sample_sortBS {
 
@@ -34,29 +37,29 @@ find_bkt_binsearch(const key_type& key, const key_type* splitter, size_t leaves)
 {
     unsigned int lo = 0, hi = leaves;
 
-    while ( lo < hi )
+    while (lo < hi)
     {
         unsigned int mid = (lo + hi) >> 1;
         assert(mid < leaves);
 
         if (key <= splitter[mid])
             hi = mid;
-        else // (key > splitter[mid])
+        else    // (key > splitter[mid])
             lo = mid + 1;
     }
 
 #if 0
     // Verify result of binary search:
-    int pos = leaves-1;
-    while ( pos >= 0 && key <= splitter[pos] ) --pos;
+    int pos = leaves - 1;
+    while (pos >= 0 && key <= splitter[pos]) --pos;
     pos++;
 
     //std::cout << "lo " << lo << " hi " << hi << " pos " << pos << "\n";
     assert(lo == pos);
 #endif
 
-    size_t b = lo * 2;                              // < bucket
-    if (lo < leaves && splitter[lo] == key) b += 1; // equal bucket
+    size_t b = lo * 2;                               // < bucket
+    if (lo < leaves && splitter[lo] == key) b += 1;  // equal bucket
 
     return b;
 }
@@ -73,7 +76,7 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
     // splitters            + bktsize
     // n * sizeof(key_type) + (2*n+1) * sizeof(size_t) <= l2cache
 
-    static const size_t leaves = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
+    static const size_t leaves = (l2cache - sizeof(size_t)) / (sizeof(key_type) + 2 * sizeof(size_t));
 
 #endif
 
@@ -90,13 +93,13 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 
     size_t samplesize = oversample_factor * leaves;
 
-    key_type* samples = new key_type[ samplesize ];
+    key_type* samples = new key_type[samplesize];
 
     LCGRandom rng(&samples);
 
     for (unsigned int i = 0; i < samplesize; ++i)
     {
-        samples[i] = get_char<key_type>(strings[ rng() % n ], depth);
+        samples[i] = get_char<key_type>(strings[rng() % n], depth);
     }
 
     std::sort(samples, samples + samplesize);
@@ -106,18 +109,18 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 
     DBG(debug_splitter, "splitter:");
     splitter_lcp[0] = 0; // sentinel for first < everything bucket
-    for (size_t i = 0, j = oversample_factor/2; i < leaves; ++i)
+    for (size_t i = 0, j = oversample_factor / 2; i < leaves; ++i)
     {
         splitter[i] = samples[j];
         DBG(debug_splitter, "key " << toHex(splitter[i]));
 
         if (i != 0) {
-            key_type xorSplit = splitter[i-1] ^ splitter[i];
+            key_type xorSplit = splitter[i - 1] ^ splitter[i];
 
             DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
 
             DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
             splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
         }
@@ -125,11 +128,11 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
         j += oversample_factor;
     }
 
-    delete [] samples;
+    delete[] samples;
 
     // step 2: classify all strings and count bucket sizes
 
-    static const size_t bktnum = 2*leaves+1;
+    static const size_t bktnum = 2 * leaves + 1;
 
     size_t* bktsize = new size_t[bktnum];
     memset(bktsize, 0, bktnum * sizeof(size_t));
@@ -143,7 +146,7 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
 
         assert(b < bktnum);
 
-        ++bktsize[ b ];
+        ++bktsize[b];
     }
 
     if (debug_bucketsize)
@@ -161,15 +164,15 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
     size_t bktindex[bktnum];
     bktindex[0] = bktsize[0];
     size_t last_bkt_size = bktsize[0];
-    for (unsigned int i=1; i < bktnum; ++i) {
-        bktindex[i] = bktindex[i-1] + bktsize[i];
+    for (unsigned int i = 1; i < bktnum; ++i) {
+        bktindex[i] = bktindex[i - 1] + bktsize[i];
         if (bktsize[i]) last_bkt_size = bktsize[i];
     }
-    assert(bktindex[bktnum-1] == n);
+    assert(bktindex[bktnum - 1] == n);
 
     // step 4: premute in-place
 
-    for (size_t i=0, j; i < n - last_bkt_size; )
+    for (size_t i = 0, j; i < n - last_bkt_size; )
     {
         string perm = strings[i];
         key_type key;
@@ -180,40 +183,40 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
             key = get_char<key_type>(perm, depth);
             b = find_bkt_binsearch(key, splitter, leaves);
 
-            j = --bktindex[ b ];
+            j = --bktindex[b];
 
-            if ( j <= i )
+            if (j <= i)
                 break;
 
             std::swap(perm, strings[j]);
         }
 
         strings[i] = perm;
-        i += bktsize[ b ];
+        i += bktsize[b];
     }
 
     // step 5: recursion
 
     size_t i = 0, bsum = 0;
-    while (i < bktnum-1)
+    while (i < bktnum - 1)
     {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i/2]));
-            sample_sortBS(strings+bsum, bktsize[i], depth + splitter_lcp[i/2]);
+            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2]));
+            sample_sortBS(strings + bsum, bktsize[i], depth + splitter_lcp[i / 2]);
         }
         bsum += bktsize[i++];
 
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if ( (splitter[i/2] & 0xFF) == 0 ) { // equal-bucket has NULL-terminated key, done.
+            if ((splitter[i / 2] & 0xFF) == 0) { // equal-bucket has NULL-terminated key, done.
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
             }
             else {
                 DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sortBS(strings+bsum, bktsize[i], depth + sizeof(key_type));
+                sample_sortBS(strings + bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i++];
@@ -221,18 +224,18 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
     if (bktsize[i] > 0)
     {
         DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
-        sample_sortBS(strings+bsum, bktsize[i], depth);
+        sample_sortBS(strings + bsum, bktsize[i], depth);
     }
     bsum += bktsize[i++];
     assert(i == bktnum && bsum == n);
 
-    delete [] bktsize;
+    delete[] bktsize;
 }
 
 void bingmann_sample_sortBS(string* strings, size_t n)
 {
     sample_sort_pre();
-    sample_sortBS(strings,n,0);
+    sample_sortBS(strings, n, 0);
     sample_sort_post();
 }
 
@@ -242,3 +245,7 @@ CONTESTANT_REGISTER(bingmann_sample_sortBS, "bingmann/sample_sortBS",
 // ----------------------------------------------------------------------------
 
 } // namespace bingmann_sample_sortBS
+
+#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
+
+/******************************************************************************/

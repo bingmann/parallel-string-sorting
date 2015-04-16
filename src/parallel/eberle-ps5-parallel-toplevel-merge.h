@@ -1,10 +1,10 @@
-/******************************************************************************
+/*******************************************************************************
  * src/parallel/eberle-ps5-parallel-toplevel-merge.h
  *
  * NUMA aware parallel sorting algorithm running separate pS5s on every NUMA
  * node and then combining the result via parallel LCP aware merge.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
  * Copyright (C) 2014 Timo Bingmann <tb@panthema.net>
  *
@@ -20,10 +20,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
-#define EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
+#ifndef PSS_SRC_PARALLEL_EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_HEADER
+#define PSS_SRC_PARALLEL_EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_HEADER
 
 #include <utility>
 
@@ -41,9 +41,8 @@
 #undef DBGX
 #define DBGX DBGX_OMP
 
+namespace eberle_ps5_parallel_toplevel_merge {
 
-namespace eberle_ps5_parallel_toplevel_merge
-{
 using std::numeric_limits;
 
 using namespace eberle_utils;
@@ -62,7 +61,7 @@ static const bool debug_verify_ps5_lcp_cache = false;
 
 //method definitions
 void
-eberle_ps5_parallel_toplevel_merge(string *strings, size_t n, void (*parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
+eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
 {
     int realNumaNodes = numa_num_configured_nodes();
     if (realNumaNodes < 1) realNumaNodes = 1;
@@ -82,7 +81,7 @@ eberle_ps5_parallel_toplevel_merge(string *strings, size_t n, void (*parallelMer
     if (numNumaNodes != realNumaNodes || g_numa_nodes == 0)
     {
         DBG(1, "!!! WARNING !!! emulating " << numNumaNodes << " NUMA nodes! "
-            << "Remove --numa-nodes for REAL EXPERIMENTS.");
+                                            << "Remove --numa-nodes for REAL EXPERIMENTS.");
     }
 
     // create outputs
@@ -193,20 +192,19 @@ void eberle_ps5_parallel_toplevel_merge_binary_splitting(string* strings, size_t
 }
 
 CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_lcp_splitting,
-    "eberle/ps5-parallel-toplevel-merge-lcp-splitting",
-    "NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle")
+                             "eberle/ps5-parallel-toplevel-merge-lcp-splitting",
+                             "NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle")
 
 CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_standard_splitting,
-    "eberle/ps5-parallel-toplevel-merge-standard-splitting",
-    "NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle")
+                             "eberle/ps5-parallel-toplevel-merge-standard-splitting",
+                             "NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle")
 
 CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_binary_splitting,
-    "eberle/ps5-parallel-toplevel-merge-binary-splitting",
-    "NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle")
-	
-	
+                             "eberle/ps5-parallel-toplevel-merge-binary-splitting",
+                             "NUMA aware sorting algorithm running pS5 on local memory and then doing a parallel merge by Andreas Eberle")
+
 void
-eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n, void (*parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
+eberle_ps5_parallel_toplevel_merge_assisting(string* strings, size_t n, void (* parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
 {
     int realNumaNodes = numa_num_configured_nodes();
     if (realNumaNodes < 1) realNumaNodes = 1;
@@ -226,7 +224,7 @@ eberle_ps5_parallel_toplevel_merge_assisting(string *strings, size_t n, void (*p
     if (numNumaNodes != realNumaNodes || g_numa_nodes == 0)
     {
         DBG(1, "!!! WARNING !!! emulating " << numNumaNodes << " NUMA nodes! "
-            << "Remove --numa-nodes for REAL EXPERIMENTS.");
+                                            << "Remove --numa-nodes for REAL EXPERIMENTS.");
     }
 
     ClockTimer timer;
@@ -295,20 +293,20 @@ void eberle_ps5_parallel_toplevel_merge_assisting_binary_splitting(string* strin
     eberle_ps5_parallel_toplevel_merge_assisting(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeBinarySplitting);
 }
 
-
 CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_assisting_lcp_splitting,
-    "eberle/ps5-parallel-toplevel-merge-assisting-lcp-splitting",
-    "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
+                             "eberle/ps5-parallel-toplevel-merge-assisting-lcp-splitting",
+                             "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
 
 CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_assisting_standard_splitting,
-    "eberle/ps5-parallel-toplevel-merge-assisting-standard-splitting",
-    "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
+                             "eberle/ps5-parallel-toplevel-merge-assisting-standard-splitting",
+                             "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
 
 CONTESTANT_REGISTER_PARALLEL(eberle_ps5_parallel_toplevel_merge_assisting_binary_splitting,
-    "eberle/ps5-parallel-toplevel-merge-assisting-binary-splitting",
-    "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
-
+                             "eberle/ps5-parallel-toplevel-merge-assisting-binary-splitting",
+                             "pS5-LCP-Merge with JobQueue assisting each other by Andreas Eberle and Timo Bingmann")
 
 } // namespace eberle_ps5_parallel_toplevel_merge
 
-#endif // EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_H_
+#endif // !PSS_SRC_PARALLEL_EBERLE_PS5_PARALLEL_TOPLEVEL_MERGE_HEADER
+
+/******************************************************************************/

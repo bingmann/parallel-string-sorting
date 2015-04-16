@@ -1,10 +1,10 @@
-/******************************************************************************
+/*******************************************************************************
  * malloc_count.c
  *
  * malloc() allocation counter based on http://ozlabs.org/~jk/code/ and other
  * code preparing LD_PRELOAD shared objects.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,7 +24,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- *****************************************************************************/
+ ******************************************************************************/
 
 #define _GNU_SOURCE
 #include <stdlib.h>
@@ -330,4 +330,4 @@ static __attribute__((destructor)) void finish(void)
             total, peak, curr);
 }
 
-/*****************************************************************************/
+/******************************************************************************/

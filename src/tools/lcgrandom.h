@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/lcgrandom.h
  *
  * Simple linear congruential random generator for 64-bit pseudo-random numbers.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,23 +18,27 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef LCGRANDOM_H_
-#define LCGRANDOM_H_
+#ifndef PSS_SRC_TOOLS_LCGRANDOM_HEADER
+#define PSS_SRC_TOOLS_LCGRANDOM_HEADER
 
 /// Simple 64-bit linear congruential random generator
 class LCGRandom
 {
 protected:
-    size_t      xn;
+    size_t xn;
+
 public:
     inline LCGRandom(size_t seed) : xn(seed) { }
     inline LCGRandom(void* ptrseed) : xn((size_t)ptrseed) { }
-    inline size_t operator()() {
+    inline size_t operator () ()
+    {
         xn = 0x27BB2EE687B0B0FDLLU * xn + 0xB504F32DLU;
         return xn;
     }
 };
 
-#endif // LCGRANDOM_H_
+#endif // !PSS_SRC_TOOLS_LCGRANDOM_HEADER
+
+/******************************************************************************/

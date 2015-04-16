@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/timer_array.h
  *
  * Class to output statistics in a flexible text file as key=value pairs.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,10 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef TOOLS_TIMER_ARRAY_H
-#define TOOLS_TIMER_ARRAY_H
+#ifndef PSS_SRC_TOOLS_TIMER_ARRAY_HEADER
+#define PSS_SRC_TOOLS_TIMER_ARRAY_HEADER
 
 #include <string>
 #include <iostream>
@@ -29,9 +29,9 @@
 #include <fstream>
 #include <iomanip>
 #include <vector>
+#include <cassert>
 #include <unistd.h>
 
-#include <assert.h>
 #include <omp.h>
 
 /// Class to measure different parts of a funciton by switching between
@@ -40,18 +40,16 @@
 class TimerArray
 {
 private:
-
     //! clock time of last call
-    struct timespec     m_tplast;
+    struct timespec m_tplast;
 
     //! currently running timer
-    unsigned int        m_tmcurr;
+    unsigned int m_tmcurr;
 
     //! array of timers (usually preallocated)
     std::vector<struct timespec> m_tpvector;
 
 public:
-
     //! real or dummy implementation
     static const bool is_real = true;
 
@@ -87,8 +85,8 @@ public:
         }
 
         // add difference to current timer
-        m_tpvector[ m_tmcurr ].tv_sec += tpnow.tv_sec - m_tplast.tv_sec;
-        m_tpvector[ m_tmcurr ].tv_nsec += tpnow.tv_nsec - m_tplast.tv_nsec;
+        m_tpvector[m_tmcurr].tv_sec += tpnow.tv_sec - m_tplast.tv_sec;
+        m_tpvector[m_tmcurr].tv_nsec += tpnow.tv_nsec - m_tplast.tv_nsec;
 
         m_tplast = tpnow;
         m_tmcurr = tm;
@@ -106,7 +104,6 @@ public:
 class TimerArrayDummy
 {
 public:
-
     //! real or dummy implementation
     static const bool is_real = false;
 
@@ -148,19 +145,18 @@ public:
 class TimerArrayMT
 {
 private:
-
     //! struct of information per thread
     struct ThreadInfo
     {
         //! clock time of last call per thread
-        struct timespec     m_tplast;
+        struct timespec m_tplast;
 
         //! currently running timer per thread
-        unsigned int        m_tmcurr;
+        unsigned int    m_tmcurr;
 
         //! filler to put info into different cache lines
-        unsigned char       m_filler[64 - sizeof(struct timespec) - sizeof(unsigned int)];
-    } __attribute__((packed));
+        unsigned char   m_filler[64 - sizeof(struct timespec) - sizeof(unsigned int)];
+    } __attribute__ ((packed));
 
     //! array of timers (preallocated)
     std::vector<struct timespec> m_timers;
@@ -169,7 +165,6 @@ private:
     std::vector<ThreadInfo> m_thread;
 
 public:
-
     //! real or dummy implementation?
     static const bool is_real = true;
 
@@ -223,9 +218,9 @@ public:
 
         // add difference to current timer
 #pragma omp atomic
-        m_timers[ ti.m_tmcurr ].tv_sec += (tpnow.tv_sec - ti.m_tplast.tv_sec);
+        m_timers[ti.m_tmcurr].tv_sec += (tpnow.tv_sec - ti.m_tplast.tv_sec);
 #pragma omp atomic
-        m_timers[ ti.m_tmcurr ].tv_nsec += tpnow.tv_nsec - ti.m_tplast.tv_nsec;
+        m_timers[ti.m_tmcurr].tv_nsec += tpnow.tv_nsec - ti.m_tplast.tv_nsec;
 
         ti.m_tplast = tpnow;
         ti.m_tmcurr = tm;
@@ -273,13 +268,12 @@ class ScopedTimerKeeperMT
 {
 protected:
     //! reference to timer array
-    TimerArrayMT&       m_ta;
+    TimerArrayMT& m_ta;
 
     //! previous timer identifier
-    unsigned int        m_tmprev;
+    unsigned int m_tmprev;
 
 public:
-
     //! construct and change timer to tm
     ScopedTimerKeeperMT(TimerArrayMT& ta, unsigned int tm)
         : m_ta(ta),
@@ -301,8 +295,9 @@ class ScopedTimerKeeperDummy
 public:
     template <typename Whatever>
     ScopedTimerKeeperDummy(Whatever /* ta */, unsigned int /* tm */)
-    {
-    }
+    { }
 };
 
-#endif // TOOLS_TIMER_ARRAY_H
+#endif // !PSS_SRC_TOOLS_TIMER_ARRAY_HEADER
+
+/******************************************************************************/

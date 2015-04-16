@@ -1,4 +1,8 @@
+################################################################################
+# CMakeLists.txt
+#
 # CMake file for parallel-string-sorting project
+################################################################################
 
 project(parallel-string-sorting)
 
@@ -87,3 +91,5 @@ add_subdirectory(src)
 
 # write platform specific configuration
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
+
+################################################################################

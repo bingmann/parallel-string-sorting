@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/parallel/eberle-parallel-lcp-merge-lcp-splitting.h
  *
  * Parallel LCP aware merge implementation.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
  * Copyright (C) 2014 Timo Bingmann <tb@panthema.net>
  *
@@ -19,10 +19,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef EBERLE_PARALLEL_LCP_MERGE_LCP_SPLITTING_H_
-#define EBERLE_PARALLEL_LCP_MERGE_LCP_SPLITTING_H_
+#ifndef PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_LCP_SPLITTING_HEADER
+#define PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_LCP_SPLITTING_HEADER
 
 #include "eberle-parallel-lcp-merge.h"
 
@@ -30,8 +30,7 @@
 #undef DBGX
 #define DBGX DBGX_OMP
 
-namespace eberle_parallel_lcp_merge
-{
+namespace eberle_parallel_lcp_merge {
 
 // debugging constants
 static const bool debug_job_details = false;
@@ -45,8 +44,8 @@ typedef uint64_t CHAR_TYPE;
 
 // method definitions
 static inline void
-createJobsLcpSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* input, unsigned numInputs,
-                        string* output, size_t numberOfElements, lcp_t baseLcp);
+createJobsLcpSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* input, unsigned numInputs,
+                       string* output, size_t numberOfElements, lcp_t baseLcp);
 
 //structs defining the jobs
 template <unsigned K>
@@ -54,11 +53,11 @@ struct MergeJobLcpSplitting : public Job
 {
     LcpStringLoserTree<K> loserTree;
 
-    string* output;
-    size_t length;
+    string                * output;
+    size_t                length;
 
-    lcp_t baseLcp;
-    lcp_t nextBaseLcp;
+    lcp_t                 baseLcp;
+    lcp_t                 nextBaseLcp;
 
     MergeJobLcpSplitting(string* output, size_t length, lcp_t baseLcp, lcp_t nextBaseLcp)
         : output(output), length(length), baseLcp(baseLcp), nextBaseLcp(nextBaseLcp)
@@ -108,7 +107,7 @@ struct MergeJobLcpSplitting : public Job
             // share work by splitting remaining streams
 
             createJobsLcpSplitting(jobQueue, loserTree.getRemaining(), K,
-                       output, length, nextBaseLcp);
+                                   output, length, nextBaseLcp);
 
             if (g_lengthOfLongestJob == length)
                 g_lengthOfLongestJob = 0;
@@ -121,9 +120,9 @@ struct MergeJobLcpSplitting : public Job
 struct InitialJobLcpSplitting : public Job
 {
     const LcpCacheStringPtr* input;
-    unsigned numInputs;
-    string* output;
-    size_t length;
+    unsigned               numInputs;
+    string                 * output;
+    size_t                 length;
 
     InitialJobLcpSplitting(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
         : input(input), numInputs(numInputs), output(output), length(length)
@@ -153,7 +152,7 @@ findNextSplitter(LcpCacheStringPtr& inputStream,
     size_t length = 1;
     ++inputStream;
 
-    for (; inputStream < end; ++inputStream, ++length)
+    for ( ; inputStream < end; ++inputStream, ++length)
     {
         lcp_t lcp = inputStream.firstLcp();
 
@@ -174,23 +173,23 @@ findNextSplitter(LcpCacheStringPtr& inputStream,
 // Create K-way MergeJob for the selected input streams.
 template <unsigned K>
 static inline unsigned
-createMergeJob(JobQueue &jobQueue, string* output, LcpCacheStringPtr* inputs, unsigned* indexesOfFound,
-        unsigned numberOfFoundBuckets, unsigned baseLcp, unsigned maxAllowedLcp, CHAR_TYPE* splitterCharacter, CHAR_TYPE keyMask)
+createMergeJob(JobQueue& jobQueue, string* output, LcpCacheStringPtr* inputs, unsigned* indexesOfFound,
+               unsigned numberOfFoundBuckets, unsigned baseLcp, unsigned maxAllowedLcp, CHAR_TYPE* splitterCharacter, CHAR_TYPE keyMask)
 {
     unsigned length = 0;
     MergeJobLcpSplitting<K>* job = new MergeJobLcpSplitting<K>(output, 0, baseLcp, maxAllowedLcp + 1);
 
     unsigned k = 0;
-    for (; k < numberOfFoundBuckets; ++k)
+    for ( ; k < numberOfFoundBuckets; ++k)
     {
         const unsigned idx = indexesOfFound[k];
         const LcpCacheStringPtr start = inputs[idx];
         size_t currLength = findNextSplitter(inputs[idx], baseLcp,
-                             maxAllowedLcp, splitterCharacter[idx], keyMask);
+                                             maxAllowedLcp, splitterCharacter[idx], keyMask);
         job->loserTree.streams[k] = start.sub(0, currLength);
         length += currLength;
     }
-    for (; k < K; k++)
+    for ( ; k < K; k++)
     {
         // this stream is not used
         job->loserTree.streams[k] = LcpCacheStringPtr(NULL, NULL, NULL, 0);
@@ -203,8 +202,8 @@ createMergeJob(JobQueue &jobQueue, string* output, LcpCacheStringPtr* inputs, un
 }
 
 static inline void
-createJobsLcpSplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs,
-           string* output, size_t numberOfElements, lcp_t baseLcp)
+createJobsLcpSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs,
+                       string* output, size_t numberOfElements, lcp_t baseLcp)
 {
     DBG(debug_job_creation, "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements);
     g_splittingsExecuted++;
@@ -396,12 +395,12 @@ sequentialLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* o
         job->length = 0;
 
         unsigned k = 0;
-        for (; k < numInputs; ++k)
+        for ( ; k < numInputs; ++k)
         {
             job->loserTree.streams[k] = input[k];
             job->length += input[k].size;
         }
-        for (; k < K; k++)
+        for ( ; k < K; k++)
         {
             // this stream is not used
             job->loserTree.streams[k] = LcpCacheStringPtr(NULL, NULL, NULL, 0);
@@ -418,12 +417,12 @@ sequentialLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* o
         job->length = 0;
 
         unsigned k = 0;
-        for (; k < numInputs; ++k)
+        for ( ; k < numInputs; ++k)
         {
             job->loserTree.streams[k] = input[k];
             job->length += input[k].size;
         }
-        for (; k < K; k++)
+        for ( ; k < K; k++)
         {
             // this stream is not used
             job->loserTree.streams[k] = LcpCacheStringPtr(NULL, NULL, NULL, 0);
@@ -448,21 +447,22 @@ parallelLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* out
     g_mergeJobsCreated = 0;
     g_splittingTime = 0;
 
-	ClockTimer timer;
-	timer.start();
+    ClockTimer timer;
+    timer.start();
 
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads");
     jobQueue.enqueue(new InitialJobLcpSplitting(input, numInputs, output, length));
-    jobQueue.numaLoop(-1, omp_get_max_threads());	
-	
+    jobQueue.numaLoop(-1, omp_get_max_threads());
+
     g_stats >> "toplevelmerge_time" << timer.elapsed();
     g_stats >> "splittings_executed" << g_splittingsExecuted;
     g_stats >> "mergejobs_created" << g_mergeJobsCreated;
     g_stats >> "splitting_time" << g_splittingTime;
 }
 
-
 } // namespace eberle_parallel_lcp_merge
 
-#endif // EBERLE_PARALLEL_LCP_MERGE_LCP_SPLITTING_H_
+#endif // !PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_LCP_SPLITTING_HEADER
+
+/******************************************************************************/

@@ -1,11 +1,11 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/logfloor.h
  *
  * Recursive template magic to calculate the floor(log(x)/log(2)) at run-time.
- * 
+ *
  * Usage: logfloor_<N>::value
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -20,23 +20,23 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef LOGFLOOT_H_
-#define LOGFLOOT_H_
+#ifndef PSS_SRC_TOOLS_LOGFLOOR_HEADER
+#define PSS_SRC_TOOLS_LOGFLOOR_HEADER
 
-template <size_t N, size_t base=2>
+template <size_t N, size_t base = 2>
 struct logfloor_ {
-    enum { value = 1 + logfloor_<N/base, base>::value };
+    enum { value = 1 + logfloor_<N / base, base>::value };
 };
 
 template <size_t base>
-struct logfloor_<1, base> { 
+struct logfloor_<1, base>{
     enum { value = 0 };
 };
 
 template <size_t base>
-struct logfloor_<0, base> {
+struct logfloor_<0, base>{
     enum { value = 0 };
 };
 
@@ -60,4 +60,6 @@ unsigned int ilog2_ceil(const IntegerType& i)
     return ilog2_floor(i - 1) + 1;
 }
 
-#endif // LOGFLOOT_H_
+#endif // !PSS_SRC_TOOLS_LOGFLOOR_HEADER
+
+/******************************************************************************/

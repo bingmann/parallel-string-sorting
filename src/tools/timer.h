@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/timer.h
  *
  * Class to output statistics in a flexible text file as key=value pairs.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,10 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef TOOLS_TIMER_H
-#define TOOLS_TIMER_H
+#ifndef PSS_SRC_TOOLS_TIMER_HEADER
+#define PSS_SRC_TOOLS_TIMER_HEADER
 
 #include <string>
 #include <iostream>
@@ -29,9 +29,9 @@
 #include <fstream>
 #include <iomanip>
 #include <vector>
-#include <unistd.h>
+#include <cassert>
 
-#include <assert.h>
+#include <unistd.h>
 #include <omp.h>
 
 //! very simple class to measure runtime of function using clock_gettime.
@@ -40,7 +40,7 @@ class ClockTimerBase
 {
 protected:
     //! time of start
-    struct timespec     m_tstart;
+    struct timespec m_tstart;
 
     //! call gettime
     static inline void get_time(struct timespec& ts)
@@ -83,7 +83,7 @@ public:
         get_time(now);
 
         return (now.tv_sec - m_tstart.tv_sec)
-            +  (now.tv_nsec - m_tstart.tv_nsec) / 1e9;
+               + (now.tv_nsec - m_tstart.tv_nsec) / 1e9;
     }
 };
 
@@ -100,14 +100,13 @@ protected:
     typedef ClockTimerBase<clk_id> super_type;
 
     //! time of stop
-    struct timespec     m_tstop;
+    struct timespec m_tstop;
 
 public:
     //! Initialize, but do not start the clock
     ClockIntervalBase()
         : super_type(false)
-    {
-    }
+    { }
 
     //! Stop timing
     inline void stop()
@@ -119,7 +118,7 @@ public:
     inline double delta() const
     {
         return (m_tstop.tv_sec - super_type::m_tstart.tv_sec)
-            +  (m_tstop.tv_nsec - super_type::m_tstart.tv_nsec) / 1e9;
+               + (m_tstop.tv_nsec - super_type::m_tstart.tv_nsec) / 1e9;
     }
 
     //! Retrun delta in seconds between start() and now.
@@ -129,4 +128,6 @@ public:
     }
 };
 
-#endif // TOOLS_TIMER_H
+#endif // !PSS_SRC_TOOLS_TIMER_HEADER
+
+/******************************************************************************/

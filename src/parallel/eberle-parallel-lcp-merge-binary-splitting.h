@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/parallel/eberle-parallel-lcp-merge-binary-splitting.h
  *
  * Parallel LCP aware merge implementation with binary splitting algorithm.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2014 Andreas Eberle <email@andreas-eberle.com>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,10 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef EBERLE_PARALLEL_LCP_MERGE_BINARY_SPLITTING_H_
-#define EBERLE_PARALLEL_LCP_MERGE_BINARY_SPLITTING_H_
+#ifndef PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_BINARY_SPLITTING_HEADER
+#define PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_BINARY_SPLITTING_HEADER
 
 #include "eberle-parallel-lcp-merge.h"
 
@@ -29,8 +29,7 @@
 #undef DBGX
 #define DBGX DBGX_OMP
 
-namespace eberle_parallel_lcp_merge
-{
+namespace eberle_parallel_lcp_merge {
 
 // debugging constants
 static const bool debug_binary_splitting = false;
@@ -38,7 +37,7 @@ static const bool debug_binary_splitting_splits_count = true;
 
 // method definitions
 static inline void
-createJobsBinarySplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements);
+createJobsBinarySplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements);
 
 //structs defining the jobs
 template <unsigned K>
@@ -46,18 +45,19 @@ struct MergeJobBinarySplitting : public Job
 {
     LcpStringLoserTree<K> loserTree;
 
-    string* output;
-    size_t length;
-    bool splittable;
+    string                * output;
+    size_t                length;
+    bool                  splittable;
 
     MergeJobBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length, bool splittable)
-        :  loserTree(inputs, numInputs), output(output), length(length), splittable(splittable)
+        : loserTree(inputs, numInputs), output(output), length(length), splittable(splittable)
     {
         g_mergeJobsCreated++;
         DBG(debug_jobtype_on_creation, "MergeJobStandardSplitting<" << K << "> (output: " << (output - g_outputBase) << ", length: " << length << ")");
     }
 
-    inline bool shouldShareWork(JobQueue& jobQueue){
+    inline bool shouldShareWork(JobQueue& jobQueue)
+    {
         return USE_WORK_SHARING && splittable && jobQueue.has_idle() && length > SHARE_WORK_THRESHOLD;
     }
 
@@ -90,11 +90,11 @@ struct MergeJobBinarySplitting : public Job
     virtual bool
     run(JobQueue& jobQueue)
     {
-        if(shouldShareWork(jobQueue))
+        if (shouldShareWork(jobQueue))
         {
             createJobsBinarySplitting(jobQueue, loserTree.getRemaining(), K, output, length);
         }
-        else{
+        else {
             loserTree.initTree(0);
 
             // merge
@@ -115,27 +115,27 @@ struct MergeJobBinarySplitting : public Job
 };
 
 static inline void
-enqueueBinarySplittingJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t jobLength, bool splittable)
+enqueueBinarySplittingJob(JobQueue& jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t jobLength, bool splittable)
 {
-    if(numInputs == 1)
+    if (numInputs == 1)
         jobQueue.enqueue(new CopyDataJob(inputs[0], output));
 
-    else if(numInputs <= 2)
+    else if (numInputs <= 2)
         jobQueue.enqueue(new BinaryMergeJob(inputs[0], inputs[1], 0, output));
 
-    else if(numInputs <= 4)
+    else if (numInputs <= 4)
         jobQueue.enqueue(new MergeJobBinarySplitting<4>(inputs, numInputs, output, jobLength, splittable));
 
-    else if(numInputs <= 8)
+    else if (numInputs <= 8)
         jobQueue.enqueue(new MergeJobBinarySplitting<8>(inputs, numInputs, output, jobLength, splittable));
 
-    else if(numInputs <= 16)
+    else if (numInputs <= 16)
         jobQueue.enqueue(new MergeJobBinarySplitting<16>(inputs, numInputs, output, jobLength, splittable));
 
-    else if(numInputs <= 32)
+    else if (numInputs <= 32)
         jobQueue.enqueue(new MergeJobBinarySplitting<32>(inputs, numInputs, output, jobLength, splittable));
 
-    else if(numInputs <= 64)
+    else if (numInputs <= 64)
         jobQueue.enqueue(new MergeJobBinarySplitting<64>(inputs, numInputs, output, jobLength, splittable));
 
     else
@@ -146,9 +146,9 @@ enqueueBinarySplittingJob(JobQueue &jobQueue, const LcpCacheStringPtr* inputs, u
 }
 
 static inline void
-createJobsBinarySplitting(JobQueue &jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
+createJobsBinarySplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
 {
-DBG(debug_binary_splitting, "CREATING JOBS for numberOfElements: " << numberOfElements);
+    DBG(debug_binary_splitting, "CREATING JOBS for numberOfElements: " << numberOfElements);
     g_splittingsExecuted++;
     ClockTimer splittingTimer;
     splittingTimer.start();
@@ -159,11 +159,11 @@ DBG(debug_binary_splitting, "CREATING JOBS for numberOfElements: " << numberOfEl
     LcpCacheStringPtr streams[numSplitters];
     unsigned nonEmptyStreams = 0;
 
-    for(unsigned i = 0; i < numInputs; i++)
+    for (unsigned i = 0; i < numInputs; i++)
     {
         streams[i] = inputStreams[i];
 
-        if(!streams[i].empty())
+        if (!streams[i].empty())
         {
             splitters[nonEmptyStreams] = streams[i].strings[streams[i].size / 2];
             ++nonEmptyStreams;
@@ -172,18 +172,17 @@ DBG(debug_binary_splitting, "CREATING JOBS for numberOfElements: " << numberOfEl
 
     string splitterString = splitters[unsigned(rand() % nonEmptyStreams)];
 
-
-DBG(debug_binary_splitting, "SplitterString: " << splitterString);
+    DBG(debug_binary_splitting, "SplitterString: " << splitterString);
 
     LcpCacheStringPtr jobStreams[2][numInputs];
-    unsigned nonEmptyCtr[2] = {0, 0};
-    unsigned jobLength[2] = {0, 0};
+    unsigned nonEmptyCtr[2] = { 0, 0 };
+    unsigned jobLength[2] = { 0, 0 };
 
-    for(unsigned i = 0; i < numInputs; i++)
+    for (unsigned i = 0; i < numInputs; i++)
     {
         LcpCacheStringPtr stream = streams[i];
 
-        if(!stream.empty())
+        if (!stream.empty())
         {
             const size_t idx = stream.binarySearch(splitterString);
 
@@ -191,10 +190,10 @@ DBG(debug_binary_splitting, "SplitterString: " << splitterString);
             nonEmptyCtr[0]++;
             jobLength[0] += idx;
 
-DBG(debug_binary_splitting, "Found at [" << idx << "]: ");
+            DBG(debug_binary_splitting, "Found at [" << idx << "]: ");
 
             const size_t restLength = stream.size - idx;
-            if(restLength > 0)
+            if (restLength > 0)
             {
                 jobStreams[1][nonEmptyCtr[1]] = stream.sub(idx, restLength);
                 nonEmptyCtr[1]++;
@@ -203,20 +202,18 @@ DBG(debug_binary_splitting, "Found at [" << idx << "]: ");
         }
     }
 
-	if(jobLength[0] > 0) {
+    if (jobLength[0] > 0) {
         // only splittable, if we already split this job (think of long equal string sequences)
-		enqueueBinarySplittingJob(jobQueue, jobStreams[0], nonEmptyCtr[0], output, jobLength[0], jobLength[1] > 0);
-	    output += jobLength[0];
-	}
-	if(jobLength[1] > 0) {
+        enqueueBinarySplittingJob(jobQueue, jobStreams[0], nonEmptyCtr[0], output, jobLength[0], jobLength[1] > 0);
+        output += jobLength[0];
+    }
+    if (jobLength[1] > 0) {
         // only splittable, if we already split this job (think of long equal string sequences)
-	    enqueueBinarySplittingJob(jobQueue, jobStreams[1], nonEmptyCtr[1], output, jobLength[1], jobLength[0] > 0);
-	}
+        enqueueBinarySplittingJob(jobQueue, jobStreams[1], nonEmptyCtr[1], output, jobLength[1], jobLength[0] > 0);
+    }
 
-	g_splittingTime += splittingTimer.elapsed();
+    g_splittingTime += splittingTimer.elapsed();
 }
-
-
 
 static inline void
 parallelLcpMergeBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length)
@@ -226,15 +223,15 @@ parallelLcpMergeBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInp
     g_mergeJobsCreated = 0;
     g_splittingTime = 0;
 
-	ClockTimer timer;
-	timer.start();
+    ClockTimer timer;
+    timer.start();
 
     JobQueue jobQueue;
     DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads with binary splitting");
-    enqueueBinarySplittingJob(jobQueue, inputs, numInputs,  output, length, true);
+    enqueueBinarySplittingJob(jobQueue, inputs, numInputs, output, length, true);
     jobQueue.numaLoop(-1, omp_get_max_threads());
-	
-	DBG(debug_binary_splitting_splits_count, "Binary Splitting executed " << g_splittingsExecuted << " splittings; created " << g_mergeJobsCreated << " jobs");
+
+    DBG(debug_binary_splitting_splits_count, "Binary Splitting executed " << g_splittingsExecuted << " splittings; created " << g_mergeJobsCreated << " jobs");
 
     g_stats >> "toplevelmerge_time" << timer.elapsed();
     g_stats >> "splittings_executed" << g_splittingsExecuted;
@@ -242,7 +239,8 @@ parallelLcpMergeBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInp
     g_stats >> "splitting_time" << g_splittingTime;
 }
 
-
 } // namespace eberle_parallel_lcp_merge
 
-#endif // EBERLE_PARALLEL_LCP_MERGE_BINARY_SPLITTING_H_
+#endif // !PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGE_BINARY_SPLITTING_HEADER
+
+/******************************************************************************/

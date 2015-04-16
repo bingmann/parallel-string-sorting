@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/parallel/eberle-parallel-lcp-mergesort.h
  *
  * Parallel LCP aware merge sort.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2014 Andreas Eberle <email@andreas-eberle.com>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,10 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef EBERLE_PARALLEL_LCP_MERGESORT_H_
-#define EBERLE_PARALLEL_LCP_MERGESORT_H_
+#ifndef PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGESORT_HEADER
+#define PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGESORT_HEADER
 
 #include <iostream>
 #include <utility>
@@ -40,9 +40,8 @@
 #undef DBGX
 #define DBGX DBGX_OMP
 
+namespace eberle_parallel_lcp_mergesort {
 
-namespace eberle_parallel_lcp_mergesort
-{
 using std::numeric_limits;
 
 using namespace eberle_utils;
@@ -62,7 +61,7 @@ static const unsigned MERGESORT_BRANCHES = 64;
 //method definitions
 
 static inline void
-eberle_parallel_lcp_mergesort(string *strings, size_t n, void (*parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
+eberle_parallel_lcp_mergesort(string* strings, size_t n, void (* parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
 {
     int realNumaNodes = numa_num_configured_nodes();
     if (realNumaNodes < 1) realNumaNodes = 1;
@@ -78,7 +77,7 @@ eberle_parallel_lcp_mergesort(string *strings, size_t n, void (*parallelMerge)(c
     LcpCacheStringPtr stringPtr[topLevelBranches];
 
 #pragma omp parallel for
-    for(unsigned k = 0; k < topLevelBranches; k++)
+    for (unsigned k = 0; k < topLevelBranches; k++)
     {
         const size_t length = ranges[k].second;
         const unsigned numaNode = k / threadsPerNode;
@@ -98,12 +97,11 @@ eberle_parallel_lcp_mergesort(string *strings, size_t n, void (*parallelMerge)(c
     parallelMerge(stringPtr, topLevelBranches, strings, n);
 
     // free memory
-    for(unsigned k = 0; k < topLevelBranches; k++)
+    for (unsigned k = 0; k < topLevelBranches; k++)
     {
         stringPtr[k].freeNumaMemory();
     }
 }
-
 
 void eberle_parallel_lcp_mergesort_lcp_splitting(string* strings, size_t n)
 {
@@ -121,18 +119,19 @@ void eberle_parallel_lcp_mergesort_binary_splitting(string* strings, size_t n)
 }
 
 CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_lcp_splitting,
-    "eberle/parallel-lcp-mergesort-lcp-splitting",
-    "parallel LCP aware mergesort by Andreas Eberle")
+                             "eberle/parallel-lcp-mergesort-lcp-splitting",
+                             "parallel LCP aware mergesort by Andreas Eberle")
 
 CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_standard_splitting,
-    "eberle/parallel-lcp-mergesort-standard-splitting",
-    "parallel LCP aware mergesort by Andreas Eberle")
+                             "eberle/parallel-lcp-mergesort-standard-splitting",
+                             "parallel LCP aware mergesort by Andreas Eberle")
 
 CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_binary_splitting,
-    "eberle/parallel-lcp-mergesort-binary-splitting",
-    "parallel LCP aware mergesort by Andreas Eberle")
-
+                             "eberle/parallel-lcp-mergesort-binary-splitting",
+                             "parallel LCP aware mergesort by Andreas Eberle")
 
 } // namespace eberle_parallel_lcp_mergesort
 
-#endif // EBERLE_PARALLEL_LCP_MERGESORT_H_
+#endif // !PSS_SRC_PARALLEL_EBERLE_PARALLEL_LCP_MERGESORT_HEADER
+
+/******************************************************************************/

@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/jobqueue.h
  *
  * Job queue class for work-balancing parallel string sorting algorithms.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,13 +18,14 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef JOBQUEUE_H_
-#define JOBQUEUE_H_
+#ifndef PSS_SRC_TOOLS_JOBQUEUE_HEADER
+#define PSS_SRC_TOOLS_JOBQUEUE_HEADER
 
 #include <iostream>
-#include <assert.h>
+#include <cassert>
+
 #include <omp.h>
 #include <numa.h>
 
@@ -91,7 +92,6 @@ public:
     typedef JobQueueGroupType<CookieType> jobqueuegroup_type;
 
 private:
-
     /// lock-free data structure containing pointers to Job objects.
     tbb::concurrent_queue<job_type*> m_queue;
 
@@ -126,7 +126,6 @@ public:
     TimerArrayMT m_timers;
 
 public:
-
     JobQueueT(cookie_type& cookie,
               jobqueuegroup_type* group)
         : m_queue(),
@@ -137,8 +136,7 @@ public:
           m_logger("jobqueue.txt", 0.005, 10000),
           m_work_logger("worker_count.txt", 0.005, 10000),
           m_timers(2)
-    {
-    }
+    { }
 
     bool has_idle() const
     {
@@ -205,7 +203,7 @@ public:
             {
                 DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
 
-                if (//!m_group->assist(m_id) &&
+                if ( //!m_group->assist(m_id) &&
                     m_idle_count == m_numthrs)
                 {
                     // assist other JobQueues before terminating.
@@ -240,7 +238,7 @@ public:
             }
 
             executeThreadWork();
-        } // end omp parallel
+        }   // end omp parallel
 
         m_timers.stop();
 
@@ -258,7 +256,7 @@ public:
             numa_set_preferred(numaNode);
 
             executeThreadWork();
-        } // end omp parallel
+        }   // end omp parallel
 
         m_timers.stop();
 
@@ -278,7 +276,6 @@ public:
     typedef JobT<CookieType> job_type;
 
 public:
-
     static inline bool assist(unsigned)
     {
         return false;
@@ -290,7 +287,6 @@ template <typename CookieType>
 class NumaJobQueueGroup
 {
 public:
-
     /// typedef of compatible JobQueue
     typedef JobQueueT<CookieType, NumaJobQueueGroup> jobqueue_type;
 
@@ -298,12 +294,10 @@ public:
     typedef JobT<CookieType> job_type;
 
 protected:
-
     //! List of managed JobQueues.
     std::vector<jobqueue_type*> m_queues;
 
 public:
-
     //! Register a JobQueue in the group, this function is NOT THREAD-SAFE.
     void add_jobqueue(jobqueue_type* jq)
     {
@@ -423,8 +417,7 @@ public:
     //! Constructor, set JobQueue cookie to ourselves.
     JobQueue()
         : super_type(*this, NULL)
-    {
-    }
+    { }
     void loop()
     {
         return super_type::loop();
@@ -441,4 +434,6 @@ typedef JobT<JobQueue> Job;
 
 } // namespace jobqueue
 
-#endif // JOBQUEUE_H_
+#endif // !PSS_SRC_TOOLS_JOBQUEUE_HEADER
+
+/******************************************************************************/

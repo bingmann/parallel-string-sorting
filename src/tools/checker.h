@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/checker.h
  *
  * Tools to check correctness of sort.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,7 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
+
+#ifndef PSS_SRC_TOOLS_CHECKER_HEADER
+#define PSS_SRC_TOOLS_CHECKER_HEADER
 
 class PermutationCheck
 {
@@ -29,7 +32,7 @@ private:
     size_t iter;        // offset / iteration
 
 public:
-    PermutationCheck() : v(0), iter(0) {}
+    PermutationCheck() : v(0), iter(0) { }
 
     PermutationCheck(const membuffer<unsigned char*>& stringptr)
     {
@@ -79,10 +82,10 @@ class PermutationCheck64
 {
 private:
     // polynomial evaluation of (z-0)*(z-1)*(z-2)...(z-(n-1)) mod (p)
-    static const uint64_t p = 4294967291;       // largest prime < 2^32
+    static const uint64_t p = 4294967291; // largest prime < 2^32
 
-    uint64_t v;         // evaluation result
-    size_t iter;        // offset / iteration
+    uint64_t v;                           // evaluation result
+    size_t iter;                          // offset / iteration
 
 public:
     PermutationCheck64(const membuffer<unsigned char*>& stringptr)
@@ -139,9 +142,9 @@ bool check_sorted_order(const membuffer<unsigned char*>& stringptr, const Permut
 
     for (size_t i = 1; i < stringptr.size(); ++i)
     {
-        if (strcmp((const char*)stringptr[i-1], (const char*)stringptr[i]) > 0)
+        if (strcmp((const char*)stringptr[i - 1], (const char*)stringptr[i]) > 0)
         {
-            std::cout << "error: invalid order at pair " << i-1 << " and " << i << "\n";
+            std::cout << "error: invalid order at pair " << i - 1 << " and " << i << "\n";
             return false;
         }
     }
@@ -157,8 +160,8 @@ size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr, si
     for (size_t i = 1; i < stringptr.size(); ++i)
     {
         size_t depth = 0;
-        while ( stringptr[i-1][depth] == stringptr[i][depth] &&
-                stringptr[i-1][depth] != 0 ) ++depth;
+        while (stringptr[i - 1][depth] == stringptr[i][depth] &&
+               stringptr[i - 1][depth] != 0) ++depth;
 
         // depth == LCP of prev and this
         lcpsum += depth;
@@ -175,3 +178,7 @@ size_t calc_distinguishing_prefix(const membuffer<unsigned char*>& stringptr, si
 
     return D;
 }
+
+#endif // !PSS_SRC_TOOLS_CHECKER_HEADER
+
+/******************************************************************************/

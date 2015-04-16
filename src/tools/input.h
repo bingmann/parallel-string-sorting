@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/tools/input.h
  *
  * Tools to read input files as null-terminated strings.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,7 +18,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
+
+#ifndef PSS_SRC_TOOLS_INPUT_HEADER
+#define PSS_SRC_TOOLS_INPUT_HEADER
 
 namespace input {
 
@@ -37,7 +40,7 @@ bool check_memory_type(const std::string& memtype)
               << "  mmap_interleave  use libnuma to interleave onto nodes" << std::endl
               << "  mmap_node0       pin memory to numa node 0" << std::endl
               << "  mmap_segment     segment characters equally onto all numa nodes" << std::endl
-        ;
+    ;
 
     /*
      * 2014-01-31: removed plain -M memory_types node0,segment,interleave. Use
@@ -57,7 +60,7 @@ void do_numa_segment(char* buff, size_t buffsize)
     int numRealNodes = numa_num_configured_nodes();
     if (numRealNodes < 1) numRealNodes = 1;
 
-    size_t segsize = (buffsize + numNodes-1) / numNodes;
+    size_t segsize = (buffsize + numNodes - 1) / numNodes;
 
     std::cout << "Segmenting string characters onto " << numNodes << " NUMA nodes, about "
               << segsize << " characters each." << std::endl;
@@ -74,7 +77,7 @@ void do_numa_segment(char* buff, size_t buffsize)
         g_numa_chars.push_back(offset);
 
         // segsize need not be page aligned
-        size_t size = std::min(segsize, buffsize-offset);
+        size_t size = std::min(segsize, buffsize - offset);
 
         numa_tonode_memory(buff + offset, size, n % numRealNodes);
     }
@@ -84,7 +87,7 @@ void do_numa_segment(char* buff, size_t buffsize)
     {
         for (size_t i = 0; i < g_numa_chars.size(); ++i)
         {
-            size_t end = i == g_numa_chars.size()-1 ? buffsize : g_numa_chars[i+1];
+            size_t end = i == g_numa_chars.size() - 1 ? buffsize : g_numa_chars[i + 1];
 
             std::cout << "NUMA segment " << i << " = "
                       << "[" << g_numa_chars[i] << "," << end << ") = "
@@ -122,7 +125,7 @@ void free_stringdata()
 }
 
 /// Allocate space in g_string_data
-char* allocate_stringdata(size_t size, const std::string& path)
+char * allocate_stringdata(size_t size, const std::string& path)
 {
     // free previous data file
     free_stringdata();
@@ -166,7 +169,7 @@ char* allocate_stringdata(size_t size, const std::string& path)
     // CPL-burstsort needs terminator immediately before and after stringdata
     g_string_databuff = stringdata;
     stringdata[0] = 0;
-    stringdata[size+1] = 0;
+    stringdata[size + 1] = 0;
     ++stringdata;
 
     g_string_data = stringdata;
@@ -192,12 +195,12 @@ void protect_stringdata()
 std::string strip_datapath(const std::string& path)
 {
     std::string::size_type slashpos = path.rfind('/');
-    std::string name = (slashpos == std::string::npos ? path : path.substr(slashpos+1));
+    std::string name = (slashpos == std::string::npos ? path : path.substr(slashpos + 1));
 
-    if ( name.substr(name.size()-3,3) == ".gz" ||
-         name.substr(name.size()-4,4) == ".bz2" ||
-         name.substr(name.size()-3,3) == ".xz" ||
-         name.substr(name.size()-4,4) == ".lzo" )
+    if (name.substr(name.size() - 3, 3) == ".gz" ||
+        name.substr(name.size() - 4, 4) == ".bz2" ||
+        name.substr(name.size() - 3, 3) == ".xz" ||
+        name.substr(name.size() - 4, 4) == ".lzo")
     {
         // remove compression suffix and size, both separated by dots
         std::string::size_type dotpos = name.rfind('.');
@@ -223,7 +226,7 @@ bool load_plain(const std::string& path)
         return false;
     }
 
-    if (fseek(file,0,SEEK_END)) {
+    if (fseek(file, 0, SEEK_END)) {
         std::cout << "Cannot seek in " << path << ": " << strerror(errno) << std::endl;
         fclose(file);
         return false;
@@ -248,12 +251,12 @@ bool load_plain(const std::string& path)
 
     // read complete file
     size_t rpos = 0;
-    while ( rpos < size )
+    while (rpos < size)
     {
-        size_t batch = std::min<size_t>(8*1024*1024, size - rpos);
+        size_t batch = std::min<size_t>(8 * 1024 * 1024, size - rpos);
         if (batch + rpos > size) batch = size - rpos;
 
-        ssize_t rb = fread(stringdata+rpos, sizeof(char), batch, file);
+        ssize_t rb = fread(stringdata + rpos, sizeof(char), batch, file);
 
         if (rb < 0) {
             std::cout << "Cannot read from " << path << ": " << strerror(errno) << std::endl;
@@ -268,7 +271,7 @@ bool load_plain(const std::string& path)
             {
                 if (stringdata[i] == '\n' || stringdata[i] == 0) {
                     stringdata[i] = 0;
-                    if (i+1 < size) g_string_count++;
+                    if (i + 1 < size) g_string_count++;
                 }
             }
         }
@@ -279,10 +282,10 @@ bool load_plain(const std::string& path)
     if (gopt_suffixsort) g_string_count = size;
 
     // force terminatation of last string
-    stringdata[ size-1 ] = 0;
+    stringdata[size - 1] = 0;
 
     // add more termination
-    for (size_t i = size; i < size+9; ++i)
+    for (size_t i = size; i < size + 9; ++i)
         stringdata[i] = 0;
 
     fclose(file);
@@ -299,13 +302,13 @@ bool load_compressed(const std::string& path)
 
     const char* decompressor = NULL;
 
-    if ( path.substr(path.size()-3,3) == ".gz" )
+    if (path.substr(path.size() - 3, 3) == ".gz")
         decompressor = "gzip";
-    else if ( path.substr(path.size()-4,4) == ".bz2" )
+    else if (path.substr(path.size() - 4, 4) == ".bz2")
         decompressor = "bzip2";
-    else if ( path.substr(path.size()-3,3) == ".xz" )
+    else if (path.substr(path.size() - 3, 3) == ".xz")
         decompressor = "xz";
-    else if ( path.substr(path.size()-4,4) == ".lzo" )
+    else if (path.substr(path.size() - 4, 4) == ".lzo")
         decompressor = "lzop";
 
     if (!decompressor) return false;
@@ -313,12 +316,13 @@ bool load_compressed(const std::string& path)
     size_t size = 0;
 
     // extract filesize from filename
-    std::string::size_type i = path.rfind('.')-1;
+    std::string::size_type i = path.rfind('.') - 1;
     size_t v = 1;
 
-    while ( isdigit(path[i]) ) {
+    while (isdigit(path[i])) {
         size += (path[i] - '0') * v;
-        v *= 10; --i;
+        v *= 10;
+        --i;
     }
     if (size == 0 || path[i] != '.') {
         std::cout << "Could not find decompressed size in filename " << path << std::endl;
@@ -339,7 +343,7 @@ bool load_compressed(const std::string& path)
     pid_t pid = fork();
     if (pid == 0)
     {
-        close(pipefd[0]); // close read end
+        close(pipefd[0]);               // close read end
         dup2(pipefd[1], STDOUT_FILENO); // replace stdout with pipe
 
         execlp(decompressor, decompressor, "-dc", path.c_str(), NULL);
@@ -349,7 +353,7 @@ bool load_compressed(const std::string& path)
         exit(-1);
     }
 
-    close(pipefd[1]); // close write end
+    close(pipefd[1]);     // close write end
 
     // create memory area
     char* stringdata = allocate_stringdata(size, path);
@@ -360,12 +364,12 @@ bool load_compressed(const std::string& path)
 
     // read complete file from decompressor child's pipe
     size_t rpos = 0;
-    while ( rpos < size )
+    while (rpos < size)
     {
-        size_t batch = std::min<size_t>(8*1024*1024, size - rpos);
+        size_t batch = std::min<size_t>(8 * 1024 * 1024, size - rpos);
         if (batch + rpos > size) batch = size - rpos;
 
-        ssize_t rb = read(pipefd[0], stringdata+rpos, batch);
+        ssize_t rb = read(pipefd[0], stringdata + rpos, batch);
 
         if (rb <= 0) {
             std::cout << "Error reading pipe: " << strerror(errno) << std::endl;
@@ -380,7 +384,7 @@ bool load_compressed(const std::string& path)
             {
                 if (stringdata[i] == '\n' || stringdata[i] == 0) {
                     stringdata[i] = 0;
-                    if (i+1 < size) g_string_count++;
+                    if (i + 1 < size) g_string_count++;
                 }
             }
         }
@@ -391,10 +395,10 @@ bool load_compressed(const std::string& path)
     if (gopt_suffixsort) g_string_count = size;
 
     // force terminatation of last string
-    stringdata[ size-1 ] = 0;
+    stringdata[size - 1] = 0;
 
     // add more termination
-    for (size_t i = size; i < size+9; ++i)
+    for (size_t i = size; i < size + 9; ++i)
         stringdata[i] = 0;
 
     // kill and reap child program
@@ -436,19 +440,19 @@ bool generate_random(const std::string& path, const std::string& letters)
             slen += (rng() % 3) + 16;
         }
 
-        if (i+1 == slen) // end of string
+        if (i + 1 == slen) // end of string
             stringdata[i] = 0;
         else
-            stringdata[i] = letters[ (rng() / 100) % letters.size() ];
+            stringdata[i] = letters[(rng() / 100) % letters.size()];
     }
 
     if (gopt_suffixsort) g_string_count = size;
 
     // force terminatation of last string
-    stringdata[ size-1 ] = 0;
+    stringdata[size - 1] = 0;
 
     // add more termination
-    for (size_t i = size; i < size+9; ++i)
+    for (size_t i = size; i < size + 9; ++i)
         stringdata[i] = 0;
 
     return true;
@@ -477,11 +481,11 @@ bool generate_sinha_randomASCII()
 
     for (size_t i = 0; i < size; ++i)
     {
-        if (i == slen) // end of string
+        if (i == slen)                 // end of string
         {
             stringdata[i] = 0;
             slen += 1 + (rand() % 20); // includes zero terminator of this
-            if (i+1 < size)
+            if (i + 1 < size)
                 g_string_count++;
         }
         else
@@ -497,10 +501,10 @@ bool generate_sinha_randomASCII()
     if (gopt_suffixsort) g_string_count = size;
 
     // force terminatation of last string
-    stringdata[ size-1 ] = 0;
+    stringdata[size - 1] = 0;
 
     // add more termination
-    for (size_t i = size; i < size+9; ++i)
+    for (size_t i = size; i < size + 9; ++i)
         stringdata[i] = 0;
 
     return true;
@@ -523,8 +527,8 @@ bool load_artifical(const std::string& path)
     }
     else if (path == "random255")
     {
-        std::string letters(255,0);
-        for (int i = 0; i < 255; ++i) letters[i] = (char)(i+1);
+        std::string letters(255, 0);
+        for (int i = 0; i < 255; ++i) letters[i] = (char)(i + 1);
         return generate_random("random255", letters);
     }
     else if (path == "randomASCII") {
@@ -538,20 +542,20 @@ bool load_artifical(const std::string& path)
 bool parse_filesize(const char* str, size_t& outsize)
 {
     char* endptr;
-    outsize = strtoul(str,&endptr,10);
+    outsize = strtoul(str, &endptr, 10);
     if (!endptr) return false;
 
-    if ( *endptr == 0 || ( (*endptr == 'b' || *endptr == 'B') && *(endptr+1) == 0) )
+    if (*endptr == 0 || ((*endptr == 'b' || *endptr == 'B') && *(endptr + 1) == 0))
         outsize *= 1;
-    else if ( (*endptr == 'k' || *endptr == 'K') &&
-              (*(endptr+1) == 0 || ( (*(endptr+1) == 'b' || *(endptr+1) == 'B') && *(endptr+2) == 0) ) )
+    else if ((*endptr == 'k' || *endptr == 'K') &&
+             (*(endptr + 1) == 0 || ((*(endptr + 1) == 'b' || *(endptr + 1) == 'B') && *(endptr + 2) == 0)))
         outsize *= 1024;
-    else if ( (*endptr == 'm' || *endptr == 'M') &&
-              (*(endptr+1) == 0 || ( (*(endptr+1) == 'b' || *(endptr+1) == 'B') && *(endptr+2) == 0) ) )
-        outsize *= 1024*1024;
-    else if ( (*endptr == 'g' || *endptr == 'G') &&
-              (*(endptr+1) == 0 || ( (*(endptr+1) == 'b' || *(endptr+1) == 'B') && *(endptr+2) == 0) ) )
-        outsize *= 1024*1024*1024;
+    else if ((*endptr == 'm' || *endptr == 'M') &&
+             (*(endptr + 1) == 0 || ((*(endptr + 1) == 'b' || *(endptr + 1) == 'B') && *(endptr + 2) == 0)))
+        outsize *= 1024 * 1024;
+    else if ((*endptr == 'g' || *endptr == 'G') &&
+             (*(endptr + 1) == 0 || ((*(endptr + 1) == 'b' || *(endptr + 1) == 'B') && *(endptr + 2) == 0)))
+        outsize *= 1024 * 1024 * 1024;
     else
         return false;
 
@@ -566,18 +570,16 @@ bool load(const std::string& path)
     if (load_artifical(path)) {
         g_dataname = path;
     }
-    else if (load_compressed(path)) {
-    }
-    else if (load_plain(path)) {
-    }
+    else if (load_compressed(path)) { }
+    else if (load_plain(path)) { }
     else {
         return false;
     }
 
     double ts2 = omp_get_wtime();
 
-    std::cout << "Loaded input in " << ts2-ts1 << " sec with "
-              << (g_string_datasize / (ts2-ts1) / 1024.0 / 1024.0) << " MiB/s" << std::endl;
+    std::cout << "Loaded input in " << ts2 - ts1 << " sec with "
+              << (g_string_datasize / (ts2 - ts1) / 1024.0 / 1024.0) << " MiB/s" << std::endl;
 
     protect_stringdata();
 
@@ -585,3 +587,7 @@ bool load(const std::string& path)
 }
 
 } // namespace input
+
+#endif // !PSS_SRC_TOOLS_INPUT_HEADER
+
+/******************************************************************************/

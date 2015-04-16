@@ -1,10 +1,10 @@
-/******************************************************************************
+/*******************************************************************************
  * src/sequential/bingmann-qsort.cc
  *
  * String sorting using qsort() and std::sort with 1-, 4- and 8-bytewise
  * comparisons
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -19,9 +19,9 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <algorithm>
 
 #include "../tools/debug.h"
@@ -40,8 +40,8 @@ typedef unsigned char* string;
 
 int compare_strcmp(const void* _a, const void* _b)
 {
-    const char* a = *(char* const *)_a;
-    const char* b = *(char* const *)_b;
+    const char* a = *(char* const*)_a;
+    const char* b = *(char* const*)_b;
 
     return strcmp(a, b);
 }
@@ -60,14 +60,14 @@ CONTESTANT_REGISTER(qsort_strcmp,
 static inline
 int qcompare_byte(const void* _a, const void* _b)
 {
-    const char* a = *(char* const *)_a;
-    const char* b = *(char* const *)_b;
+    const char* a = *(char* const*)_a;
+    const char* b = *(char* const*)_b;
 
     for (size_t i = 0; ; i++)
     {
         if (a[i] != b[i]) {
             return (a[i] > b[i]) ? +1 : -1;
-        } 
+        }
 
         // check byte for zero -> both strings end
         if (a[i] == 0)
@@ -79,8 +79,8 @@ template <typename key_type>
 static inline
 int qcompare_uint(const void* _a, const void* _b)
 {
-    const string a = *(string const *)_a;
-    const string b = *(string const *)_b;
+    const string a = *(string const*)_a;
+    const string b = *(string const*)_b;
 
     for (size_t depth = 0; ; depth += sizeof(key_type))
     {
@@ -92,7 +92,7 @@ int qcompare_uint(const void* _a, const void* _b)
         }
 
         // check highest byte for zero -> both strings end
-        const key_type mask = key_type(0xFF) << 8*(sizeof(key_type)-1);
+        const key_type mask = key_type(0xFF) << 8 * (sizeof(key_type) - 1);
         if ((av & mask) == 0)
             return 0;
     }
@@ -134,7 +134,7 @@ bool stdcompare_byte(const string a, const string b)
     {
         if (a[i] != b[i]) {
             return (a[i] > b[i]) ? false : true;
-        } 
+        }
 
         // check byte for zero -> both strings end
         if (a[i] == 0)
@@ -156,7 +156,7 @@ bool stdcompare_uint(const string a, const string b)
         }
 
         // check highest byte for zero -> both strings end
-        const key_type mask = key_type(0xFF) << 8*(sizeof(key_type)-1);
+        const key_type mask = key_type(0xFF) << 8 * (sizeof(key_type) - 1);
         if ((av & mask) == 0)
             return false;
     }
@@ -164,17 +164,17 @@ bool stdcompare_uint(const string a, const string b)
 
 void stdsort1(string* strings, size_t n)
 {
-    std::sort(strings, strings+n, stdcompare_byte);
+    std::sort(strings, strings + n, stdcompare_byte);
 }
 
 void stdsort4(string* strings, size_t n)
 {
-    std::sort(strings, strings+n, stdcompare_uint<uint32_t>);
+    std::sort(strings, strings + n, stdcompare_uint<uint32_t>);
 }
 
 void stdsort8(string* strings, size_t n)
 {
-    std::sort(strings, strings+n, stdcompare_uint<uint64_t>);
+    std::sort(strings, strings + n, stdcompare_uint<uint64_t>);
 }
 
 CONTESTANT_REGISTER(stdsort1,
@@ -189,6 +189,6 @@ CONTESTANT_REGISTER(stdsort8,
                     "bingmann/stdsort8",
                     "Run std::sort with string comparsions (8 bytewise)")
 
-////////////////////////////////////////////////////////////////////////////////
-
 } // namespace bingmann_qsort
+
+/******************************************************************************/

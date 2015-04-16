@@ -1,10 +1,10 @@
-/******************************************************************************
+/*******************************************************************************
  * src/parallel/bingmann-parallel_sample_sort_lcp.cc
  *
  * Parallel Super Scalar String Sample-Sort, many variant via different
  * Classifier templates and LCP construction.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -19,8 +19,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
 #define CALC_LCP 1
 
 #include "bingmann-parallel_sample_sort.cc"
+
+/******************************************************************************/

@@ -1,9 +1,9 @@
-/******************************************************************************
+/*******************************************************************************
  * src/sequential/eberle-inssort-lcp.h
  *
  * LCP aware insertion sort.
  *
- ******************************************************************************
+ *******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -18,18 +18,17 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
+ ******************************************************************************/
 
-#ifndef EBERLE_INSSORT_H_
-#define EBERLE_INSSORT_H_
+#ifndef PSS_SRC_SEQUENTIAL_EBERLE_INSSORT_LCP_HEADER
+#define PSS_SRC_SEQUENTIAL_EBERLE_INSSORT_LCP_HEADER
 
 #include <iostream>
 #include "../tools/stringtools.h"
 
 //#define EBERLE_INSSORT_CHECK_LCPS
 
-namespace eberle_inssort_lcp
-{
+namespace eberle_inssort_lcp {
 
 using namespace stringtools;
 
@@ -49,23 +48,23 @@ void inssort_lcp(string* strings, const LcpStringPtr& out, size_t length)
         lcp_t candidateLcp = 0;
 
         size_t insIdx = 0;
-        for (; insIdx < n; insIdx++)
+        for ( ; insIdx < n; insIdx++)
         {
             lcp_t currLcp = lcps[insIdx];
 
             if (candidateLcp == currLcp)
-            { // CASE 1 lcps are equal
+            {       // CASE 1 lcps are equal
                 string s1 = candidateText + candidateLcp;
                 string s2 = output[insIdx] + candidateLcp;
 
                 // check the strings starting after lcp and calculate new lcp
                 while (*s1 != '\0' && *s1 == *s2)
-                s1++, s2++;
+                    s1++, s2++;
 
                 const lcp_t lcp = s1 - candidateText;
 
                 if (*s1 <= *s2)
-                {   // CASE 1.1: candidate <= curr => insert it
+                {       // CASE 1.1: candidate <= curr => insert it
                     lcps[insIdx] = lcp;
                     break;
                 }
@@ -73,12 +72,10 @@ void inssort_lcp(string* strings, const LcpStringPtr& out, size_t length)
                 {            // CASE 1.2: candidate > curr
                     candidateLcp = lcp;
                 }
-
             }
             else if (candidateLcp > currLcp)
-            { // CASE 2: candidate < curr => insert it
+            {       // CASE 2: candidate < curr => insert it
                 break;
-
             } //  CASE 3: candidate > curr => nothing to do
         }
 
@@ -95,16 +92,15 @@ void inssort_lcp(string* strings, const LcpStringPtr& out, size_t length)
     }
 }
 
-
 static inline
 void inssort_lcp(string* strings, const LcpCacheStringPtr& out, size_t length)
 {
-    inssort_lcp(strings, (const LcpStringPtr&) out, length);
+    inssort_lcp(strings, (const LcpStringPtr&)out, length);
     out.calculateCache();
 }
 
 static inline
-void eberle_lcp_inssort(string *strings, size_t n)
+void eberle_lcp_inssort(string* strings, size_t n)
 {
     lcp_t* lcps = new lcp_t[n];
     LcpStringPtr output(strings, lcps, n);
@@ -121,7 +117,7 @@ void eberle_lcp_inssort(string *strings, size_t n)
 }
 
 static inline
-void eberle_lcp_inssort_cache(string *strings, size_t n)
+void eberle_lcp_inssort_cache(string* strings, size_t n)
 {
     lcp_t* lcps = new lcp_t[n];
     char_type* cache = new char_type[n];
@@ -139,12 +135,11 @@ void eberle_lcp_inssort_cache(string *strings, size_t n)
     delete[] cache;
 }
 
-
 CONTESTANT_REGISTER(eberle_lcp_inssort, "eberle/lcp_insertion_sort", "LCP aware inssertion sort by Andreas Eberle")
 CONTESTANT_REGISTER(eberle_lcp_inssort_cache, "eberle/lcp_insertion_sort_cache", "LCP aware insertion sort with cached characters calculation by Andreas Eberle")
 
+} // namespace eberle_inssort_lcp
 
-}
- // namespace eberle_inssort_lcp
+#endif // !PSS_SRC_SEQUENTIAL_EBERLE_INSSORT_LCP_HEADER
 
-#endif // EBERLE_INSSORT_H_
+/******************************************************************************/
