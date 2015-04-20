@@ -498,8 +498,8 @@ void bingmann_sample_sortRBTCE(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortRBTCE, "bingmann/sample_sortRBTCE",
-                    "bingmann/sample_sortRBTCE (adapt binary tree equal, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortRBTCE, "bingmann/sample_sortRBTCE",
+               "bingmann/sample_sortRBTCE (adapt binary tree equal, bkt cache)")
 
 void bingmann_sample_sortRBTCEA(string* strings, size_t n)
 {
@@ -508,8 +508,8 @@ void bingmann_sample_sortRBTCEA(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortRBTCEA, "bingmann/sample_sortRBTCEA",
-                    "bingmann/sample_sortRBTCEA (adapt binary tree equal, asm CMOV, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortRBTCEA, "bingmann/sample_sortRBTCEA",
+               "bingmann/sample_sortRBTCEA (adapt binary tree equal, asm CMOV, bkt cache)")
 
 // ----------------------------------------------------------------------------
 

@@ -473,14 +473,14 @@ void multikey_multipivot_brute_simd2(unsigned char** strings, size_t n)
 void multikey_multipivot_brute_simd4(unsigned char** strings, size_t n)
 { multikey_multipivot<uint32_t, 32>(strings, n, 0); }
 
-CONTESTANT_REGISTER(multikey_multipivot_brute_simd1,
-                    "rantala/multikey_multipivot_brute_simd1",
-                    "multikey_multipivot brute_simd with 1byte alphabet")
-CONTESTANT_REGISTER(multikey_multipivot_brute_simd2,
-                    "rantala/multikey_multipivot_brute_simd2",
-                    "multikey_multipivot brute_simd with 2byte alphabet")
-CONTESTANT_REGISTER(multikey_multipivot_brute_simd4,
-                    "rantala/multikey_multipivot_brute_simd4",
-                    "multikey_multipivot brute_simd with 4byte alphabet")
+PSS_CONTESTANT(multikey_multipivot_brute_simd1,
+               "rantala/multikey_multipivot_brute_simd1",
+               "multikey_multipivot brute_simd with 1byte alphabet")
+PSS_CONTESTANT(multikey_multipivot_brute_simd2,
+               "rantala/multikey_multipivot_brute_simd2",
+               "multikey_multipivot brute_simd with 2byte alphabet")
+PSS_CONTESTANT(multikey_multipivot_brute_simd4,
+               "rantala/multikey_multipivot_brute_simd4",
+               "multikey_multipivot brute_simd with 4byte alphabet")
 
 } // namespace rantala

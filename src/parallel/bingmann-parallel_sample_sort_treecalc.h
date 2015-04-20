@@ -321,7 +321,7 @@ parallel_sample_sortBTCT(string* strings, size_t n)
     parallel_sample_sort_base<ClassifySimpleTreeCalc>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTCT,
     "bingmann/parallel_sample_sortBTCT",
     "pS5: binary tree, bktcache, tree calc")
@@ -332,7 +332,7 @@ parallel_sample_sortBTCTU1(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyUnrollTreeCalc>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTCTU1,
     "bingmann/parallel_sample_sortBTCTU1",
     "pS5: binary tree, bktcache, unroll tree, tree calc")
@@ -343,7 +343,7 @@ parallel_sample_sortBTCTU2(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyUnrollBothTreeCalc>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTCTU2,
     "bingmann/parallel_sample_sortBTCTU2",
     "pS5: binary tree, bktcache, unroll tree and strings, tree calc")

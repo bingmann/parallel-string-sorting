@@ -158,7 +158,7 @@ eberle_lcp_mergesort(string* strings, size_t n)
     delete[] tmpLcps;
 }
 
-CONTESTANT_REGISTER(eberle_lcp_mergesort, "eberle/mergesort_lcp_binary", "Binary Mergesort with LCP-usage by Andreas Eberle")
+PSS_CONTESTANT(eberle_lcp_mergesort, "eberle/mergesort_lcp_binary", "Binary Mergesort with LCP-usage by Andreas Eberle")
 
 static inline void
 eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1,

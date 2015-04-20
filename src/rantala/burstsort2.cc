@@ -460,55 +460,55 @@ void burstsort2_sampling_superalphabet_vector_block(unsigned char** strings, siz
 	traverse(root, strings, 0, SmallSort);
 }
 
-CONTESTANT_REGISTER(burstsort2_vector,
+PSS_CONTESTANT(burstsort2_vector,
                     "rantala/burstsort2_vector",
                     "burstsort2 with std::vector bucket type")
-CONTESTANT_REGISTER(burstsort2_brodnik,
+PSS_CONTESTANT(burstsort2_brodnik,
                     "rantala/burstsort2_brodnik",
                     "burstsort2 with vector_brodnik bucket type")
-CONTESTANT_REGISTER(burstsort2_bagwell,
+PSS_CONTESTANT(burstsort2_bagwell,
                     "rantala/burstsort2_bagwell",
                     "burstsort2 with vector_bagwell bucket type")
-CONTESTANT_REGISTER(burstsort2_vector_block,
+PSS_CONTESTANT(burstsort2_vector_block,
                     "rantala/burstsort2_vector_block",
                     "burstsort2 with vector_block bucket type")
 
-CONTESTANT_REGISTER(burstsort2_superalphabet_vector,
+PSS_CONTESTANT(burstsort2_superalphabet_vector,
                     "rantala/burstsort2_superalphabet_vector",
                     "burstsort2 superalphabet with std::vector bucket type")
-CONTESTANT_REGISTER(burstsort2_superalphabet_brodnik,
+PSS_CONTESTANT(burstsort2_superalphabet_brodnik,
                     "rantala/burstsort2_superalphabet_brodnik",
                     "burstsort2 superalphabet with vector_brodnik bucket type")
-CONTESTANT_REGISTER(burstsort2_superalphabet_bagwell,
+PSS_CONTESTANT(burstsort2_superalphabet_bagwell,
                     "rantala/burstsort2_superalphabet_bagwell",
                     "burstsort2 superalphabet with vector_bagwell bucket type")
-CONTESTANT_REGISTER(burstsort2_superalphabet_vector_block,
+PSS_CONTESTANT(burstsort2_superalphabet_vector_block,
                     "rantala/burstsort2_superalphabet_vector_block",
                     "burstsort2 superalphabet with vector_block bucket type")
 
-CONTESTANT_REGISTER(burstsort2_sampling_vector,
+PSS_CONTESTANT(burstsort2_sampling_vector,
                     "rantala/burstsort2_sampling_vector",
                     "burstsort2 sampling with std::vector bucket type")
-CONTESTANT_REGISTER(burstsort2_sampling_brodnik,
+PSS_CONTESTANT(burstsort2_sampling_brodnik,
                     "rantala/burstsort2_sampling_brodnik",
                     "burstsort2 sampling with vector_brodnik bucket type")
-CONTESTANT_REGISTER(burstsort2_sampling_bagwell,
+PSS_CONTESTANT(burstsort2_sampling_bagwell,
                     "rantala/burstsort2_sampling_bagwell",
                     "burstsort2 sampling with vector_bagwell bucket type")
-CONTESTANT_REGISTER(burstsort2_sampling_vector_block,
+PSS_CONTESTANT(burstsort2_sampling_vector_block,
                     "rantala/burstsort2_sampling_vector_block",
                     "burstsort2 sampling with vector_block bucket type")
 
-CONTESTANT_REGISTER(burstsort2_sampling_superalphabet_vector,
+PSS_CONTESTANT(burstsort2_sampling_superalphabet_vector,
                     "rantala/burstsort2_sampling_superalphabet_vector",
                     "burstsort2 sampling superalphabet with std::vector bucket type")
-CONTESTANT_REGISTER(burstsort2_sampling_superalphabet_brodnik,
+PSS_CONTESTANT(burstsort2_sampling_superalphabet_brodnik,
                     "rantala/burstsort2_sampling_superalphabet_brodnik",
                     "burstsort2 sampling superalphabet with vector_brodnik bucket type")
-CONTESTANT_REGISTER(burstsort2_sampling_superalphabet_bagwell,
+PSS_CONTESTANT(burstsort2_sampling_superalphabet_bagwell,
                     "rantala/burstsort2_sampling_superalphabet_bagwell",
                     "burstsort2 sampling superalphabet with vector_bagwell bucket type")
-CONTESTANT_REGISTER(burstsort2_sampling_superalphabet_vector_block,
+PSS_CONTESTANT(burstsort2_sampling_superalphabet_vector_block,
                     "rantala/burstsort2_sampling_superalphabet_vector_block",
                     "burstsort2 sampling superalphabet with vector_block bucket type")
 

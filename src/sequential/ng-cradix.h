@@ -206,9 +206,9 @@ void cradix(unsigned char **strings, size_t n)
     return CRadix(strings, n);
 }
 
-CONTESTANT_REGISTER(cradix,
-                    "ng/cradix",
-                    "CRadix Original by Waihong Ng and Katsuhiko Kakehi")
+PSS_CONTESTANT(cradix,
+               "ng/cradix",
+               "CRadix Original by Waihong Ng and Katsuhiko Kakehi")
 
 #undef push
 #undef pop

@@ -110,8 +110,8 @@ void ng_lcpmergesort(unsigned char **strings, size_t n)
     return lcpms((char**)strings, n);
 }
 
-CONTESTANT_REGISTER(ng_lcpmergesort,
-                    "ng/lcpmergesort",
-                    "LCP-Mergesort Original by Waihong Ng and Katsuhiko Kakehi")
+PSS_CONTESTANT(ng_lcpmergesort,
+               "ng/lcpmergesort",
+               "LCP-Mergesort Original by Waihong Ng and Katsuhiko Kakehi")
 
 } // namespace ng_lcpmergesort

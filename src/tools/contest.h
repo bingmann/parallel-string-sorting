@@ -34,6 +34,9 @@ extern stats_writer g_stats;
 extern int pss_num_threads;
 extern size_t g_small_sort;
 
+#if PSS_CONTEST
+
+//! forward declaration
 class Contestant;
 
 class Contest
@@ -107,11 +110,11 @@ public:
     virtual bool is_parallel() const { return false; }
 };
 
-#define CONTESTANT_REGISTER(func, algoname, desc)                      \
+#define PSS_CONTESTANT(func, algoname, desc)                           \
     static const class Contestant* _Contestant_ ## func ## _register = \
         new Contestant_UCArray(NULL, func, algoname, desc);
 
-#define CONTESTANT_REGISTER_PREPARE(pfunc, func, algoname, desc)       \
+#define PSS_CONTESTANT_PREPARE(pfunc, func, algoname, desc)            \
     static const class Contestant* _Contestant_ ## func ## _register = \
         new Contestant_UCArray(pfunc, func, algoname, desc);
 
@@ -130,13 +133,22 @@ public:
     virtual bool is_parallel() const { return true; }
 };
 
-#define CONTESTANT_REGISTER_PARALLEL(func, algoname, desc)             \
+#define PSS_CONTESTANT_PARALLEL(func, algoname, desc)                  \
     static const class Contestant* _Contestant_ ## func ## _register = \
         new Contestant_UCArray_Parallel(NULL, func, algoname, desc);
 
-#define CONTESTANT_REGISTER_PARALLEL_PREPARE(pfunc, func, algoname, desc) \
-    static const class Contestant* _Contestant_ ## func ## _register =    \
+#define PSS_CONTESTANT_PARALLEL_PREPARE(pfunc, func, algoname, desc)   \
+    static const class Contestant* _Contestant_ ## func ## _register = \
         new Contestant_UCArray_Parallel(pfunc, func, algoname, desc);
+
+#else // !PSS_CONTEST
+
+#define PSS_CONTESTANT(func, algoname, desc)
+#define PSS_CONTESTANT_PREPARE(pfunc, func, algoname, desc)
+#define PSS_CONTESTANT_PARALLEL(func, algoname, desc)
+#define PSS_CONTESTANT_PARALLEL_PREPARE(pfunc, func, algoname, desc)
+
+#endif // !PSS_CONTEST
 
 #endif // !PSS_SRC_TOOLS_CONTEST_HEADER
 

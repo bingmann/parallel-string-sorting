@@ -152,12 +152,12 @@ void msd_ci(unsigned char** strings, size_t n)
 void msd_ci_adaptive(unsigned char** strings, size_t n)
 { msd_ci_adaptive(strings, n, 0); }
 
-CONTESTANT_REGISTER(msd_ci,
-                    "rantala/msd_CI",
-                    "msd_CI")
+PSS_CONTESTANT(msd_ci,
+               "rantala/msd_CI",
+               "msd_CI")
 
-CONTESTANT_REGISTER(msd_ci_adaptive,
-                    "rantala/msd_CI_adaptive",
-                    "msd_CI: adaptive")
+PSS_CONTESTANT(msd_ci_adaptive,
+               "rantala/msd_CI_adaptive",
+               "msd_CI: adaptive")
 
 } // namespace rantala

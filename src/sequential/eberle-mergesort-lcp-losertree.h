@@ -133,21 +133,21 @@ eberle_mergesort_losertree_64way(string* strings, size_t n)
     eberle_mergesort_losertree_kway<64>(strings, n);
 }
 
-CONTESTANT_REGISTER(eberle_mergesort_losertree_4way,
-                    "eberle/mergesort_lcp_losertree_4way",
-                    "Mergesort with lcp aware Losertree by Andreas Eberle")
+PSS_CONTESTANT(eberle_mergesort_losertree_4way,
+               "eberle/mergesort_lcp_losertree_4way",
+               "Mergesort with lcp aware Losertree by Andreas Eberle")
 
-CONTESTANT_REGISTER(eberle_mergesort_losertree_16way,
-                    "eberle/mergesort_lcp_losertree_16way",
-                    "Mergesort with lcp aware Losertree by Andreas Eberle")
+PSS_CONTESTANT(eberle_mergesort_losertree_16way,
+               "eberle/mergesort_lcp_losertree_16way",
+               "Mergesort with lcp aware Losertree by Andreas Eberle")
 
-CONTESTANT_REGISTER(eberle_mergesort_losertree_32way,
-                    "eberle/mergesort_lcp_losertree_32way",
-                    "Mergesort with lcp aware Losertree by Andreas Eberle")
+PSS_CONTESTANT(eberle_mergesort_losertree_32way,
+               "eberle/mergesort_lcp_losertree_32way",
+               "Mergesort with lcp aware Losertree by Andreas Eberle")
 
-CONTESTANT_REGISTER(eberle_mergesort_losertree_64way,
-                    "eberle/mergesort_lcp_losertree_64way",
-                    "Mergesort with lcp aware Losertree by Andreas Eberle")
+PSS_CONTESTANT(eberle_mergesort_losertree_64way,
+               "eberle/mergesort_lcp_losertree_64way",
+               "Mergesort with lcp aware Losertree by Andreas Eberle")
 
 } // namespace eberle_mergesort
 

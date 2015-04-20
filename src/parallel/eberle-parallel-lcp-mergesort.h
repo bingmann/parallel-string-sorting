@@ -118,17 +118,17 @@ void eberle_parallel_lcp_mergesort_binary_splitting(string* strings, size_t n)
     eberle_parallel_lcp_mergesort(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeBinarySplitting);
 }
 
-CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_lcp_splitting,
-                             "eberle/parallel-lcp-mergesort-lcp-splitting",
-                             "parallel LCP aware mergesort by Andreas Eberle")
+PSS_CONTESTANT_PARALLEL(eberle_parallel_lcp_mergesort_lcp_splitting,
+                        "eberle/parallel-lcp-mergesort-lcp-splitting",
+                        "parallel LCP aware mergesort by Andreas Eberle")
 
-CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_standard_splitting,
-                             "eberle/parallel-lcp-mergesort-standard-splitting",
-                             "parallel LCP aware mergesort by Andreas Eberle")
+PSS_CONTESTANT_PARALLEL(eberle_parallel_lcp_mergesort_standard_splitting,
+                        "eberle/parallel-lcp-mergesort-standard-splitting",
+                        "parallel LCP aware mergesort by Andreas Eberle")
 
-CONTESTANT_REGISTER_PARALLEL(eberle_parallel_lcp_mergesort_binary_splitting,
-                             "eberle/parallel-lcp-mergesort-binary-splitting",
-                             "parallel LCP aware mergesort by Andreas Eberle")
+PSS_CONTESTANT_PARALLEL(eberle_parallel_lcp_mergesort_binary_splitting,
+                        "eberle/parallel-lcp-mergesort-binary-splitting",
+                        "parallel LCP aware mergesort by Andreas Eberle")
 
 } // namespace eberle_parallel_lcp_mergesort
 

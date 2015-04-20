@@ -161,8 +161,8 @@ burstsortL(unsigned char *strings[], size_t scnt)
     return;
 }
 
-CONTESTANT_REGISTER(burstsortL,
-                    "sinha/burstsortL",
-                    "burstsortL Original Burstsort with linked-lists")
+PSS_CONTESTANT(burstsortL,
+               "sinha/burstsortL",
+               "burstsortL Original Burstsort with linked-lists")
 
 } // namespace sinha_burstsortL

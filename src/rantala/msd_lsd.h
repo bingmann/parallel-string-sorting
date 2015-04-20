@@ -211,36 +211,36 @@ void msd_A_lsd_adaptive10(unsigned char** strings, size_t N)
 void msd_A_lsd_adaptive12(unsigned char** strings, size_t N)
 { msd_A_lsd_adaptive<12>(strings, N); }
 
-CONTESTANT_REGISTER(msd_A_lsd4,
-                    "rantala/msd_A_lsd4",
-                    "msd_A_lsd with 4byte cache")
-CONTESTANT_REGISTER(msd_A_lsd6,
-                    "rantala/msd_A_lsd6",
-                    "msd_A_lsd with 6byte cache")
-CONTESTANT_REGISTER(msd_A_lsd8,
-                    "rantala/msd_A_lsd8",
-                    "msd_A_lsd with 8byte cache")
-CONTESTANT_REGISTER(msd_A_lsd10,
-                    "rantala/msd_A_lsd10",
-                    "msd_A_lsd with 10byte cache")
-CONTESTANT_REGISTER(msd_A_lsd12,
-                    "rantala/msd_A_lsd12",
-                    "msd_A_lsd with 12byte cache")
+PSS_CONTESTANT(msd_A_lsd4,
+               "rantala/msd_A_lsd4",
+               "msd_A_lsd with 4byte cache")
+PSS_CONTESTANT(msd_A_lsd6,
+               "rantala/msd_A_lsd6",
+               "msd_A_lsd with 6byte cache")
+PSS_CONTESTANT(msd_A_lsd8,
+               "rantala/msd_A_lsd8",
+               "msd_A_lsd with 8byte cache")
+PSS_CONTESTANT(msd_A_lsd10,
+               "rantala/msd_A_lsd10",
+               "msd_A_lsd with 10byte cache")
+PSS_CONTESTANT(msd_A_lsd12,
+               "rantala/msd_A_lsd12",
+               "msd_A_lsd with 12byte cache")
 
-CONTESTANT_REGISTER(msd_A_lsd_adaptive4,
-                    "rantala/msd_A_lsd_adaptive4",
-                    "msd_A_lsd_adaptive with 4byte cache")
-CONTESTANT_REGISTER(msd_A_lsd_adaptive6,
-                    "rantala/msd_A_lsd_adaptive6",
-                    "msd_A_lsd_adaptive with 6byte cache")
-CONTESTANT_REGISTER(msd_A_lsd_adaptive8,
-                    "rantala/msd_A_lsd_adaptive8",
-                    "msd_A_lsd_adaptive with 8byte cache")
-CONTESTANT_REGISTER(msd_A_lsd_adaptive10,
-                    "rantala/msd_A_lsd_adaptive10",
-                    "msd_A_lsd_adaptive with 10byte cache")
-CONTESTANT_REGISTER(msd_A_lsd_adaptive12,
-                    "rantala/msd_A_lsd_adaptive12",
-                    "msd_A_lsd_adaptive with 12byte cache")
+PSS_CONTESTANT(msd_A_lsd_adaptive4,
+               "rantala/msd_A_lsd_adaptive4",
+               "msd_A_lsd_adaptive with 4byte cache")
+PSS_CONTESTANT(msd_A_lsd_adaptive6,
+               "rantala/msd_A_lsd_adaptive6",
+               "msd_A_lsd_adaptive with 6byte cache")
+PSS_CONTESTANT(msd_A_lsd_adaptive8,
+               "rantala/msd_A_lsd_adaptive8",
+               "msd_A_lsd_adaptive with 8byte cache")
+PSS_CONTESTANT(msd_A_lsd_adaptive10,
+               "rantala/msd_A_lsd_adaptive10",
+               "msd_A_lsd_adaptive with 10byte cache")
+PSS_CONTESTANT(msd_A_lsd_adaptive12,
+               "rantala/msd_A_lsd_adaptive12",
+               "msd_A_lsd_adaptive with 12byte cache")
 
 } // namespace rantala

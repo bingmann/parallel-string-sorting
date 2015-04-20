@@ -88,8 +88,8 @@ void bingmann_msd_CE(string* strings, size_t n)
     return msd_CE(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CE, "bingmann/msd_CE",
-                    "bingmann/msd_CE (rantala CE original)")
+PSS_CONTESTANT(bingmann_msd_CE, "bingmann/msd_CE",
+               "bingmann/msd_CE (rantala CE original)")
 
 static void
 msd_CE2(string* strings, size_t n, size_t depth)
@@ -128,8 +128,8 @@ void bingmann_msd_CE2(string* strings, size_t n)
     return msd_CE2(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CE2, "bingmann/msd_CE2",
-                    "bingmann/msd_CE2 (CE with reused prefix sum)")
+PSS_CONTESTANT(bingmann_msd_CE2, "bingmann/msd_CE2",
+               "bingmann/msd_CE2 (CE with reused prefix sum)")
 
 static void
 msd_CE3(string* str_begin, string* str_end, size_t depth)
@@ -168,8 +168,8 @@ void bingmann_msd_CE3(string* strings, size_t n)
     return msd_CE3(strings, strings + n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CE3, "bingmann/msd_CE3",
-                    "bingmann/msd_CE3 (CE2 with iterators)")
+PSS_CONTESTANT(bingmann_msd_CE3, "bingmann/msd_CE3",
+               "bingmann/msd_CE3 (CE2 with iterators)")
 
 template <typename BucketType>
 struct distblock {
@@ -233,8 +233,8 @@ void bingmann_msd_CI(string* strings, size_t n)
     msd_CI<size_t>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI, "bingmann/msd_CI",
-                    "bingmann/msd_CI (rantala CI original with oracle)")
+PSS_CONTESTANT(bingmann_msd_CI, "bingmann/msd_CI",
+               "bingmann/msd_CI (rantala CI original with oracle)")
 
 template <typename BucketsizeType>
 static void msd_CI2(string* strings, size_t n, size_t depth)
@@ -287,8 +287,8 @@ void bingmann_msd_CI2(string* strings, size_t n)
     msd_CI2<size_t>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI2, "bingmann/msd_CI2",
-                    "bingmann/msd_CI2 (CI without oracle)")
+PSS_CONTESTANT(bingmann_msd_CI2, "bingmann/msd_CI2",
+               "bingmann/msd_CI2 (CI without oracle)")
 
 static void
 msd_CI3(string* strings, size_t n, size_t depth)
@@ -334,8 +334,8 @@ void bingmann_msd_CI3(string* strings, size_t n)
     msd_CI3(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI3, "bingmann/msd_CI3",
-                    "bingmann/msd_CI3 (CI2 with swap operations)")
+PSS_CONTESTANT(bingmann_msd_CI3, "bingmann/msd_CI3",
+               "bingmann/msd_CI3 (CI2 with swap operations)")
 
 // Note: CI in-place variant cannot be done with just one prefix-sum bucket
 // array, because during in-place permutation the beginning _and_ end
@@ -387,8 +387,8 @@ void bingmann_msd_CI4(string* strings, size_t n)
     msd_CI4(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI4, "bingmann/msd_CI4",
-                    "bingmann/msd_CI4 (CI3 with swap cache)")
+PSS_CONTESTANT(bingmann_msd_CI4, "bingmann/msd_CI4",
+               "bingmann/msd_CI4 (CI3 with swap cache)")
 
 static inline size_t *
 msd_CI5_bktsize(string * strings, size_t n, size_t depth)
@@ -456,8 +456,8 @@ void bingmann_msd_CI5(string* strings, size_t n)
     msd_CI5(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI5, "bingmann/msd_CI5",
-                    "bingmann/msd_CI5 (CI4 with charcache)")
+PSS_CONTESTANT(bingmann_msd_CI5, "bingmann/msd_CI5",
+               "bingmann/msd_CI5 (CI4 with charcache)")
 
 // --------------------------------------------------------------------------------
 
@@ -531,8 +531,8 @@ void bingmann_msd_CI5_16bit(string* strings, size_t n)
     msd_CI5_16bit(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI5_16bit, "bingmann/msd_CI5_16bit",
-                    "bingmann/msd_CI5_16bit (CI5 with 16-bit radix)")
+PSS_CONTESTANT(bingmann_msd_CI5_16bit, "bingmann/msd_CI5_16bit",
+               "bingmann/msd_CI5_16bit (CI5 with 16-bit radix)")
 
 // --------------------------------------------------------------------------------
 
@@ -607,8 +607,8 @@ bingmann_msd_CE_nr(string* strings, size_t n)
     }
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CE_nr, "bingmann/msd_CE_nr",
-                    "bingmann/msd_CE_nr (CE non-recursive)")
+PSS_CONTESTANT(bingmann_msd_CE_nr, "bingmann/msd_CE_nr",
+               "bingmann/msd_CE_nr (CE non-recursive)")
 
 struct RadixStep_CE_nr2
 {
@@ -679,8 +679,8 @@ bingmann_msd_CE_nr2(string* strings, size_t n)
     }
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CE_nr2, "bingmann/msd_CE_nr2",
-                    "bingmann/msd_CE_nr2 (CE non-recursive)")
+PSS_CONTESTANT(bingmann_msd_CE_nr2, "bingmann/msd_CE_nr2",
+               "bingmann/msd_CE_nr2 (CE non-recursive)")
 
 struct RadixStep_CI_nr
 {
@@ -775,8 +775,8 @@ bingmann_msd_CI_nr(string* strings, size_t n)
     }
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI_nr, "bingmann/msd_CI_nr",
-                    "bingmann/msd_CI_nr (CI non-recursive)")
+PSS_CONTESTANT(bingmann_msd_CI_nr, "bingmann/msd_CI_nr",
+               "bingmann/msd_CI_nr (CI non-recursive)")
 
 struct RadixStep_CI_nr2
 {
@@ -853,8 +853,8 @@ bingmann_msd_CI_nr2(string* strings, size_t n)
     }
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI_nr2, "bingmann/msd_CI_nr2",
-                    "bingmann/msd_CI_nr2 (CI non-recursive)")
+PSS_CONTESTANT(bingmann_msd_CI_nr2, "bingmann/msd_CI_nr2",
+               "bingmann/msd_CI_nr2 (CI non-recursive)")
 
 struct RadixStep_CI_nr3
 {
@@ -942,8 +942,8 @@ bingmann_msd_CI_nr3(string* strings, size_t n)
     delete[] charcache;
 }
 
-CONTESTANT_REGISTER(bingmann_msd_CI_nr3, "bingmann/msd_CI_nr3",
-                    "bingmann/msd_CI_nr3 (CI non-recursive, charcache)")
+PSS_CONTESTANT(bingmann_msd_CI_nr3, "bingmann/msd_CI_nr3",
+               "bingmann/msd_CI_nr3 (CI non-recursive, charcache)")
 
 } // namespace bingmann_radix_sort
 

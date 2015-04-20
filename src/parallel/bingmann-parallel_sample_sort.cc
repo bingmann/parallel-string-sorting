@@ -55,16 +55,16 @@
 #if !CALC_LCP
 namespace bingmann_parallel_sample_sort {
 
-#define CONTESTANT_REGISTER_PARALLEL_LCP(func, name, desc) \
-    CONTESTANT_REGISTER_PARALLEL(func, name, desc)
+#define PSS_CONTESTANT_PARALLEL_LCP(func, name, desc) \
+    PSS_CONTESTANT_PARALLEL(func, name, desc)
 
-//#define CONTESTANT_REGISTER_PARALLEL_LCP CONTESTANT_REGISTER_PARALLEL
+//#define PSS_CONTESTANT_PARALLEL_LCP CONTESTANT_REGISTER_PARALLEL
 
 #else
 namespace bingmann_parallel_sample_sort_lcp {
 
-#define CONTESTANT_REGISTER_PARALLEL_LCP(func, name, desc) \
-    CONTESTANT_REGISTER_PARALLEL(func, name "_lcp", desc "_lcp")
+#define PSS_CONTESTANT_PARALLEL_LCP(func, name, desc) \
+    PSS_CONTESTANT_PARALLEL(func, name "_lcp", desc "_lcp")
 
 #endif
 
@@ -2077,7 +2077,7 @@ parallel_sample_sortBTC(string* strings, size_t n)
     parallel_sample_sort_base<ClassifySimple>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTC,
     "bingmann/parallel_sample_sortBTC",
     "pS5: binary tree, bktcache")
@@ -2088,7 +2088,7 @@ parallel_sample_sortBTCU1(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyUnrollTree>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTCU1,
     "bingmann/parallel_sample_sortBTCU1",
     "pS5: binary tree, bktcache, unroll tree")
@@ -2099,7 +2099,7 @@ parallel_sample_sortBTCU2(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyUnrollBoth>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTCU2,
     "bingmann/parallel_sample_sortBTCU2",
     "pS5: binary tree, bktcache, unroll tree and strings")
@@ -2116,7 +2116,7 @@ parallel_sample_sortBTCU2_out(string* strings, size_t n)
     delete[] output;
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTCU2_out,
     "bingmann/parallel_sample_sortBTCU2_out",
     "pS5: binary tree, bktcache, unroll tree and strings, separate output")
@@ -2212,7 +2212,7 @@ parallel_sample_sortBSC(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyBinarySearch>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBSC,
     "bingmann/parallel_sample_sortBSC",
     "pS5: binary search, bktcache")

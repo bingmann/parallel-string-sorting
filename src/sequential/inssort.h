@@ -48,7 +48,7 @@ static inline
 void insertion_sort(string* a, size_t n)
 { inssort(a, n, 0); }
 
-CONTESTANT_REGISTER(insertion_sort, "insertion_sort", "String Insertion-Sort")
+PSS_CONTESTANT(insertion_sort, "insertion_sort", "String Insertion-Sort")
 
 } // namespace  inssort
 

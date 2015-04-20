@@ -499,8 +499,8 @@ void bingmann_sample_sortBTCE2(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCE2, "bingmann/sample_sortBTCE2",
-                    "bingmann/sample_sortBTCE2 (binary tree equal, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBTCE2, "bingmann/sample_sortBTCE2",
+               "bingmann/sample_sortBTCE2 (binary tree equal, bkt cache)")
 
 void bingmann_sample_sortBTCE2A(string* strings, size_t n)
 {
@@ -511,8 +511,8 @@ void bingmann_sample_sortBTCE2A(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCE2A, "bingmann/sample_sortBTCE2A",
-                    "bingmann/sample_sortBTCE2A (binary tree equal, asm CMOV, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBTCE2A, "bingmann/sample_sortBTCE2A",
+               "bingmann/sample_sortBTCE2A (binary tree equal, asm CMOV, bkt cache)")
 
 void bingmann_sample_sortBTCE2U(string* strings, size_t n)
 {
@@ -523,8 +523,8 @@ void bingmann_sample_sortBTCE2U(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCE2U, "bingmann/sample_sortBTCE2U",
-                    "bingmann/sample_sortBTCE2U (binary tree equal unroll, asm CMOV, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBTCE2U, "bingmann/sample_sortBTCE2U",
+               "bingmann/sample_sortBTCE2U (binary tree equal unroll, asm CMOV, bkt cache)")
 
 // ----------------------------------------------------------------------------
 
@@ -890,8 +890,8 @@ void bingmann_sample_sortBTCE3(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCE3, "bingmann/sample_sortBTCE3",
-                    "bingmann/sample_sortBTCE3 (adapt binary tree equal, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBTCE3, "bingmann/sample_sortBTCE3",
+               "bingmann/sample_sortBTCE3 (adapt binary tree equal, bkt cache)")
 
 void bingmann_sample_sortBTCE3A(string* strings, size_t n)
 {
@@ -902,8 +902,8 @@ void bingmann_sample_sortBTCE3A(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCE3A, "bingmann/sample_sortBTCE3A",
-                    "bingmann/sample_sortBTCE3A (adapt binary tree equal, asm CMOV, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBTCE3A, "bingmann/sample_sortBTCE3A",
+               "bingmann/sample_sortBTCE3A (adapt binary tree equal, asm CMOV, bkt cache)")
 
 void bingmann_sample_sortBTCE3U(string* strings, size_t n)
 {
@@ -914,8 +914,8 @@ void bingmann_sample_sortBTCE3U(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBTCE3U, "bingmann/sample_sortBTCE3U",
-                    "bingmann/sample_sortBTCE3U (adapt binary tree equal unroll, asm CMOV, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBTCE3U, "bingmann/sample_sortBTCE3U",
+               "bingmann/sample_sortBTCE3U (adapt binary tree equal unroll, asm CMOV, bkt cache)")
 
 // ----------------------------------------------------------------------------
 

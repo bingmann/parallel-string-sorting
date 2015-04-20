@@ -203,8 +203,8 @@ lcp_mergesort_binary(string* strings, size_t n)
     delete[] tmpLcps;
 }
 
-CONTESTANT_REGISTER(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
-                    "Binary Mergesort with LCP-merge by Andreas Eberle and Timo Bingmann")
+PSS_CONTESTANT(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
+               "Binary Mergesort with LCP-merge by Andreas Eberle and Timo Bingmann")
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -431,14 +431,14 @@ lcp_mergesort_128way(string* strings, size_t n)
     lcp_mergesort_kway<128>(strings, n);
 }
 
-CONTESTANT_REGISTER(lcp_mergesort_4way, "bingmann/lcp_mergesort_4way",
-                    "4-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
-CONTESTANT_REGISTER(lcp_mergesort_8way, "bingmann/lcp_mergesort_8way",
-                    "8-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
-CONTESTANT_REGISTER(lcp_mergesort_16way, "bingmann/lcp_mergesort_16way",
-                    "16-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
-CONTESTANT_REGISTER(lcp_mergesort_128way, "bingmann/lcp_mergesort_128way",
-                    "128-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
+PSS_CONTESTANT(lcp_mergesort_4way, "bingmann/lcp_mergesort_4way",
+               "4-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
+PSS_CONTESTANT(lcp_mergesort_8way, "bingmann/lcp_mergesort_8way",
+               "8-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
+PSS_CONTESTANT(lcp_mergesort_16way, "bingmann/lcp_mergesort_16way",
+               "16-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
+PSS_CONTESTANT(lcp_mergesort_128way, "bingmann/lcp_mergesort_128way",
+               "128-way LCP-Mergesort by Andreas Eberle and Timo Bingmann")
 
 } // namespace bingmann_lcp_mergesort
 

@@ -135,8 +135,8 @@ void eberle_lcp_inssort_cache(string* strings, size_t n)
     delete[] cache;
 }
 
-CONTESTANT_REGISTER(eberle_lcp_inssort, "eberle/lcp_insertion_sort", "LCP aware inssertion sort by Andreas Eberle")
-CONTESTANT_REGISTER(eberle_lcp_inssort_cache, "eberle/lcp_insertion_sort_cache", "LCP aware insertion sort with cached characters calculation by Andreas Eberle")
+PSS_CONTESTANT(eberle_lcp_inssort, "eberle/lcp_insertion_sort", "LCP aware inssertion sort by Andreas Eberle")
+PSS_CONTESTANT(eberle_lcp_inssort_cache, "eberle/lcp_insertion_sort_cache", "LCP aware insertion sort with cached characters calculation by Andreas Eberle")
 
 } // namespace eberle_inssort_lcp
 

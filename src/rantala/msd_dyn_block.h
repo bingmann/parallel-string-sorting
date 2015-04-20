@@ -200,8 +200,8 @@ msd_D(unsigned char** strings, size_t n, size_t depth)
 void msd_DB(unsigned char** strings, size_t n)
 { msd_D<1024>(strings, n, 0); }
 
-CONTESTANT_REGISTER(msd_DB,
-                    "rantala/msd_DB",
-                    "msd_DB")
+PSS_CONTESTANT(msd_DB,
+               "rantala/msd_DB",
+               "msd_DB")
 
 } // namespace rantala

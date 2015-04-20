@@ -577,9 +577,9 @@ bingmann_sequential_mkqs_cache8(string* strings, size_t n)
     SequentialMKQS<true>(strings, n, 0, cache).sequential_mkqs(jobqueue);
 }
 
-CONTESTANT_REGISTER(bingmann_sequential_mkqs_cache8,
-                    "bingmann/sequential_mkqs_cache8",
-                    "multikey_cache with 8byte cache (non-recursive)")
+PSS_CONTESTANT(bingmann_sequential_mkqs_cache8,
+               "bingmann/sequential_mkqs_cache8",
+               "multikey_cache with 8byte cache (non-recursive)")
 
 // ****************************************************************************
 // *** BlockSource - provide new blocks of unpartitioned input to ParallelMKQS
@@ -1221,9 +1221,9 @@ void parallel_mkqs(string* strings, size_t n)
     jobqueue.loop();
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_mkqs,
-                             "bingmann/parallel_mkqs",
-                             "Parallel MKQS with blocks and cache8")
+PSS_CONTESTANT_PARALLEL(parallel_mkqs,
+                        "bingmann/parallel_mkqs",
+                        "Parallel MKQS with blocks and cache8")
 
 } // namespace bingmann_parallel_mkqs
 

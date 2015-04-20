@@ -96,9 +96,9 @@ msd_CE0(unsigned char** strings, size_t n, size_t depth)
 void msd_CE0(unsigned char** strings, size_t n)
 { msd_CE0(strings, n, 0); }
 
-CONTESTANT_REGISTER(msd_CE0,
-                    "rantala/msd_CE0",
-                    "msd_CE0: baseline")
+PSS_CONTESTANT(msd_CE0,
+               "rantala/msd_CE0",
+               "msd_CE0: baseline")
 
 void
 msd_CE1(unsigned char** strings, size_t n, size_t depth)
@@ -134,9 +134,9 @@ msd_CE1(unsigned char** strings, size_t n, size_t depth)
 void msd_CE1(unsigned char** strings, size_t n)
 { msd_CE1(strings, n, 0); }
 
-CONTESTANT_REGISTER(msd_CE1,
-                    "rantala/msd_CE1",
-                    "msd_CE1: oracle")
+PSS_CONTESTANT(msd_CE1,
+               "rantala/msd_CE1",
+               "msd_CE1: oracle")
 
 void
 msd_CE2(unsigned char** strings, size_t n, size_t depth)
@@ -174,9 +174,9 @@ msd_CE2(unsigned char** strings, size_t n, size_t depth)
 void msd_CE2(unsigned char** strings, size_t n)
 { msd_CE2(strings, n, 0); }
 
-CONTESTANT_REGISTER(msd_CE2,
-                    "rantala/msd_CE2",
-                    "msd_CE2: oracle+loop fission")
+PSS_CONTESTANT(msd_CE2,
+               "rantala/msd_CE2",
+               "msd_CE2: oracle+loop fission")
 
 void
 msd_CE2_16bit(unsigned char** strings, size_t n, size_t depth)
@@ -250,9 +250,9 @@ msd_CE3(unsigned char** strings, size_t n, size_t depth)
 void msd_CE3(unsigned char** strings, size_t n)
 { msd_CE3(strings, n, 0); }
 
-CONTESTANT_REGISTER(msd_CE3,
-                    "rantala/msd_CE3",
-                    "msd_CE3: oracle+loop fission+adaptive")
+PSS_CONTESTANT(msd_CE3,
+               "rantala/msd_CE3",
+               "msd_CE3: oracle+loop fission+adaptive")
 
 static void
 msd_CE4(unsigned char** strings, size_t n, size_t depth)
@@ -293,9 +293,9 @@ msd_CE4(unsigned char** strings, size_t n, size_t depth)
 void msd_CE4(unsigned char** strings, size_t n)
 { msd_CE4(strings, n, 0); }
 
-CONTESTANT_REGISTER(msd_CE4,
-                    "rantala/msd_CE4",
-                    "msd_CE4: oracle+loop fission+adaptive+16bit counter")
+PSS_CONTESTANT(msd_CE4,
+               "rantala/msd_CE4",
+               "msd_CE4: oracle+loop fission+adaptive+16bit counter")
 
 static void
 msd_CE2_16bit_5(unsigned char** strings, size_t n, size_t depth,
@@ -369,9 +369,9 @@ void msd_CE5(unsigned char** strings, size_t n)
 	free(sorted);
 }
 
-CONTESTANT_REGISTER(msd_CE5,
-                    "rantala/msd_CE5",
-                    "msd_CE5: oracle+loop fission+adaptive+16bit counter+prealloc")
+PSS_CONTESTANT(msd_CE5,
+               "rantala/msd_CE5",
+               "msd_CE5: oracle+loop fission+adaptive+16bit counter+prealloc")
 
 static void
 msd_CE6(unsigned char** strings, size_t n, size_t depth,
@@ -425,9 +425,9 @@ void msd_CE6(unsigned char** strings, size_t n)
 	free(sorted);
 }
 
-CONTESTANT_REGISTER(msd_CE6,
-                    "rantala/msd_CE6",
-                    "msd_CE6: oracle+loop fission+adaptive+16bit counter+prealloc+unroll")
+PSS_CONTESTANT(msd_CE6,
+               "rantala/msd_CE6",
+               "msd_CE6: oracle+loop fission+adaptive+16bit counter+prealloc+unroll")
 
 static void
 msd_CE7_(unsigned char** strings, size_t n, size_t depth,
@@ -500,8 +500,8 @@ void msd_CE7(unsigned char** strings, size_t n)
 	free(sorted);
 }
 
-CONTESTANT_REGISTER(msd_CE7,
-                    "rantala/msd_CE7",
-                    "msd_CE7: oracle+loop fission+adaptive+16bit counter+prealloc+unroll+sortedness")
+PSS_CONTESTANT(msd_CE7,
+               "rantala/msd_CE7",
+               "msd_CE7: oracle+loop fission+adaptive+16bit counter+prealloc+unroll+sortedness")
 
 } // namespace rantala

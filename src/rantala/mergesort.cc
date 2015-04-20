@@ -115,9 +115,9 @@ void mergesort_2way(unsigned char** strings, size_t n)
 	mergesort_2way(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER(mergesort_2way,
-                    "rantala/mergesort_2way",
-                    "mergesort with 2way merger")
+PSS_CONTESTANT(mergesort_2way,
+               "rantala/mergesort_2way",
+               "mergesort with 2way merger")
 
 static void
 mergesort_2way_parallel(unsigned char** strings, size_t n, unsigned char** tmp)
@@ -146,9 +146,9 @@ void mergesort_2way_parallel(unsigned char** strings, size_t n)
 	mergesort_2way_parallel(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER_PARALLEL(mergesort_2way_parallel,
-                             "rantala/mergesort_2way_parallel",
-                             "mergesort_parallel with 2way merger")
+PSS_CONTESTANT_PARALLEL(mergesort_2way_parallel,
+                        "rantala/mergesort_2way_parallel",
+                        "mergesort_parallel with 2way merger")
 
 /*******************************************************************************
  *
@@ -320,9 +320,9 @@ void mergesort_3way(unsigned char** strings, size_t n)
 	mergesort_3way(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER(mergesort_3way,
-                    "rantala/mergesort_3way",
-                    "mergesort with 3way merger")
+PSS_CONTESTANT(mergesort_3way,
+               "rantala/mergesort_3way",
+               "mergesort with 3way merger")
 
 static void
 mergesort_3way_parallel(unsigned char** strings, size_t n, unsigned char** tmp)
@@ -355,9 +355,9 @@ void mergesort_3way_parallel(unsigned char** strings, size_t n)
 	mergesort_3way_parallel(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER_PARALLEL(mergesort_3way_parallel,
-                             "rantala/mergesort_3way_parallel",
-                             "mergesort_parallel with 3way merger")
+PSS_CONTESTANT_PARALLEL(mergesort_3way_parallel,
+                        "rantala/mergesort_3way_parallel",
+                        "mergesort_parallel with 3way merger")
 
 /*******************************************************************************
  *
@@ -486,9 +486,9 @@ void mergesort_4way(unsigned char** strings, size_t n)
 	mergesort_4way(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER(mergesort_4way,
-                    "rantala/mergesort_4way",
-                    "mergesort with 4way merger")
+PSS_CONTESTANT(mergesort_4way,
+               "rantala/mergesort_4way",
+               "mergesort with 4way merger")
 
 void
 mergesort_4way_parallel(unsigned char** strings, size_t n, unsigned char** tmp)
@@ -526,8 +526,8 @@ void mergesort_4way_parallel(unsigned char** strings, size_t n)
 	mergesort_4way_parallel(strings, n, tmp);
 	free(tmp);
 }
-CONTESTANT_REGISTER_PARALLEL(mergesort_4way_parallel,
-                             "rantala/mergesort_4way_parallel",
-                             "mergesort_parallel with 4way merger")
+PSS_CONTESTANT_PARALLEL(mergesort_4way_parallel,
+                        "rantala/mergesort_4way_parallel",
+                        "mergesort_parallel with 4way merger")
 
 } // namespace rantala

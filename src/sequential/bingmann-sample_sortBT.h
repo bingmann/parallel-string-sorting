@@ -307,8 +307,8 @@ void bingmann_sample_sortBT(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBT, "bingmann/sample_sortBT",
-                    "bingmann/sample_sortBT (binary tree, no cache)")
+PSS_CONTESTANT(bingmann_sample_sortBT, "bingmann/sample_sortBT",
+               "bingmann/sample_sortBT (binary tree, no cache)")
 
 // ----------------------------------------------------------------------------
 

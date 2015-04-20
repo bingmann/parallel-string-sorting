@@ -271,13 +271,13 @@ void burstsort_mkq_simpleburst_2(unsigned char** strings, size_t N)
 void burstsort_mkq_simpleburst_4(unsigned char** strings, size_t N)
 { burstsort_mkq_simpleburst<uint32_t>(strings, N); }
 
-CONTESTANT_REGISTER(burstsort_mkq_simpleburst_1,
+PSS_CONTESTANT(burstsort_mkq_simpleburst_1,
                     "rantala/burstsort_mkq_simpleburst_1",
                     "burstsort_mkq 1byte alphabet with simpleburst")
-CONTESTANT_REGISTER(burstsort_mkq_simpleburst_2,
+PSS_CONTESTANT(burstsort_mkq_simpleburst_2,
                     "rantala/burstsort_mkq_simpleburst_2",
                     "burstsort_mkq 2byte alphabet with simpleburst")
-CONTESTANT_REGISTER(burstsort_mkq_simpleburst_4,
+PSS_CONTESTANT(burstsort_mkq_simpleburst_4,
                     "rantala/burstsort_mkq_simpleburst_4",
                     "burstsort_mkq 4byte alphabet with simpleburst")
 
@@ -302,13 +302,13 @@ void burstsort_mkq_recursiveburst_2(unsigned char** strings, size_t N)
 void burstsort_mkq_recursiveburst_4(unsigned char** strings, size_t N)
 { burstsort_mkq_recursiveburst<uint32_t>(strings, N); }
 
-CONTESTANT_REGISTER(burstsort_mkq_recursiveburst_1,
+PSS_CONTESTANT(burstsort_mkq_recursiveburst_1,
                     "rantala/burstsort_mkq_recursiveburst_1",
                     "burstsort_mkq 1byte alphabet with recursiveburst")
-CONTESTANT_REGISTER(burstsort_mkq_recursiveburst_2,
+PSS_CONTESTANT(burstsort_mkq_recursiveburst_2,
                     "rantala/burstsort_mkq_recursiveburst_2",
                     "burstsort_mkq 2byte alphabet with recursiveburst")
-CONTESTANT_REGISTER(burstsort_mkq_recursiveburst_4,
+PSS_CONTESTANT(burstsort_mkq_recursiveburst_4,
                     "rantala/burstsort_mkq_recursiveburst_4",
                     "burstsort_mkq 4byte alphabet with recursiveburst")
 

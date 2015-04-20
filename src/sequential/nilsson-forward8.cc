@@ -383,6 +383,6 @@ void nilsson_forward8(unsigned char **strings, size_t n)
     return frssort1(strings, n);
 }
 
-CONTESTANT_REGISTER(nilsson_forward8,
-                    "nilsson/forward8",
-                    "Forward Radix Sort 8-bit by Stefan Nilsson")
+PSS_CONTESTANT(nilsson_forward8,
+               "nilsson/forward8",
+               "Forward Radix Sort 8-bit by Stefan Nilsson")

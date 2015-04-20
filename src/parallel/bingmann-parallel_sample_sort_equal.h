@@ -910,7 +910,7 @@ parallel_sample_sortBTCE(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyEqual>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTCE,
     "bingmann/parallel_sample_sortBTCE",
     "pS5: binary tree, equality, bktcache")
@@ -921,7 +921,7 @@ parallel_sample_sortBTCEU1(string* strings, size_t n)
     parallel_sample_sort_base<ClassifyEqualUnrollTree>(strings, n, 0);
 }
 
-CONTESTANT_REGISTER_PARALLEL_LCP(
+PSS_CONTESTANT_PARALLEL_LCP(
     parallel_sample_sortBTCEU1,
     "bingmann/parallel_sample_sortBTCEU1",
     "pS5: binary tree, equality, bktcache, unroll tree")

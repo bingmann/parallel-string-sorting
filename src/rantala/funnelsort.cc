@@ -721,35 +721,35 @@ void funnelsort_64way_dfs(unsigned char** strings, size_t n)
 void funnelsort_128way_dfs(unsigned char** strings, size_t n)
 { funnelsort_Kway<128, buffer_layout_dfs>(strings, n); }
 
-CONTESTANT_REGISTER(funnelsort_8way_bfs,
+PSS_CONTESTANT(funnelsort_8way_bfs,
                     "rantala/funnelsort_8way_bfs",
                     "funnelsort 8way bfs")
-CONTESTANT_REGISTER(funnelsort_16way_bfs,
+PSS_CONTESTANT(funnelsort_16way_bfs,
                     "rantala/funnelsort_16way_bfs",
                     "funnelsort 16way bfs")
-CONTESTANT_REGISTER(funnelsort_32way_bfs,
+PSS_CONTESTANT(funnelsort_32way_bfs,
                     "rantala/funnelsort_32way_bfs",
                     "funnelsort 32way bfs")
-CONTESTANT_REGISTER(funnelsort_64way_bfs,
+PSS_CONTESTANT(funnelsort_64way_bfs,
                     "rantala/funnelsort_64way_bfs",
                     "funnelsort 64way bfs")
-CONTESTANT_REGISTER(funnelsort_128way_bfs,
+PSS_CONTESTANT(funnelsort_128way_bfs,
                     "rantala/funnelsort_128way_bfs",
                     "funnelsort 128way bfs")
 
-CONTESTANT_REGISTER(funnelsort_8way_dfs,
+PSS_CONTESTANT(funnelsort_8way_dfs,
                     "rantala/funnelsort_8way_dfs",
                     "funnelsort 8way dfs")
-CONTESTANT_REGISTER(funnelsort_16way_dfs,
+PSS_CONTESTANT(funnelsort_16way_dfs,
                     "rantala/funnelsort_16way_dfs",
                     "funnelsort 16way dfs")
-CONTESTANT_REGISTER(funnelsort_32way_dfs,
+PSS_CONTESTANT(funnelsort_32way_dfs,
                     "rantala/funnelsort_32way_dfs",
                     "funnelsort 32way dfs")
-CONTESTANT_REGISTER(funnelsort_64way_dfs,
+PSS_CONTESTANT(funnelsort_64way_dfs,
                     "rantala/funnelsort_64way_dfs",
                     "funnelsort 64way dfs")
-CONTESTANT_REGISTER(funnelsort_128way_dfs,
+PSS_CONTESTANT(funnelsort_128way_dfs,
                     "rantala/funnelsort_128way_dfs",
                     "funnelsort 128way dfs")
 

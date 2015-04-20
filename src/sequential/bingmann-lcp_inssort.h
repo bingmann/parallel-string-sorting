@@ -235,9 +235,9 @@ void test_lcp_insertion_sort(string* strings, size_t n)
     lcp_insertion_sort(strings, n, 0);
 }
 
-CONTESTANT_REGISTER(test_lcp_insertion_sort,
-                    "bingmann/lcp_insertion_sort",
-                    "LCP-aware insertion sort")
+PSS_CONTESTANT(test_lcp_insertion_sort,
+               "bingmann/lcp_insertion_sort",
+               "LCP-aware insertion sort")
 
 static inline
 void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
@@ -250,9 +250,9 @@ void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
     delete[] shadow;
 }
 
-CONTESTANT_REGISTER(test_lcp_insertion_sort_nolcp,
-                    "bingmann/lcp_insertion_sort_nolcp",
-                    "LCP-aware insertion sort (without LCP output)")
+PSS_CONTESTANT(test_lcp_insertion_sort_nolcp,
+               "bingmann/lcp_insertion_sort_nolcp",
+               "LCP-aware insertion sort (without LCP output)")
 
 static inline
 void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
@@ -269,9 +269,9 @@ void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
     delete[] shadow;
 }
 
-CONTESTANT_REGISTER(test_lcp_insertion_sort_pseudocode,
-                    "bingmann/lcp_insertion_sort_pseudocode",
-                    "LCP-aware insertion sort close to pseudo-code, with checking")
+PSS_CONTESTANT(test_lcp_insertion_sort_pseudocode,
+               "bingmann/lcp_insertion_sort_pseudocode",
+               "LCP-aware insertion sort close to pseudo-code, with checking")
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -425,9 +425,9 @@ void test_lcp_insertion_sort_cache(string* strings, size_t n)
     delete[] cache;
 }
 
-CONTESTANT_REGISTER(test_lcp_insertion_sort_cache,
-                    "bingmann/lcp_insertion_sort_cache",
-                    "LCP-aware insertion sort (with distinguishing character cache)")
+PSS_CONTESTANT(test_lcp_insertion_sort_cache,
+               "bingmann/lcp_insertion_sort_cache",
+               "LCP-aware insertion sort (with distinguishing character cache)")
 
 } // namespace bingmann_lcp_inssort
 

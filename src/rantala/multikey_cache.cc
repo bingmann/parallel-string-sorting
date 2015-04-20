@@ -243,12 +243,12 @@ void multikey_cache4(unsigned char** strings, size_t n)
 void multikey_cache8(unsigned char** strings, size_t n)
 { multikey_cache<8>(strings, n, 0); }
 
-CONTESTANT_REGISTER(multikey_cache4,
-                    "rantala/multikey_cache4",
-                    "multikey_cache with 4byte cache")
+PSS_CONTESTANT(multikey_cache4,
+               "rantala/multikey_cache4",
+               "multikey_cache with 4byte cache")
 
-CONTESTANT_REGISTER(multikey_cache8,
-                    "rantala/multikey_cache8",
-                    "multikey_cache with 8byte cache")
+PSS_CONTESTANT(multikey_cache8,
+               "rantala/multikey_cache8",
+               "multikey_cache with 8byte cache")
 
 } // namespace rantala

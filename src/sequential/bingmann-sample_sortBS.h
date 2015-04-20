@@ -239,8 +239,8 @@ void bingmann_sample_sortBS(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBS, "bingmann/sample_sortBS",
-                    "bingmann/sample_sortBS (binary search, no cache)")
+PSS_CONTESTANT(bingmann_sample_sortBS, "bingmann/sample_sortBS",
+               "bingmann/sample_sortBS (binary search, no cache)")
 
 // ----------------------------------------------------------------------------
 

@@ -290,8 +290,8 @@ void bingmann_sample_sortBSC(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBSC, "bingmann/sample_sortBSC",
-                    "bingmann/sample_sortBSC (binary search, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBSC, "bingmann/sample_sortBSC",
+               "bingmann/sample_sortBSC (binary search, bkt cache)")
 
 void bingmann_sample_sortBSCA(string* strings, size_t n)
 {
@@ -300,8 +300,8 @@ void bingmann_sample_sortBSCA(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBSCA, "bingmann/sample_sortBSCA",
-                    "bingmann/sample_sortBSCA (binary search, assembler CMOV, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBSCA, "bingmann/sample_sortBSCA",
+               "bingmann/sample_sortBSCA (binary search, assembler CMOV, bkt cache)")
 
 // ----------------------------------------------------------------------------
 
@@ -369,8 +369,8 @@ void bingmann_sample_sortBSCE(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBSCE, "bingmann/sample_sortBSCE",
-                    "bingmann/sample_sortBSCE (binary search equal, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBSCE, "bingmann/sample_sortBSCE",
+               "bingmann/sample_sortBSCE (binary search equal, bkt cache)")
 
 void bingmann_sample_sortBSCEA(string* strings, size_t n)
 {
@@ -379,8 +379,8 @@ void bingmann_sample_sortBSCEA(string* strings, size_t n)
     sample_sort_post();
 }
 
-CONTESTANT_REGISTER(bingmann_sample_sortBSCEA, "bingmann/sample_sortBSCEA",
-                    "bingmann/sample_sortBSCEA (binary search equal, assembler CMOV, bkt cache)")
+PSS_CONTESTANT(bingmann_sample_sortBSCEA, "bingmann/sample_sortBSCEA",
+               "bingmann/sample_sortBSCEA (binary search equal, assembler CMOV, bkt cache)")
 
 // ----------------------------------------------------------------------------
 

@@ -226,9 +226,9 @@ void cradix_rantala(LPPSTR a, UINT n)
 	free((void*)tj);
 }
 
-CONTESTANT_REGISTER(cradix_rantala,
-                    "ng/rantala_cradix",
-                    "CRadix by Waihong Ng and Katsuhiko Kakehi modified by Rantala")
+PSS_CONTESTANT(cradix_rantala,
+               "ng/rantala_cradix",
+               "CRadix by Waihong Ng and Katsuhiko Kakehi modified by Rantala")
 
 #undef push
 #undef pop

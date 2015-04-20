@@ -397,6 +397,8 @@ void nilsson_adaptive_msd(unsigned char **strings, size_t n)
     return arssort((char_t**)strings, n);
 }
 
-CONTESTANT_REGISTER(nilsson_adaptive_msd,
-                    "nilsson/adaptive_msd",
-                    "Adaptive MSD Radix Sort by Stefan Nilsson")
+PSS_CONTESTANT(nilsson_adaptive_msd,
+               "nilsson/adaptive_msd",
+               "Adaptive MSD Radix Sort by Stefan Nilsson")
+
+/******************************************************************************/

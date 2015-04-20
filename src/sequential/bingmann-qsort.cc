@@ -51,9 +51,9 @@ void qsort_strcmp(string* strings, size_t n)
     qsort((void*)strings, n, sizeof(string), compare_strcmp);
 }
 
-CONTESTANT_REGISTER(qsort_strcmp,
-                    "bingmann/qsort_strcmp",
-                    "Run stdlib qsort with strcmp comparsion")
+PSS_CONTESTANT(qsort_strcmp,
+               "bingmann/qsort_strcmp",
+               "Run stdlib qsort with strcmp comparsion")
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -113,17 +113,17 @@ void qsort8(string* strings, size_t n)
     qsort((void*)strings, n, sizeof(string), qcompare_uint<uint64_t>);
 }
 
-CONTESTANT_REGISTER(qsort1,
-                    "bingmann/qsort1",
-                    "Run stdlib qsort with string comparsions (bytewise)")
+PSS_CONTESTANT(qsort1,
+               "bingmann/qsort1",
+               "Run stdlib qsort with string comparsions (bytewise)")
 
-CONTESTANT_REGISTER(qsort4,
-                    "bingmann/qsort4",
-                    "Run stdlib qsort with string comparsions (4 bytewise)")
+PSS_CONTESTANT(qsort4,
+               "bingmann/qsort4",
+               "Run stdlib qsort with string comparsions (4 bytewise)")
 
-CONTESTANT_REGISTER(qsort8,
-                    "bingmann/qsort8",
-                    "Run stdlib qsort with string comparsions (8 bytewise)")
+PSS_CONTESTANT(qsort8,
+               "bingmann/qsort8",
+               "Run stdlib qsort with string comparsions (8 bytewise)")
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -177,17 +177,17 @@ void stdsort8(string* strings, size_t n)
     std::sort(strings, strings + n, stdcompare_uint<uint64_t>);
 }
 
-CONTESTANT_REGISTER(stdsort1,
-                    "bingmann/stdsort1",
-                    "Run std::sort with string comparsions (bytewise)")
+PSS_CONTESTANT(stdsort1,
+               "bingmann/stdsort1",
+               "Run std::sort with string comparsions (bytewise)")
 
-CONTESTANT_REGISTER(stdsort4,
-                    "bingmann/stdsort4",
-                    "Run std::sort with string comparsions (4 bytewise)")
+PSS_CONTESTANT(stdsort4,
+               "bingmann/stdsort4",
+               "Run std::sort with string comparsions (4 bytewise)")
 
-CONTESTANT_REGISTER(stdsort8,
-                    "bingmann/stdsort8",
-                    "Run std::sort with string comparsions (8 bytewise)")
+PSS_CONTESTANT(stdsort8,
+               "bingmann/stdsort8",
+               "Run std::sort with string comparsions (8 bytewise)")
 
 } // namespace bingmann_qsort
 

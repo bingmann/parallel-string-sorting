@@ -384,6 +384,6 @@ void nilsson_forward16(unsigned char **strings, size_t n)
 	return frssort(strings, n);
 }
 
-CONTESTANT_REGISTER(nilsson_forward16,
-                    "nilsson/forward16",
-                    "Forward Radix Sort 16-bit by Stefan Nilsson")
+PSS_CONTESTANT(nilsson_forward16,
+               "nilsson/forward16",
+               "Forward Radix Sort 16-bit by Stefan Nilsson")

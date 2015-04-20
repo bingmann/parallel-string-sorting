@@ -63,6 +63,10 @@ if(PSS_BINARY)
   add_executable(psstest ${PSSBIN_SOURCES})
   target_link_libraries(psstest ${PSSBIN_LIBRARIES})
 
+  # enable compilation of hooks for pss contest list
+  set_property(TARGET psstest
+    PROPERTY COMPILE_DEFINITIONS "PSS_CONTEST=1")
+
   if(BUILD_ALL)
     # build parallel string sorting with additional parameters
 

@@ -681,9 +681,9 @@ static void parallel_radix_sort_8bit(string* strings, size_t n)
     delete[] shadow;
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_radix_sort_8bit,
-                             "bingmann/parallel_radix_sort_8bit",
-                             "Parallel MSD Radix sort with load balancing, 8-bit BigSorts")
+PSS_CONTESTANT_PARALLEL(parallel_radix_sort_8bit,
+                        "bingmann/parallel_radix_sort_8bit",
+                        "Parallel MSD Radix sort with load balancing, 8-bit BigSorts")
 
 static void parallel_radix_sort_16bit(string* strings, size_t n)
 {
@@ -700,9 +700,9 @@ static void parallel_radix_sort_16bit(string* strings, size_t n)
     delete[] shadow;
 }
 
-CONTESTANT_REGISTER_PARALLEL(parallel_radix_sort_16bit,
-                             "bingmann/parallel_radix_sort_16bit",
-                             "Parallel MSD Radix sort with load balancing, 16-bit BigSorts")
+PSS_CONTESTANT_PARALLEL(parallel_radix_sort_16bit,
+                        "bingmann/parallel_radix_sort_16bit",
+                        "Parallel MSD Radix sort with load balancing, 16-bit BigSorts")
 
 } // namespace bingmann_parallel_radix_sort
 

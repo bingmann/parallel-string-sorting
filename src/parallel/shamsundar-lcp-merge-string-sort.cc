@@ -425,7 +425,7 @@ static void string_sort(unsigned char **strings, size_t size)
     delete [] gSP;
 }
 
-CONTESTANT_REGISTER_PARALLEL_PREPARE(
+PSS_CONTESTANT_PARALLEL_PREPARE(
     prepare, string_sort,
     "shamsundar/lcp-merge-string-sort",
     "Parallelized LCP Merge sort by N. Shamsundar");

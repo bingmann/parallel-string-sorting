@@ -147,14 +147,14 @@ static inline void ssort2(string a[], size_t n, int depth)
 static inline void multikey2(string a[], size_t n)
 { ssort2(a, n, 0); }
 
-static void bs_mkqsort(unsigned char **strings, size_t n)
+static inline void bs_mkqsort(unsigned char **strings, size_t n)
 {
     return multikey2(strings, n);
 }
 
-CONTESTANT_REGISTER(bs_mkqsort,
-                    "bs/mkqsort",
-                    "bs_mkqs Original Multikey-Quicksort")
+PSS_CONTESTANT(bs_mkqsort,
+               "bs/mkqsort",
+               "bs_mkqs Original Multikey-Quicksort")
 
 #undef i2c
 #undef ptr2char

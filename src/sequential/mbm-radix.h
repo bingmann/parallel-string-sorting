@@ -101,8 +101,8 @@ void mbm_radix(string a[], size_t n)
 #undef pop
 #undef stackempty
 
-CONTESTANT_REGISTER(mbm_radix,
-                    "mbm/radixsort",
-                    "MSD Radix Sort by P. M. McIlroy, K. Bostic, and M. D. McIlroy")
+PSS_CONTESTANT(mbm_radix,
+               "mbm/radixsort",
+               "MSD Radix Sort by P. M. McIlroy, K. Bostic, and M. D. McIlroy")
 
 } // namespace mbm_radixsort
