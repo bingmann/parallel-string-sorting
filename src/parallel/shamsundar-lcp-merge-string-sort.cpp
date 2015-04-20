@@ -42,8 +42,7 @@ http://dspace.wul.waseda.ac.jp/dspace/bitstream/2065/28672/4/Honbun-4624_01.pdf
 */
 
 #include "../tools/contest.hpp"
-
-extern int pss_num_threads;
+#include "../tools/globals.hpp"
 
 #define PTHREAD
 
@@ -390,7 +389,7 @@ int main(int argc,char *argv[]){
 
 AS *sP;
 
-static void prepare(unsigned char **strings, size_t size)
+static inline void prepare(unsigned char **strings, size_t size)
 {
     sP = new AS[size];
     for (size_t i = 0; i < size; ++i) {
@@ -403,7 +402,7 @@ static void prepare(unsigned char **strings, size_t size)
         gSP[i] = &sP[i];
 }
 
-static void string_sort(unsigned char **strings, size_t size)
+static inline void string_sort(unsigned char **strings, size_t size)
 {
     int cnts[4];
     int fcol=1,lcol=1000000000;

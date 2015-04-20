@@ -10,6 +10,7 @@ include_directories("${GMP_INCLUDE_DIR}")
 include_directories("${NUMA_INCLUDE_DIR}")
 
 set(PSSLIB_SOURCES
+  tools/globals.cpp
   sequential/nilsson-adaptive.cpp
   sequential/nilsson-forward8.cpp
   sequential/nilsson-forward16.cpp
@@ -28,7 +29,6 @@ set(PSSLIB_SOURCES
   rantala/multikey_dynamic.cpp
   rantala/multikey_multipivot.cpp
   rantala/multikey_simd.cpp
-  sinha-copy-burstsort/glue.cpp
   parallel/akiba-parallel_string_radix_sort.cpp
   parallel/bingmann-parallel_radix_sort.cpp
   parallel/bingmann-parallel_mkqs.cpp
@@ -40,6 +40,7 @@ set(PSSLIB_SOURCES
 set(PSSBIN_SOURCES
   psstest.cpp
   ${PSSLIB_SOURCES}
+  sinha-copy-burstsort/glue.cpp
   )
 
 set(PSSBIN_LIBRARIES minitbb ${GMP_LIBRARIES} ${NUMA_LIBRARIES} rt)

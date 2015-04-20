@@ -99,8 +99,6 @@ bool gopt_mlockall = false;          // argument --mlockall
 
 std::vector<size_t> gopt_threadlist; // argument --thread-list
 
-stats_writer g_stats;
-
 size_t g_smallsort = 0;
 
 bool gopt_forkrun = false;
@@ -110,11 +108,6 @@ bool gopt_sequential_only = false;            // argument --sequential
 bool gopt_parallel_only = false;              // argument --parallel
 
 const size_t g_stacklimit = 64 * 1024 * 1024; // increase from 8 MiB
-
-std::string gopt_memory_type;                 // argument -M, --memory, see tools/input.h
-
-// for NUMA segmenting and algorithms
-size_t g_numa_nodes;                          // number of NUMA nodes (may be faked by cmdline)
 
 // for -M mmap_segment:
 std::vector<size_t> g_numa_chars;             // offsets of character on NUMA nodes
@@ -174,8 +167,6 @@ std::vector<size_t> g_numa_string_count;      // pointer to strings on NUMA node
 #include "rantala/msd_dyn_vector.hpp"
 
 #undef debug
-
-int pss_num_threads = 0;
 
 Contest * getContestSingleton()
 {

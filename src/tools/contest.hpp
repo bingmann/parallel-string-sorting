@@ -27,13 +27,6 @@
 #include <cstring>
 #include <vector>
 
-#include "stats_writer.hpp"
-
-extern stats_writer g_stats;
-
-extern int pss_num_threads;
-extern size_t g_small_sort;
-
 #if PSS_CONTEST
 
 //! forward declaration

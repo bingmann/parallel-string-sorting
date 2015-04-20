@@ -46,9 +46,7 @@
 #include "../tools/agglogger.hpp"
 #include "../tools/timer.hpp"
 #include "../tools/timer_array.hpp"
-
-extern std::string gopt_memory_type;
-extern size_t g_numa_nodes;
+#include "../tools/globals.hpp"
 
 namespace jobqueue {
 

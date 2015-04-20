@@ -63,6 +63,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <iostream>
+#include <sstream>
 
 #include <boost/tuple/tuple.hpp>
 

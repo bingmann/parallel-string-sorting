@@ -23,6 +23,8 @@
 #ifndef PSS_SRC_TOOLS_INPUT_HEADER
 #define PSS_SRC_TOOLS_INPUT_HEADER
 
+#include "globals.hpp"
+
 namespace input {
 
 /// Returns true for a valid memory type

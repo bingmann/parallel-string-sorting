@@ -44,6 +44,7 @@
 
 #include "../tools/debug.hpp"
 #include "../tools/contest.hpp"
+#include "../tools/globals.hpp"
 #include "../tools/stringtools.hpp"
 #include "../tools/jobqueue.hpp"
 
@@ -51,8 +52,6 @@
 #define DBGX DBGX_OMP
 
 #include "../sequential/inssort.hpp"
-
-extern size_t g_smallsort;
 
 namespace bingmann_parallel_radix_sort {
 
@@ -666,7 +665,7 @@ void Enqueue(JobQueue& jobqueue, const StringPtr& strptr, size_t depth)
         EnqueueSmallsortJob8(jobqueue, strptr, depth);
 }
 
-static void parallel_radix_sort_8bit(string* strings, size_t n)
+static inline void parallel_radix_sort_8bit(string* strings, size_t n)
 {
     g_totalsize = n;
     g_threadnum = omp_get_max_threads();
@@ -685,7 +684,7 @@ PSS_CONTESTANT_PARALLEL(parallel_radix_sort_8bit,
                         "bingmann/parallel_radix_sort_8bit",
                         "Parallel MSD Radix sort with load balancing, 8-bit BigSorts")
 
-static void parallel_radix_sort_16bit(string* strings, size_t n)
+static inline void parallel_radix_sort_16bit(string* strings, size_t n)
 {
     g_totalsize = n;
     g_threadnum = omp_get_max_threads();
