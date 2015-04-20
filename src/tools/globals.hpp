@@ -30,7 +30,7 @@
 
 extern stats_writer g_stats;
 
-extern int pss_num_threads;
+extern int g_num_threads;
 
 // number of NUMA nodes (may be faked by cmdline)
 extern size_t g_numa_nodes;

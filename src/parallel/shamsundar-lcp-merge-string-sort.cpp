@@ -407,7 +407,7 @@ static inline void string_sort(unsigned char **strings, size_t size)
     int cnts[4];
     int fcol=1,lcol=1000000000;
 
-    NCPU = pss_num_threads;
+    NCPU = g_num_threads;
 
     cnts[0]=cnts[1]=cnts[2]=cnts[3]=0;
 

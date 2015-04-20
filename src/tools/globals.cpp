@@ -25,7 +25,7 @@
 
 stats_writer g_stats;
 
-int pss_num_threads = 0;
+int g_num_threads = 0;
 
 // number of NUMA nodes (may be faked by cmdline)
 size_t g_numa_nodes;

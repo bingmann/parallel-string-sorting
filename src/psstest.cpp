@@ -300,9 +300,9 @@ void Contest::list_contentants()
 void Contestant_UCArray::run_forked()
 {
     if (gopt_memory_type == "mmap_segment" &&
-        pss_num_threads < (int)g_numa_nodes)
+        g_num_threads < (int)g_numa_nodes)
     {
-        std::cout << "Skipping because threads=" << pss_num_threads
+        std::cout << "Skipping because threads=" << g_num_threads
                   << " less than numa_nodes=" << g_numa_nodes << std::endl;
         return;
     }
@@ -499,9 +499,9 @@ void Contestant_UCArray::real_run()
 
     // enable nested parallel regions
     omp_set_nested(true);
-    omp_set_num_threads(pss_num_threads);
+    omp_set_num_threads(g_num_threads);
 
-    if (pss_num_threads)
+    if (g_num_threads)
     {
         // dummy parallel region to start up threads
         unsigned int thrsum = 0;
@@ -616,7 +616,7 @@ void Contestant_UCArray::real_run()
 void Contestant_UCArray::run()
 {
     // sequential algorithm
-    pss_num_threads = 0;
+    g_num_threads = 0;
 
     for (size_t r = 0; r < gopt_repeats; ++r)
         run_forked();
@@ -633,7 +633,7 @@ void Contestant_UCArray_Parallel::run()
             for (size_t r = 0; r < gopt_repeats; ++r)
             {
                 g_stats.clear();
-                pss_num_threads = p;
+                g_num_threads = p;
                 std::cout << "threads=" << p << std::endl;
                 g_stats >> "threads" << p;
 
@@ -668,7 +668,7 @@ void Contestant_UCArray_Parallel::run()
             for (size_t r = 0; r < gopt_repeats; ++r)
             {
                 g_stats.clear();
-                pss_num_threads = p;
+                g_num_threads = p;
                 std::cout << "threads=" << p << std::endl;
                 g_stats >> "threads" << p;
 
