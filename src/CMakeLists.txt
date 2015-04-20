@@ -42,7 +42,9 @@ set(PSSBIN_SOURCES
   ${PSSLIB_SOURCES}
   )
 
-set(LIBS minitbb ${GMP_LIBRARIES} ${NUMA_LIBRARIES} rt)
+set(PSSBIN_LIBRARIES minitbb ${GMP_LIBRARIES} ${NUMA_LIBRARIES} rt)
+
+set(PSSBIN_LIBRARIES ${PSSBIN_LIBRARIES} CACHE STRING "Pssbin Libraries" FORCE)
 
 if(WITH_MALLOC_COUNT)
 
@@ -51,7 +53,7 @@ if(WITH_MALLOC_COUNT)
     tools/malloc_count.c
     tools/stack_count.c
   )
-  list(APPEND LIBS "dl")
+  list(APPEND PSSBIN_LIBRARIES "dl")
 
 endif(WITH_MALLOC_COUNT)
 
@@ -59,7 +61,7 @@ endif(WITH_MALLOC_COUNT)
 if(PSS_BINARY)
 
   add_executable(psstest ${PSSBIN_SOURCES})
-  target_link_libraries(psstest ${LIBS})
+  target_link_libraries(psstest ${PSSBIN_LIBRARIES})
 
   if(BUILD_ALL)
     # build parallel string sorting with additional parameters
@@ -67,7 +69,7 @@ if(PSS_BINARY)
     foreach(BPARAM 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576)
 
       add_executable(psstest-${BPARAM} ${PSSBIN_SOURCES})
-      target_link_libraries(psstest-${BPARAM} ${LIBS})
+      target_link_libraries(psstest-${BPARAM} ${PSSBIN_LIBRARIES})
       set_property(TARGET psstest-${BPARAM} PROPERTY COMPILE_DEFINITIONS "BPARAM=${BPARAM}")
 
     endforeach(BPARAM)

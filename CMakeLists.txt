@@ -46,6 +46,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Drestrict=__restrict__ -std=c+
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native -g")
 
+# enable use of "make test"
+enable_testing()
+
 # Use OpenMP
 
 include(FindOpenMP)
@@ -96,7 +99,11 @@ add_subdirectory(minitbb)
 # descend into source
 add_subdirectory(src)
 
+# descend into testsuite
+add_subdirectory(tests)
+
 # write platform specific configuration
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 ################################################################################

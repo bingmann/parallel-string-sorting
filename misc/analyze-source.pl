@@ -340,6 +340,10 @@ foreach my $file (@filelist)
     elsif ($file =~ m!^src/(sequential|parallel)/(bingmann|eberle).*!) {
         process_cpp($file);
     }
+    # source files in /tests
+    elsif ($file =~ m!^tests/[^./]+\.(h|cpp|hpp|h\.in)$!) {
+        process_cpp($file);
+    }
     # skip .h and .cc from other sources
     elsif ($file =~ m!\.(h|c|cc|hpp|h\.in)$!) {
     }
