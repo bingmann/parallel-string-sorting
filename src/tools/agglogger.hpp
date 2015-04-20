@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/agglogger.h
+ * src/tools/agglogger.hpp
  *
  * Class to write aggregated measurement values into gnuplottable text format.
  *

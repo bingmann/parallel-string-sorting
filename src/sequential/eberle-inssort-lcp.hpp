@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/eberle-inssort-lcp.h
+ * src/sequential/eberle-inssort-lcp.hpp
  *
  * LCP aware insertion sort.
  *

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/eberle-parallel-lcp-mergesort.h
+ * src/parallel/eberle-parallel-lcp-mergesort.hpp
  *
  * Parallel LCP aware merge sort.
  *

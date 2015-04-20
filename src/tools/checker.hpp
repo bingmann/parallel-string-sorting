@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/checker.h
+ * src/tools/checker.hpp
  *
  * Tools to check correctness of sort.
  *

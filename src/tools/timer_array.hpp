@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/timer_array.h
+ * src/tools/timer_array.hpp
  *
  * Class to output statistics in a flexible text file as key=value pairs.
  *

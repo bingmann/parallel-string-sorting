@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/stringptr.h
+ * src/tools/stringptr.hpp
  *
  * StringPtr, StringPtrOut, and NoLcpCalc specializations. Encapsulate string
  * and shadow array pointers.

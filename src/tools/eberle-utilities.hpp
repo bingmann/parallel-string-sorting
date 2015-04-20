@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/eberle-utilities.h
+ * src/tools/eberle-utilities.hpp
  *
  * Header for utility functions used by src/eberle/ algorithms.
  *

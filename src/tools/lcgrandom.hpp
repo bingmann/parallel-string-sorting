@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/lcgrandom.h
+ * src/tools/lcgrandom.hpp
  *
  * Simple linear congruential random generator for 64-bit pseudo-random numbers.
  *

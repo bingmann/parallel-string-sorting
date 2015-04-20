@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/psstest.cc
+ * src/psstest.cpp
  *
  * Parallel string sorting test program
  *

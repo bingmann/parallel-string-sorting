@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/eberle-parallel-lcp-merge-standard-splitting.h
+ * src/parallel/eberle-parallel-lcp-merge-standard-splitting.hpp
  *
  * Parallel LCP aware merge implementation.
  *

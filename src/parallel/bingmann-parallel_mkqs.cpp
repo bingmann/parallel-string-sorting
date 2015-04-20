@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/bingmann-parallel_mkqs.cc
+ * src/parallel/bingmann-parallel_mkqs.cpp
  *
  * Parallel multikey-quicksort.
  *

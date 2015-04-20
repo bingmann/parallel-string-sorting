@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/contest.h
+ * src/tools/contest.hpp
  *
  * Class to register contestants for speed test.
  *

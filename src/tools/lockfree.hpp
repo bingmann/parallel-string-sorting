@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/lockfree.h
+ * src/tools/lockfree.hpp
  *
  * Lock-free auxiliary data structures
  *

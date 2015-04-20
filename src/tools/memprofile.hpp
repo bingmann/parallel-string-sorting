@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/memprofile.h
+ * src/tools/memprofile.hpp
  *
  * Class to write the datafile for a memory profile plot.
  *

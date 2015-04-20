@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/stringtools.h
+ * src/tools/stringtools.hpp
  *
  * Some template tools to access strings. Used in sample and radix sorts.
  *

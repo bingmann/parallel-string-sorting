@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/bingmann-parallel_sample_sort_equal.h
+ * src/parallel/bingmann-parallel_sample_sort_equal.hpp
  *
  * Parallel Super Scalar String Sample-Sort, Classifier variant with equal
  * checks at each node.

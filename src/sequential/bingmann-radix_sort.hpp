@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-radix_sort.h
+ * src/sequential/bingmann-radix_sort.hpp
  *
  * Experiments with sequential radix sort implementations.
  * Based on rantala/msd_c?.h

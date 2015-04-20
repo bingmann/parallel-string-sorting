@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-lcp-mergesort.cc
+ * src/sequential/bingmann-lcp-mergesort.cpp
  *
  * LCP aware binary and k-way mergesort, implemented to verify pseudo-code in
  * journal.  Not necessarily the fastest implementations.

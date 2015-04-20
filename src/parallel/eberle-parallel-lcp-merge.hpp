@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/eberle-parallel-lcp-merge.h
+ * src/parallel/eberle-parallel-lcp-merge.hpp
  *
  * Parallel LCP aware merge implementation.
  *

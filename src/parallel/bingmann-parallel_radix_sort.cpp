@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/bingmann-parallel_radix_sort.cc
+ * src/parallel/bingmann-parallel_radix_sort.cpp
  *
  * Parallel radix sort with work-balancing.
  *

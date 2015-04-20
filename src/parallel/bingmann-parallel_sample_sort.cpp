@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/bingmann-parallel_sample_sort.cc
+ * src/parallel/bingmann-parallel_sample_sort.cpp
  *
  * Parallel Super Scalar String Sample-Sort, many variant via different
  * Classifier templates.

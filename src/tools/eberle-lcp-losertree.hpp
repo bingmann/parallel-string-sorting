@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/eberle-lcp-losertree.h
+ * src/tools/eberle-lcp-losertree.hpp
  *
  * Implementation of a LCP aware multiway losertree.
  *

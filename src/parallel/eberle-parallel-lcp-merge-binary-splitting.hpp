@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/eberle-parallel-lcp-merge-binary-splitting.h
+ * src/parallel/eberle-parallel-lcp-merge-binary-splitting.hpp
  *
  * Parallel LCP aware merge implementation with binary splitting algorithm.
  *

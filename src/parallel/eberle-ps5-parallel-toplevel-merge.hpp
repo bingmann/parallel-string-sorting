@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/eberle-ps5-parallel-toplevel-merge.h
+ * src/parallel/eberle-ps5-parallel-toplevel-merge.hpp
  *
  * NUMA aware parallel sorting algorithm running separate pS5s on every NUMA
  * node and then combining the result via parallel LCP aware merge.

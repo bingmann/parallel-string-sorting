@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/jobqueue.h
+ * src/tools/jobqueue.hpp
  *
  * Job queue class for work-balancing parallel string sorting algorithms.
  *

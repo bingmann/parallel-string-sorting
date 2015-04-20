@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/bingmann-parallel_sample_sort_treecalc.h
+ * src/parallel/bingmann-parallel_sample_sort_treecalc.hpp
  *
  * Parallel Super Scalar String Sample-Sort, Classifier variant with
  * TreeCalculations instead of separate splitter array.

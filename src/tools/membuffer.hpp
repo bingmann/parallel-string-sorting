@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/membuffer.h
+ * src/tools/membuffer.hpp
  *
  * Dumb memory buffer using new[]/delete[] which does not initialize the
  * values. This is used instead of std::vector when the values need not be

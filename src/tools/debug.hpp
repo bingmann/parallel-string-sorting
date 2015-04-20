@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/debug.h
+ * src/tools/debug.hpp
  *
  * Debugging macros and memory debugging utility
  *

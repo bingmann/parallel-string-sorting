@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/eberle-mergesort-lcp.h
+ * src/sequential/eberle-mergesort-lcp.hpp
  *
  * LCP aware binary mergesort.
  *

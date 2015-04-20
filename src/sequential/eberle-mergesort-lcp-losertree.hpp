@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/eberle-mergesort-lcp-losertree.h
+ * src/sequential/eberle-mergesort-lcp-losertree.hpp
  *
  * LCP aware multiway mergesort using a losertree implementation for merging.
  *

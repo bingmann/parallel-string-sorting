@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/stats_writer.h
+ * src/tools/stats_writer.hpp
  *
  * Class to collect and output statistics as key=value pairs.
  *

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-qsort.cc
+ * src/sequential/bingmann-qsort.cpp
  *
  * String sorting using qsort() and std::sort with 1-, 4- and 8-bytewise
  * comparisons

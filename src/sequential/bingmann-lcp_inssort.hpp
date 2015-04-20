@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-lcp_inssort.h
+ * src/sequential/bingmann-lcp_inssort.hpp
  *
  * LCP-aware insertion sort, used in parallel variants as base case.
  *

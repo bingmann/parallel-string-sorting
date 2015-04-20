@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-sample_sortBTC.h
+ * src/sequential/bingmann-sample_sortBTC.hpp
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/parallel/bingmann-parallel_sample_sort_lcp.cc
+ * src/parallel/bingmann-parallel_sample_sort_lcp.cpp
  *
  * Parallel Super Scalar String Sample-Sort, many variant via different
  * Classifier templates and LCP construction.

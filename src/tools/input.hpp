@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/input.h
+ * src/tools/input.hpp
  *
  * Tools to read input files as null-terminated strings.
  *

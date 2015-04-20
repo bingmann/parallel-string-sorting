@@ -334,18 +334,18 @@ foreach my $file (@filelist)
         process_cpp($file);
     }
     # source files in /src
-    elsif ($file =~ m!^src/[^./]+\.(h|cc|hpp|h\.in)$!) {
+    elsif ($file =~ m!^src/[^./]+\.(h|c|cpp|hpp|h\.in)$!) {
         process_cpp($file);
     }
     elsif ($file =~ m!^src/(sequential|parallel)/(bingmann|eberle).*!) {
         process_cpp($file);
     }
     # source files in /tests
-    elsif ($file =~ m!^tests/[^./]+\.(h|cpp|hpp|h\.in)$!) {
+    elsif ($file =~ m!^tests/[^./]+\.(cpp|hpp|h\.in)$!) {
         process_cpp($file);
     }
-    # skip .h and .cc from other sources
-    elsif ($file =~ m!\.(h|c|cc|hpp|h\.in)$!) {
+    # skip .hpp and .cpp from other sources
+    elsif ($file =~ m!\.(h|c|cpp|hpp|h\.in)$!) {
     }
     elsif ($file =~ /\.pl$/) {
         process_pl_cmake($file);

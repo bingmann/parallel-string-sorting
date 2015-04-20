@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/tools/logfloor.h
+ * src/tools/logfloor.hpp
  *
  * Recursive template magic to calculate the floor(log(x)/log(2)) at run-time.
  *
