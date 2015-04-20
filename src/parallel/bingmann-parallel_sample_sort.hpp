@@ -1,10 +1,11 @@
 /*******************************************************************************
- * tests/test-bingmann-parallel_sample_sort.cpp
+ * src/parallel/bingmann-parallel_sample_sort.h
  *
- * Parallel string sorting test program
+ * Parallel Super Scalar String Sample-Sort, many variant via different
+ * Classifier templates.
  *
  *******************************************************************************
- * Copyright (C) 2012-2013 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -20,11 +21,24 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#include <parallel/bingmann-parallel_sample_sort.hpp>
+#ifndef PSS_SRC_PARALLEL_BINGMANN_PARALLEL_SAMPLE_SORT_HEADER
+#define PSS_SRC_PARALLEL_BINGMANN_PARALLEL_SAMPLE_SORT_HEADER
 
-int main()
-{
-    return 0;
-}
+#include "../tools/stringtools.hpp"
+
+namespace bingmann_parallel_sample_sort_lcp {
+
+using namespace stringtools;
+
+void parallel_sample_sort_numa(string* strings, size_t n,
+                               int numaNode, int numberOfThreads,
+                               const LcpCacheStringPtr& output);
+
+void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* input,
+                                unsigned numInputs);
+
+} // namespace bingmann_parallel_sample_sort_lcp
+
+#endif // !PSS_SRC_PARALLEL_BINGMANN_PARALLEL_SAMPLE_SORT_HEADER
 
 /******************************************************************************/

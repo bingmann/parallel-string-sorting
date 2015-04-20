@@ -10,35 +10,35 @@ include_directories("${GMP_INCLUDE_DIR}")
 include_directories("${NUMA_INCLUDE_DIR}")
 
 set(PSSLIB_SOURCES
-  sequential/nilsson-adaptive.cc
-  sequential/nilsson-forward8.cc
-  sequential/nilsson-forward16.cc
-  sequential/bingmann-qsort.cc
-  sequential/bingmann-lcp-mergesort.cc
-  rantala/burstsort.cc
-  rantala/burstsort2.cc
-  rantala/burstsort_mkq.cc
-  rantala/funnelsort.cc
-  rantala/mergesort.cc
-  rantala/mergesort_lcp.cc
-  rantala/mergesort_losertree.cc
-  rantala/mergesort_unstable.cc
-  rantala/multikey_block.cc
-  rantala/multikey_cache.cc
-  rantala/multikey_dynamic.cc
-  rantala/multikey_multipivot.cc
-  rantala/multikey_simd.cc
-  sinha-copy-burstsort/glue.cc
-  parallel/akiba-parallel_string_radix_sort.cc
-  parallel/bingmann-parallel_radix_sort.cc
-  parallel/bingmann-parallel_mkqs.cc
-  parallel/bingmann-parallel_sample_sort.cc
-  parallel/bingmann-parallel_sample_sort_lcp.cc
-  parallel/shamsundar-lcp-merge-string-sort.cc
+  sequential/nilsson-adaptive.cpp
+  sequential/nilsson-forward8.cpp
+  sequential/nilsson-forward16.cpp
+  sequential/bingmann-qsort.cpp
+  sequential/bingmann-lcp-mergesort.cpp
+  rantala/burstsort.cpp
+  rantala/burstsort2.cpp
+  rantala/burstsort_mkq.cpp
+  rantala/funnelsort.cpp
+  rantala/mergesort.cpp
+  rantala/mergesort_lcp.cpp
+  rantala/mergesort_losertree.cpp
+  rantala/mergesort_unstable.cpp
+  rantala/multikey_block.cpp
+  rantala/multikey_cache.cpp
+  rantala/multikey_dynamic.cpp
+  rantala/multikey_multipivot.cpp
+  rantala/multikey_simd.cpp
+  sinha-copy-burstsort/glue.cpp
+  parallel/akiba-parallel_string_radix_sort.cpp
+  parallel/bingmann-parallel_radix_sort.cpp
+  parallel/bingmann-parallel_mkqs.cpp
+  parallel/bingmann-parallel_sample_sort.cpp
+  parallel/bingmann-parallel_sample_sort_lcp.cpp
+  parallel/shamsundar-lcp-merge-string-sort.cpp
   )
 
 set(PSSBIN_SOURCES
-  psstest.cc
+  psstest.cpp
   ${PSSLIB_SOURCES}
   )
 
@@ -105,9 +105,9 @@ if(PSS_SHARED)
 endif()
 
 # silence some warnings from legacy code
-set_property(SOURCE sinha-copy-burstsort/glue.cc
+set_property(SOURCE sinha-copy-burstsort/glue.cpp
   PROPERTY COMPILE_FLAGS "-Wno-write-strings -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-sign-compare -Wno-sequence-point -Wno-uninitialized")
-set_property(SOURCE parallel/shamsundar-lcp-merge-string-sort.cc
+set_property(SOURCE parallel/shamsundar-lcp-merge-string-sort.cpp
   PROPERTY COMPILE_FLAGS "-Wno-sign-compare")
 
 ################################################################################
