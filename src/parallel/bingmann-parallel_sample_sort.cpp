@@ -1568,7 +1568,7 @@ struct SampleSortStep : public SortStep
         }
     };
 
-    struct CountJob : public  job_type
+    struct CountJob : public job_type
     {
         SampleSortStep* step;
         unsigned int  p;

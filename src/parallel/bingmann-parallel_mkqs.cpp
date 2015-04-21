@@ -770,11 +770,11 @@ struct ParallelMKQS
 {
     // *** Class Attributes
 
-    BlockSource                  blks;
-    uint64_t                     pivot;
+    BlockSource               blks;
+    uint64_t                  pivot;
 
-    unsigned int                 procs;
-    std::atomic<unsigned int>    pwork;
+    unsigned int              procs;
+    std::atomic<unsigned int> pwork;
 
     // *** PartitionJob for JobQueue
 
