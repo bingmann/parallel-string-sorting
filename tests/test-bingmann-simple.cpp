@@ -135,6 +135,7 @@ void test_all(const size_t nstrings)
 {
     if (nstrings <= 1024) {
         run_tests(inssort::inssort_generic);
+        run_tests(bingmann_lcp_inssort::lcp_insertion_sort_verify);
     }
     run_tests(bingmann_radix_sort::msd_CE_generic);
     run_tests(bingmann_radix_sort::msd_CE2_generic);

@@ -41,6 +41,7 @@
 #include <stdint.h>
 #include "debug.hpp"
 #include <numa.h>
+#include "stringset.hpp"
 
 namespace stringtools {
 
@@ -766,39 +767,49 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 
 //! verify LCP array against sorted string array by scanning LCPs
-template <bool checkCache>
+template <bool checkCache, typename StringSet>
 static inline bool
-verify_lcp_cache(string* strings, lcp_t* lcps, char_type* cache, size_t n, lcp_t expectedFirstLcp)
+verify_lcp_cache(const StringSet& ss,
+                 lcp_t* lcps, char_type* cache, lcp_t expectedFirstLcp)
 {
+    typedef typename StringSet::String String;
+    typedef typename StringSet::Iterator Iterator;
+
     bool allValid = true;
+    Iterator begin = ss.begin();
 
     if (expectedFirstLcp != (lcp_t)-1)
     {
         if (lcps[0] != expectedFirstLcp)
         {
-            std::cout << "lcp[0] = " << lcps[0] << " excepted " << expectedFirstLcp << std::endl;
+            std::cout << "lcp[0] = " << lcps[0]
+                      << " excepted " << expectedFirstLcp << std::endl;
             allValid = false;
         }
-        if (checkCache && *cache != strings[0][lcps[0]])
+        if (checkCache && *cache != ss.get_char(ss[begin], lcps[0]))
         {
-            std::cout << "cache[0] = " << cache[0] << " excepted " << strings[0][lcps[0]] << std::endl;
+            std::cout << "cache[0] = " << cache[0]
+                      << " excepted " << ss.get_char(ss[begin], lcps[0])
+                      << std::endl;
             allValid = false;
         }
     }
 
-    for (size_t i = 1; i < n; ++i)
+    for (size_t i = 1; i < ss.size(); ++i)
     {
-        string s1 = strings[i - 1], s2 = strings[i];
-        size_t h = calc_lcp(s1, s2);
+        String s1 = ss[begin + i - 1], s2 = ss[begin + i];
+        size_t h = calc_lcp(ss, s1, s2);
 
         if (h != lcps[i])
         {
-            std::cout << "lcp[" << i << "] = " << lcps[i] << " excepted " << h << std::endl;
+            std::cout << "lcp[" << i << "] = " << lcps[i]
+                      << " excepted " << h << std::endl;
             allValid = false;
         }
-        if (checkCache && cache[i] != s2[lcps[i]])
+        if (checkCache && cache[i] != ss.get_char(s2, lcps[i]))
         {
-            std::cout << "cache[" << i << "] = " << cache[i] << " excepted " << s2[lcps[i]] << std::endl;
+            std::cout << "cache[" << i << "] = " << cache[i]
+                      << " excepted " << ss.get_char(s2, lcps[i]) << std::endl;
             allValid = false;
         }
     }
@@ -811,16 +822,27 @@ verify_lcp_cache(string* strings, lcp_t* lcps, char_type* cache, size_t n, lcp_t
     return allValid;
 }
 
+template <typename StringSet>
+static inline bool
+verify_lcp(const StringSet& ss, lcp_t* lcps, lcp_t expectedFirstLcp)
+{
+    return verify_lcp_cache<false>(ss, lcps, NULL, expectedFirstLcp);
+}
+
 static inline bool
 verify_lcp(string* strings, lcp_t* lcps, size_t n, lcp_t expectedFirstLcp)
 {
-    return verify_lcp_cache<false>(strings, lcps, NULL, n, expectedFirstLcp);
+    return verify_lcp_cache<false>(
+        parallel_string_sorting::UCharStringSet(strings, strings + n),
+        lcps, NULL, expectedFirstLcp);
 }
 
 static inline bool
 verify_lcp_cache(string* strings, lcp_t* lcps, char_type* cache, size_t n, lcp_t expectedFirstLcp)
 {
-    return verify_lcp_cache<true>(strings, lcps, cache, n, expectedFirstLcp);
+    return verify_lcp_cache<true>(
+        parallel_string_sorting::UCharStringSet(strings, strings + n),
+        lcps, cache, expectedFirstLcp);
 }
 
 } // namespace stringtools

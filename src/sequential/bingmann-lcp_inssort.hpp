@@ -4,7 +4,7 @@
  * LCP-aware insertion sort, used in parallel variants as base case.
  *
  *******************************************************************************
- * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2013-2015 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -33,16 +33,24 @@ namespace bingmann_lcp_inssort {
 using namespace stringtools;
 
 //! LCP insertion sort
+template <typename StringSet>
 static inline
-void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
+void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
 {
+    typedef typename StringSet::String String;
+    typedef typename StringSet::Iterator Iterator;
+    typedef typename StringSet::CharIterator CharIterator;
+
+    Iterator begin = str.begin();
+    size_t n = str.size();
+
     if (n <= 1) return;
 
     for (size_t j = 0; j < n - 1; ++j)
     {
         // insert strings[j] into sorted strings[0..j-1]
 
-        string new_str = str[j];
+        String new_str = str[begin + j];
         size_t new_lcp = depth; // start with LCP depth
 
         size_t i = j;
@@ -50,7 +58,7 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
         {
             size_t prev_lcp = new_lcp;
 
-            string cur_str = str[i - 1];
+            String cur_str = str[begin + i - 1];
             size_t cur_lcp = lcp[i];
 
             if (cur_lcp < new_lcp)
@@ -62,8 +70,8 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
             {
                 // CASE 2: compare more characters
 
-                string s1 = new_str + new_lcp;
-                string s2 = cur_str + new_lcp;
+                CharIterator s1 = str.get_chars(new_str, new_lcp);
+                CharIterator s2 = str.get_chars(cur_str, new_lcp);
 
                 while (*s1 != 0 && *s1 == *s2)
                     ++s1, ++s2, ++new_lcp;
@@ -80,13 +88,13 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
             }
             // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
-            str[i] = cur_str;
+            str[begin + i] = cur_str;
             lcp[i + 1] = cur_lcp;
 
             --i;
         }
 
-        str[i] = new_str;
+        str[begin + i] = new_str;
         lcp[i + 1] = new_lcp;
     }
 
@@ -96,7 +104,7 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
 
         // insert strings[j] into sorted strings[0..j-1]
 
-        string new_str = str[j];
+        String new_str = str[begin + j];
         size_t new_lcp = depth; // start with LCP depth
 
         size_t i = j;
@@ -104,7 +112,7 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
         {
             size_t prev_lcp = new_lcp;
 
-            string cur_str = str[i - 1];
+            String cur_str = str[begin + i - 1];
             size_t cur_lcp = lcp[i];
 
             if (cur_lcp < new_lcp)
@@ -116,8 +124,8 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
             {
                 // CASE 2: compare more characters
 
-                string s1 = new_str + new_lcp;
-                string s2 = cur_str + new_lcp;
+                CharIterator s1 = str.get_chars(new_str, new_lcp);
+                CharIterator s2 = str.get_chars(cur_str, new_lcp);
 
                 while (*s1 != 0 && *s1 == *s2)
                     ++s1, ++s2, ++new_lcp;
@@ -134,7 +142,7 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
             }
             // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
-            str[i] = cur_str;
+            str[begin + i] = cur_str;
 
             if (i + 1 < n) // check out-of-bounds copy
                 lcp[i + 1] = cur_lcp;
@@ -142,11 +150,31 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
             --i;
         }
 
-        str[i] = new_str;
+        str[begin + i] = new_str;
 
         if (i + 1 < n) // check out-of-bounds save
             lcp[i + 1] = new_lcp;
     }
+}
+
+//! LCP insertion sort, but immediately discard the lcp
+template <typename StringSet>
+static inline
+void lcp_insertion_sort_nolcp(const StringSet& ss, size_t depth)
+{
+    uintptr_t tmp_lcp[ss.size()];
+    return lcp_insertion_sort(ss, tmp_lcp, depth);
+}
+
+//! LCP insertion sort, but immediately discard the lcp
+template <typename StringSet>
+static inline
+void lcp_insertion_sort_verify(const StringSet& ss, size_t depth)
+{
+    uintptr_t tmp_lcp[ss.size()];
+    tmp_lcp[0] = 42;                 // must keep lcp[0] unchanged
+    lcp_insertion_sort(ss, tmp_lcp, depth);
+    stringtools::verify_lcp(ss, tmp_lcp, 42);
 }
 
 //! LCP insertion sort, close to journal's pseudo-code
@@ -212,7 +240,9 @@ static inline
 void lcp_insertion_sort(string* str, size_t n, size_t depth)
 {
     uintptr_t tmp_lcp[n];
-    return lcp_insertion_sort(str, tmp_lcp, n, depth);
+    return lcp_insertion_sort(
+        parallel_string_sorting::UCharStringSet(str, str + n),
+        tmp_lcp, depth);
 }
 
 static inline
@@ -224,7 +254,9 @@ void lcp_insertion_sort(StringShadowPtr& str, size_t depth)
 static inline
 void lcp_insertion_sort(StringShadowLcpPtr& str, size_t depth)
 {
-    return lcp_insertion_sort(str.active(), str.lcparray(), str.size(), depth);
+    return lcp_insertion_sort(
+        parallel_string_sorting::UCharStringSet(str.active(), str.active() + str.size()),
+        str.lcparray(), depth);
 }
 
 // *** Registered Test Functions ***

@@ -100,6 +100,23 @@ static inline unsigned int calc_lcp(const string _s1, const string _s2)
     return h;
 }
 
+/// calculate lcp by scanning
+template <typename StringSet>
+static inline
+unsigned int calc_lcp(const StringSet& ss,
+                      const typename StringSet::String& s1,
+                      const typename StringSet::String& s2)
+{
+    typename StringSet::CharIterator c1 = ss.get_chars(s1, 0);
+    typename StringSet::CharIterator c2 = ss.get_chars(s2, 0);
+
+    size_t h = 0;
+    while (*c1 != 0 && *c1 == *c2)
+        ++h, ++c1, ++c2;
+
+    return h;
+}
+
 /// Return traits of key_type
 template <typename CharT>
 class key_traits
