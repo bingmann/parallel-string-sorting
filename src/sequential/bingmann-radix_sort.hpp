@@ -179,6 +179,56 @@ PSS_CONTESTANT(bingmann_msd_CE2, "bingmann/msd_CE2",
 
 /******************************************************************************/
 
+template <typename StringSet>
+static inline void
+msd_CE2_generic(const StringSet& ss, size_t depth)
+{
+    typedef typename StringSet::Iterator Iterator;
+    typedef typename StringSet::String String;
+
+    if (ss.size() < g_inssort_threshold)
+        return inssort::inssort_generic(ss, depth);
+
+    // count character occurances
+    size_t bkt[256 + 1] = { 0 };
+    for (Iterator i = ss.begin(); i != ss.end(); ++i)
+        ++bkt[ss.get_uint8(ss[i], depth)];
+
+    String* sorted = new String[ss.size()];
+
+    // prefix sum
+    for (size_t i = 1; i <= 256; ++i)
+        bkt[i] += bkt[i - 1];
+
+    // distribute
+    for (Iterator i = ss.begin(); i != ss.end(); ++i)
+        sorted[--bkt[ss.get_uint8(ss[i], depth)]] = ss[i];
+
+    size_t i = 0;
+    for (Iterator o = ss.begin(); o != ss.end(); ++o, ++i)
+        ss[o] = sorted[i];
+    delete[] sorted;
+
+    // recursion
+    for (size_t i = 1; i < 256; ++i) {
+        if (bkt[i] == bkt[i + 1]) continue;
+        //if (bkt[i]+1 >= bkt[i+1]) continue;
+        msd_CE2_generic(ss.subset(ss.begin() + bkt[i], ss.begin() + bkt[i + 1]),
+                        depth + 1);
+    }
+}
+
+void bingmann_msd_CE2_generic(string* strings, size_t n)
+{
+    return msd_CE2_generic(
+        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
+}
+
+PSS_CONTESTANT(bingmann_msd_CE2_generic, "bingmann/msd_CE2_gen",
+               "bingmann/msd_CE2 generic (CE with reused prefix sum)")
+
+/******************************************************************************/
+
 static inline void
 msd_CE3(string* str_begin, string* str_end, size_t depth)
 {
@@ -218,6 +268,8 @@ void bingmann_msd_CE3(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_msd_CE3, "bingmann/msd_CE3",
                "bingmann/msd_CE3 (CE2 with iterators)")
+
+/******************************************************************************/
 
 template <typename BucketType>
 struct distblock {
@@ -284,6 +336,8 @@ void bingmann_msd_CI(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CI, "bingmann/msd_CI",
                "bingmann/msd_CI (rantala CI original with oracle)")
 
+/******************************************************************************/
+
 template <typename BucketsizeType>
 static inline void msd_CI2(string* strings, size_t n, size_t depth)
 {
@@ -338,6 +392,8 @@ void bingmann_msd_CI2(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CI2, "bingmann/msd_CI2",
                "bingmann/msd_CI2 (CI without oracle)")
 
+/******************************************************************************/
+
 static inline void
 msd_CI3(string* strings, size_t n, size_t depth)
 {
@@ -384,6 +440,8 @@ void bingmann_msd_CI3(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_msd_CI3, "bingmann/msd_CI3",
                "bingmann/msd_CI3 (CI2 with swap operations)")
+
+/******************************************************************************/
 
 // Note: CI in-place variant cannot be done with just one prefix-sum bucket
 // array, because during in-place permutation the beginning _and_ end
@@ -437,6 +495,8 @@ void bingmann_msd_CI4(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_msd_CI4, "bingmann/msd_CI4",
                "bingmann/msd_CI4 (CI3 with swap cache)")
+
+/******************************************************************************/
 
 static inline size_t *
 msd_CI5_bktsize(string * strings, size_t n, size_t depth)
@@ -507,7 +567,89 @@ void bingmann_msd_CI5(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CI5, "bingmann/msd_CI5",
                "bingmann/msd_CI5 (CI4 with charcache)")
 
-// --------------------------------------------------------------------------------
+/******************************************************************************/
+
+template <typename StringSet>
+static inline size_t*
+msd_CI5_bktsize_generic(const StringSet& ss, size_t depth)
+{
+    typedef typename StringSet::Iterator Iterator;
+    typedef typename StringSet::String String;
+    typedef typename StringSet::Char Char;
+
+    // cache characters
+    Char* charcache = new Char[ss.size()];
+    size_t j = 0;
+    for (Iterator i = ss.begin(); i != ss.end(); ++i)
+        charcache[j++] = *ss.get_chars(ss[i], depth);
+
+    // count character occurances
+    size_t* bktsize = new size_t[256];
+    memset(bktsize, 0, 256 * sizeof(size_t));
+    for (size_t i = 0; i < ss.size(); ++i)
+        ++bktsize[static_cast<size_t>(charcache[i])];
+
+    // inclusive prefix sum
+    size_t bkt[256];
+    bkt[0] = bktsize[0];
+    size_t last_bkt_size = bktsize[0];
+    for (unsigned i = 1; i < 256; ++i) {
+        bkt[i] = bkt[i - 1] + bktsize[i];
+        if (bktsize[i]) last_bkt_size = bktsize[i];
+    }
+
+    // premute in-place
+    for (size_t i = 0, j; i < ss.size() - last_bkt_size; )
+    {
+        String perm = ss[ss.begin() + i];
+        Char permch = charcache[i];
+        while ((j = --bkt[static_cast<size_t>(permch)]) > i)
+        {
+            std::swap(perm, ss[ss.begin() + j]);
+            std::swap(permch, charcache[j]);
+        }
+        ss[ss.begin() + i] = perm;
+        i += bktsize[static_cast<size_t>(permch)];
+    }
+
+    delete[] charcache;
+
+    return bktsize;
+}
+
+template <typename StringSet>
+static inline void
+msd_CI5_generic(const StringSet& ss, size_t depth)
+{
+    typedef typename StringSet::Iterator Iterator;
+
+    if (ss.size() < g_inssort_threshold)
+        return inssort::inssort_generic(ss, depth);
+
+    size_t* bktsize = msd_CI5_bktsize_generic(ss, depth);
+
+    // recursion
+    Iterator bsum = ss.begin() + bktsize[0];
+    for (size_t i = 1; i < 256; ++i) {
+        if (bktsize[i] == 0) continue;
+        Iterator bend = bsum + bktsize[i];
+        msd_CI5_generic(ss.subset(bsum, bend), depth + 1);
+        bsum = bend;
+    }
+
+    delete[] bktsize;
+}
+
+void bingmann_msd_CI5_generic(string* strings, size_t n)
+{
+    msd_CI5_generic(
+        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
+}
+
+PSS_CONTESTANT(bingmann_msd_CI5_generic, "bingmann/msd_CI5_gen",
+               "bingmann/msd_CI5 generic (CI4 with charcache)")
+
+/******************************************************************************/
 
 static inline size_t *
 msd_CI5_16bit_bktsize(string * strings, size_t n, size_t depth)
@@ -582,7 +724,7 @@ void bingmann_msd_CI5_16bit(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CI5_16bit, "bingmann/msd_CI5_16bit",
                "bingmann/msd_CI5_16bit (CI5 with 16-bit radix)")
 
-// --------------------------------------------------------------------------------
+/******************************************************************************/
 
 struct RadixStep_CE_nr
 {
@@ -658,6 +800,8 @@ bingmann_msd_CE_nr(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CE_nr, "bingmann/msd_CE_nr",
                "bingmann/msd_CE_nr (CE non-recursive)")
 
+/******************************************************************************/
+
 struct RadixStep_CE_nr2
 {
     string * str;
@@ -729,6 +873,8 @@ bingmann_msd_CE_nr2(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_msd_CE_nr2, "bingmann/msd_CE_nr2",
                "bingmann/msd_CE_nr2 (CE non-recursive)")
+
+/******************************************************************************/
 
 struct RadixStep_CI_nr
 {
@@ -826,6 +972,8 @@ bingmann_msd_CI_nr(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CI_nr, "bingmann/msd_CI_nr",
                "bingmann/msd_CI_nr (CI non-recursive)")
 
+/******************************************************************************/
+
 struct RadixStep_CI_nr2
 {
     string * str;
@@ -903,6 +1051,8 @@ bingmann_msd_CI_nr2(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_msd_CI_nr2, "bingmann/msd_CI_nr2",
                "bingmann/msd_CI_nr2 (CI non-recursive)")
+
+/******************************************************************************/
 
 struct RadixStep_CI_nr3
 {
@@ -992,6 +1142,8 @@ bingmann_msd_CI_nr3(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_msd_CI_nr3, "bingmann/msd_CI_nr3",
                "bingmann/msd_CI_nr3 (CI non-recursive, charcache)")
+
+/******************************************************************************/
 
 } // namespace bingmann_radix_sort
 

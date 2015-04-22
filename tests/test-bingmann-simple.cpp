@@ -1,5 +1,5 @@
 /*******************************************************************************
- * tests/test-bingmann-lcp_inssort.cpp
+ * tests/test-bingmann-simple.cpp
  *
  * Parallel string sorting test program
  *
@@ -36,7 +36,7 @@ void fill_random(LCGRandom& rng, const std::string& letters,
         *i = letters[(rng() / 100) % letters.size()];
 }
 
-template <void (*Algo)(const UCharStringSet& ss, size_t depth)>
+template <void(* Algo)(const UCharStringSet& ss, size_t depth)>
 void test_uchar(const size_t nstrings, const size_t nchars,
                 const std::string& letters)
 {
@@ -52,7 +52,7 @@ void test_uchar(const size_t nstrings, const size_t nchars,
     {
         size_t slen = nchars + (rng() >> 8) % (nchars / 4);
 
-        cstrings[i] = new unsigned char[slen+1];
+        cstrings[i] = new unsigned char[slen + 1];
         fill_random(rng, letters, cstrings[i], cstrings[i] + slen);
         cstrings[i][slen] = 0;
     }
@@ -68,12 +68,12 @@ void test_uchar(const size_t nstrings, const size_t nchars,
 
     // free memory.
     for (size_t i = 0; i < nstrings; ++i)
-        delete [] cstrings[i];
+        delete[] cstrings[i];
 
-    delete [] cstrings;
+    delete[] cstrings;
 }
 
-template <void (*Algo)(const VectorStringSet& ss, size_t depth)>
+template <void(* Algo)(const VectorStringSet& ss, size_t depth)>
 void test_vectorstring(const size_t nstrings, const size_t nchars,
                        const std::string& letters)
 {
@@ -101,7 +101,7 @@ void test_vectorstring(const size_t nstrings, const size_t nchars,
         abort();
 }
 
-template <void (*Algo)(const StringSuffixSet& ss, size_t depth)>
+template <void(* Algo)(const StringSuffixSet& ss, size_t depth)>
 void test_suffixstring(const size_t nchars, const std::string& letters)
 {
     LCGRandom rng(1234567);
@@ -123,12 +123,12 @@ void test_suffixstring(const size_t nchars, const std::string& letters)
 }
 
 const std::string letters_alnum
-= "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 // use macro because one cannot pass template functions as template parameters:
-#define run_tests(func)                                      \
-    test_uchar<func>(nstrings, 16, letters_alnum);           \
-    test_vectorstring<func>(nstrings, 16, letters_alnum);    \
+#define run_tests(func)                                   \
+    test_uchar<func>(nstrings, 16, letters_alnum);        \
+    test_vectorstring<func>(nstrings, 16, letters_alnum); \
     test_suffixstring<func>(nstrings, letters_alnum);
 
 void test_all(const size_t nstrings)
@@ -137,6 +137,8 @@ void test_all(const size_t nstrings)
         run_tests(inssort::inssort_generic);
     }
     run_tests(bingmann_radix_sort::msd_CE_generic);
+    run_tests(bingmann_radix_sort::msd_CE2_generic);
+    run_tests(bingmann_radix_sort::msd_CI5_generic);
 }
 
 int main()

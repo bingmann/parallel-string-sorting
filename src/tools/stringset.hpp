@@ -4,9 +4,6 @@
  * Implementations of StringSet concept: UCharStringSet, VectorStringSet,
  * StringSuffixSet.
  *
-, and Lcp,  StringPtrOut, and NoLcpCalc specializations. Encapsulate string
- * and shadow array pointers.
- *
  * Additionally: LcpStringPtr encapsulates string and lcp arrays, which may be
  * interleaved or separate.
  *
@@ -106,7 +103,6 @@ template <typename StringSet>
 class StringSetBase
 {
 public:
-    
     template <typename Index>
     uint8_t get_uint8(const Index& i, size_t depth) const
     {
@@ -144,13 +140,13 @@ public:
     bool check_order()
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-                
+
         for (typename StringSet::Iterator pi = ss.begin() + 1;
              pi != ss.end(); ++pi)
         {
             typename StringSet::CharIterator
-                s = ss.get_chars(ss[pi - 1], 0),
-                t = ss.get_chars(ss[pi], 0);
+            s = ss.get_chars(ss[pi - 1], 0),
+            t = ss.get_chars(ss[pi], 0);
 
             while (*s == *t && *s != 0)
                 ++s, ++t;
@@ -232,6 +228,9 @@ public:
     //! exported alias for assumed string container
     typedef std::vector<std::string> Container;
 
+    //! exported alias for character type
+    typedef std::string::value_type Char;
+
     //! String reference: std::string, which should be reference counted.
     typedef typename Container::value_type String;
 
@@ -285,6 +284,9 @@ class StringSuffixSet : public StringSetBase<StringSuffixSet>
 public:
     //! exported alias for assumed string container
     typedef std::string Container;
+
+    //! exported alias for character type
+    typedef std::string::value_type Char;
 
     //! String reference: suffix index of the text.
     typedef typename Container::size_type String;
