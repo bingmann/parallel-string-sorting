@@ -94,34 +94,92 @@ inline uint32_t get_char_uint32(CharIterator str, size_t depth)
 #endif
 }
 
+template <typename CharIterator>
+inline uint64_t get_char_uint64(CharIterator str, size_t depth)
+{
+#if 0
+    uint64_t v = 0;
+    if (str[depth] == 0) return v;
+    v = (uint64_t(str[depth]) << 56);
+    ++str;
+    if (str[depth] == 0) return v;
+    v |= (uint64_t(str[depth]) << 48);
+    ++str;
+    if (str[depth] == 0) return v;
+    v |= (uint64_t(str[depth]) << 40);
+    ++str;
+    if (str[depth] == 0) return v;
+    v |= (uint64_t(str[depth]) << 32);
+    ++str;
+    if (str[depth] == 0) return v;
+    v |= (uint64_t(str[depth]) << 24);
+    ++str;
+    if (str[depth] == 0) return v;
+    v |= (uint64_t(str[depth]) << 16);
+    ++str;
+    if (str[depth] == 0) return v;
+    v |= (uint64_t(str[depth]) << 8);
+    ++str;
+    v |= (uint64_t(str[depth]) << 0);
+    return v;
+#else
+    uint64_t v = __builtin_bswap64(*(uint64_t*)(str + depth));
+    if ((v & 0xFF00000000000000LLU) == 0)
+        return 0;
+    else if ((v & 0x00FF000000000000LLU) == 0)
+        return (v & 0xFFFF000000000000LLU);
+    else if ((v & 0x0000FF0000000000LLU) == 0)
+        return (v & 0xFFFFFF0000000000LLU);
+    else if ((v & 0x000000FF00000000LLU) == 0)
+        return (v & 0xFFFFFFFF00000000LLU);
+    else if ((v & 0x00000000FF000000LLU) == 0)
+        return (v & 0xFFFFFFFFFF000000LLU);
+    else if ((v & 0x0000000000FF0000LLU) == 0)
+        return (v & 0xFFFFFFFFFFFF0000LLU);
+    else if ((v & 0x000000000000FF00LLU) == 0)
+        return (v & 0xFFFFFFFFFFFFFF00LLU);
+    return v;
+#endif
+}
+
 /******************************************************************************/
 
 /*!
  * Base class for common string set functions, included via CRTP.
  */
-template <typename StringSet>
+template <typename StringSet, typename Traits>
 class StringSetBase
 {
 public:
-    template <typename Index>
-    uint8_t get_uint8(const Index& i, size_t depth) const
+    typename Traits::Char
+    get_char(const typename Traits::String& i, size_t depth) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return *ss.get_chars(i, depth);
+    }
+
+    uint8_t get_uint8(const typename Traits::String& i, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
         return get_char_uint8(ss.get_chars(i, 0), depth);
     }
 
-    template <typename Index>
-    uint16_t get_uint16(const Index& i, size_t depth) const
+    uint16_t get_uint16(const typename Traits::String& i, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
         return get_char_uint16(ss.get_chars(i, 0), depth);
     }
 
-    template <typename Index>
-    uint32_t get_uint32(const Index& i, size_t depth) const
+    uint32_t get_uint32(const typename Traits::String& i, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
         return get_char_uint32(ss.get_chars(i, 0), depth);
+    }
+
+    uint64_t get_uint64(const typename Traits::String& i, size_t depth) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return get_char_uint64(ss.get_chars(i, 0), depth);
     }
 
     void print() const
@@ -129,8 +187,7 @@ public:
         const StringSet& ss = *static_cast<const StringSet*>(this);
 
         size_t i = 0;
-        for (typename StringSet::Iterator pi = ss.begin();
-             pi != ss.end(); ++pi)
+        for (typename Traits::Iterator pi = ss.begin(); pi != ss.end(); ++pi)
         {
             std::cout << "[" << i++ << "] = " << ss[pi]
                       << " = " << ss.get_string(ss[pi], 0) << std::endl;
@@ -141,7 +198,7 @@ public:
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
 
-        for (typename StringSet::Iterator pi = ss.begin() + 1;
+        for (typename Traits::Iterator pi = ss.begin() + 1;
              pi != ss.end(); ++pi)
         {
             typename StringSet::CharIterator
@@ -161,11 +218,10 @@ public:
 /******************************************************************************/
 
 /*!
- * Class implementing StringSet concept for char* and unsigned char* strings.
+ * Traits class implementing StringSet concept for char* and unsigned char* strings.
  */
 template <typename CharType>
-class GenericCharStringSet
-    : public StringSetBase<GenericCharStringSet<CharType> >
+class GenericCharStringSetTraits
 {
 public:
     //! exported alias for character type
@@ -179,6 +235,24 @@ public:
 
     //! iterator of characters in a string
     typedef Char* CharIterator;
+};
+
+/*!
+ * Class implementing StringSet concept for char* and unsigned char* strings.
+ */
+template <typename CharType>
+class GenericCharStringSet
+    : public GenericCharStringSetTraits<CharType>,
+      public StringSetBase<GenericCharStringSet<CharType>,
+                           GenericCharStringSetTraits<CharType> >
+{
+public:
+    typedef GenericCharStringSetTraits<CharType> Traits;
+
+    using typename Traits::Char;
+    using typename Traits::String;
+    using typename Traits::Iterator;
+    using typename Traits::CharIterator;
 
     //! Construct from begin and end string pointers
     GenericCharStringSet(Iterator begin, Iterator end)
@@ -192,7 +266,7 @@ public:
     //! Iterator representing beyond last String position
     Iterator end() const { return end_; }
 
-    //! Array access (readable and writable) to String objects.
+    //! Iterator-based array access (readable and writable) to String objects.
     String& operator [] (Iterator i) const
     { return *i; }
 
@@ -222,7 +296,7 @@ typedef GenericCharStringSet<unsigned char> UCharStringSet;
  * Class implementing StringSet concept for a std::vector containing std::string
  * objects.
  */
-class VectorStringSet : public StringSetBase<VectorStringSet>
+class VectorStringSetTraits
 {
 public:
     //! exported alias for assumed string container
@@ -239,6 +313,23 @@ public:
 
     //! iterator of characters in a string
     typedef std::string::const_iterator CharIterator;
+};
+
+/*!
+ * Class implementing StringSet concept for a std::vector containing std::string
+ * objects.
+ */
+class VectorStringSet
+    : public VectorStringSetTraits,
+      public StringSetBase<VectorStringSet, VectorStringSetTraits>
+{
+public:
+    typedef VectorStringSetTraits Traits;
+
+    using typename Traits::Char;
+    using typename Traits::String;
+    using typename Traits::Iterator;
+    using typename Traits::CharIterator;
 
     //! Construct from begin and end string pointers
     VectorStringSet(const Iterator& begin, const Iterator& end)
@@ -279,7 +370,7 @@ protected:
  * Class implementing StringSet concept for suffix sorting indexes of a
  * std::string text object.
  */
-class StringSuffixSet : public StringSetBase<StringSuffixSet>
+class StringSuffixSetTraits
 {
 public:
     //! exported alias for assumed string container
@@ -297,6 +388,23 @@ public:
 
     //! iterator of characters in a string
     typedef std::string::const_iterator CharIterator;
+};
+
+/*!
+ * Class implementing StringSet concept for suffix sorting indexes of a
+ * std::string text object.
+ */
+class StringSuffixSet
+    : public StringSuffixSetTraits,
+      public StringSetBase<StringSuffixSet, StringSuffixSetTraits>
+{
+public:
+    typedef StringSuffixSetTraits Traits;
+
+    using typename Traits::Char;
+    using typename Traits::String;
+    using typename Traits::Iterator;
+    using typename Traits::CharIterator;
 
     //! Construct from begin and end string pointers
     StringSuffixSet(const Container& text,
