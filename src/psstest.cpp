@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <cstddef>
 #include <cmath>
 #include <string>
 #include <vector>

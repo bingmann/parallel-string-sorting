@@ -38,6 +38,7 @@
 #define PSS_SRC_TOOLS_STRINGPTR_HEADER
 
 #include <cassert>
+#include <stdint.h>
 #include "debug.hpp"
 #include <numa.h>
 

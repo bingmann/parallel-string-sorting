@@ -5,7 +5,7 @@
  * Based on rantala/msd_c?.h
  *
  *******************************************************************************
- * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2013-2015 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -24,31 +24,22 @@
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_RADIX_SORT_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_RADIX_SORT_HEADER
 
+#include "../tools/globals.hpp"
+#include "../tools/stringtools.hpp"
+#include "../tools/stringset.hpp"
+#include "inssort.hpp"
+
+#include <stack>
+
 namespace bingmann_radix_sort {
 
 static const size_t g_inssort_threshold = 64;
 
 typedef unsigned char* string;
 
-static inline void
-insertion_sort(string* str_begin, string* str_end, size_t depth)
-{
-    for (string* i = str_begin + 1; i != str_end; ++i) {
-        string* j = i;
-        string tmp = *i;
-        while (j > str_begin) {
-            string s = *(j - 1) + depth;
-            string t = tmp + depth;
-            while (*s == *t && *s != 0) ++s, ++t;
-            if (*s <= *t) break;
-            *j = *(j - 1);
-            --j;
-        }
-        *j = tmp;
-    }
-}
+/******************************************************************************/
 
-static void
+static inline void
 msd_CE(string* strings, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
@@ -91,7 +82,62 @@ void bingmann_msd_CE(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CE, "bingmann/msd_CE",
                "bingmann/msd_CE (rantala CE original)")
 
-static void
+/******************************************************************************/
+
+template <typename StringSet>
+static inline void
+msd_CE_generic(const StringSet& ss, size_t depth)
+{
+    typedef typename StringSet::Iterator Iterator;
+    typedef typename StringSet::String String;
+
+    if (ss.size() < g_inssort_threshold)
+        return inssort::inssort_generic(ss, depth);
+
+    // count character occurances
+    size_t bktsize[256] = { 0 };
+    for (Iterator i = ss.begin(); i != ss.end(); ++i)
+        ++bktsize[ss.get_uint8(ss[i], depth)];
+
+    String* sorted = new String[ss.size()];
+
+    // prefix sum
+    size_t bktindex[256];
+    bktindex[0] = 0;
+    for (size_t i = 1; i < 256; ++i)
+        bktindex[i] = bktindex[i - 1] + bktsize[i - 1];
+
+    // distribute
+    for (Iterator i = ss.begin(); i != ss.end(); ++i)
+        sorted[bktindex[ss.get_uint8(ss[i], depth)]++] = ss[i];
+
+    size_t i = 0;
+    for (Iterator o = ss.begin(); o != ss.end(); ++o, ++i)
+        ss[o] = sorted[i];
+    delete[] sorted;
+
+    // recursion
+    Iterator bsum = ss.begin() + bktsize[0];
+    for (size_t i = 1; i < 256; ++i) {
+        if (bktsize[i] == 0) continue;
+        Iterator bend = bsum + bktsize[i];
+        msd_CE_generic(ss.subset(bsum, bend), depth + 1);
+        bsum = bend;
+    }
+}
+
+void bingmann_msd_CE_generic(string* strings, size_t n)
+{
+    return msd_CE_generic(
+        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
+}
+
+PSS_CONTESTANT(bingmann_msd_CE_generic, "bingmann/msd_CE_gen",
+               "bingmann/msd_CE generic (rantala CE original)")
+
+/******************************************************************************/
+
+static inline void
 msd_CE2(string* strings, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
@@ -131,11 +177,13 @@ void bingmann_msd_CE2(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CE2, "bingmann/msd_CE2",
                "bingmann/msd_CE2 (CE with reused prefix sum)")
 
-static void
+/******************************************************************************/
+
+static inline void
 msd_CE3(string* str_begin, string* str_end, size_t depth)
 {
     if (str_begin + g_inssort_threshold > str_end)
-        return insertion_sort(str_begin, str_end, depth);
+        return inssort::inssort_range(str_begin, str_end, depth);
 
     // count character occurances
     size_t bkt[256 + 1] = { 0 };
@@ -237,7 +285,7 @@ PSS_CONTESTANT(bingmann_msd_CI, "bingmann/msd_CI",
                "bingmann/msd_CI (rantala CI original with oracle)")
 
 template <typename BucketsizeType>
-static void msd_CI2(string* strings, size_t n, size_t depth)
+static inline void msd_CI2(string* strings, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold) {
         inssort::inssort(strings, n, depth);
@@ -290,7 +338,7 @@ void bingmann_msd_CI2(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CI2, "bingmann/msd_CI2",
                "bingmann/msd_CI2 (CI without oracle)")
 
-static void
+static inline void
 msd_CI3(string* strings, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
@@ -341,7 +389,7 @@ PSS_CONTESTANT(bingmann_msd_CI3, "bingmann/msd_CI3",
 // array, because during in-place permutation the beginning _and_ end
 // boundaries of each bucket must be kept.
 
-static void
+static inline void
 msd_CI4(string* strings, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
@@ -565,7 +613,7 @@ struct RadixStep_CE_nr
     }
 };
 
-static void
+static inline void
 bingmann_msd_CE_nr(string* strings, size_t n)
 {
     if (n < g_inssort_threshold)
@@ -643,7 +691,7 @@ struct RadixStep_CE_nr2
     }
 };
 
-static void
+static inline void
 bingmann_msd_CE_nr2(string* strings, size_t n)
 {
     if (n < g_inssort_threshold)
@@ -733,7 +781,7 @@ struct RadixStep_CI_nr
     }
 };
 
-static void
+static inline void
 bingmann_msd_CI_nr(string* strings, size_t n)
 {
     if (n < g_inssort_threshold)
@@ -817,7 +865,7 @@ struct RadixStep_CI_nr2
     }
 };
 
-static void
+static inline void
 bingmann_msd_CI_nr2(string* strings, size_t n)
 {
     if (n < g_inssort_threshold)
@@ -901,7 +949,7 @@ struct RadixStep_CI_nr3
     }
 };
 
-static void
+static inline void
 bingmann_msd_CI_nr3(string* strings, size_t n)
 {
     if (n < g_inssort_threshold)

@@ -21,9 +21,14 @@
 #ifndef INSSORT_H_
 #define INSSORT_H_
 
+#include "../tools/contest.hpp"
+#include "../tools/stringset.hpp"
+
 namespace inssort {
 
 typedef unsigned char* string;
+
+/******************************************************************************/
 
 static inline void
 inssort(string* str, int n, int d)
@@ -49,6 +54,74 @@ void insertion_sort(string* a, size_t n)
 { inssort(a, n, 0); }
 
 PSS_CONTESTANT(insertion_sort, "insertion_sort", "String Insertion-Sort")
+
+/******************************************************************************/
+
+static inline void
+inssort_range(string* str_begin, string* str_end, size_t depth)
+{
+    for (string* i = str_begin + 1; i != str_end; ++i) {
+        string* j = i;
+        string tmp = *i;
+        while (j > str_begin) {
+            string s = *(j - 1) + depth;
+            string t = tmp + depth;
+            while (*s == *t && *s != 0) ++s, ++t;
+            if (*s <= *t) break;
+            *j = *(j - 1);
+            --j;
+        }
+        *j = tmp;
+    }
+}
+
+/******************************************************************************/
+
+//! Generic insertion sort for objectified string sets
+template <typename StringSet>
+static inline void inssort_generic(const StringSet& ss, size_t depth)
+{
+    typedef typename StringSet::Iterator Iterator;
+    typedef typename StringSet::String String;
+    typedef typename StringSet::CharIterator CharIterator;
+
+    for (Iterator pi = ss.begin() + 1; pi != ss.end(); ++pi)
+    {
+        String tmp = ss[pi];
+        Iterator pj = pi;
+
+        while (pj != ss.begin())
+        {
+            --pj;
+
+            CharIterator s = ss.get_chars(ss[pj], depth),
+                t = ss.get_chars(tmp, depth);
+
+            while (*s == *t && *s != 0)
+                ++s, ++t;
+
+            if (*s <= *t) {
+                ++pj;
+                break;
+            }
+
+            ss[pj + 1] = ss[pj];
+        }
+
+        ss[pj] = tmp;
+    }
+}
+
+static inline
+void insertion_sort_generic(string* a, size_t n)
+{
+    inssort_generic(parallel_string_sorting::UCharStringSet(a, a + n), 0);
+}
+
+PSS_CONTESTANT(insertion_sort_generic, "insertion_sort_gen",
+               "String Insertion-Sort generic")
+
+/******************************************************************************/
 
 } // namespace  inssort
 

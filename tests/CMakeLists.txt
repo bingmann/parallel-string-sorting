@@ -41,6 +41,7 @@ if(PSS_TESTLIB)
   
   include_directories(${PROJECT_SOURCE_DIR}/src)
 
+  build_test(test-bingmann-simple)
   build_test(test-bingmann-parallel_sample_sort)
 
 endif()
