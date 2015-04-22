@@ -726,6 +726,88 @@ PSS_CONTESTANT(bingmann_msd_CI5_16bit, "bingmann/msd_CI5_16bit",
 
 /******************************************************************************/
 
+template <typename StringSet>
+static inline size_t*
+msd_CI6_bktsize_generic(const StringSet& ss, size_t depth)
+{
+    typedef typename StringSet::Iterator Iterator;
+    typedef typename StringSet::String String;
+    typedef typename StringSet::Char Char;
+
+    // cache characters
+    Char* charcache = new Char[ss.size()];
+    size_t j = 0;
+    for (Iterator i = ss.begin(); i != ss.end(); ++i)
+        charcache[j++] = *ss.get_chars(ss[i], depth);
+
+    // count character occurances
+    size_t* bktsize = new size_t[256];
+    memset(bktsize, 0, 256 * sizeof(size_t));
+    for (size_t i = 0; i < ss.size(); ++i)
+        ++bktsize[static_cast<size_t>(charcache[i])];
+
+    // inclusive prefix sum
+    Iterator bkt[256];
+    bkt[0] = ss.begin() + bktsize[0];
+    size_t last_bkt_size = bktsize[0];
+    for (unsigned i = 1; i < 256; ++i) {
+        bkt[i] = bkt[i - 1] + bktsize[i];
+        if (bktsize[i]) last_bkt_size = bktsize[i];
+    }
+
+    // premute in-place
+    for (Iterator i = ss.begin(), j; i != ss.end() - last_bkt_size; )
+    {
+        String perm = ss[i];
+        Char permch = charcache[i - ss.begin()];
+        while ((j = --bkt[static_cast<size_t>(permch)]) > i)
+        {
+            std::swap(perm, ss[j]);
+            std::swap(permch, charcache[j - ss.begin()]);
+        }
+        ss[i] = perm;
+        i += bktsize[static_cast<size_t>(permch)];
+    }
+
+    delete[] charcache;
+
+    return bktsize;
+}
+
+template <typename StringSet>
+static inline void
+msd_CI6_generic(const StringSet& ss, size_t depth)
+{
+    typedef typename StringSet::Iterator Iterator;
+
+    if (ss.size() < g_inssort_threshold)
+        return inssort::inssort_generic(ss, depth);
+
+    size_t* bktsize = msd_CI6_bktsize_generic(ss, depth);
+
+    // recursion
+    Iterator bsum = ss.begin() + bktsize[0];
+    for (size_t i = 1; i < 256; ++i) {
+        if (bktsize[i] == 0) continue;
+        Iterator bend = bsum + bktsize[i];
+        msd_CI6_generic(ss.subset(bsum, bend), depth + 1);
+        bsum = bend;
+    }
+
+    delete[] bktsize;
+}
+
+void bingmann_msd_CI6_generic(string* strings, size_t n)
+{
+    msd_CI6_generic(
+        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
+}
+
+PSS_CONTESTANT(bingmann_msd_CI6_generic, "bingmann/msd_CI6_gen",
+               "bingmann/msd_CI6 generic (CI5 with ptr bkts)")
+
+/******************************************************************************/
+
 struct RadixStep_CE_nr
 {
     string * str;
