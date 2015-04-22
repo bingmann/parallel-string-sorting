@@ -324,6 +324,9 @@ foreach my $file (@filelist)
 
     if ($file =~ m!^b!) {
     }
+    # skip dot files
+    elsif ($file =~ m!(^|/)\.[^/]*$!) {
+    }
     elsif ($file =~ m!^minitbb!) {
     }
     elsif ($file =~ m!^tools!) {
