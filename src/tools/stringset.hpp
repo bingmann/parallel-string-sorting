@@ -95,9 +95,8 @@ inline uint32_t get_char_uint32(CharIterator str, size_t depth)
 }
 
 template <typename CharIterator>
-inline uint64_t get_char_uint64(CharIterator str, size_t depth)
+inline uint64_t get_char_uint64_simple(CharIterator str, size_t depth)
 {
-#if 0
     uint64_t v = 0;
     if (str[depth] == 0) return v;
     v = (uint64_t(str[depth]) << 56);
@@ -122,7 +121,11 @@ inline uint64_t get_char_uint64(CharIterator str, size_t depth)
     ++str;
     v |= (uint64_t(str[depth]) << 0);
     return v;
-#else
+}
+
+template <typename CharIterator>
+inline uint64_t get_char_uint64_bswap64(CharIterator str, size_t depth)
+{
     uint64_t v = __builtin_bswap64(*(uint64_t*)(str + depth));
     if ((v & 0xFF00000000000000LLU) == 0)
         return 0;
@@ -139,7 +142,27 @@ inline uint64_t get_char_uint64(CharIterator str, size_t depth)
     else if ((v & 0x000000000000FF00LLU) == 0)
         return (v & 0xFFFFFFFFFFFFFF00LLU);
     return v;
-#endif
+}
+
+template <typename CharIterator>
+inline uint64_t get_char_uint64(CharIterator str, size_t depth);
+
+template <>
+inline uint64_t get_char_uint64(unsigned char* str, size_t depth)
+{
+    return get_char_uint64_bswap64(str, depth);
+}
+
+template <>
+inline uint64_t get_char_uint64(char* str, size_t depth)
+{
+    return get_char_uint64_bswap64(str, depth);
+}
+
+template <>
+inline uint64_t get_char_uint64(std::string::const_iterator str, size_t depth)
+{
+    return get_char_uint64_bswap64(&(*str), depth);
 }
 
 /******************************************************************************/
@@ -180,6 +203,20 @@ public:
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
         return get_char_uint64(ss.get_chars(i, 0), depth);
+    }
+
+    //! Subset this string set using begin and size range.
+    StringSet subr(const typename Traits::Iterator& begin, size_t size) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return ss.sub(begin, begin + size);
+    }
+
+    //! Subset this string set using index range.
+    StringSet subi(size_t begin, size_t end) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return ss.sub(ss.begin() + begin, ss.begin() + end);
     }
 
     void print() const
@@ -279,7 +316,7 @@ public:
     { return std::string(reinterpret_cast<const char*>(s) + depth); }
 
     //! Subset this string set using iterator range.
-    GenericCharStringSet subset(Iterator begin, Iterator end) const
+    GenericCharStringSet sub(Iterator begin, Iterator end) const
     { return GenericCharStringSet(begin, end); }
 
 protected:
@@ -356,7 +393,7 @@ public:
     { return s.substr(depth); }
 
     //! Subset this string set using iterator range.
-    VectorStringSet subset(Iterator begin, Iterator end) const
+    VectorStringSet sub(Iterator begin, Iterator end) const
     { return VectorStringSet(begin, end); }
 
 protected:
@@ -444,7 +481,7 @@ public:
     { return text_.substr(s + depth); }
 
     //! Subset this string set using iterator range.
-    StringSuffixSet subset(Iterator begin, Iterator end) const
+    StringSuffixSet sub(Iterator begin, Iterator end) const
     { return StringSuffixSet(text_, begin, end); }
 
 protected:

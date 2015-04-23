@@ -23,6 +23,7 @@
 #include <sequential/inssort.hpp>
 #include <sequential/bingmann-lcp_inssort.hpp>
 #include <sequential/bingmann-radix_sort.hpp>
+#include <parallel/bingmann-parallel_mkqs.hpp>
 #include <tools/stringset.hpp>
 #include <tools/lcgrandom.hpp>
 
@@ -140,6 +141,8 @@ void test_all(const size_t nstrings)
     run_tests(bingmann_radix_sort::msd_CE_generic);
     run_tests(bingmann_radix_sort::msd_CE2_generic);
     run_tests(bingmann_radix_sort::msd_CI5_generic);
+    run_tests(bingmann_parallel_mkqs::bingmann_sequential_mkqs_cache8);
+    run_tests(bingmann_parallel_mkqs::bingmann_parallel_mkqs);
 }
 
 int main()

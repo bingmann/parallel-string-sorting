@@ -121,7 +121,7 @@ msd_CE_generic(const StringSet& ss, size_t depth)
     for (size_t i = 1; i < 256; ++i) {
         if (bktsize[i] == 0) continue;
         Iterator bend = bsum + bktsize[i];
-        msd_CE_generic(ss.subset(bsum, bend), depth + 1);
+        msd_CE_generic(ss.sub(bsum, bend), depth + 1);
         bsum = bend;
     }
 }
@@ -213,7 +213,7 @@ msd_CE2_generic(const StringSet& ss, size_t depth)
     for (size_t i = 1; i < 256; ++i) {
         if (bkt[i] == bkt[i + 1]) continue;
         //if (bkt[i]+1 >= bkt[i+1]) continue;
-        msd_CE2_generic(ss.subset(ss.begin() + bkt[i], ss.begin() + bkt[i + 1]),
+        msd_CE2_generic(ss.sub(ss.begin() + bkt[i], ss.begin() + bkt[i + 1]),
                         depth + 1);
     }
 }
@@ -633,7 +633,7 @@ msd_CI5_generic(const StringSet& ss, size_t depth)
     for (size_t i = 1; i < 256; ++i) {
         if (bktsize[i] == 0) continue;
         Iterator bend = bsum + bktsize[i];
-        msd_CI5_generic(ss.subset(bsum, bend), depth + 1);
+        msd_CI5_generic(ss.sub(bsum, bend), depth + 1);
         bsum = bend;
     }
 
@@ -790,7 +790,7 @@ msd_CI6_generic(const StringSet& ss, size_t depth)
     for (size_t i = 1; i < 256; ++i) {
         if (bktsize[i] == 0) continue;
         Iterator bend = bsum + bktsize[i];
-        msd_CI6_generic(ss.subset(bsum, bend), depth + 1);
+        msd_CI6_generic(ss.sub(bsum, bend), depth + 1);
         bsum = bend;
     }
 

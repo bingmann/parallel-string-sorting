@@ -40,6 +40,7 @@ endmacro(build_test)
 if(PSS_TESTLIB)
   
   include_directories(${PROJECT_SOURCE_DIR}/src)
+  include_directories(${PROJECT_BINARY_DIR})
 
   build_test(test-bingmann-simple)
   build_test(test-bingmann-parallel_sample_sort)

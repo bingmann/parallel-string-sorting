@@ -27,18 +27,8 @@ namespace bingmann_parallel_mkqs {
 static inline void
 bingmann_sequential_mkqs_cache8(unsigned char** strings, size_t n)
 {
-    typedef ParallelMKQS<parallel_string_sorting::UCharStringSet> MKQS;
-
-    MKQS::Context ctx;
-    ctx.g_strings = strings;
-    ctx.g_totalsize = n;
-
-    MKQS::StrCache* cache = new MKQS::StrCache[n];
-    for (size_t i = 0; i < n; ++i) {
-        cache[i].str = strings[i];
-    }
-    JobQueue jobqueue;
-    MKQS::SequentialJob<true>(ctx, strings, n, 0, cache).sequential_mkqs(jobqueue);
+    return bingmann_sequential_mkqs_cache8(
+        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
 }
 
 PSS_CONTESTANT(bingmann_sequential_mkqs_cache8,
@@ -48,20 +38,8 @@ PSS_CONTESTANT(bingmann_sequential_mkqs_cache8,
 static inline
 void bingmann_parallel_mkqs(unsigned char** strings, size_t n)
 {
-    typedef ParallelMKQS<parallel_string_sorting::UCharStringSet> MKQS;
-
-    MKQS::Context ctx;
-    ctx.g_strings = strings;
-    ctx.g_totalsize = n;
-    ctx.g_threadnum = omp_get_max_threads();
-    ctx.g_sequential_threshold = std::max(g_inssort_threshold,
-                                          ctx.g_totalsize / ctx.g_threadnum);
-
-    g_stats >> "block_size" << block_size;
-
-    JobQueue jobqueue;
-    new MKQS::ParallelJob<MKQS::BlockSourceInput>(ctx, jobqueue, strings, n, 0);
-    jobqueue.loop();
+    return bingmann_parallel_mkqs(
+        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
 }
 
 PSS_CONTESTANT_PARALLEL(bingmann_parallel_mkqs,
