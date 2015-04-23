@@ -42,12 +42,6 @@ namespace bingmann_parallel_mkqs {
 using namespace stringtools;
 using namespace jobqueue;
 
-size_t g_totalsize;             // total size of input
-size_t g_sequential_threshold;  // calculated threshold for sequential sorting
-size_t g_threadnum;             // number of threads overall
-
-string* g_strings;
-
 static const size_t g_inssort_threshold = 64;
 
 static const unsigned int block_size = 128 * 1024;
@@ -71,14 +65,28 @@ public:
     typedef unsigned char* string;
     typedef uint64_t key_type;
 
-    /// output string ranges for debugging
-
-    static inline std::string srange(string* str, size_t n)
+    //! Context class holding global sorting algorithm variables
+    class Context
     {
-        std::ostringstream oss;
-        oss << "[" << (str - g_strings) << "," << (str + n - g_strings) << ")=" << n;
-        return oss.str();
-    }
+    public:
+        //! total size of input
+        size_t g_totalsize;
+        //! calculated threshold for sequential sorting
+        size_t g_sequential_threshold;
+        //! number of threads overall
+        size_t g_threadnum;
+
+        string* g_strings;
+
+        //! output string ranges for debugging
+        std::string srange(string* str, size_t n)
+        {
+            std::ostringstream oss;
+            oss << "[" << (str - g_strings)
+                << "," << (str + n - g_strings) << ")=" << n;
+            return oss.str();
+        }
+    };
 
     /// Multi-character cache block for each string
 
@@ -321,6 +329,7 @@ public:
     template <bool CacheDirty>
     struct SequentialJob : public Job
     {
+        Context&        ctx;
         string          * strings;
         size_t          n, depth;
 
@@ -335,22 +344,25 @@ public:
 
         // *** Constructors
 
-        SequentialJob(string* _strings, size_t _n, size_t _depth, StrCache* _cache)
-            : strings(_strings), n(_n), depth(_depth),
+        SequentialJob(Context& _ctx,
+                      string* _strings, size_t _n, size_t _depth, StrCache* _cache)
+            : ctx(_ctx), strings(_strings), n(_n), depth(_depth),
               cache(_cache), cache_base(_cache)
         { }
 
-        SequentialJob(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth,
+        SequentialJob(Context& _ctx, JobQueue& jobqueue,
+                      string* _strings, size_t _n, size_t _depth,
                       BlockQueueType* _block_queue)
-            : strings(_strings), n(_n), depth(_depth),
+            : ctx(_ctx), strings(_strings), n(_n), depth(_depth),
               block_queue(_block_queue), cache(NULL)
         {
             jobqueue.enqueue(this);
         }
 
-        SequentialJob(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth,
+        SequentialJob(Context& _ctx, JobQueue& jobqueue,
+                      string* _strings, size_t _n, size_t _depth,
                       StrCache* _cache, StrCachePtrType _cache_base)
-            : strings(_strings), n(_n), depth(_depth),
+            : ctx(_ctx), strings(_strings), n(_n), depth(_depth),
               cache(_cache), cache_base(_cache_base)
         {
             jobqueue.enqueue(this);
@@ -366,7 +378,7 @@ public:
             {
                 if (n == 1) // nothing to sort
                 {
-                    DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings, n));
+                    DBG(debug_seqjobs, "copy result to output string ptrs " << ctx.srange(strings, n));
 
                     StrCacheBlock* scb = NULL;
                     while (block_queue->try_pop(scb))
@@ -426,13 +438,13 @@ public:
         inline void
         sequential_mkqs(JobQueue& jobqueue)
         {
-            DBG(debug_seqjobs, "SequentialJob on area " << srange(strings, n) << " @ job " << this);
+            DBG(debug_seqjobs, "SequentialJob on area " << ctx.srange(strings, n) << " @ job " << this);
 
             if (n < g_inssort_threshold)
             {
                 insertion_sort<true>(cache, n, depth);
 
-                DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings, n) << " @ job " << this);
+                DBG(debug_seqjobs, "copy result to output string ptrs " << ctx.srange(strings, n) << " @ job " << this);
                 for (size_t i = 0; i < n; ++i)
                     strings[i] = cache[i].str;
 
@@ -461,30 +473,32 @@ jumpout:
 
                         DBG(debug_seqjobs, "Queueing front of SequentialJob's stack level "
                             << pop_front << ", idx " << st.idx
-                            << ", areas lt " << srange(st_strings, st.num_lt)
-                            << " eq " << srange(st_strings + st.num_lt, st.num_eq)
-                            << " gt " << srange(st_strings + st.num_lt + st.num_eq, st.num_gt)
+                            << ", areas lt " << ctx.srange(st_strings, st.num_lt)
+                            << " eq " << ctx.srange(st_strings + st.num_lt, st.num_eq)
+                            << " gt " << ctx.srange(st_strings + st.num_lt + st.num_eq, st.num_gt)
                             << " @ job " << this);
 
                         if (st.idx == 0 && st.num_lt != 0)
                         {
-                            DBG(debug_seqjobs, "Queueing job for lt-area " << srange(st_strings, st.num_lt) << " @ job " << this);
+                            DBG(debug_seqjobs, "Queueing job for lt-area " << ctx.srange(st_strings, st.num_lt) << " @ job " << this);
 
-                            new SequentialJob<false>(jobqueue, st_strings, st.num_lt, st.depth,
+                            new SequentialJob<false>(ctx, jobqueue,
+                                                     st_strings, st.num_lt, st.depth,
                                                      st.cache, cache_base);
                         }
                         if (st.idx <= 1 && st.num_eq != 0)
                         {
-                            DBG(debug_seqjobs, "Queueing job for eq-area " << srange(st_strings + st.num_lt, st.num_eq) << " @ job " << this);
+                            DBG(debug_seqjobs, "Queueing job for eq-area " << ctx.srange(st_strings + st.num_lt, st.num_eq) << " @ job " << this);
 
                             if (st.eq_recurse) {
-                                new SequentialJob<true>(jobqueue, st_strings + st.num_lt,
+                                new SequentialJob<true>(ctx, jobqueue,
+                                                        st_strings + st.num_lt,
                                                         st.num_eq, st.depth + sizeof(key_type),
                                                         st.cache + st.num_lt, cache_base);
                             }
                             else
                             {
-                                DBG(debug_seqjobs, "copy result to output string ptrs " << srange(st_strings + st.num_lt, st.num_eq) << " - no recurse equal @ job " << this);
+                                DBG(debug_seqjobs, "copy result to output string ptrs " << ctx.srange(st_strings + st.num_lt, st.num_eq) << " - no recurse equal @ job " << this);
 
                                 // seems overkill to create an extra thread job for this:
                                 for (size_t i = st.num_lt; i < st.num_lt + st.num_eq; ++i)
@@ -493,9 +507,10 @@ jumpout:
                         }
                         if (st.idx <= 2 && st.num_gt != 0)
                         {
-                            DBG(debug_seqjobs, "Queueing job for gt-area " << srange(st_strings + st.num_lt + st.num_eq, st.num_gt) << " @ job " << this);
+                            DBG(debug_seqjobs, "Queueing job for gt-area " << ctx.srange(st_strings + st.num_lt + st.num_eq, st.num_gt) << " @ job " << this);
 
-                            new SequentialJob<false>(jobqueue, st_strings + st.num_lt + st.num_eq,
+                            new SequentialJob<false>(ctx, jobqueue,
+                                                     st_strings + st.num_lt + st.num_eq,
                                                      st.num_gt, st.depth,
                                                      st.cache + st.num_lt + st.num_eq, cache_base);
                         }
@@ -563,7 +578,7 @@ jumpout:
             {
                 size_t n_finished = cache_finished - cache;
 
-                DBG(debug_seqjobs, "copy result to output string ptrs " << srange(strings, n_finished) << " @ job " << this);
+                DBG(debug_seqjobs, "copy result to output string ptrs " << ctx.srange(strings, n_finished) << " @ job " << this);
                 for (size_t i = 0; i < n_finished; ++i)
                     strings[i] = cache[i].str;
             }
@@ -759,6 +774,8 @@ jumpout:
     {
         // *** Class Attributes
 
+        Context&                  ctx;
+
         BlockSource               blks;
         uint64_t                  pivot;
 
@@ -797,8 +814,10 @@ jumpout:
 
         // *** Constructor
 
-        inline ParallelJob(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
-            : blks(strings, n, depth),
+        inline ParallelJob(Context& _ctx, JobQueue& jobqueue,
+                           string* strings, size_t n, size_t depth)
+            : ctx(_ctx),
+              blks(strings, n, depth),
               pivot(blks.select_pivot()),
               // contruct queues
               oblk_lt(new BlockQueueType()),
@@ -813,9 +832,11 @@ jumpout:
         }
 
         // for BlockSourceQueueUnequal
-        inline ParallelJob(JobQueue& jobqueue, string* strings, size_t n, size_t depth,
+        inline ParallelJob(Context& _ctx, JobQueue& jobqueue,
+                           string* strings, size_t n, size_t depth,
                            BlockQueueType* iblk, PivotKeyQueueType* iblk_pivot)
-            : blks(strings, n, depth, iblk, iblk_pivot),
+            : ctx(_ctx),
+              blks(strings, n, depth, iblk, iblk_pivot),
               pivot(blks.select_pivot()),
               // contruct queues
               oblk_lt(new BlockQueueType()),
@@ -830,9 +851,11 @@ jumpout:
         }
 
         //  for BlockSourceQueueEqual
-        inline ParallelJob(JobQueue& jobqueue, string* strings, size_t n, size_t depth,
+        inline ParallelJob(Context& _ctx,
+                           JobQueue& jobqueue, string* strings, size_t n, size_t depth,
                            BlockQueueType* iblk, PivotStrQueueType* iblk_pivot)
-            : blks(strings, n, depth, iblk, iblk_pivot),
+            : ctx(_ctx),
+              blks(strings, n, depth, iblk, iblk_pivot),
               pivot(blks.select_pivot()),
               // contruct queues
               oblk_lt(new BlockQueueType()),
@@ -848,10 +871,10 @@ jumpout:
 
         void        enqueue_jobs(JobQueue& jobqueue)
         {
-            procs = blks.n / g_sequential_threshold;
+            procs = blks.n / ctx.g_sequential_threshold;
             if (procs == 0) procs = 1;
 
-            DBG(debug_parajobs, "ParallelJob on area " << srange(blks.strings, blks.n) << " with " << procs << " threads @ job " << this);
+            DBG(debug_parajobs, "ParallelJob on area " << ctx.srange(blks.strings, blks.n) << " with " << procs << " threads @ job " << this);
 
             // create partition jobs
             pwork = procs;
@@ -1012,29 +1035,31 @@ jump2:
 
             // recurse into lt-queue
             if (count_lt == 0) { }
-            else if (count_lt <= g_sequential_threshold) {
-                new SequentialJob<false>
-                    (jobqueue, blks.strings, count_lt, blks.depth,
+            else if (count_lt <= ctx.g_sequential_threshold) {
+                new SequentialJob<false>(
+                    ctx, jobqueue, blks.strings, count_lt, blks.depth,
                     oblk_lt);
                 delete oblk_lt_pivot;
             }
             else {
-                new ParallelJob<BlockSourceQueueUnequal>
-                    (jobqueue, blks.strings, count_lt, blks.depth,
+                new ParallelJob<BlockSourceQueueUnequal>(
+                    ctx, jobqueue, blks.strings, count_lt, blks.depth,
                     oblk_lt, oblk_lt_pivot);
             }
 
             // recurse into eq-queue
             if (count_eq == 0) { }
-            else if (count_eq <= g_sequential_threshold) {
+            else if (count_eq <= ctx.g_sequential_threshold) {
                 new SequentialJob<true>
-                    (jobqueue, blks.strings + count_lt, count_eq, blks.depth + sizeof(key_type),
+                    (ctx, jobqueue,
+                    blks.strings + count_lt, count_eq, blks.depth + sizeof(key_type),
                     oblk_eq);
                 delete oblk_eq_pivot;
             }
             else {
-                new ParallelJob<BlockSourceQueueEqual>
-                    (jobqueue, blks.strings + count_lt, count_eq, blks.depth + sizeof(key_type),
+                new ParallelJob<BlockSourceQueueEqual>(
+                    ctx, jobqueue,
+                    blks.strings + count_lt, count_eq, blks.depth + sizeof(key_type),
                     oblk_eq, oblk_eq_pivot);
             }
 
@@ -1042,15 +1067,17 @@ jump2:
             size_t count_lteq = count_lt + count_eq;
             size_t count_gt = blks.n - count_lteq;
             if (count_gt == 0) { }
-            else if (count_gt <= g_sequential_threshold) {
+            else if (count_gt <= ctx.g_sequential_threshold) {
                 new SequentialJob<false>
-                    (jobqueue, blks.strings + count_lteq, count_gt, blks.depth,
+                    (ctx, jobqueue,
+                    blks.strings + count_lteq, count_gt, blks.depth,
                     oblk_gt);
                 delete oblk_gt_pivot;
             }
             else {
-                new ParallelJob<BlockSourceQueueUnequal>
-                    (jobqueue, blks.strings + count_lteq, count_gt, blks.depth,
+                new ParallelJob<BlockSourceQueueUnequal>(
+                    ctx, jobqueue,
+                    blks.strings + count_lteq, count_gt, blks.depth,
                     oblk_gt, oblk_gt_pivot);
             }
 
@@ -1197,12 +1224,16 @@ bingmann_sequential_mkqs_cache8(string* strings, size_t n)
 {
     typedef ParallelMKQS MKQS;
 
+    MKQS::Context ctx;
+    ctx.g_strings = strings;
+    ctx.g_totalsize = n;
+
     MKQS::StrCache* cache = new MKQS::StrCache[n];
     for (size_t i = 0; i < n; ++i) {
         cache[i].str = strings[i];
     }
     JobQueue jobqueue;
-    MKQS::SequentialJob<true>(strings, n, 0, cache).sequential_mkqs(jobqueue);
+    MKQS::SequentialJob<true>(ctx, strings, n, 0, cache).sequential_mkqs(jobqueue);
 }
 
 PSS_CONTESTANT(bingmann_sequential_mkqs_cache8,
@@ -1214,15 +1245,17 @@ void bingmann_parallel_mkqs(string* strings, size_t n)
 {
     typedef ParallelMKQS MKQS;
 
-    g_strings = strings;
-    g_totalsize = n;
-    g_threadnum = omp_get_max_threads();
-    g_sequential_threshold = std::max(g_inssort_threshold, g_totalsize / g_threadnum);
+    MKQS::Context ctx;
+    ctx.g_strings = strings;
+    ctx.g_totalsize = n;
+    ctx.g_threadnum = omp_get_max_threads();
+    ctx.g_sequential_threshold = std::max(g_inssort_threshold,
+                                          ctx.g_totalsize / ctx.g_threadnum);
 
     g_stats >> "block_size" << block_size;
 
     JobQueue jobqueue;
-    new MKQS::ParallelJob<MKQS::BlockSourceInput>(jobqueue, strings, n, 0);
+    new MKQS::ParallelJob<MKQS::BlockSourceInput>(ctx, jobqueue, strings, n, 0);
     jobqueue.loop();
 }
 
