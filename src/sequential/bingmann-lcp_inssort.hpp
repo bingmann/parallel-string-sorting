@@ -157,6 +157,14 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
     }
 }
 
+//! LCP insertion sort, plain arguments version.
+static inline
+void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
+{
+    return lcp_insertion_sort(
+        parallel_string_sorting::UCharStringSet(str, str + n), lcp, depth);
+}
+
 //! LCP insertion sort, but immediately discard the lcp
 template <typename StringSet>
 static inline

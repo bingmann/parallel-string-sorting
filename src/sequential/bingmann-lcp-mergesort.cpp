@@ -354,12 +354,14 @@ public:
 
 template <unsigned K>
 static inline void
-lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp, const LcpStringPtr& output, size_t length)
+lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp,
+                   const LcpStringPtr& output, size_t length)
 {
     if (length <= 2 * K)
     {
         memcpy(output.strings, strings, length * sizeof(string));
-        return bingmann_lcp_inssort::lcp_insertion_sort(output.strings, output.lcps, length, 0);
+        return bingmann_lcp_inssort::lcp_insertion_sort(
+            output.strings, output.lcps, length, 0);
     }
 
     // create ranges of the parts
