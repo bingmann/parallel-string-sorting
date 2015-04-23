@@ -4,7 +4,7 @@
  * Parallel multikey-quicksort.
  *
  *******************************************************************************
- * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2013-2015 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -316,7 +316,7 @@ struct shared_ptr_array_deleter {
 };
 
 template <bool CacheDirty>
-struct SequentialMKQS : public Job
+struct SequentialJob : public Job
 {
     string          * strings;
     size_t          n, depth;
@@ -332,21 +332,21 @@ struct SequentialMKQS : public Job
 
     // *** Constructors
 
-    SequentialMKQS(string* _strings, size_t _n, size_t _depth, StrCache* _cache)
+    SequentialJob(string* _strings, size_t _n, size_t _depth, StrCache* _cache)
         : strings(_strings), n(_n), depth(_depth),
           cache(_cache), cache_base(_cache)
     { }
 
-    SequentialMKQS(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth,
-                   BlockQueueType* _block_queue)
+    SequentialJob(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth,
+                  BlockQueueType* _block_queue)
         : strings(_strings), n(_n), depth(_depth),
           block_queue(_block_queue), cache(NULL)
     {
         jobqueue.enqueue(this);
     }
 
-    SequentialMKQS(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth,
-                   StrCache* _cache, StrCachePtrType _cache_base)
+    SequentialJob(JobQueue& jobqueue, string* _strings, size_t _n, size_t _depth,
+                  StrCache* _cache, StrCachePtrType _cache_base)
         : strings(_strings), n(_n), depth(_depth),
           cache(_cache), cache_base(_cache_base)
     {
@@ -357,7 +357,7 @@ struct SequentialMKQS : public Job
 
     virtual bool run(JobQueue& jobqueue)
     {
-        DBG(debug_seqjobs, "SequentialMKQS for " << n << " strings @ " << this);
+        DBG(debug_seqjobs, "SequentialJob for " << n << " strings @ " << this);
 
         if (!cache)
         {
@@ -423,7 +423,7 @@ struct SequentialMKQS : public Job
     inline void
     sequential_mkqs(JobQueue& jobqueue)
     {
-        DBG(debug_seqjobs, "SequentialMKQS on area " << srange(strings, n) << " @ job " << this);
+        DBG(debug_seqjobs, "SequentialJob on area " << srange(strings, n) << " @ job " << this);
 
         if (n < g_inssort_threshold)
         {
@@ -456,27 +456,28 @@ jumpout:
                     MKQSStep& st = stack[pop_front];
                     string* st_strings = strings + (st.cache - cache);
 
-                    DBG(debug_seqjobs, "Queueing front of SequentialMKQS's stack level " << pop_front << ", idx " << st.idx
-                                                                                         << ", areas lt " << srange(st_strings, st.num_lt)
-                                                                                         << " eq " << srange(st_strings + st.num_lt, st.num_eq)
-                                                                                         << " gt " << srange(st_strings + st.num_lt + st.num_eq, st.num_gt)
-                                                                                         << " @ job " << this);
+                    DBG(debug_seqjobs, "Queueing front of SequentialJob's stack level "
+                        << pop_front << ", idx " << st.idx
+                        << ", areas lt " << srange(st_strings, st.num_lt)
+                        << " eq " << srange(st_strings + st.num_lt, st.num_eq)
+                        << " gt " << srange(st_strings + st.num_lt + st.num_eq, st.num_gt)
+                        << " @ job " << this);
 
                     if (st.idx == 0 && st.num_lt != 0)
                     {
                         DBG(debug_seqjobs, "Queueing job for lt-area " << srange(st_strings, st.num_lt) << " @ job " << this);
 
-                        new SequentialMKQS<false>(jobqueue, st_strings, st.num_lt, st.depth,
-                                                  st.cache, cache_base);
+                        new SequentialJob<false>(jobqueue, st_strings, st.num_lt, st.depth,
+                                                 st.cache, cache_base);
                     }
                     if (st.idx <= 1 && st.num_eq != 0)
                     {
                         DBG(debug_seqjobs, "Queueing job for eq-area " << srange(st_strings + st.num_lt, st.num_eq) << " @ job " << this);
 
                         if (st.eq_recurse) {
-                            new SequentialMKQS<true>(jobqueue, st_strings + st.num_lt,
-                                                     st.num_eq, st.depth + sizeof(key_type),
-                                                     st.cache + st.num_lt, cache_base);
+                            new SequentialJob<true>(jobqueue, st_strings + st.num_lt,
+                                                    st.num_eq, st.depth + sizeof(key_type),
+                                                    st.cache + st.num_lt, cache_base);
                         }
                         else
                         {
@@ -491,9 +492,9 @@ jumpout:
                     {
                         DBG(debug_seqjobs, "Queueing job for gt-area " << srange(st_strings + st.num_lt + st.num_eq, st.num_gt) << " @ job " << this);
 
-                        new SequentialMKQS<false>(jobqueue, st_strings + st.num_lt + st.num_eq,
-                                                  st.num_gt, st.depth,
-                                                  st.cache + st.num_lt + st.num_eq, cache_base);
+                        new SequentialJob<false>(jobqueue, st_strings + st.num_lt + st.num_eq,
+                                                 st.num_gt, st.depth,
+                                                 st.cache + st.num_lt + st.num_eq, cache_base);
                     }
 
                     // recalculate finish pointer for this thread (removes all queued areas)
@@ -574,7 +575,7 @@ bingmann_sequential_mkqs_cache8(string* strings, size_t n)
         cache[i].str = strings[i];
     }
     JobQueue jobqueue;
-    SequentialMKQS<true>(strings, n, 0, cache).sequential_mkqs(jobqueue);
+    SequentialJob<true>(strings, n, 0, cache).sequential_mkqs(jobqueue);
 }
 
 PSS_CONTESTANT(bingmann_sequential_mkqs_cache8,
@@ -582,7 +583,7 @@ PSS_CONTESTANT(bingmann_sequential_mkqs_cache8,
                "multikey_cache with 8byte cache (non-recursive)")
 
 // ****************************************************************************
-// *** BlockSource - provide new blocks of unpartitioned input to ParallelMKQS
+// *** BlockSource - provide new blocks of unpartitioned input to ParallelJob
 
 struct BlockSourceInput
 {
@@ -761,12 +762,12 @@ struct BlockSourceQueueEqual
 };
 
 // ****************************************************************************
-// *** ParallelMKQS - split ternary with 8-byte superalphabet
+// *** ParallelJob - split ternary with 8-byte superalphabet
 
 enum { LT, EQ, GT };
 
 template <typename BlockSource>
-struct ParallelMKQS
+struct ParallelJob
 {
     // *** Class Attributes
 
@@ -780,10 +781,10 @@ struct ParallelMKQS
 
     struct PartitionJob : public Job
     {
-        ParallelMKQS * step;
+        ParallelJob  * step;
         unsigned int p;
 
-        inline PartitionJob(ParallelMKQS* _step, unsigned int _p)
+        inline PartitionJob(ParallelJob* _step, unsigned int _p)
             : step(_step), p(_p) { }
 
         virtual bool run(JobQueue& jobqueue)
@@ -808,7 +809,7 @@ struct ParallelMKQS
 
     // *** Constructor
 
-    inline ParallelMKQS(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
+    inline ParallelJob(JobQueue& jobqueue, string* strings, size_t n, size_t depth)
         : blks(strings, n, depth),
           pivot(blks.select_pivot()),
           // contruct queues
@@ -824,8 +825,8 @@ struct ParallelMKQS
     }
 
     // for BlockSourceQueueUnequal
-    inline ParallelMKQS(JobQueue& jobqueue, string* strings, size_t n, size_t depth,
-                        BlockQueueType* iblk, PivotKeyQueueType* iblk_pivot)
+    inline ParallelJob(JobQueue& jobqueue, string* strings, size_t n, size_t depth,
+                       BlockQueueType* iblk, PivotKeyQueueType* iblk_pivot)
         : blks(strings, n, depth, iblk, iblk_pivot),
           pivot(blks.select_pivot()),
           // contruct queues
@@ -841,8 +842,8 @@ struct ParallelMKQS
     }
 
     //  for BlockSourceQueueEqual
-    inline ParallelMKQS(JobQueue& jobqueue, string* strings, size_t n, size_t depth,
-                        BlockQueueType* iblk, PivotStrQueueType* iblk_pivot)
+    inline ParallelJob(JobQueue& jobqueue, string* strings, size_t n, size_t depth,
+                       BlockQueueType* iblk, PivotStrQueueType* iblk_pivot)
         : blks(strings, n, depth, iblk, iblk_pivot),
           pivot(blks.select_pivot()),
           // contruct queues
@@ -862,7 +863,7 @@ struct ParallelMKQS
         procs = blks.n / g_sequential_threshold;
         if (procs == 0) procs = 1;
 
-        DBG(debug_parajobs, "ParallelMKQS on area " << srange(blks.strings, blks.n) << " with " << procs << " threads @ job " << this);
+        DBG(debug_parajobs, "ParallelJob on area " << srange(blks.strings, blks.n) << " with " << procs << " threads @ job " << this);
 
         // create partition jobs
         pwork = procs;
@@ -898,7 +899,7 @@ struct ParallelMKQS
 
 // *** Class Representing a Current Block during partition()
 
-template <typename ParallelMKQS>
+template <typename ParallelJob>
 struct PartitionBlock
 {
     unsigned int pos, fill;
@@ -908,7 +909,7 @@ struct PartitionBlock
     PartitionBlock() : pos(0), fill(0), blk(NULL) { }
 
     template <int type>
-    inline bool has_src_block(ParallelMKQS& mkqs)
+    inline bool has_src_block(ParallelJob& mkqs)
     {
         if (pos < fill) return true; // still element in source block
 
@@ -934,7 +935,7 @@ struct PartitionBlock
     }
 
     template <int type>
-    inline void check_partial_block(ParallelMKQS& mkqs)
+    inline void check_partial_block(ParallelJob& mkqs)
     {
         if (blk && pos < block_size) return; // blk has free space
         // allocate free partial block
@@ -963,7 +964,7 @@ struct PartitionBlock
     }
 
     template <int type>
-    inline void swap_or_move_to(ParallelMKQS& mkqs, PartitionBlock& from)
+    inline void swap_or_move_to(ParallelJob& mkqs, PartitionBlock& from)
     {
         if (!partial && pos < block_size) {
             if (pos < fill) {
@@ -986,7 +987,7 @@ struct PartitionBlock
     }
 
     template <int type>
-    inline void finish_partial(ParallelMKQS& mkqs, PartitionBlock& lt, PartitionBlock& eq, PartitionBlock& gt)
+    inline void finish_partial(ParallelJob& mkqs, PartitionBlock& lt, PartitionBlock& eq, PartitionBlock& gt)
     {
         if (!blk || partial) return;
 
@@ -1032,13 +1033,13 @@ struct PartitionBlock
 // *** partition() separating a BlockSource into three Queues lt, eq and gt.
 
 template <typename BlockSource>
-void ParallelMKQS<BlockSource>::partition(unsigned int p, JobQueue& jobqueue)
+void ParallelJob<BlockSource>::partition(unsigned int p, JobQueue& jobqueue)
 {
     DBG(debug_parajobs, "process PartitionJob " << p << " @ " << this << " with pivot " << toHex(pivot));
 
     // phase 1: partition blocks in-place
 
-    PartitionBlock<ParallelMKQS> lt, eq, gt;
+    PartitionBlock<ParallelJob> lt, eq, gt;
 
     while (1)
     {
@@ -1110,7 +1111,7 @@ jump2:
 }
 
 template <typename BlockSource>
-void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
+void ParallelJob<BlockSource>::partition_finished(JobQueue& jobqueue)
 {
     DBG(debug_parajobs, "finished PartitionJobs @ " << this);
     DBG(debug_parajobs, "finished partitioning - " << count_lt << " lt "
@@ -1163,13 +1164,13 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
     // recurse into lt-queue
     if (count_lt == 0) { }
     else if (count_lt <= g_sequential_threshold) {
-        new SequentialMKQS<false>
+        new SequentialJob<false>
             (jobqueue, blks.strings, count_lt, blks.depth,
             oblk_lt);
         delete oblk_lt_pivot;
     }
     else {
-        new ParallelMKQS<BlockSourceQueueUnequal>
+        new ParallelJob<BlockSourceQueueUnequal>
             (jobqueue, blks.strings, count_lt, blks.depth,
             oblk_lt, oblk_lt_pivot);
     }
@@ -1177,13 +1178,13 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
     // recurse into eq-queue
     if (count_eq == 0) { }
     else if (count_eq <= g_sequential_threshold) {
-        new SequentialMKQS<true>
+        new SequentialJob<true>
             (jobqueue, blks.strings + count_lt, count_eq, blks.depth + sizeof(key_type),
             oblk_eq);
         delete oblk_eq_pivot;
     }
     else {
-        new ParallelMKQS<BlockSourceQueueEqual>
+        new ParallelJob<BlockSourceQueueEqual>
             (jobqueue, blks.strings + count_lt, count_eq, blks.depth + sizeof(key_type),
             oblk_eq, oblk_eq_pivot);
     }
@@ -1193,13 +1194,13 @@ void ParallelMKQS<BlockSource>::partition_finished(JobQueue& jobqueue)
     size_t count_gt = blks.n - count_lteq;
     if (count_gt == 0) { }
     else if (count_gt <= g_sequential_threshold) {
-        new SequentialMKQS<false>
+        new SequentialJob<false>
             (jobqueue, blks.strings + count_lteq, count_gt, blks.depth,
             oblk_gt);
         delete oblk_gt_pivot;
     }
     else {
-        new ParallelMKQS<BlockSourceQueueUnequal>
+        new ParallelJob<BlockSourceQueueUnequal>
             (jobqueue, blks.strings + count_lteq, count_gt, blks.depth,
             oblk_gt, oblk_gt_pivot);
     }
@@ -1217,7 +1218,7 @@ void parallel_mkqs(string* strings, size_t n)
     g_stats >> "block_size" << block_size;
 
     JobQueue jobqueue;
-    new ParallelMKQS<BlockSourceInput>(jobqueue, strings, n, 0);
+    new ParallelJob<BlockSourceInput>(jobqueue, strings, n, 0);
     jobqueue.loop();
 }
 
