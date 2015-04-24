@@ -127,7 +127,10 @@ public:
         }
     };
 
-    typedef tbb::concurrent_queue<StrCacheBlock*> BlockQueueType;
+    // TODO: use unique_ptr when TBB decides to supports it
+    typedef std::shared_ptr<StrCacheBlock> StrCacheBlockPtr;
+
+    typedef tbb::concurrent_queue<StrCacheBlockPtr> BlockQueueType;
     typedef tbb::concurrent_queue<key_type> PivotKeyQueueType;
     typedef tbb::concurrent_queue<String> PivotStrQueueType;
 
@@ -189,7 +192,7 @@ public:
         StrCache* pi, * pj;
         String s, t;
         for (pi = cache + 1; --n > 0; ++pi) {
-            String tmp = pi->str;
+            String tmp = std::move(pi->str);
             for (pj = pi; pj > cache; --pj) {
                 CharIterator s = strset.get_chars((pj - 1)->str, depth);
                 CharIterator t = strset.get_chars(tmp, depth);
@@ -198,9 +201,9 @@ public:
                     ++s, ++t;
                 if (*s <= *t)
                     break;
-                pj->str = (pj - 1)->str;
+                pj->str = std::move((pj - 1)->str);
             }
-            pj->str = tmp;
+            pj->str = std::move(tmp);
         }
     }
 
@@ -210,13 +213,13 @@ public:
     {
         StrCache* pi, * pj;
         for (pi = cache + 1; --n > 0; ++pi) {
-            StrCache tmp = *pi;
+            StrCache tmp = std::move(*pi);
             for (pj = pi; pj > cache; --pj) {
                 if (cmp((pj - 1)->key, tmp.key) <= 0)
                     break;
-                *pj = *(pj - 1);
+                *pj = std::move(*(pj - 1));
             }
-            *pj = tmp;
+            *pj = std::move(tmp);
         }
     }
 
@@ -267,15 +270,15 @@ public:
                 for (size_t i = 0; i < n; ++i)
                     cache[i].key = ss.get_uint64(cache[i].str, depth);
             }
-            // Move pivot to first position to avoid wrapping the unsigned values
-            // we are using in the main loop from zero to max.
+            // Move pivot to first position to avoid wrapping the unsigned
+            // values we are using in the main loop from zero to max.
             std::swap(cache[0],
                       med3charRef(
                           med3charRef(cache[0], cache[n / 8], cache[n / 4]),
                           med3charRef(cache[n / 2 - n / 8], cache[n / 2], cache[n / 2 + n / 8]),
                           med3charRef(cache[n - 1 - n / 4], cache[n - 1 - n / 8], cache[n - 3])
                           ));
-            StrCache pivot = cache[0];
+            const StrCache& pivot = cache[0];
             size_t first = 1;
             size_t last = n - 1;
             size_t beg_ins = 1;
@@ -404,20 +407,18 @@ public:
                     DBG(debug_seqjobs, "copy result to output string ptrs "
                         << ctx.srange(strset));
 
-                    StrCacheBlock* scb = NULL;
+                    StrCacheBlockPtr scb;
                     while (block_queue->try_pop(scb))
                     {
                         assert(scb && (scb->fill == 0 || scb->fill == 1));
                         if (scb->fill == 1) {
-                            strset[strset.begin()] = scb->cache[0].str;
+                            strset[strset.begin()] = std::move(scb->cache[0].str);
                         }
-                        delete scb;
                     }
 
                     while (block_queue->try_pop(scb))
                     {
                         assert(scb && scb->fill == 0);
-                        delete scb;
                     }
 
                     assert(block_queue->empty());
@@ -432,7 +433,7 @@ public:
 
                 // extract all elements, and maybe update cache
 
-                StrCacheBlock* scb;
+                StrCacheBlockPtr scb;
                 size_t o = 0;
 
                 while (block_queue->try_pop(scb))
@@ -440,14 +441,13 @@ public:
                     for (unsigned int i = 0; i < scb->fill; ++i, ++o)
                     {
                         if (CacheDirty) {
-                            cache[o].str = scb->cache[i].str;
+                            cache[o].str = std::move(scb->cache[i].str);
                             cache[o].key = strset.get_uint64(cache[o].str, depth);
                         }
                         else {
-                            cache[o] = scb->cache[i];
+                            cache[o] = std::move(scb->cache[i]);
                         }
                     }
-                    delete scb;
                 }
 
                 delete block_queue;
@@ -473,7 +473,7 @@ public:
 
                 Iterator begin = strset.begin();
                 for (size_t i = 0; i < strset.size(); ++i)
-                    strset[begin + i] = cache[i].str;
+                    strset[begin + i] = std::move(cache[i].str);
 
                 return;
             }
@@ -541,7 +541,7 @@ jumpout:
 
                                 // seems overkill to create an extra thread job for this:
                                 for (size_t i = st.num_lt; i < st.num_lt + st.num_eq; ++i)
-                                    st_strings[i] = st.cache[i].str;
+                                    st_strings[i] = std::move(st.cache[i].str);
                             }
                         }
                         if (st.idx <= 2 && st.num_gt != 0)
@@ -629,7 +629,7 @@ jumpout:
 
                 Iterator begin = strset.begin();
                 for (size_t i = 0; i < n_finished; ++i)
-                    strset[begin + i] = cache[i].str;
+                    strset[begin + i] = std::move(cache[i].str);
             }
         }
     };
@@ -672,7 +672,7 @@ jumpout:
                 );
         }
 
-        StrCacheBlock * get_block(unsigned int& fill)
+        StrCacheBlockPtr get_block(unsigned int& fill)
         {
             unsigned int blk;
 
@@ -691,18 +691,18 @@ jumpout:
             DBG(debug_blocks, "reserved input block " << blk <<
                 " @ " << (blk * block_size) << " fill " << fill);
 
-            StrCacheBlock* scb = new StrCacheBlock;
+            StrCacheBlockPtr scb(new StrCacheBlock);
 
             // TODO: maybe separate loops?
 
             // fill cache for processor's part
             Iterator str = strset.begin() + blk * block_size;
             for (StrCache* sc = scb->cache; sc != scb->cache + fill; ++sc, ++str) {
-                sc->str = *str;
-                sc->key = strset.get_uint64(*str, depth);
+                sc->str = std::move(*str);
+                sc->key = strset.get_uint64(sc->str, depth);
             }
 
-            return scb;
+            return std::move(scb);
         }
     };
 
@@ -747,15 +747,15 @@ jumpout:
                 );
         }
 
-        StrCacheBlock * get_block(unsigned int& fill)
+        StrCacheBlockPtr get_block(unsigned int& fill)
         {
-            StrCacheBlock* blk;
+            StrCacheBlockPtr blk;
             if (!block_queue->try_pop(blk)) return NULL;
 
-            DBG(debug_blocks, "pop()ed input block " << blk << " fill " << blk->fill);
+            DBG(debug_blocks, "pop()ed input block  fill " << blk->fill);
             fill = blk->fill;
 
-            return blk;
+            return std::move(blk);
         }
     };
 
@@ -800,12 +800,13 @@ jumpout:
                 );
         }
 
-        StrCacheBlock * get_block(unsigned int& fill)
+        StrCacheBlockPtr get_block(unsigned int& fill)
         {
-            StrCacheBlock* blk;
+            StrCacheBlockPtr blk;
             if (!block_queue->try_pop(blk)) return NULL;
 
-            DBG(debug_blocks, "pop()ed input block " << blk << " fill " << blk->fill);
+            DBG(debug_blocks, "pop()ed input block " /* << blk*/
+                << " fill " << blk->fill);
             fill = blk->fill;
 
             // refill key cache
@@ -814,7 +815,7 @@ jumpout:
                 blk->cache[i].key = strset.get_uint64(blk->cache[i].str, depth);
             }
 
-            return blk;
+            return std::move(blk);
         }
     };
 
@@ -942,23 +943,23 @@ jumpout:
 
         // *** Helper to Output to One of the oblk Queues
 
-        void oblk_push(const int type, StrCacheBlock*& blk)
+        void oblk_push(const int type, StrCacheBlockPtr&& blk)
         {
             // hopefully this function will be optimized, a templated version is
             // very obfuscated.
             if (type == LT) {
                 count_lt += blk->fill;
                 oblk_lt_pivot->push(blk->key(blk->fill / 2));
-                oblk_lt->push(blk);
+                oblk_lt->push(std::move(blk));
             }
             else if (type == EQ) {
                 count_eq += blk->fill;
                 oblk_eq_pivot->push(blk->str(blk->fill / 2));
-                oblk_eq->push(blk);
+                oblk_eq->push(std::move(blk));
             }
             else {
                 oblk_gt_pivot->push(blk->key(blk->fill / 2));
-                oblk_gt->push(blk);
+                oblk_gt->push(std::move(blk));
             }
         }
 
@@ -967,7 +968,8 @@ jumpout:
         //! partition() separating a BlockSource into three Queues lt, eq and gt.
         void partition(unsigned int p, JobQueue& jobqueue)
         {
-            DBG(debug_parajobs, "process PartitionJob " << p << " @ " << this << " with pivot " << toHex(pivot));
+            DBG(debug_parajobs, "process PartitionJob " << p << " @ " <<
+                this << " with pivot " << toHex(pivot));
 
             // phase 1: partition blocks in-place
 
@@ -975,7 +977,8 @@ jumpout:
 
             while (1)
             {
-                while (lt.template has_src_block<LT>(*this) && eq.template has_src_block<EQ>(*this))
+                while (lt.template has_src_block<LT>(*this) &&
+                       eq.template has_src_block<EQ>(*this))
                 {
                     int res = cmp(lt.front_key(), pivot);
                     if (res < 0) {       // < than pivot
@@ -998,7 +1001,8 @@ jumpout:
                 break;
 
 jump1:
-                while (gt.template has_src_block<GT>(*this) && eq.template has_src_block<EQ>(*this))
+                while (gt.template has_src_block<GT>(*this) &&
+                       eq.template has_src_block<EQ>(*this))
                 {
                     int res = cmp(gt.front_key(), pivot);
                     if (res < 0) {       // < than pivot
@@ -1030,7 +1034,7 @@ jump2:
             }
 
             DBG(debug, "finished full blocks, creating partials @ " << this);
-            DBG(debug, "lt " << lt.blk << " eq " << eq.blk << " gt " << gt.blk);
+            //DBG(debug, "lt " << *lt.blk << " eq " << *eq.blk << " gt " << *gt.blk);
 
             lt.partial = (lt.blk == NULL);
             eq.partial = (eq.blk == NULL);
@@ -1042,9 +1046,9 @@ jump2:
             eq.template finish_partial<EQ>(*this, lt, eq, gt);
             gt.template finish_partial<GT>(*this, lt, eq, gt);
 
-            if (lt.blk) lt.blk->fill = lt.fill, oblk_push(LT, lt.blk);
-            if (eq.blk) eq.blk->fill = eq.fill, oblk_push(EQ, eq.blk);
-            if (gt.blk) gt.blk->fill = gt.fill, oblk_push(GT, gt.blk);
+            if (lt.blk) lt.blk->fill = lt.fill, oblk_push(LT, std::move(lt.blk));
+            if (eq.blk) eq.blk->fill = eq.fill, oblk_push(EQ, std::move(eq.blk));
+            if (gt.blk) gt.blk->fill = gt.fill, oblk_push(GT, std::move(gt.blk));
 
             if (--pwork == 0)
                 partition_finished(jobqueue);
@@ -1166,10 +1170,10 @@ jump2:
     {
     public:
         unsigned int pos, fill;
-        StrCacheBlock* blk;
+        StrCacheBlockPtr blk;
         bool partial;
 
-        PartitionBlock() : pos(0), fill(0), blk(NULL) { }
+        //PartitionBlock() : pos(0), fill(0), blk(nullptr) { }
 
         template <int type>
         bool has_src_block(ParallelJob& mkqs)
@@ -1178,17 +1182,19 @@ jump2:
 
             // try to fetch full block from BlockSource
             unsigned int newfill = 0;
-            StrCacheBlock* newblk = mkqs.blks.get_block(newfill);
+            StrCacheBlockPtr newblk = mkqs.blks.get_block(newfill);
 
             if (newblk || fill == block_size)
             {
                 // save existing block to correct output queue
                 if (blk) {
                     assert(pos == fill);
-                    blk->fill = fill, mkqs.oblk_push(type, blk);
+                    blk->fill = fill;
+                    mkqs.oblk_push(type, std::move(blk));
                 }
                 // switch to new block
-                return (pos = 0, fill = newfill, blk = newblk);
+                pos = 0, fill = newfill, blk = std::move(newblk);
+                return true;
             }
             else
             {
@@ -1202,9 +1208,9 @@ jump2:
         {
             if (blk && pos < block_size) return; // blk has free space
             // allocate free partial block
-            if (blk) blk->fill = fill, mkqs.oblk_push(type, blk);
+            if (blk) blk->fill = fill, mkqs.oblk_push(type, std::move(blk));
             pos = fill = 0;
-            blk = new StrCacheBlock;
+            blk = StrCacheBlockPtr(new StrCacheBlock);
             partial = true;
         }
 
@@ -1237,15 +1243,21 @@ jump2:
                 else {
                     DBG(debug_cmp2, "move to free-area at blk[" << pos << "].");
                     assert(fill < block_size);
-                    fill++, front_cache() = from.front_cache(), pos++;
-                    from.front_cache() = from.back_cache(), from.fill--; // move back element in from
+                    fill++;
+                    front_cache() = std::move(from.front_cache());
+                    pos++;
+                    // move back element in from
+                    from.front_cache() = std::move(from.back_cache());
+                    from.fill--;
                 }
             }
             else {
                 DBG(debug_cmp2, "move to partial blk[" << pos << "].");
                 check_partial_block<type>(mkqs);
-                fill++, front_cache() = from.front_cache(), pos++;
-                from.front_cache() = from.back_cache(), from.fill--; // move back element in from
+                fill++, front_cache() = std::move(from.front_cache()), pos++;
+                // move back element in from
+                from.front_cache() = std::move(from.back_cache());
+                from.fill--;
             }
         }
 
@@ -1311,7 +1323,7 @@ bingmann_sequential_mkqs_cache8(const StringSet& ss, size_t depth)
 
     typename StringSet::Iterator begin = ss.begin();
     for (size_t i = 0; i < ss.size(); ++i)
-        cache[i].str = ss[begin + i];
+        cache[i].str = std::move(ss[begin + i]);
 
     JobQueue jobqueue;
     typename MKQS::template SequentialJob<true>(ctx, ss, depth, cache)

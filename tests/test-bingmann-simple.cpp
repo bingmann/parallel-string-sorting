@@ -38,8 +38,8 @@ void fill_random(LCGRandom& rng, const std::string& letters,
 }
 
 template <void(* Algo)(const UCharStringSet& ss, size_t depth)>
-void test_uchar(const size_t nstrings, const size_t nchars,
-                const std::string& letters)
+void TestUCharString(const size_t nstrings, const size_t nchars,
+                     const std::string& letters)
 {
     typedef unsigned char* string;
 
@@ -75,8 +75,8 @@ void test_uchar(const size_t nstrings, const size_t nchars,
 }
 
 template <void(* Algo)(const VectorStringSet& ss, size_t depth)>
-void test_vectorstring(const size_t nstrings, const size_t nchars,
-                       const std::string& letters)
+void TestVectorString(const size_t nstrings, const size_t nchars,
+                      const std::string& letters)
 {
     LCGRandom rng(1234567);
 
@@ -95,7 +95,36 @@ void test_vectorstring(const size_t nstrings, const size_t nchars,
     // run sorting algorithm
     VectorStringSet ss(strings.begin(), strings.end());
     Algo(ss, 0);
-    if (0) ss.print();
+    //if (0) ss.print();
+
+    // check result
+    if (!ss.check_order())
+        abort();
+}
+
+template <void(* Algo)(const VectorPtrStringSet& ss, size_t depth)>
+void TestVectorPtrString(const size_t nstrings, const size_t nchars,
+                         const std::string& letters)
+{
+    LCGRandom rng(1234567);
+
+    // vector of pointers to std::string objects
+    typedef std::unique_ptr<std::string> unique_ptr_string;
+    std::vector<unique_ptr_string> strings(nstrings);
+
+    // generate random strings of length nchars
+    for (size_t i = 0; i < nstrings; ++i)
+    {
+        size_t slen = nchars + (rng() >> 8) % (nchars / 4);
+
+        strings[i] = unique_ptr_string(new std::string(slen, 0));
+        fill_random(rng, letters, strings[i]->begin(), strings[i]->end());
+    }
+
+    // run sorting algorithm
+    VectorPtrStringSet ss(strings.begin(), strings.end());
+    Algo(ss, 0);
+    //ss.print();
 
     // check result
     if (!ss.check_order())
@@ -103,7 +132,7 @@ void test_vectorstring(const size_t nstrings, const size_t nchars,
 }
 
 template <void(* Algo)(const StringSuffixSet& ss, size_t depth)>
-void test_suffixstring(const size_t nchars, const std::string& letters)
+void TestSuffixString(const size_t nchars, const std::string& letters)
 {
     LCGRandom rng(1234567);
 
@@ -127,10 +156,12 @@ const std::string letters_alnum
     = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 // use macro because one cannot pass template functions as template parameters:
-#define run_tests(func)                                   \
-    test_uchar<func>(nstrings, 16, letters_alnum);        \
-    test_vectorstring<func>(nstrings, 16, letters_alnum); \
-    test_suffixstring<func>(nstrings, letters_alnum);
+#define run_tests(func)                                  \
+    TestUCharString<func>(nstrings, 16, letters_alnum);  \
+    TestVectorString<func>(nstrings, 16, letters_alnum); \
+    TestSuffixString<func>(nstrings, letters_alnum);
+
+//TestVectorPtrString<func>(nstrings, 16, letters_alnum);
 
 void test_all(const size_t nstrings)
 {
@@ -147,6 +178,7 @@ void test_all(const size_t nstrings)
 
 int main()
 {
+    test_all(16);
     test_all(256);
     test_all(65550);
 

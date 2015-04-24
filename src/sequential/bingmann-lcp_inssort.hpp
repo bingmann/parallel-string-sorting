@@ -50,7 +50,7 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
     {
         // insert strings[j] into sorted strings[0..j-1]
 
-        String new_str = str[begin + j];
+        String new_str = std::move(str[begin + j]);
         size_t new_lcp = depth; // start with LCP depth
 
         size_t i = j;
@@ -58,12 +58,15 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
         {
             size_t prev_lcp = new_lcp;
 
-            String cur_str = str[begin + i - 1];
+            String cur_str = std::move(str[begin + i - 1]);
             size_t cur_lcp = lcp[i];
 
             if (cur_lcp < new_lcp)
             {
                 // CASE 1: lcp goes down -> insert string
+
+                // move comparison string back
+                str[begin + i - 1] = std::move(cur_str);
                 break;
             }
             else if (cur_lcp == new_lcp)
@@ -83,18 +86,21 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
                     lcp[i] = new_lcp;
                     // lcp of inserted string with next string
                     new_lcp = prev_lcp;
+
+                    // move comparison string back
+                    str[begin + i - 1] = std::move(cur_str);
                     break;
                 }
             }
             // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
-            str[begin + i] = cur_str;
+            str[begin + i] = std::move(cur_str);
             lcp[i + 1] = cur_lcp;
 
             --i;
         }
 
-        str[begin + i] = new_str;
+        str[begin + i] = std::move(new_str);
         lcp[i + 1] = new_lcp;
     }
 
@@ -104,7 +110,7 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
 
         // insert strings[j] into sorted strings[0..j-1]
 
-        String new_str = str[begin + j];
+        String new_str = std::move(str[begin + j]);
         size_t new_lcp = depth; // start with LCP depth
 
         size_t i = j;
@@ -112,12 +118,15 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
         {
             size_t prev_lcp = new_lcp;
 
-            String cur_str = str[begin + i - 1];
+            String cur_str = std::move(str[begin + i - 1]);
             size_t cur_lcp = lcp[i];
 
             if (cur_lcp < new_lcp)
             {
                 // CASE 1: lcp goes down -> insert string
+
+                // move comparison string back
+                str[begin + i - 1] = std::move(cur_str);
                 break;
             }
             else if (cur_lcp == new_lcp)
@@ -137,12 +146,15 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
                     lcp[i] = new_lcp;
                     // lcp of inserted string with next string
                     new_lcp = prev_lcp;
+
+                    // move comparison string back
+                    str[begin + i - 1] = std::move(cur_str);
                     break;
                 }
             }
             // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
-            str[begin + i] = cur_str;
+            str[begin + i] = std::move(cur_str);
 
             if (i + 1 < n) // check out-of-bounds copy
                 lcp[i + 1] = cur_lcp;
@@ -150,7 +162,7 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
             --i;
         }
 
-        str[begin + i] = new_str;
+        str[begin + i] = std::move(new_str);
 
         if (i + 1 < n) // check out-of-bounds save
             lcp[i + 1] = new_lcp;

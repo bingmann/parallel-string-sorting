@@ -39,6 +39,7 @@
 #include <cassert>
 #include <stdint.h>
 #include <vector>
+#include <memory>
 
 #include "debug.hpp"
 
@@ -228,6 +229,12 @@ public:
         {
             std::cout << "[" << i++ << "] = " << ss[pi]
                       << " = " << ss.get_string(ss[pi], 0) << std::endl;
+
+            // for printing std::unique_ptr<std::string>
+            // std::cout << "[" << i++ << "] = " << ss[pi].get();
+            // if (ss[pi])
+            //     std::cout << " = " << ss.get_string(ss[pi], 0);
+            // std::cout << std::endl;
         }
     }
 
@@ -312,7 +319,7 @@ public:
     { return s + depth; }
 
     //! Return complete string (for debugging purposes)
-    std::string get_string(const String& s, size_t depth) const
+    std::string get_string(const String& s, size_t depth = 0) const
     { return std::string(reinterpret_cast<const char*>(s) + depth); }
 
     //! Subset this string set using iterator range.
@@ -389,12 +396,86 @@ public:
     { return s.begin() + depth; }
 
     //! Return complete string (for debugging purposes)
-    std::string get_string(const String& s, size_t depth) const
+    std::string get_string(const String&& s, size_t depth = 0) const
     { return s.substr(depth); }
 
     //! Subset this string set using iterator range.
     VectorStringSet sub(Iterator begin, Iterator end) const
     { return VectorStringSet(begin, end); }
+
+protected:
+    //! vector of std::string objects
+    Iterator begin_, end_;
+};
+
+/******************************************************************************/
+
+/*!
+ * Class implementing StringSet concept for a std::vector containing
+ * std::unique_ptr<std::string> objects, which are non-copyable.
+ */
+class VectorPtrStringSetTraits
+{
+public:
+    //! exported alias for assumed string container
+    typedef std::vector<std::unique_ptr<std::string> > Container;
+
+    //! exported alias for character type
+    typedef std::string::value_type Char;
+
+    //! String reference: std::string, which should be reference counted.
+    typedef typename Container::value_type String;
+
+    //! Iterator over string references: using std::vector's iterator
+    typedef typename Container::iterator Iterator;
+
+    //! iterator of characters in a string
+    typedef std::string::const_iterator CharIterator;
+};
+
+/*!
+ * Class implementing StringSet concept for a std::vector containing std::string
+ * objects.
+ */
+class VectorPtrStringSet
+    : public VectorPtrStringSetTraits,
+      public StringSetBase<VectorPtrStringSet, VectorPtrStringSetTraits>
+{
+public:
+    typedef VectorPtrStringSetTraits Traits;
+
+    using typename Traits::Char;
+    using typename Traits::String;
+    using typename Traits::Iterator;
+    using typename Traits::CharIterator;
+
+    //! Construct from begin and end string pointers
+    VectorPtrStringSet(const Iterator& begin, const Iterator& end)
+        : begin_(begin), end_(end)
+    { }
+
+    //! Return size of string array
+    size_t size() const { return end_ - begin_; }
+    //! Iterator representing first String position
+    Iterator begin() const { return begin_; }
+    //! Iterator representing beyond last String position
+    Iterator end() const { return end_; }
+
+    //! Array access (readable and writable) to String objects.
+    String& operator [] (const Iterator& i) const
+    { return *i; }
+
+    //! Return CharIterator for referenced string, which belongs to this set.
+    CharIterator get_chars(const String& s, size_t depth) const
+    { return s->begin() + depth; }
+
+    //! Return complete string (for debugging purposes)
+    std::string get_string(const String& s, size_t depth = 0) const
+    { return s->substr(depth); }
+
+    //! Subset this string set using iterator range.
+    VectorPtrStringSet sub(Iterator begin, Iterator end) const
+    { return VectorPtrStringSet(begin, end); }
 
 protected:
     //! vector of std::string objects
@@ -477,7 +558,7 @@ public:
     { return text_.begin() + s + depth; }
 
     //! Return complete string (for debugging purposes)
-    std::string get_string(const String& s, size_t depth) const
+    std::string get_string(const String& s, size_t depth = 0) const
     { return text_.substr(s + depth); }
 
     //! Subset this string set using iterator range.

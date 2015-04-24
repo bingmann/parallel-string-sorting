@@ -109,11 +109,12 @@ msd_CE_generic(const StringSet& ss, size_t depth)
 
     // distribute
     for (Iterator i = ss.begin(); i != ss.end(); ++i)
-        sorted[bktindex[ss.get_uint8(ss[i], depth)]++] = ss[i];
+        sorted[bktindex[ss.get_uint8(ss[i], depth)]++] = std::move(ss[i]);
 
     size_t i = 0;
     for (Iterator o = ss.begin(); o != ss.end(); ++o, ++i)
-        ss[o] = sorted[i];
+        ss[o] = std::move(sorted[i]);
+
     delete[] sorted;
 
     // recursion
@@ -202,11 +203,12 @@ msd_CE2_generic(const StringSet& ss, size_t depth)
 
     // distribute
     for (Iterator i = ss.begin(); i != ss.end(); ++i)
-        sorted[--bkt[ss.get_uint8(ss[i], depth)]] = ss[i];
+        sorted[--bkt[ss.get_uint8(ss[i], depth)]] = std::move(ss[i]);
 
     size_t i = 0;
     for (Iterator o = ss.begin(); o != ss.end(); ++o, ++i)
-        ss[o] = sorted[i];
+        ss[o] = std::move(sorted[i]);
+
     delete[] sorted;
 
     // recursion
@@ -601,14 +603,14 @@ msd_CI5_bktsize_generic(const StringSet& ss, size_t depth)
     // premute in-place
     for (size_t i = 0, j; i < ss.size() - last_bkt_size; )
     {
-        String perm = ss[ss.begin() + i];
+        String perm = std::move(ss[ss.begin() + i]);
         Char permch = charcache[i];
         while ((j = --bkt[static_cast<size_t>(permch)]) > i)
         {
             std::swap(perm, ss[ss.begin() + j]);
             std::swap(permch, charcache[j]);
         }
-        ss[ss.begin() + i] = perm;
+        ss[ss.begin() + i] = std::move(perm);
         i += bktsize[static_cast<size_t>(permch)];
     }
 

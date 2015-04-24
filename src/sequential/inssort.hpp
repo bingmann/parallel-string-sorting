@@ -87,7 +87,7 @@ static inline void inssort_generic(const StringSet& ss, size_t depth)
 
     for (Iterator pi = ss.begin() + 1; pi != ss.end(); ++pi)
     {
-        String tmp = ss[pi];
+        String tmp = std::move(ss[pi]);
         Iterator pj = pi;
 
         while (pj != ss.begin())
@@ -105,10 +105,10 @@ static inline void inssort_generic(const StringSet& ss, size_t depth)
                 break;
             }
 
-            ss[pj + 1] = ss[pj];
+            ss[pj + 1] = std::move(ss[pj]);
         }
 
-        ss[pj] = tmp;
+        ss[pj] = std::move(tmp);
     }
 }
 

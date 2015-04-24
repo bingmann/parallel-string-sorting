@@ -797,7 +797,9 @@ verify_lcp_cache(const StringSet& ss,
 
     for (size_t i = 1; i < ss.size(); ++i)
     {
-        String s1 = ss[begin + i - 1], s2 = ss[begin + i];
+        const String& s1 = ss[begin + i - 1];
+        const String& s2 = ss[begin + i];
+
         size_t h = calc_lcp(ss, s1, s2);
 
         if (h != lcps[i])
