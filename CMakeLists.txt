@@ -95,6 +95,9 @@ find_package_handle_standard_args(NUMA DEFAULT_MSG NUMA_INCLUDE_DIR NUMA_LIBRARI
 
 # build subset of Intel TBB
 add_subdirectory(minitbb)
+set(TBB_LIBRARIES minitbb)
+
+include_directories("${PROJECT_SOURCE_DIR}/minitbb/")
 
 # descend into source
 add_subdirectory(src)

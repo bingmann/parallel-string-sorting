@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2012 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #if !defined(__TBB_machine_H) || defined(__TBB_machine_icc_generic_H)
@@ -31,7 +23,7 @@
 #endif
 
 #if ! __TBB_ICC_BUILTIN_ATOMICS_PRESENT
-    #error "Intel C++ Compiler of at least 12.1 version is needed to use ICC intrinsics port"
+    #error "Intel C++ Compiler of at least 12.0 version is needed to use ICC intrinsics port"
 #endif
 
 #define __TBB_machine_icc_generic_H
@@ -51,18 +43,25 @@
 #else
     #define __TBB_WORDSIZE 8
 #endif
-#define __TBB_BIG_ENDIAN 0
+#define __TBB_ENDIANNESS __TBB_ENDIAN_LITTLE
 
 //__TBB_compiler_fence() defined just in case, as it seems not to be used on its own anywhere else
 #if _MSC_VER
     //TODO: any way to use same intrinsics on windows and linux?
     #pragma intrinsic(_ReadWriteBarrier)
-    #pragma intrinsic(_mm_mfence)
     #define __TBB_compiler_fence()    _ReadWriteBarrier()
-    #define __TBB_full_memory_fence() _mm_mfence()
 #else
     #define __TBB_compiler_fence()    __asm__ __volatile__("": : :"memory")
+#endif
+
+#ifndef __TBB_full_memory_fence
+#if _MSC_VER 
+    //TODO: any way to use same intrinsics on windows and linux?
+    #pragma intrinsic(_mm_mfence)
+    #define __TBB_full_memory_fence() _mm_mfence()
+#else
     #define __TBB_full_memory_fence() __asm__ __volatile__("mfence": : :"memory")
+#endif
 #endif
 
 #define __TBB_control_consistency_helper() __TBB_compiler_fence()
@@ -77,46 +76,40 @@ typedef enum memory_order {
     memory_order_release, memory_order_acq_rel, memory_order_seq_cst
 } memory_order;
 
+namespace icc_intrinsics_port {
+    template <typename T>
+    T convert_argument(T value){
+        return value;
+    }
+    //The overload below is needed to have explicit conversion of pointer to void* in argument list.
+    //compiler bug?
+    //TODO: add according broken macro and recheck with ICC 13.0 if the overload is still needed
+    template <typename T>
+    void* convert_argument(T* value){
+        return (void*)value;
+    }
+}
+//TODO: code below is a bit repetitive, consider simplifying it
 template <typename T, size_t S>
 struct machine_load_store {
     static T load_with_acquire ( const volatile T& location ) {
         return __atomic_load_explicit(&location, memory_order_acquire);
     }
     static void store_with_release ( volatile T &location, T value ) {
-        __atomic_store_explicit(&location, value, memory_order_release);
+        __atomic_store_explicit(&location, icc_intrinsics_port::convert_argument(value), memory_order_release);
     }
 };
-//The specializations below are needed to have explicit conversion of pointer to void* in argument list.
-//compiler bug?
-//TODO: move to workaround to separate layer by wrapping the call to __atomic_store_explicit in overloaded template function
-template <typename T, size_t S>
-struct machine_load_store<T*, S> {
-    static T* load_with_acquire ( T* const volatile & location ) {
-        return __atomic_load_explicit(&location, memory_order_acquire);
-    }
-    static void store_with_release ( T* volatile &location, T* value ) {
-        __atomic_store_explicit(&location, (void*) value, memory_order_release);
-    }
-};
+
 template <typename T, size_t S>
 struct machine_load_store_relaxed {
     static inline T load ( const T& location ) {
         return __atomic_load_explicit(&location, memory_order_relaxed);
     }
     static inline void store (  T& location, T value ) {
-        __atomic_store_explicit(&location, value, memory_order_relaxed);
+        __atomic_store_explicit(&location, icc_intrinsics_port::convert_argument(value), memory_order_relaxed);
     }
 };
 
-template <typename T, size_t S>
-struct machine_load_store_relaxed<T*, S> {
-    static inline T* load ( T* const& location ) {
-        return (T*)__atomic_load_explicit(&location, memory_order_relaxed);
-    }
-    static inline void store (  T*& location, T* value ) {
-        __atomic_store_explicit(&location, (void*)value, memory_order_relaxed);
-    }
-};
 template <typename T, size_t S>
 struct machine_load_store_seq_cst {
     static T load ( const volatile T& location ) {
@@ -127,6 +120,7 @@ struct machine_load_store_seq_cst {
         __atomic_store_explicit(&location, value, memory_order_seq_cst);
     }
 };
+
 }} // namespace tbb::internal
 
 namespace tbb{ namespace internal { namespace icc_intrinsics_port{
@@ -182,6 +176,76 @@ __TBB_MACHINE_DEFINE_ATOMICS(8,tbb::internal::int64_t, relaxed)
 
 #define __TBB_USE_FENCED_ATOMICS                            1
 
+namespace tbb { namespace internal {
+#if __TBB_FORCE_64BIT_ALIGNMENT_BROKEN
+__TBB_MACHINE_DEFINE_LOAD8_GENERIC_FENCED(full_fence)
+__TBB_MACHINE_DEFINE_STORE8_GENERIC_FENCED(full_fence)
+
+__TBB_MACHINE_DEFINE_LOAD8_GENERIC_FENCED(acquire)
+__TBB_MACHINE_DEFINE_STORE8_GENERIC_FENCED(release)
+
+__TBB_MACHINE_DEFINE_LOAD8_GENERIC_FENCED(relaxed)
+__TBB_MACHINE_DEFINE_STORE8_GENERIC_FENCED(relaxed)
+
+template <typename T>
+struct machine_load_store<T,8> {
+    static T load_with_acquire ( const volatile T& location ) {
+        if( tbb::internal::is_aligned(&location,8)) {
+            return __atomic_load_explicit(&location, memory_order_acquire);
+        } else {
+            return __TBB_machine_generic_load8acquire(&location);
+        }
+    }
+    static void store_with_release ( volatile T &location, T value ) {
+        if( tbb::internal::is_aligned(&location,8)) {
+            __atomic_store_explicit(&location, icc_intrinsics_port::convert_argument(value), memory_order_release);
+        } else {
+            return __TBB_machine_generic_store8release(&location,value);
+        }
+    }
+};
+
+template <typename T>
+struct machine_load_store_relaxed<T,8> {
+    static T load( const volatile T& location ) {
+        if( tbb::internal::is_aligned(&location,8)) {
+            return __atomic_load_explicit(&location, memory_order_relaxed);
+        } else {
+            return __TBB_machine_generic_load8relaxed(&location);
+        }
+    }
+    static void store( volatile T &location, T value ) {
+        if( tbb::internal::is_aligned(&location,8)) {
+            __atomic_store_explicit(&location, icc_intrinsics_port::convert_argument(value), memory_order_relaxed);
+        } else {
+            return __TBB_machine_generic_store8relaxed(&location,value);
+        }
+    }
+};
+
+template <typename T >
+struct machine_load_store_seq_cst<T,8> {
+    static T load ( const volatile T& location ) {
+        if( tbb::internal::is_aligned(&location,8)) {
+            return __atomic_load_explicit(&location, memory_order_seq_cst);
+        } else {
+            return __TBB_machine_generic_load8full_fence(&location);
+        }
+
+    }
+
+    static void store ( volatile T &location, T value ) {
+        if( tbb::internal::is_aligned(&location,8)) {
+            __atomic_store_explicit(&location, value, memory_order_seq_cst);
+        } else {
+            return __TBB_machine_generic_store8full_fence(&location,value);
+        }
+
+    }
+};
+
+#endif
+}} // namespace tbb::internal
 template <typename T>
 inline void __TBB_machine_OR( T *operand, T addend ) {
     __atomic_fetch_or_explicit(operand, addend, tbb::internal::memory_order_seq_cst);
@@ -191,3 +255,4 @@ template <typename T>
 inline void __TBB_machine_AND( T *operand, T addend ) {
     __atomic_fetch_and_explicit(operand, addend, tbb::internal::memory_order_seq_cst);
 }
+

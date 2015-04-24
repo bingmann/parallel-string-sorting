@@ -1,33 +1,39 @@
 # CMake targets for subset of Intel TBB
 
 include_directories("${PROJECT_SOURCE_DIR}/minitbb/")
+include_directories("${PROJECT_SOURCE_DIR}/minitbb/src/")
 
 # Define sources
 set(LIBMINITBB_SOURCES
 
-  src/cache_aligned_allocator.cpp
-  src/concurrent_monitor.cpp
-  src/concurrent_monitor.h
-  src/concurrent_queue.cpp
-  src/dynamic_link.cpp
-  src/dynamic_link.h
-  src/itt_notify.cpp
-  src/itt_notify.h
-  src/semaphore.cpp
-  src/semaphore.h
-  src/tbb_assert_impl.h
-  src/tbb_misc.cpp
-  src/tbb_misc.h
-  src/tbb_version.h
-  src/version_string.ver
+  src/tbb/cache_aligned_allocator.cpp
+  src/tbb/concurrent_monitor.cpp
+  src/tbb/concurrent_monitor.h
+  src/tbb/concurrent_queue.cpp
+  src/tbb/dynamic_link.cpp
+  src/tbb/dynamic_link.h
+  src/tbb/itt_notify.cpp
+  src/tbb/itt_notify.h
+  src/tbb/semaphore.cpp
+  src/tbb/semaphore.h
+  src/tbb/tbb_assert_impl.h
+  src/tbb/tbb_misc.cpp
+  src/tbb/tbb_misc.h
+  src/tbb/tbb_version.h
+  src/tbb/version_string.ver
 
   tbb/aligned_space.h
   tbb/atomic.h
   tbb/cache_aligned_allocator.h
   tbb/concurrent_queue.h
   tbb/internal/_concurrent_queue_impl.h
+  tbb/internal/_mutex_padding.h
+  tbb/internal/_tbb_strings.h
+  tbb/internal/_x86_eliding_mutex_impl.h
+  tbb/machine/gcc_armv7.h
   tbb/machine/gcc_generic.h
   tbb/machine/gcc_ia32_common.h
+  tbb/machine/gcc_itsx.h
   tbb/machine/ibm_aix51.h
   tbb/machine/icc_generic.h
   tbb/machine/linux_common.h
@@ -37,6 +43,7 @@ set(LIBMINITBB_SOURCES
   tbb/machine/mac_ppc.h
   tbb/machine/macos_common.h
   tbb/machine/mic_common.h
+  tbb/machine/msvc_armv7.h
   tbb/machine/msvc_ia32_common.h
   tbb/machine/sunos_sparc.h
   tbb/machine/windows_api.h
@@ -52,7 +59,7 @@ set(LIBMINITBB_SOURCES
   tbb/tbb_stddef.h
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__TBB_BUILD=1 -DUSE_PTHREAD -D__TBB_DYNAMIC_LOAD_ENABLED=0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__TBB_BUILD=1 -DUSE_PTHREAD")
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DTBB_USE_DEBUG")
 

@@ -43,7 +43,7 @@ set(PSSBIN_SOURCES
   sinha-copy-burstsort/glue.cpp
   )
 
-set(PSSBIN_LIBRARIES minitbb ${GMP_LIBRARIES} ${NUMA_LIBRARIES} rt)
+set(PSSBIN_LIBRARIES ${TBB_LIBRARIES} ${GMP_LIBRARIES} ${NUMA_LIBRARIES} rt dl)
 
 set(PSSBIN_LIBRARIES ${PSSBIN_LIBRARIES} CACHE STRING "Pssbin Libraries" FORCE)
 
@@ -54,7 +54,6 @@ if(WITH_MALLOC_COUNT)
     tools/malloc_count.c
     tools/stack_count.c
   )
-  list(APPEND PSSBIN_LIBRARIES "dl")
 
 endif(WITH_MALLOC_COUNT)
 

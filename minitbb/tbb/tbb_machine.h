@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2012 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_machine_H
@@ -58,16 +50,17 @@
     be set to 1 explicitly, though normally this is not necessary as tbb_machine.h
     will set it automatically.
 
-    __TBB_BIG_ENDIAN macro can be defined by the implementation as well.
-    It is used only if the __TBB_USE_GENERIC_PART_WORD_CAS is set.
-    Possible values are:
-       -  1 if the system is big endian,
-       -  0 if it is little endian,
-       -  or -1 to explicitly state that __TBB_USE_GENERIC_PART_WORD_CAS can not be used.
-    -1 should be used when it is known in advance that endianness can change in run time
-    or it is  not simple big or little but something more complex.
-    The system will try to detect it in run time if it is not set(in assumption that it
-    is either a big or little one).
+    __TBB_ENDIANNESS macro can be defined by the implementation as well.
+    It is used only if __TBB_USE_GENERIC_PART_WORD_CAS is set (or for testing),
+    and must specify the layout of aligned 16-bit and 32-bit data anywhere within a process
+    (while the details of unaligned 16-bit or 32-bit data or of 64-bit data are irrelevant).
+    The layout must be the same at all relevant memory locations within the current process;
+    in case of page-specific endianness, one endianness must be kept "out of sight".
+    Possible settings, reflecting hardware and possibly O.S. convention, are:
+    -  __TBB_ENDIAN_BIG for big-endian data,
+    -  __TBB_ENDIAN_LITTLE for little-endian data,
+    -  __TBB_ENDIAN_DETECT for run-time detection iff exactly one of the above,
+    -  __TBB_ENDIAN_UNSUPPORTED to prevent undefined behavior if none of the above.
 
     Prerequisites for each architecture port
     ----------------------------------------
@@ -104,13 +97,13 @@
     __TBB_control_consistency_helper()
         Bridges the memory-semantics gap between architectures providing only
         implicit C++0x "consume" semantics (like Power Architecture) and those
-        also implicitly obeying control dependencies (like IA-64).
+        also implicitly obeying control dependencies (like IA-64 architecture).
         It must be used only in conditional code where the condition is itself
         data-dependent, and will then make subsequent code behave as if the
         original data dependency were acquired.
         It needs only a compiler fence where implied by the architecture
-        either specifically (like IA-64) or because generally stronger "acquire"
-        semantics are enforced (like x86).
+        either specifically (like IA-64 architecture) or because generally stronger 
+        "acquire" semantics are enforced (like x86).
         It is always valid, though potentially suboptimal, to replace
         control with acquire on the load and then remove the helper.
 
@@ -124,7 +117,7 @@
 #include "tbb_stddef.h"
 
 namespace tbb {
-namespace internal {
+namespace internal { //< @cond INTERNAL
 
 ////////////////////////////////////////////////////////////////////////////////
 // Overridable helpers declarations
@@ -171,7 +164,29 @@ template<> struct atomic_selector<8> {
     inline static word fetch_store ( volatile void* location, word value );
 };
 
-}} // namespaces internal, tbb
+}} //< namespaces internal @endcond, tbb
+
+#define __TBB_MACHINE_DEFINE_STORE8_GENERIC_FENCED(M)                                        \
+    inline void __TBB_machine_generic_store8##M(volatile void *ptr, int64_t value) {         \
+        for(;;) {                                                                            \
+            int64_t result = *(volatile int64_t *)ptr;                                       \
+            if( __TBB_machine_cmpswp8##M(ptr,value,result)==result ) break;                  \
+        }                                                                                    \
+    }                                                                                        \
+
+#define __TBB_MACHINE_DEFINE_LOAD8_GENERIC_FENCED(M)                                         \
+    inline int64_t __TBB_machine_generic_load8##M(const volatile void *ptr) {                \
+        /* Comparand and new value may be anything, they only must be equal, and      */     \
+        /* the value should have a low probability to be actually found in 'location'.*/     \
+        const int64_t anyvalue = 2305843009213693951LL;                                      \
+        return __TBB_machine_cmpswp8##M(const_cast<volatile void *>(ptr),anyvalue,anyvalue); \
+    }                                                                                        \
+
+// The set of allowed values for __TBB_ENDIANNESS (see above for details)
+#define __TBB_ENDIAN_UNSUPPORTED -1
+#define __TBB_ENDIAN_LITTLE       0
+#define __TBB_ENDIAN_BIG          1
+#define __TBB_ENDIAN_DETECT       2
 
 #if _WIN32||_WIN64
 
@@ -191,12 +206,14 @@ template<> struct atomic_selector<8> {
         #endif
     #elif (TBB_USE_ICC_BUILTINS && __TBB_ICC_BUILTIN_ATOMICS_PRESENT)
         #include "machine/icc_generic.h"
-    #elif defined(_M_IX86)
+    #elif defined(_M_IX86) && !defined(__TBB_WIN32_USE_CL_BUILTINS)
         #include "machine/windows_ia32.h"
     #elif defined(_M_X64) 
         #include "machine/windows_intel64.h"
-    #elif _XBOX
+    #elif defined(_XBOX)
         #include "machine/xbox360_ppc.h"
+    #elif defined(_M_ARM) || defined(__TBB_WIN32_USE_CL_BUILTINS)
+        #include "machine/msvc_armv7.h"
     #endif
 
 #ifdef _MANAGED
@@ -206,8 +223,11 @@ template<> struct atomic_selector<8> {
 #elif __TBB_DEFINE_MIC
 
     #include "machine/mic_common.h"
-    //TODO: check if ICC atomic intrinsics are available for MIC
-    #include "machine/linux_intel64.h"
+    #if (TBB_USE_ICC_BUILTINS && __TBB_ICC_BUILTIN_ATOMICS_PRESENT)
+        #include "machine/icc_generic.h"
+    #else
+        #include "machine/linux_intel64.h"
+    #endif
 
 #elif __linux__ || __FreeBSD__ || __NetBSD__
 
@@ -223,6 +243,8 @@ template<> struct atomic_selector<8> {
         #include "machine/linux_ia64.h"
     #elif __powerpc__
         #include "machine/mac_ppc.h"
+    #elif __arm__
+        #include "machine/gcc_armv7.h"
     #elif __TBB_GCC_BUILTIN_ATOMICS_PRESENT
         #include "machine/gcc_generic.h"
     #endif
@@ -322,7 +344,7 @@ namespace tbb {
 //! Sequentially consistent full memory fence.
 inline void atomic_fence () { __TBB_full_memory_fence(); }
 
-namespace internal {
+namespace internal { //< @cond INTERNAL
 
 //! Class that implements exponential backoff.
 /** See implementation of spin_wait_while_eq for an example. */
@@ -333,7 +355,12 @@ class atomic_backoff : no_copy {
     static const int32_t LOOPS_BEFORE_YIELD = 16;
     int32_t count;
 public:
+    // In many cases, an object of this type is initialized eagerly on hot path,
+    // as in for(atomic_backoff b; ; b.pause()) { /*loop body*/ }
+    // For this reason, the construction cost must be very small!
     atomic_backoff() : count(1) {}
+    // This constructor pauses immediately; do not use on hot paths!
+    atomic_backoff( bool ) : count(1) { pause(); }
 
     //! Pause for a while.
     void pause() {
@@ -380,31 +407,43 @@ void spin_wait_until_eq( const volatile T& location, const U value ) {
     while( location!=value ) backoff.pause();
 }
 
-//TODO: add static_assert for the requirements stated below
-//TODO: check if it works with signed types
+template <typename predicate_type>
+void spin_wait_while(predicate_type condition){
+    atomic_backoff backoff;
+    while( condition() ) backoff.pause();
+}
 
-// there are following restrictions/limitations for this operation:
-//  - T should be unsigned, otherwise sign propagation will break correctness of bit manipulations.
-//  - T should be integer type of at most 4 bytes, for the casts and calculations to work.
-//      (Together, these rules limit applicability of Masked CAS to uint8_t and uint16_t only,
-//      as it does nothing useful for 4 bytes).
-//  - The operation assumes that the architecture consistently uses either little-endian or big-endian:
-//      it does not support mixed-endian or page-specific bi-endian architectures.
-// This function is the only use of __TBB_BIG_ENDIAN.
-#if (__TBB_BIG_ENDIAN!=-1)
-    #if ( __TBB_USE_GENERIC_PART_WORD_CAS)
-        #error generic implementation of part-word CAS was explicitly disabled for this configuration
-    #endif
+////////////////////////////////////////////////////////////////////////////////
+// Generic compare-and-swap applied to only a part of a machine word.
+//
+#ifndef __TBB_ENDIANNESS
+#define __TBB_ENDIANNESS __TBB_ENDIAN_DETECT
+#endif
+
+#if __TBB_USE_GENERIC_PART_WORD_CAS && __TBB_ENDIANNESS==__TBB_ENDIAN_UNSUPPORTED
+#error Generic implementation of part-word CAS may not be used with __TBB_ENDIAN_UNSUPPORTED
+#endif
+
+#if __TBB_ENDIANNESS!=__TBB_ENDIAN_UNSUPPORTED
+//
+// This function is the only use of __TBB_ENDIANNESS.
+// The following restrictions/limitations apply for this operation:
+//  - T must be an integer type of at most 4 bytes for the casts and calculations to work
+//  - T must also be less than 4 bytes to avoid compiler warnings when computing mask
+//      (and for the operation to be useful at all, so no workaround is applied)
+//  - the architecture must consistently use either little-endian or big-endian (same for all locations)
+//
+// TODO: static_assert for the type requirements stated above
 template<typename T>
 inline T __TBB_MaskedCompareAndSwap (volatile T * const ptr, const T value, const T comparand ) {
     struct endianness{ static bool is_big_endian(){
-        #ifndef __TBB_BIG_ENDIAN
+        #if __TBB_ENDIANNESS==__TBB_ENDIAN_DETECT
             const uint32_t probe = 0x03020100;
             return (((const char*)(&probe))[0]==0x03);
-        #elif (__TBB_BIG_ENDIAN==0) || (__TBB_BIG_ENDIAN==1)
-            return __TBB_BIG_ENDIAN;
+        #elif __TBB_ENDIANNESS==__TBB_ENDIAN_BIG || __TBB_ENDIANNESS==__TBB_ENDIAN_LITTLE
+            return __TBB_ENDIANNESS==__TBB_ENDIAN_BIG;
         #else
-            #error unexpected value of __TBB_BIG_ENDIAN
+            #error Unexpected value of __TBB_ENDIANNESS
         #endif
     }};
 
@@ -414,11 +453,12 @@ inline T __TBB_MaskedCompareAndSwap (volatile T * const ptr, const T value, cons
     // location of T within uint32_t for a C++ shift operation
     const uint32_t bits_to_shift     = 8*(endianness::is_big_endian() ? (4 - sizeof(T) - (byte_offset)) : byte_offset);
     const uint32_t mask              = (((uint32_t)1<<(sizeof(T)*8)) - 1 )<<bits_to_shift;
+    // for signed T, any sign extension bits in cast value/comparand are immediately clipped by mask
     const uint32_t shifted_comparand = ((uint32_t)comparand << bits_to_shift)&mask;
     const uint32_t shifted_value     = ((uint32_t)value     << bits_to_shift)&mask;
 
-    for(atomic_backoff b;;b.pause()) {
-        const uint32_t surroundings  = *aligned_ptr & ~mask ; // reload the aligned_ptr value which might change during the pause
+    for( atomic_backoff b;;b.pause() ) {
+        const uint32_t surroundings  = *aligned_ptr & ~mask ; // may have changed during the pause
         const uint32_t big_comparand = surroundings | shifted_comparand ;
         const uint32_t big_value     = surroundings | shifted_value     ;
         // __TBB_machine_cmpswp4 presumed to have full fence.
@@ -429,101 +469,99 @@ inline T __TBB_MaskedCompareAndSwap (volatile T * const ptr, const T value, cons
         {
             return T((big_result & mask) >> bits_to_shift);
         }
-        else continue;                                     // CAS failed but the bits of interest left unchanged
+        else continue;                                     // CAS failed but the bits of interest were not changed
     }
 }
-#endif
+#endif // __TBB_ENDIANNESS!=__TBB_ENDIAN_UNSUPPORTED
+////////////////////////////////////////////////////////////////////////////////
+
 template<size_t S, typename T>
 inline T __TBB_CompareAndSwapGeneric (volatile void *ptr, T value, T comparand );
 
 template<>
-inline uint8_t __TBB_CompareAndSwapGeneric <1,uint8_t> (volatile void *ptr, uint8_t value, uint8_t comparand ) {
+inline int8_t __TBB_CompareAndSwapGeneric <1,int8_t> (volatile void *ptr, int8_t value, int8_t comparand ) {
 #if __TBB_USE_GENERIC_PART_WORD_CAS
-    return __TBB_MaskedCompareAndSwap<uint8_t>((volatile uint8_t *)ptr,value,comparand);
+    return __TBB_MaskedCompareAndSwap<int8_t>((volatile int8_t *)ptr,value,comparand);
 #else
     return __TBB_machine_cmpswp1(ptr,value,comparand);
 #endif
 }
 
 template<>
-inline uint16_t __TBB_CompareAndSwapGeneric <2,uint16_t> (volatile void *ptr, uint16_t value, uint16_t comparand ) {
+inline int16_t __TBB_CompareAndSwapGeneric <2,int16_t> (volatile void *ptr, int16_t value, int16_t comparand ) {
 #if __TBB_USE_GENERIC_PART_WORD_CAS
-    return __TBB_MaskedCompareAndSwap<uint16_t>((volatile uint16_t *)ptr,value,comparand);
+    return __TBB_MaskedCompareAndSwap<int16_t>((volatile int16_t *)ptr,value,comparand);
 #else
     return __TBB_machine_cmpswp2(ptr,value,comparand);
 #endif
 }
 
 template<>
-inline uint32_t __TBB_CompareAndSwapGeneric <4,uint32_t> (volatile void *ptr, uint32_t value, uint32_t comparand ) {
+inline int32_t __TBB_CompareAndSwapGeneric <4,int32_t> (volatile void *ptr, int32_t value, int32_t comparand ) {
     // Cast shuts up /Wp64 warning
-    return (uint32_t)__TBB_machine_cmpswp4(ptr,value,comparand);
+    return (int32_t)__TBB_machine_cmpswp4(ptr,value,comparand);
 }
 
 #if __TBB_64BIT_ATOMICS
 template<>
-inline uint64_t __TBB_CompareAndSwapGeneric <8,uint64_t> (volatile void *ptr, uint64_t value, uint64_t comparand ) {
+inline int64_t __TBB_CompareAndSwapGeneric <8,int64_t> (volatile void *ptr, int64_t value, int64_t comparand ) {
     return __TBB_machine_cmpswp8(ptr,value,comparand);
 }
 #endif
 
 template<size_t S, typename T>
 inline T __TBB_FetchAndAddGeneric (volatile void *ptr, T addend) {
-    atomic_backoff b;
     T result;
-    for(;;) {
+    for( atomic_backoff b;;b.pause() ) {
         result = *reinterpret_cast<volatile T *>(ptr);
         // __TBB_CompareAndSwapGeneric presumed to have full fence.
         if( __TBB_CompareAndSwapGeneric<S,T> ( ptr, result+addend, result )==result )
             break;
-        b.pause();
     }
     return result;
 }
 
 template<size_t S, typename T>
 inline T __TBB_FetchAndStoreGeneric (volatile void *ptr, T value) {
-    atomic_backoff b;
     T result;
-    for(;;) {
+    for( atomic_backoff b;;b.pause() ) {
         result = *reinterpret_cast<volatile T *>(ptr);
         // __TBB_CompareAndSwapGeneric presumed to have full fence.
         if( __TBB_CompareAndSwapGeneric<S,T> ( ptr, value, result )==result )
             break;
-        b.pause();
     }
     return result;
 }
 
 #if __TBB_USE_GENERIC_PART_WORD_CAS
-#define __TBB_machine_cmpswp1 tbb::internal::__TBB_CompareAndSwapGeneric<1,uint8_t>
-#define __TBB_machine_cmpswp2 tbb::internal::__TBB_CompareAndSwapGeneric<2,uint16_t>
+#define __TBB_machine_cmpswp1 tbb::internal::__TBB_CompareAndSwapGeneric<1,int8_t>
+#define __TBB_machine_cmpswp2 tbb::internal::__TBB_CompareAndSwapGeneric<2,int16_t>
 #endif
 
 #if __TBB_USE_GENERIC_FETCH_ADD || __TBB_USE_GENERIC_PART_WORD_FETCH_ADD
-#define __TBB_machine_fetchadd1 tbb::internal::__TBB_FetchAndAddGeneric<1,uint8_t>
-#define __TBB_machine_fetchadd2 tbb::internal::__TBB_FetchAndAddGeneric<2,uint16_t>
+#define __TBB_machine_fetchadd1 tbb::internal::__TBB_FetchAndAddGeneric<1,int8_t>
+#define __TBB_machine_fetchadd2 tbb::internal::__TBB_FetchAndAddGeneric<2,int16_t>
 #endif
 
 #if __TBB_USE_GENERIC_FETCH_ADD
-#define __TBB_machine_fetchadd4 tbb::internal::__TBB_FetchAndAddGeneric<4,uint32_t>
+#define __TBB_machine_fetchadd4 tbb::internal::__TBB_FetchAndAddGeneric<4,int32_t>
 #endif
 
 #if __TBB_USE_GENERIC_FETCH_ADD || __TBB_USE_GENERIC_DWORD_FETCH_ADD
-#define __TBB_machine_fetchadd8 tbb::internal::__TBB_FetchAndAddGeneric<8,uint64_t>
+#define __TBB_machine_fetchadd8 tbb::internal::__TBB_FetchAndAddGeneric<8,int64_t>
 #endif
 
 #if __TBB_USE_GENERIC_FETCH_STORE || __TBB_USE_GENERIC_PART_WORD_FETCH_STORE
-#define __TBB_machine_fetchstore1 tbb::internal::__TBB_FetchAndStoreGeneric<1,uint8_t>
-#define __TBB_machine_fetchstore2 tbb::internal::__TBB_FetchAndStoreGeneric<2,uint16_t>
+#define __TBB_machine_fetchstore1 tbb::internal::__TBB_FetchAndStoreGeneric<1,int8_t>
+#define __TBB_machine_fetchstore2 tbb::internal::__TBB_FetchAndStoreGeneric<2,int16_t>
 #endif
 
 #if __TBB_USE_GENERIC_FETCH_STORE
-#define __TBB_machine_fetchstore4 tbb::internal::__TBB_FetchAndStoreGeneric<4,uint32_t>
+#define __TBB_machine_fetchstore4 tbb::internal::__TBB_FetchAndStoreGeneric<4,int32_t>
 #endif
 
 #if __TBB_USE_GENERIC_FETCH_STORE || __TBB_USE_GENERIC_DWORD_FETCH_STORE
-#define __TBB_machine_fetchstore8 tbb::internal::__TBB_FetchAndStoreGeneric<8,uint64_t>
+#define __TBB_machine_fetchstore8 tbb::internal::__TBB_FetchAndStoreGeneric<8,int64_t>
 #endif
 
 #if __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE
@@ -541,28 +579,34 @@ __TBB_MACHINE_DEFINE_ATOMIC_SELECTOR_FETCH_STORE(8)
 #endif /* __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE */
 
 #if __TBB_USE_GENERIC_DWORD_LOAD_STORE
-inline void __TBB_machine_store8 (volatile void *ptr, int64_t value) {
-    for(;;) {
-        int64_t result = *(int64_t *)ptr;
-        if( __TBB_machine_cmpswp8(ptr,value,result)==result ) break;
-    }
-}
+/*TODO: find a more elegant way to handle function names difference*/
+#if ! __TBB_USE_FENCED_ATOMICS
+    /* This name forwarding is needed for generic implementation of
+     * load8/store8 defined below (via macro) to pick the right CAS function*/
+    #define   __TBB_machine_cmpswp8full_fence __TBB_machine_cmpswp8
+#endif
+__TBB_MACHINE_DEFINE_LOAD8_GENERIC_FENCED(full_fence)
+__TBB_MACHINE_DEFINE_STORE8_GENERIC_FENCED(full_fence)
 
-inline int64_t __TBB_machine_load8 (const volatile void *ptr) {
-    // Comparand and new value may be anything, they only must be equal, and
-    // the value should have a low probability to be actually found in 'location'.
-    const int64_t anyvalue = 2305843009213693951LL;
-    return __TBB_machine_cmpswp8(const_cast<volatile void *>(ptr),anyvalue,anyvalue);
-}
+#if ! __TBB_USE_FENCED_ATOMICS
+    #undef   __TBB_machine_cmpswp8full_fence
+#endif
+
+#define __TBB_machine_store8 tbb::internal::__TBB_machine_generic_store8full_fence
+#define __TBB_machine_load8  tbb::internal::__TBB_machine_generic_load8full_fence
 #endif /* __TBB_USE_GENERIC_DWORD_LOAD_STORE */
 
 #if __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE
 /** Fenced operations use volatile qualifier to prevent compiler from optimizing
-    them out, and on on architectures with weak memory ordering to induce compiler
+    them out, and on architectures with weak memory ordering to induce compiler
     to generate code with appropriate acquire/release semantics.
-    On architectures like IA32, Intel64 (and likely and Sparc TSO) volatile has
+    On architectures like IA32, Intel64 (and likely Sparc TSO) volatile has
     no effect on code gen, and consistency helpers serve as a compiler fence (the
-    latter being true for IA64/gcc as well to fix a bug in some gcc versions). **/
+    latter being true for IA64/gcc as well to fix a bug in some gcc versions).
+    This code assumes that the generated instructions will operate atomically,
+    which typically requires a type that can be moved in a single instruction,
+    cooperation from the compiler for effective use of such an instruction,
+    and appropriate alignment of the data. **/
 template <typename T, size_t S>
 struct machine_load_store {
     static T load_with_acquire ( const volatile T& location ) {
@@ -790,7 +834,7 @@ const T reverse<T>::byte_table[256] = {
     0x0F, 0x8F, 0x4F, 0xCF, 0x2F, 0xAF, 0x6F, 0xEF, 0x1F, 0x9F, 0x5F, 0xDF, 0x3F, 0xBF, 0x7F, 0xFF
 };
 
-} // namespace internal
+} // namespace internal @endcond
 } // namespace tbb
 
 // Preserving access to legacy APIs
@@ -805,39 +849,48 @@ using tbb::internal::__TBB_store_with_release;
 inline intptr_t __TBB_Log2( uintptr_t x ) {
     if( x==0 ) return -1;
     intptr_t result = 0;
-    uintptr_t tmp;
 
-    if( sizeof(x)>4 && (tmp = ((uint64_t)x)>>32)) { x=tmp; result += 32; }
-    if( (tmp = x>>16) ) { x=tmp; result += 16; }
-    if( (tmp = x>>8) )  { x=tmp; result += 8; }
-    if( (tmp = x>>4) )  { x=tmp; result += 4; }
-    if( (tmp = x>>2) )  { x=tmp; result += 2; }
+#if !defined(_M_ARM) 
+    uintptr_t tmp;
+    if( sizeof(x)>4 && (tmp = ((uint64_t)x)>>32) ) { x=tmp; result += 32; }
+#endif
+    if( uintptr_t tmp = x>>16 ) { x=tmp; result += 16; }
+    if( uintptr_t tmp = x>>8 )  { x=tmp; result += 8; }
+    if( uintptr_t tmp = x>>4 )  { x=tmp; result += 4; }
+    if( uintptr_t tmp = x>>2 )  { x=tmp; result += 2; }
+
     return (x&2)? result+1: result;
 }
 #endif
 
 #ifndef __TBB_AtomicOR
 inline void __TBB_AtomicOR( volatile void *operand, uintptr_t addend ) {
-    tbb::internal::atomic_backoff b;
-    for(;;) {
+    for( tbb::internal::atomic_backoff b;;b.pause() ) {
         uintptr_t tmp = *(volatile uintptr_t *)operand;
         uintptr_t result = __TBB_CompareAndSwapW(operand, tmp|addend, tmp);
         if( result==tmp ) break;
-        b.pause();
     }
 }
 #endif
 
 #ifndef __TBB_AtomicAND
 inline void __TBB_AtomicAND( volatile void *operand, uintptr_t addend ) {
-    tbb::internal::atomic_backoff b;
-    for(;;) {
+    for( tbb::internal::atomic_backoff b;;b.pause() ) {
         uintptr_t tmp = *(volatile uintptr_t *)operand;
         uintptr_t result = __TBB_CompareAndSwapW(operand, tmp&addend, tmp);
         if( result==tmp ) break;
-        b.pause();
     }
 }
+#endif
+
+#if __TBB_PREFETCHING
+#ifndef __TBB_cl_prefetch
+#error This platform does not define cache management primitives required for __TBB_PREFETCHING
+#endif
+
+#ifndef __TBB_cl_evict
+#define __TBB_cl_evict(p)
+#endif
 #endif
 
 #ifndef __TBB_Flag
@@ -853,18 +906,44 @@ inline bool __TBB_TryLockByte( __TBB_atomic_flag &flag ) {
 
 #ifndef __TBB_LockByte
 inline __TBB_Flag __TBB_LockByte( __TBB_atomic_flag& flag ) {
-    if ( !__TBB_TryLockByte(flag) ) {
-        tbb::internal::atomic_backoff b;
-        do {
-            b.pause();
-        } while ( !__TBB_TryLockByte(flag) );
-    }
+    tbb::internal::atomic_backoff backoff;
+    while( !__TBB_TryLockByte(flag) ) backoff.pause();
     return 0;
 }
 #endif
 
 #ifndef  __TBB_UnlockByte
-#define __TBB_UnlockByte __TBB_store_with_release
+#define __TBB_UnlockByte(addr) __TBB_store_with_release((addr),0)
+#endif
+
+// lock primitives with TSX
+#if ( __TBB_x86_32 || __TBB_x86_64 )  /* only on ia32/intel64 */
+inline void __TBB_TryLockByteElidedCancel() { __TBB_machine_try_lock_elided_cancel(); }
+
+inline bool __TBB_TryLockByteElided( __TBB_atomic_flag& flag ) {
+    bool res = __TBB_machine_try_lock_elided( &flag )!=0;
+    // to avoid the "lemming" effect, we need to abort the transaction
+    // if  __TBB_machine_try_lock_elided returns false (i.e., someone else
+    // has acquired the mutex non-speculatively).
+    if( !res ) __TBB_TryLockByteElidedCancel();
+    return res;
+}
+
+inline void __TBB_LockByteElided( __TBB_atomic_flag& flag )
+{
+    for(;;) {
+        tbb::internal::spin_wait_while_eq( flag, 1 );
+        if( __TBB_machine_try_lock_elided( &flag ) )
+            return;
+        // Another thread acquired the lock "for real".
+        // To avoid the "lemming" effect, we abort the transaction.
+        __TBB_TryLockByteElidedCancel();
+    }
+}
+
+inline void __TBB_UnlockByteElided( __TBB_atomic_flag& flag ) {
+    __TBB_machine_unlock_elided( &flag );
+}
 #endif
 
 #ifndef __TBB_ReverseByte

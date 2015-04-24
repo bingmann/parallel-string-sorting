@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2012 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef _TBB_ITT_NOTIFY
@@ -45,6 +37,7 @@
 
 #include "tools_api/ittnotify.h"
 #include "tools_api/legacy/ittnotify.h"
+extern "C" void __itt_fini_ittlib(void);
 
 #if _WIN32||_WIN64
     #undef _T
@@ -105,6 +98,7 @@ namespace tbb {
 // const_cast<void*>() is necessary to cast off volatility
 #define ITT_NOTIFY(name,obj)            __itt_notify_##name(const_cast<void*>(static_cast<volatile void*>(obj)))
 #define ITT_THREAD_SET_NAME(name)       __itt_thread_set_name(name)
+#define ITT_FINI_ITTLIB()               __itt_fini_ittlib()
 #define ITT_SYNC_CREATE(obj, type, name) __itt_sync_create((void*)(obj), type, name, 2)
 #define ITT_SYNC_RENAME(obj, name)      __itt_sync_rename(obj, name)
 #define ITT_STACK_CREATE(obj)           obj = __itt_stack_caller_create()
@@ -118,6 +112,7 @@ namespace tbb {
 
 #define ITT_NOTIFY(name,obj)            ((void)0)
 #define ITT_THREAD_SET_NAME(name)       ((void)0)
+#define ITT_FINI_ITTLIB()               ((void)0)
 #define ITT_SYNC_CREATE(obj, type, name) ((void)0)
 #define ITT_SYNC_RENAME(obj, name)      ((void)0)
 #define ITT_STACK_CREATE(obj)           ((void)0)
