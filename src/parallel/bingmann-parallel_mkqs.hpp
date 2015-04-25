@@ -127,12 +127,10 @@ public:
         }
     };
 
-    // TODO: use unique_ptr when TBB decides to supports it
-    typedef std::shared_ptr<StrCacheBlock> StrCacheBlockPtr;
+    typedef std::unique_ptr<StrCacheBlock> StrCacheBlockPtr;
 
     typedef tbb::concurrent_queue<StrCacheBlockPtr> BlockQueueType;
     typedef tbb::concurrent_queue<key_type> PivotKeyQueueType;
-    typedef tbb::concurrent_queue<String> PivotStrQueueType;
 
     //! median of three (characters) and return reference to it.
     template <typename CharT>
@@ -666,9 +664,15 @@ jumpout:
             size_t n = strset.size();
             // select pivot from median of 9
             return med3char(
-                med3char(get_direct(0), get_direct(n / 8), get_direct(n / 4)),
-                med3char(get_direct(n / 2 - n / 8), get_direct(n / 2), get_direct(n / 2 + n / 8)),
-                med3char(get_direct(n - 1 - n / 4), get_direct(n - 1 - n / 8), get_direct(n - 3))
+                med3char(get_direct(0),
+                         get_direct(n / 8),
+                         get_direct(n / 4)),
+                med3char(get_direct(n / 2 - n / 8),
+                         get_direct(n / 2),
+                         get_direct(n / 2 + n / 8)),
+                med3char(get_direct(n - 1 - n / 4),
+                         get_direct(n - 1 - n / 8),
+                         get_direct(n - 3))
                 );
         }
 
@@ -741,9 +745,15 @@ jumpout:
             size_t p = pivots.size();
 
             return med3char(
-                med3char(pivots[0], pivots[p / 8], pivots[p / 4]),
-                med3char(pivots[p / 2 - p / 8], pivots[p / 2], pivots[p / 2 + p / 8]),
-                med3char(pivots[p - 1 - p / 4], pivots[p - 1 - p / 8], pivots[p - 3])
+                med3char(pivots[0],
+                         pivots[p / 8],
+                         pivots[p / 4]),
+                med3char(pivots[p / 2 - p / 8],
+                         pivots[p / 2],
+                         pivots[p / 2 + p / 8]),
+                med3char(pivots[p - 1 - p / 4],
+                         pivots[p - 1 - p / 8],
+                         pivots[p - 3])
                 );
         }
 
@@ -766,10 +776,10 @@ jumpout:
         size_t depth;
 
         BlockQueueType* block_queue;
-        PivotStrQueueType* pivot_queue;
+        PivotKeyQueueType* pivot_queue;
 
         BlockSourceQueueEqual(const StringSet& _strset, size_t _depth,
-                              BlockQueueType* _blocks, PivotStrQueueType* _pivots)
+                              BlockQueueType* _blocks, PivotKeyQueueType* _pivots)
             : strset(_strset), depth(_depth),
               block_queue(_blocks), pivot_queue(_pivots)
         { }
@@ -785,18 +795,24 @@ jumpout:
             std::vector<key_type> pivots;
             pivots.reserve(strset.size() / block_size + 1);
 
-            String s;
-            while (pivot_queue->try_pop(s)) {
-                pivots.push_back(strset.get_uint64(s, depth));
+            key_type k;
+            while (pivot_queue->try_pop(k)) {
+                pivots.push_back(k);
             }
             delete pivot_queue;
 
             size_t p = pivots.size();
 
             return med3char(
-                med3char(pivots[0], pivots[p / 8], pivots[p / 4]),
-                med3char(pivots[p / 2 - p / 8], pivots[p / 2], pivots[p / 2 + p / 8]),
-                med3char(pivots[p - 1 - p / 4], pivots[p - 1 - p / 8], pivots[p - 3])
+                med3char(pivots[0],
+                         pivots[p / 8],
+                         pivots[p / 4]),
+                med3char(pivots[p / 2 - p / 8],
+                         pivots[p / 2],
+                         pivots[p / 2 + p / 8]),
+                med3char(pivots[p - 1 - p / 4],
+                         pivots[p - 1 - p / 8],
+                         pivots[p - 3])
                 );
         }
 
@@ -862,7 +878,7 @@ jumpout:
 
         // queue for one potential pivot from each block
         PivotKeyQueueType* oblk_lt_pivot;
-        PivotStrQueueType* oblk_eq_pivot;
+        PivotKeyQueueType* oblk_eq_pivot;
         PivotKeyQueueType* oblk_gt_pivot;
 
         // counters for determinting final output position
@@ -880,7 +896,7 @@ jumpout:
               oblk_eq(new BlockQueueType()),
               oblk_gt(new BlockQueueType()),
               oblk_lt_pivot(new PivotKeyQueueType()),
-              oblk_eq_pivot(new PivotStrQueueType()),
+              oblk_eq_pivot(new PivotKeyQueueType()),
               oblk_gt_pivot(new PivotKeyQueueType()),
               count_lt(0), count_eq(0)
         {
@@ -899,7 +915,7 @@ jumpout:
               oblk_eq(new BlockQueueType()),
               oblk_gt(new BlockQueueType()),
               oblk_lt_pivot(new PivotKeyQueueType()),
-              oblk_eq_pivot(new PivotStrQueueType()),
+              oblk_eq_pivot(new PivotKeyQueueType()),
               oblk_gt_pivot(new PivotKeyQueueType()),
               count_lt(0), count_eq(0)
         {
@@ -909,7 +925,7 @@ jumpout:
         //  for BlockSourceQueueEqual
         ParallelJob(Context& _ctx, JobQueue& jobqueue,
                     const StringSet& strset, size_t depth,
-                    BlockQueueType* iblk, PivotStrQueueType* iblk_pivot,
+                    BlockQueueType* iblk, PivotKeyQueueType* iblk_pivot,
                     bool /* dummy */)
             : ctx(_ctx),
               blks(strset, depth, iblk, iblk_pivot),
@@ -919,7 +935,7 @@ jumpout:
               oblk_eq(new BlockQueueType()),
               oblk_gt(new BlockQueueType()),
               oblk_lt_pivot(new PivotKeyQueueType()),
-              oblk_eq_pivot(new PivotStrQueueType()),
+              oblk_eq_pivot(new PivotKeyQueueType()),
               oblk_gt_pivot(new PivotKeyQueueType()),
               count_lt(0), count_eq(0)
         {
@@ -954,7 +970,12 @@ jumpout:
             }
             else if (type == EQ) {
                 count_eq += blk->fill;
-                oblk_eq_pivot->push(blk->str(blk->fill / 2));
+                oblk_eq_pivot->push(
+                    // get pivot key directly from string (one cache hit per
+                    // block)
+                    blks.strset.get_uint64(blk->str(blk->fill / 2),
+                                           blks.depth + sizeof(key_type))
+                    );
                 oblk_eq->push(std::move(blk));
             }
             else {
@@ -1169,11 +1190,9 @@ jump2:
     class PartitionBlock
     {
     public:
-        unsigned int pos, fill;
+        unsigned int pos = 0, fill = 0;
         StrCacheBlockPtr blk;
-        bool partial;
-
-        //PartitionBlock() : pos(0), fill(0), blk(nullptr) { }
+        bool partial = false;
 
         template <int type>
         bool has_src_block(ParallelJob& mkqs)

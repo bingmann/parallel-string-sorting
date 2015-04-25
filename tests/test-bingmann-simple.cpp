@@ -159,9 +159,8 @@ const std::string letters_alnum
 #define run_tests(func)                                  \
     TestUCharString<func>(nstrings, 16, letters_alnum);  \
     TestVectorString<func>(nstrings, 16, letters_alnum); \
-    TestSuffixString<func>(nstrings, letters_alnum);
-
-//TestVectorPtrString<func>(nstrings, 16, letters_alnum);
+    TestSuffixString<func>(nstrings, letters_alnum);     \
+    TestVectorPtrString<func>(nstrings, 16, letters_alnum);
 
 void test_all(const size_t nstrings)
 {
