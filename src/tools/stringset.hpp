@@ -275,7 +275,7 @@ public:
     typedef Char* String;
 
     //! Iterator over string references: pointer over pointers
-    typedef Char** Iterator;
+    typedef String* Iterator;
 
     //! iterator of characters in a string
     typedef Char* CharIterator;
@@ -368,13 +368,6 @@ class VectorStringSet
       public StringSetBase<VectorStringSet, VectorStringSetTraits>
 {
 public:
-    typedef VectorStringSetTraits Traits;
-
-    using typename Traits::Char;
-    using typename Traits::String;
-    using typename Traits::Iterator;
-    using typename Traits::CharIterator;
-
     //! Construct from begin and end string pointers
     VectorStringSet(const Iterator& begin, const Iterator& end)
         : begin_(begin), end_(end)
@@ -442,13 +435,6 @@ class VectorPtrStringSet
       public StringSetBase<VectorPtrStringSet, VectorPtrStringSetTraits>
 {
 public:
-    typedef VectorPtrStringSetTraits Traits;
-
-    using typename Traits::Char;
-    using typename Traits::String;
-    using typename Traits::Iterator;
-    using typename Traits::CharIterator;
-
     //! Construct from begin and end string pointers
     VectorPtrStringSet(const Iterator& begin, const Iterator& end)
         : begin_(begin), end_(end)
@@ -479,6 +465,79 @@ public:
 
 protected:
     //! vector of std::string objects
+    Iterator begin_, end_;
+};
+
+/******************************************************************************/
+
+/*!
+ * Class implementing StringSet concept for suffix sorting indexes of an
+ * unsigned char* text object.
+ */
+class UCharSuffixSetTraits
+{
+public:
+    //! exported alias for assumed string container
+    typedef unsigned char* Container;
+
+    //! exported alias for character type
+    typedef unsigned char Char;
+
+    //! String reference: suffix index of the text.
+    typedef uint32_t String;
+
+    //! Iterator over string references: using std::vector's iterator over
+    //! suffix array vector
+    typedef String* Iterator;
+
+    //! iterator of characters in a string
+    typedef Char* CharIterator;
+};
+
+/*!
+ * Class implementing StringSet concept for suffix sorting indexes of a
+ * std::string text object.
+ */
+class UCharSuffixSet
+    : public UCharSuffixSetTraits,
+      public StringSetBase<UCharSuffixSet, UCharSuffixSetTraits>
+{
+public:
+    //! Construct from begin and end string pointers
+    UCharSuffixSet(const Container& text,
+                   const Iterator& begin, const Iterator& end)
+        : text_(text),
+          begin_(begin), end_(end)
+    { }
+
+    //! Return size of string array
+    size_t size() const { return end_ - begin_; }
+    //! Iterator representing first String position
+    Iterator begin() const { return begin_; }
+    //! Iterator representing beyond last String position
+    Iterator end() const { return end_; }
+
+    //! Array access (readable and writable) to String objects.
+    String& operator [] (const Iterator& i) const
+    { return *i; }
+
+    //! Return CharIterator for referenced string, which belongs to this set.
+    CharIterator get_chars(const String& s, size_t depth) const
+    { return text_ + s + depth; }
+
+    //! Return complete string (for debugging purposes)
+    std::string get_string(const String& s, size_t depth = 0) const
+    { return std::string(reinterpret_cast<const char*>(text_ + s + depth)); }
+
+    //! Subset this string set using iterator range.
+    UCharSuffixSet sub(Iterator begin, Iterator end) const
+    { return UCharSuffixSet(text_, begin, end); }
+
+protected:
+    //! reference to base text
+    const Container& text_;
+
+    //! iterators inside the output suffix array.
     Iterator begin_, end_;
 };
 
@@ -517,17 +576,9 @@ class StringSuffixSet
       public StringSetBase<StringSuffixSet, StringSuffixSetTraits>
 {
 public:
-    typedef StringSuffixSetTraits Traits;
-
-    using typename Traits::Char;
-    using typename Traits::String;
-    using typename Traits::Iterator;
-    using typename Traits::CharIterator;
-
     //! Construct from begin and end string pointers
     StringSuffixSet(const Container& text,
-                    const std::vector<String>::iterator& begin,
-                    const std::vector<String>::iterator& end)
+                    const Iterator& begin, const Iterator& end)
         : text_(text),
           begin_(begin), end_(end)
     { }

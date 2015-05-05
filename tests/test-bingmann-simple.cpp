@@ -131,8 +131,34 @@ void TestVectorPtrString(const size_t nstrings, const size_t nchars,
         abort();
 }
 
+template <void(* Algo)(const UCharSuffixSet& ss, size_t depth)>
+void TestUCharSuffixString(const size_t nchars, const std::string& letters)
+{
+    LCGRandom rng(1234567);
+
+    // std::string text object
+    std::vector<unsigned char> text(nchars);
+    fill_random(rng, letters, text.begin(), text.end());
+
+    std::vector<uint32_t> sa;
+    sa.resize(text.size());
+    for (size_t i = 0; i < sa.size(); ++i)
+        sa[i] = i;
+
+    UCharSuffixSet ss = UCharSuffixSet(
+        text.data(), sa.data(), sa.data() + sa.size());
+
+    // run sorting algorithm
+    Algo(ss, 0);
+    if (0) ss.print();
+
+    // check result
+    if (!ss.check_order())
+        abort();
+}
+
 template <void(* Algo)(const StringSuffixSet& ss, size_t depth)>
-void TestSuffixString(const size_t nchars, const std::string& letters)
+void TestStringSuffixString(const size_t nchars, const std::string& letters)
 {
     LCGRandom rng(1234567);
 
@@ -156,10 +182,11 @@ const std::string letters_alnum
     = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 // use macro because one cannot pass template functions as template parameters:
-#define run_tests(func)                                  \
-    TestUCharString<func>(nstrings, 16, letters_alnum);  \
-    TestVectorString<func>(nstrings, 16, letters_alnum); \
-    TestSuffixString<func>(nstrings, letters_alnum);     \
+#define run_tests(func)                                    \
+    TestUCharString<func>(nstrings, 16, letters_alnum);    \
+    TestVectorString<func>(nstrings, 16, letters_alnum);   \
+    TestUCharSuffixString<func>(nstrings, letters_alnum);  \
+    TestStringSuffixString<func>(nstrings, letters_alnum); \
     TestVectorPtrString<func>(nstrings, 16, letters_alnum);
 
 void test_all(const size_t nstrings)
