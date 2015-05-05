@@ -16,6 +16,7 @@ set(LIBMINITBB_SOURCES
   src/tbb/itt_notify.h
   src/tbb/semaphore.cpp
   src/tbb/semaphore.h
+  src/tbb/spin_mutex.cpp
   src/tbb/tbb_assert_impl.h
   src/tbb/tbb_misc.cpp
   src/tbb/tbb_misc.h
