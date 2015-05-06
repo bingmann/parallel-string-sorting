@@ -484,7 +484,7 @@ public:
     typedef unsigned char Char;
 
     //! String reference: suffix index of the text.
-    typedef uint32_t String;
+    typedef int String;
 
     //! Iterator over string references: using std::vector's iterator over
     //! suffix array vector

@@ -140,7 +140,7 @@ void TestUCharSuffixString(const size_t nchars, const std::string& letters)
     std::vector<unsigned char> text(nchars);
     fill_random(rng, letters, text.begin(), text.end());
 
-    std::vector<uint32_t> sa;
+    std::vector<int> sa;
     sa.resize(text.size());
     for (size_t i = 0; i < sa.size(); ++i)
         sa[i] = i;

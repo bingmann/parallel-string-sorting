@@ -47,7 +47,7 @@ using namespace jobqueue;
 
 static const size_t g_inssort_threshold = 64;
 
-static const unsigned int block_size = 128 * 1024;
+static const size_t block_size = 128 * 1024;
 
 template <typename StringSet>
 class ParallelMKQS
@@ -80,7 +80,7 @@ public:
     {
     public:
         //! total size of input
-        const StringSet* g_strings;
+        const StringSet* g_strings = NULL;
         //! calculated threshold for sequential sorting
         size_t g_sequential_threshold;
         //! number of threads overall
@@ -90,8 +90,11 @@ public:
         std::string srange(const StringSet& ss)
         {
             std::ostringstream oss;
-            oss << "[" << (ss.begin() - g_strings->begin())
-                << "," << (ss.end() - g_strings->begin()) << ")=" << ss.size();
+            if (!g_strings)
+                oss << "[size " << ss.size() << "]";
+            else
+                oss << "[" << (ss.begin() - g_strings->begin())
+                    << "," << (ss.end() - g_strings->begin()) << ")=" << ss.size();
             return oss.str();
         }
     };
@@ -100,7 +103,7 @@ public:
 
     struct StrCache
     {
-        uint64_t key;
+        key_type key;
         String   str;
 
         friend std::ostream& operator << (std::ostream& os, const StrCache& sc)
@@ -111,16 +114,16 @@ public:
 
     struct StrCacheBlock
     {
-        unsigned int fill;
-        StrCache     cache[block_size];
+        size_t           fill;
+        StrCache         cache[block_size];
 
-        String &     str(unsigned int i)
+        String &         str(size_t i)
         {
             assert(i < block_size);
             return cache[i].str;
         }
 
-        uint64_t &   key(unsigned int i)
+        const key_type & key(size_t i)
         {
             assert(i < block_size);
             return cache[i].key;
@@ -167,7 +170,7 @@ public:
     }
 
     // TODO: make faster
-    static inline int cmp(const uint64_t& a, const uint64_t& b)
+    static inline int cmp(const key_type& a, const key_type& b)
     {
         if (a > b) return 1;
         if (a < b) return -1;
@@ -263,6 +266,10 @@ public:
         MKQSStep(const StringSet& ss, StrCache* cache,
                  size_t n, size_t depth, bool CacheDirty)
         {
+            DBG(debug_seqjobs, "SequentialJob::MKQSStep"
+                " for " << ss.size() << " strings @ size " << n <<
+                " depth " << depth << " CacheDirty " << CacheDirty);
+
             if (CacheDirty)
             {
                 for (size_t i = 0; i < n; ++i)
@@ -276,14 +283,15 @@ public:
                           med3charRef(cache[n / 2 - n / 8], cache[n / 2], cache[n / 2 + n / 8]),
                           med3charRef(cache[n - 1 - n / 4], cache[n - 1 - n / 8], cache[n - 3])
                           ));
-            const StrCache& pivot = cache[0];
+            // must copy out pivot key
+            const key_type pivot = cache[0].key;
             size_t first = 1;
             size_t last = n - 1;
             size_t beg_ins = 1;
             size_t end_ins = n - 1;
             while (true) {
                 while (first <= last) {
-                    const int res = cmp(cache[first], pivot);
+                    const int res = cmp(cache[first].key, pivot);
                     if (res > 0) {
                         break;
                     }
@@ -293,7 +301,7 @@ public:
                     ++first;
                 }
                 while (first <= last) {
-                    const int res = cmp(cache[last], pivot);
+                    const int res = cmp(cache[last].key, pivot);
                     if (res < 0) {
                         break;
                     }
@@ -327,13 +335,15 @@ public:
             this->n = n;
             this->depth = depth;
             this->idx = 0;
-            this->eq_recurse = (pivot.key & 0xFF);
-/*
-  multikey_cache<false>(cache, num_lt, depth);
-  multikey_cache<false>(cache+num_lt+num_eq, num_gt, depth);
-  if (pivot.key & 0xFF)
-  multikey_cache<true>(cache+num_lt, num_eq, depth + sizeof(key_type));
-*/
+            this->eq_recurse = (pivot & 0xFF);
+
+            DBG(debug_seqjobs, "Result of MKQSStep:"
+                << " depth " << depth
+                << " size " << n
+                << " num_lt " << num_lt
+                << " num_eq " << num_eq
+                << " num_gt " << num_gt
+                << " eq_recurse " << eq_recurse);
         }
     };
 
@@ -427,7 +437,8 @@ public:
 
                 // locally allocate (ptr,cache) array (NUMA-friendly)
                 cache = new StrCache[strset.size()];
-                cache_base = StrCachePtrType(cache, shared_ptr_array_deleter<StrCache>());
+                cache_base = StrCachePtrType(
+                    cache, shared_ptr_array_deleter<StrCache>());
 
                 // extract all elements, and maybe update cache
 
@@ -436,7 +447,7 @@ public:
 
                 while (block_queue->try_pop(scb))
                 {
-                    for (unsigned int i = 0; i < scb->fill; ++i, ++o)
+                    for (size_t i = 0; i < scb->fill; ++i, ++o)
                     {
                         if (CacheDirty) {
                             cache[o].str = std::move(scb->cache[i].str);
@@ -583,8 +594,9 @@ jumpout:
                             insertion_sort<false>(
                                 strset, ms.cache, ms.num_lt, ms.depth);
                         else
-                            stack.push_back(MKQSStep(
-                                                strset, ms.cache, ms.num_lt, ms.depth, false));
+                            stack.push_back(
+                                MKQSStep(strset, ms.cache,
+                                         ms.num_lt, ms.depth, false));
                     }
                     // process the eq-subsequence
                     else if (ms.idx == 2)
@@ -596,8 +608,9 @@ jumpout:
                                 strset, ms.cache + ms.num_lt, ms.num_eq,
                                 ms.depth + sizeof(key_type));
                         else
-                            stack.push_back(MKQSStep(strset, ms.cache + ms.num_lt, ms.num_eq,
-                                                     ms.depth + sizeof(key_type), true));
+                            stack.push_back(
+                                MKQSStep(strset, ms.cache + ms.num_lt, ms.num_eq,
+                                         ms.depth + sizeof(key_type), true));
                     }
                     // process the gt-subsequence
                     else
@@ -610,8 +623,9 @@ jumpout:
                                 strset, ms.cache + ms.num_lt + ms.num_eq, ms.num_gt,
                                 ms.depth);
                         else
-                            stack.push_back(MKQSStep(strset, ms.cache + ms.num_lt + ms.num_eq, ms.num_gt,
-                                                     ms.depth, false));
+                            stack.push_back(
+                                MKQSStep(strset, ms.cache + ms.num_lt + ms.num_eq,
+                                         ms.num_gt, ms.depth, false));
                     }
                 }
 
@@ -642,10 +656,10 @@ jumpout:
         size_t depth;
 
         /// number of block in input
-        unsigned int block_count;
+        size_t block_count;
 
         /// atomic index to currently unprocessed block of input
-        std::atomic<unsigned int> block_current;
+        std::atomic<size_t> block_current;
 
         BlockSourceInput(const StringSet& _strset, size_t _depth)
             : strset(_strset), depth(_depth),
@@ -676,9 +690,9 @@ jumpout:
                 );
         }
 
-        StrCacheBlockPtr get_block(unsigned int& fill)
+        StrCacheBlockPtr get_block(size_t& fill)
         {
-            unsigned int blk;
+            size_t blk;
 
             do {
                 blk = block_current;
@@ -757,7 +771,7 @@ jumpout:
                 );
         }
 
-        StrCacheBlockPtr get_block(unsigned int& fill)
+        StrCacheBlockPtr get_block(size_t& fill)
         {
             StrCacheBlockPtr blk;
             if (!block_queue->try_pop(blk)) return NULL;
@@ -816,7 +830,7 @@ jumpout:
                 );
         }
 
-        StrCacheBlockPtr get_block(unsigned int& fill)
+        StrCacheBlockPtr get_block(size_t& fill)
         {
             StrCacheBlockPtr blk;
             if (!block_queue->try_pop(blk)) return NULL;
@@ -826,7 +840,7 @@ jumpout:
             fill = blk->fill;
 
             // refill key cache
-            for (unsigned int i = 0; i < fill; ++i)
+            for (size_t i = 0; i < fill; ++i)
             {
                 blk->cache[i].key = strset.get_uint64(blk->cache[i].str, depth);
             }
@@ -849,19 +863,19 @@ jumpout:
         Context& ctx;
 
         BlockSource blks;
-        uint64_t pivot;
+        key_type pivot;
 
-        unsigned int procs;
-        std::atomic<unsigned int> pwork;
+        size_t procs;
+        std::atomic<size_t> pwork;
 
         // *** PartitionJob for JobQueue
 
         struct PartitionJob : public Job
         {
-            ParallelJob  * step;
-            unsigned int p;
+            ParallelJob* step;
+            size_t     p;
 
-            PartitionJob(ParallelJob* _step, unsigned int _p)
+            PartitionJob(ParallelJob* _step, size_t _p)
                 : step(_step), p(_p) { }
 
             virtual bool run(JobQueue& jobqueue)
@@ -953,7 +967,7 @@ jumpout:
 
             // create partition jobs
             pwork = procs;
-            for (unsigned int p = 0; p < procs; ++p)
+            for (size_t p = 0; p < procs; ++p)
                 jobqueue.enqueue(new PartitionJob(this, p));
         }
 
@@ -987,7 +1001,7 @@ jumpout:
         // *** Main partition() function and collector
 
         //! partition() separating a BlockSource into three Queues lt, eq and gt.
-        void partition(unsigned int p, JobQueue& jobqueue)
+        void partition(size_t p, JobQueue& jobqueue)
         {
             DBG(debug_parajobs, "process PartitionJob " << p << " @ " <<
                 this << " with pivot " << toHex(pivot));
@@ -1091,7 +1105,7 @@ jump2:
                      it != oblk_lt->unsafe_end(); ++it)
                 {
                     std::cout << "fill_lt : " << (*it)->fill << "\n";
-                    for (unsigned int i = 0; i < (*it)->fill; ++i)
+                    for (size_t i = 0; i < (*it)->fill; ++i)
                     {
                         assert((*it)->key(i) < pivot);
                     }
@@ -1103,7 +1117,7 @@ jump2:
                      it != oblk_eq->unsafe_end(); ++it)
                 {
                     std::cout << "fill_eq : " << (*it)->fill << "\n";
-                    for (unsigned int i = 0; i < (*it)->fill; ++i)
+                    for (size_t i = 0; i < (*it)->fill; ++i)
                     {
                         assert((*it)->key(i) == pivot);
                     }
@@ -1115,7 +1129,7 @@ jump2:
                      it != oblk_gt->unsafe_end(); ++it)
                 {
                     std::cout << "fill_gt : " << (*it)->fill << "\n";
-                    for (unsigned int i = 0; i < (*it)->fill; ++i)
+                    for (size_t i = 0; i < (*it)->fill; ++i)
                     {
                         assert((*it)->key(i) > pivot);
                     }
@@ -1190,7 +1204,7 @@ jump2:
     class PartitionBlock
     {
     public:
-        unsigned int pos = 0, fill = 0;
+        size_t pos = 0, fill = 0;
         StrCacheBlockPtr blk;
         bool partial = false;
 
@@ -1200,7 +1214,7 @@ jump2:
             if (pos < fill) return true; // still element in source block
 
             // try to fetch full block from BlockSource
-            unsigned int newfill = 0;
+            size_t newfill = 0;
             StrCacheBlockPtr newblk = mkqs.blks.get_block(newfill);
 
             if (newblk || fill == block_size)
@@ -1368,6 +1382,36 @@ void bingmann_parallel_mkqs(const StringSet& strset, size_t depth)
     new typename MKQS::template ParallelJob<typename MKQS::BlockSourceInput>(
         ctx, jobqueue, strset, depth);
     jobqueue.loop();
+}
+
+template <typename StringSet>
+static inline
+void bingmann_parallel_mkqs_enqueue(
+    JobQueue& jobqueue, typename ParallelMKQS<StringSet>::Context& ctx,
+    const StringSet& strset, size_t depth)
+{
+    typedef ParallelMKQS<StringSet> MKQS;
+
+    if (strset.size() <= 1)
+        return;
+
+    if (strset.size() <= ctx.g_sequential_threshold) {
+        typename MKQS::StrCache * cache =
+            new typename MKQS::StrCache[strset.size()];
+
+        typename StringSet::Iterator begin = strset.begin();
+        for (size_t i = 0; i < strset.size(); ++i)
+            cache[i].str = std::move(strset[begin + i]);
+
+        jobqueue.enqueue(
+            new typename MKQS::template SequentialJob<true>(
+                ctx, strset, depth, cache)
+            );
+    }
+    else {
+        new typename MKQS::template ParallelJob<typename MKQS::BlockSourceInput>(
+            ctx, jobqueue, strset, depth);
+    }
 }
 
 } // namespace bingmann_parallel_mkqs
