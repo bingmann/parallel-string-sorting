@@ -195,12 +195,14 @@ public:
         for (pi = cache + 1; --n > 0; ++pi) {
             String tmp = std::move(pi->str);
             for (pj = pi; pj > cache; --pj) {
-                CharIterator s = strset.get_chars((pj - 1)->str, depth);
-                CharIterator t = strset.get_chars(tmp, depth);
+                const String& s1 = (pj - 1)->str, & s2 = tmp;
+                CharIterator c1 = strset.get_chars(s1, depth);
+                CharIterator c2 = strset.get_chars(s2, depth);
 
-                while (*s == *t && *s != 0)
-                    ++s, ++t;
-                if (*s <= *t)
+                while (strset.is_equal(s1, c1, s2, c2))
+                    ++c1, ++c2;
+
+                if (strset.is_leq(s1, c1, s2, c2))
                     break;
                 pj->str = std::move((pj - 1)->str);
             }

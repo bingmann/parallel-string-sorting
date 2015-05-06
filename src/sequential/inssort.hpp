@@ -94,13 +94,13 @@ static inline void inssort_generic(const StringSet& ss, size_t depth)
         {
             --pj;
 
-            CharIterator s = ss.get_chars(ss[pj], depth),
-                t = ss.get_chars(tmp, depth);
+            CharIterator s = ss.get_chars(ss[pj], depth);
+            CharIterator t = ss.get_chars(tmp, depth);
 
-            while (*s == *t && *s != 0)
+            while (ss.is_equal(ss[pj], s, tmp, t))
                 ++s, ++t;
 
-            if (*s <= *t) {
+            if (ss.is_leq(ss[pj], s, tmp, t)) {
                 ++pj;
                 break;
             }

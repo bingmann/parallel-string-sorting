@@ -146,7 +146,8 @@ void TestUCharSuffixString(const size_t nchars, const std::string& letters)
         sa[i] = i;
 
     UCharSuffixSet ss = UCharSuffixSet(
-        text.data(), sa.data(), sa.data() + sa.size());
+        text.data(), text.data() + text.size(),
+        sa.data(), sa.data() + sa.size());
 
     // run sorting algorithm
     Algo(ss, 0);

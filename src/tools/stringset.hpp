@@ -175,35 +175,101 @@ template <typename StringSet, typename Traits>
 class StringSetBase
 {
 public:
+    //! check equality of two strings a and b at char iterators ai and bi.
+    bool is_equal(const typename Traits::String& a,
+                  const typename Traits::CharIterator& ai,
+                  const typename Traits::String& b,
+                  const typename Traits::CharIterator& bi) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return !ss.is_end(a, ai) && !ss.is_end(b, bi) && (*ai == *bi);
+    }
+
+    //! check if string a is less or equal to string b at iterators ai and bi.
+    bool is_less(const typename Traits::String& a,
+                 const typename Traits::CharIterator& ai,
+                 const typename Traits::String& b,
+                 const typename Traits::CharIterator& bi) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return ss.is_end(a, ai) ||
+               (!ss.is_end(a, ai) && !ss.is_end(b, bi) && *ai < *bi);
+    }
+
+    //! check if string a is less or equal to string b at iterators ai and bi.
+    bool is_leq(const typename Traits::String& a,
+                const typename Traits::CharIterator& ai,
+                const typename Traits::String& b,
+                const typename Traits::CharIterator& bi) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return ss.is_end(a, ai) ||
+               (!ss.is_end(a, ai) && !ss.is_end(b, bi) && *ai <= *bi);
+    }
+
+    //! Return up to 8 characters of string s at iterator i packed into a uint64
+    //! (only works correctly for 8-bit characters)
+    uint64_t get_char_uint64_simple(
+        const typename Traits::String& s, typename Traits::CharIterator i) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+
+        uint64_t v = 0;
+        if (ss.is_end(s, i)) return v;
+        v = (uint64_t(*i) << 56);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint64_t(*i) << 48);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint64_t(*i) << 40);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint64_t(*i) << 32);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint64_t(*i) << 24);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint64_t(*i) << 16);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint64_t(*i) << 8);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint64_t(*i) << 0);
+        return v;
+    }
+
     typename Traits::Char
-    get_char(const typename Traits::String& i, size_t depth) const
+    get_char(const typename Traits::String& s, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-        return *ss.get_chars(i, depth);
+        return *ss.get_chars(s, depth);
     }
 
-    uint8_t get_uint8(const typename Traits::String& i, size_t depth) const
+    uint8_t get_uint8(const typename Traits::String& s, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-        return get_char_uint8(ss.get_chars(i, 0), depth);
+        return get_char_uint8(ss.get_chars(s, 0), depth);
     }
 
-    uint16_t get_uint16(const typename Traits::String& i, size_t depth) const
+    uint16_t get_uint16(const typename Traits::String& s, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-        return get_char_uint16(ss.get_chars(i, 0), depth);
+        return get_char_uint16(ss.get_chars(s, 0), depth);
     }
 
-    uint32_t get_uint32(const typename Traits::String& i, size_t depth) const
+    uint32_t get_uint32(const typename Traits::String& s, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-        return get_char_uint32(ss.get_chars(i, 0), depth);
+        return get_char_uint32(ss.get_chars(s, 0), depth);
     }
 
-    uint64_t get_uint64(const typename Traits::String& i, size_t depth) const
+    uint64_t get_uint64(const typename Traits::String& s, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-        return get_char_uint64(ss.get_chars(i, 0), depth);
+        return get_char_uint64_simple(s, ss.get_chars(s, depth));
     }
 
     //! Subset this string set using begin and size range.
@@ -249,10 +315,11 @@ public:
             s = ss.get_chars(ss[pi - 1], 0),
             t = ss.get_chars(ss[pi], 0);
 
-            while (*s == *t && *s != 0)
+            while (ss.is_equal(ss[pi - 1], s, ss[pi], t))
                 ++s, ++t;
 
-            if (*s > *t) return false;
+            if (!ss.is_leq(ss[pi - 1], s, ss[pi], t))
+                return false;
         }
 
         return true;
@@ -262,7 +329,8 @@ public:
 /******************************************************************************/
 
 /*!
- * Traits class implementing StringSet concept for char* and unsigned char* strings.
+ * Traits class implementing StringSet concept for char* and unsigned char*
+ * strings.
  */
 template <typename CharType>
 class GenericCharStringSetTraits
@@ -317,6 +385,10 @@ public:
     //! Return CharIterator for referenced string, which belong to this set.
     CharIterator get_chars(const String& s, size_t depth) const
     { return s + depth; }
+
+    //! Returns true if CharIterator is at end of the given String
+    bool is_end(const String&, const CharIterator& i) const
+    { return (*i == 0); }
 
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const
@@ -388,6 +460,10 @@ public:
     CharIterator get_chars(const String& s, size_t depth) const
     { return s.begin() + depth; }
 
+    //! Returns true if CharIterator is at end of the given String
+    bool is_end(const String& s, const CharIterator& i) const
+    { return (i == s.end()); }
+
     //! Return complete string (for debugging purposes)
     std::string get_string(const String&& s, size_t depth = 0) const
     { return s.substr(depth); }
@@ -455,6 +531,10 @@ public:
     CharIterator get_chars(const String& s, size_t depth) const
     { return s->begin() + depth; }
 
+    //! Returns true if CharIterator is at end of the given String
+    bool is_end(const String& s, const CharIterator& i) const
+    { return (i == s->end()); }
+
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const
     { return s->substr(depth); }
@@ -504,9 +584,9 @@ class UCharSuffixSet
 {
 public:
     //! Construct from begin and end string pointers
-    UCharSuffixSet(const Container& text,
+    UCharSuffixSet(const Container& text, const Container& text_end,
                    const Iterator& begin, const Iterator& end)
-        : text_(text),
+        : text_(text), text_end_(text_end),
           begin_(begin), end_(end)
     { }
 
@@ -525,17 +605,21 @@ public:
     CharIterator get_chars(const String& s, size_t depth) const
     { return text_ + s + depth; }
 
+    //! Returns true if CharIterator is at end of the given String
+    bool is_end(const String&, const CharIterator& i) const
+    { return (i == text_end_); }
+
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const
     { return std::string(reinterpret_cast<const char*>(text_ + s + depth)); }
 
     //! Subset this string set using iterator range.
     UCharSuffixSet sub(Iterator begin, Iterator end) const
-    { return UCharSuffixSet(text_, begin, end); }
+    { return UCharSuffixSet(text_, text_end_, begin, end); }
 
 protected:
     //! reference to base text
-    const Container& text_;
+    const Container text_, text_end_;
 
     //! iterators inside the output suffix array.
     Iterator begin_, end_;
@@ -607,6 +691,10 @@ public:
     //! Return CharIterator for referenced string, which belongs to this set.
     CharIterator get_chars(const String& s, size_t depth) const
     { return text_.begin() + s + depth; }
+
+    //! Returns true if CharIterator is at end of the given String
+    bool is_end(const String&, const CharIterator& i) const
+    { return (i == text_.end()); }
 
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const

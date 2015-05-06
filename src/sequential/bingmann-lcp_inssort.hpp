@@ -76,11 +76,11 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
                 CharIterator s1 = str.get_chars(new_str, new_lcp);
                 CharIterator s2 = str.get_chars(cur_str, new_lcp);
 
-                while (*s1 != 0 && *s1 == *s2)
+                while (str.is_equal(new_str, s1, cur_str, s2))
                     ++s1, ++s2, ++new_lcp;
 
                 // if (new_str >= curr_str) -> insert string
-                if (*s1 >= *s2)
+                if (!str.is_less(new_str, s1, cur_str, s2))
                 {
                     // update lcp of prev (smaller string) with inserted string
                     lcp[i] = new_lcp;
@@ -136,11 +136,11 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
                 CharIterator s1 = str.get_chars(new_str, new_lcp);
                 CharIterator s2 = str.get_chars(cur_str, new_lcp);
 
-                while (*s1 != 0 && *s1 == *s2)
+                while (str.is_equal(new_str, s1, cur_str, s2))
                     ++s1, ++s2, ++new_lcp;
 
                 // if (new_str >= curr_str) -> insert string
-                if (*s1 >= *s2)
+                if (!str.is_less(new_str, s1, cur_str, s2))
                 {
                     // update lcp of prev (smaller string) with inserted string
                     lcp[i] = new_lcp;

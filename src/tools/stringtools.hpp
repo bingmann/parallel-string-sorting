@@ -111,7 +111,7 @@ unsigned int calc_lcp(const StringSet& ss,
     typename StringSet::CharIterator c2 = ss.get_chars(s2, 0);
 
     size_t h = 0;
-    while (*c1 != 0 && *c1 == *c2)
+    while (ss.is_equal(s1, c1, s2, c2))
         ++h, ++c1, ++c2;
 
     return h;
