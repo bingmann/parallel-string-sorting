@@ -32,8 +32,6 @@ set(PSSLIB_SOURCES
   parallel/akiba-parallel_string_radix_sort.cpp
   parallel/bingmann-parallel_radix_sort.cpp
   parallel/bingmann-parallel_mkqs.cpp
-  parallel/bingmann-parallel_sample_sort.cpp
-  parallel/bingmann-parallel_sample_sort_lcp.cpp
   parallel/shamsundar-lcp-merge-string-sort.cpp
   )
 
