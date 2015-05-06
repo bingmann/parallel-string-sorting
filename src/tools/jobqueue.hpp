@@ -225,6 +225,7 @@ public:
     void loop()
     {
         m_timers.start(omp_get_max_threads());
+        m_idle_count = 0;
 
 #pragma omp parallel
         {
