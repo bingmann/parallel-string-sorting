@@ -117,6 +117,33 @@ unsigned int calc_lcp(const StringSet& ss,
     return h;
 }
 
+static inline std::string hexdump(const void* data, size_t size)
+{
+    const unsigned char* cdata = static_cast<const unsigned char*>(data);
+
+    std::string out;
+    out.resize(size * 2);
+
+    static const char xdigits[16] = {
+        '0', '1', '2', '3', '4', '5', '6', '7',
+        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+    };
+
+    std::string::iterator oi = out.begin();
+    for (const unsigned char* si = cdata; si != cdata + size; ++si)
+    {
+        *oi++ = xdigits[(*si & 0xF0) >> 4];
+        *oi++ = xdigits[(*si & 0x0F)];
+    }
+
+    return out;
+}
+
+static inline std::string hexdump(const std::string& str)
+{
+    return hexdump(str.data(), str.size());
+}
+
 /// Return traits of key_type
 template <typename CharT>
 class key_traits
