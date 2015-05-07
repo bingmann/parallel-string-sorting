@@ -49,14 +49,14 @@ typedef uintptr_t lcp_t;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct LcpCacheStringPtr;
+class LcpCacheStringPtr;
 
-struct LcpStringPtr
+class LcpStringPtr
 {
 public:
-    string      * strings;
-    lcp_t       * lcps;
-    size_t      size;
+    string* strings;
+    lcp_t* lcps;
+    size_t size;
 
 public:
     LcpStringPtr()
@@ -67,63 +67,55 @@ public:
         : strings(_strings), lcps(_lcps), size(_size)
     { }
 
-    inline bool empty() const
+    bool empty() const
     {
         return (size == 0);
     }
 
-    inline void
-                setFirst(string s, lcp_t lcp) const
+    void setFirst(string s, lcp_t lcp) const
     {
         assert(size > 0);
-        * strings = s;
-        * lcps = lcp;
+        *strings = s;
+        *lcps = lcp;
     }
 
-    inline void
-                setFirst(LcpStringPtr& ptr)
+    void setFirst(LcpStringPtr& ptr)
     {
-        * strings = *ptr.strings;
-        * lcps = *ptr.lcps;
+        *strings = *ptr.strings;
+        *lcps = *ptr.lcps;
     }
 
-    inline string&
-                firstString() const
+    string & firstString() const
     {
         assert(size > 0);
         return *strings;
     }
 
-    inline lcp_t&
-                firstLcp() const
+    lcp_t & firstLcp() const
     {
         assert(size > 0);
         return *lcps;
     }
 
-    inline void
-                copyFrom(LcpStringPtr& other, size_t length) const
+    void copyFrom(LcpStringPtr& other, size_t length) const
     {
         memcpy(strings, other.strings, length * sizeof(string));
         memcpy(lcps, other.lcps, length * sizeof(lcp_t));
     }
 
-    inline void
-                copyStringsTo(string* destination, size_t length) const
+    void copyStringsTo(string* destination, size_t length) const
     {
         memcpy(destination, strings, length * sizeof(string));
     }
 
-    inline void
-                setLcp(size_t position, lcp_t value) const
+    void setLcp(size_t position, lcp_t value) const
     {
         assert(position < size);
         lcps[position] = value;
     }
 
     // preincrement
-    inline LcpStringPtr&
-    operator ++ ()
+    LcpStringPtr& operator ++ ()
     {
         ++strings;
         ++lcps;
@@ -132,28 +124,24 @@ public:
     }
 
     //! return sub-array of (string,lcp) with offset and size
-    inline LcpStringPtr
-    sub(size_t offset, size_t n) const
+    LcpStringPtr sub(size_t offset, size_t n) const
     {
         assert(offset + n <= size);
         return LcpStringPtr(strings + offset, lcps + offset, n);
     }
 
     //! return empty end array.
-    inline LcpStringPtr
-    end() const
+    LcpStringPtr end() const
     {
         return sub(size, 0);
     }
 
-    inline size_t
-    operator - (const LcpStringPtr& rhs) const
+    size_t operator - (const LcpStringPtr& rhs) const
     {
         return strings - rhs.strings;
     }
 
-    inline bool
-    operator < (const LcpStringPtr& rhs) const
+    bool operator < (const LcpStringPtr& rhs) const
     {
         return strings < rhs.strings;
     }
@@ -161,13 +149,13 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct LcpCacheStringPtr
+class LcpCacheStringPtr
 {
 public:
-    string      * strings;
-    lcp_t       * lcps;
-    char_type   * cachedChars;
-    size_t      size;
+    string* strings;
+    lcp_t* lcps;
+    char_type* cachedChars;
+    size_t size;
 
 public:
     LcpCacheStringPtr()
@@ -178,82 +166,72 @@ public:
         : strings(_strings), lcps(_lcps), cachedChars(_cachedChars), size(_size)
     { }
 
-    inline bool empty() const
+    bool empty() const
     {
         return (size == 0);
     }
 
-    inline void
-                setFirst(string s, lcp_t lcp) const
+    void setFirst(string s, lcp_t lcp) const
     {
         assert(size > 0);
-        * strings = s;
-        * lcps = lcp;
-        * cachedChars = s[lcp];
+        *strings = s;
+        *lcps = lcp;
+        *cachedChars = s[lcp];
     }
 
-    inline void
-                setFirst(string s, lcp_t lcp, char cachedCharacter) const
+    void setFirst(string s, lcp_t lcp, char cachedCharacter) const
     {
         assert(size > 0);
-        * strings = s;
-        * lcps = lcp;
-        * cachedChars = cachedCharacter;
+        *strings = s;
+        *lcps = lcp;
+        *cachedChars = cachedCharacter;
     }
 
-    inline void
-                setFirst(LcpCacheStringPtr& ptr)
+    void setFirst(LcpCacheStringPtr& ptr)
     {
-        * strings = *ptr.strings;
-        * lcps = *ptr.lcps;
-        * cachedChars = *ptr.cachedChars;
+        *strings = *ptr.strings;
+        *lcps = *ptr.lcps;
+        *cachedChars = *ptr.cachedChars;
     }
 
-    inline string&
-                firstString() const
+    string & firstString() const
     {
         assert(size > 0);
         return *strings;
     }
 
-    inline lcp_t&
-                firstLcp() const
+    lcp_t & firstLcp() const
     {
         assert(size > 0);
         return *lcps;
     }
 
-    inline char_type&
-                firstCached() const
+    char_type & firstCached() const
     {
         assert(size > 0);
         return *cachedChars;
     }
 
-    inline void
-                copyFrom(LcpCacheStringPtr& other, size_t length) const
+    void copyFrom(LcpCacheStringPtr& other, size_t length) const
     {
         memcpy(strings, other.strings, length * sizeof(string));
         memcpy(lcps, other.lcps, length * sizeof(lcp_t));
         memcpy(cachedChars, other.cachedChars, length * sizeof(char));
     }
 
-    inline void
-                copyStringsTo(string* destination, size_t length) const
+    void copyStringsTo(string* destination, size_t length) const
     {
         memcpy(destination, strings, length * sizeof(string));
     }
 
-    inline void
-                calculateCache() const
+    void calculateCache() const
     {
         for (unsigned i = 0; i < size; ++i) {
             cachedChars[i] = strings[i][lcps[i]];
         }
     }
 
-    inline void
-                allocateNumaMemory(int numaNode, size_t length)
+    void allocateNumaMemory(int numaNode, size_t length)
     {
 #if 0
         strings = new string[length];
@@ -271,8 +249,7 @@ public:
         size = length;
     }
 
-    inline void
-    freeNumaMemory()
+    void freeNumaMemory()
     {
 #if 0
         delete[] strings;
@@ -286,8 +263,7 @@ public:
     }
 
     // preincrement
-    inline LcpCacheStringPtr&
-    operator ++ ()
+    LcpCacheStringPtr& operator ++ ()
     {
         ++strings;
         ++lcps;
@@ -297,8 +273,7 @@ public:
     }
 
     //! return sub-array of (string,lcp) with offset and size
-    inline LcpCacheStringPtr
-    sub(size_t offset, size_t n) const
+    LcpCacheStringPtr sub(size_t offset, size_t n) const
     {
         assert(offset + n <= size);
         return LcpCacheStringPtr(strings + offset, lcps + offset, cachedChars + offset, n);
@@ -306,34 +281,29 @@ public:
 
     //! return sub-array of (string,lcp) with offset and size, but remove
     //! cachedChars
-    inline LcpStringPtr
-    subNoCache(size_t offset, size_t n) const
+    LcpStringPtr subNoCache(size_t offset, size_t n) const
     {
         assert(offset + n <= size);
         return LcpStringPtr(strings + offset, lcps + offset, n);
     }
 
     //! return empty end array.
-    inline LcpCacheStringPtr
-    end() const
+    LcpCacheStringPtr end() const
     {
         return sub(size, 0);
     }
 
-    inline size_t
-    operator - (const LcpCacheStringPtr& rhs) const
+    size_t operator - (const LcpCacheStringPtr& rhs) const
     {
         return strings - rhs.strings;
     }
 
-    inline bool
-    operator < (const LcpCacheStringPtr& rhs) const
+    bool operator < (const LcpCacheStringPtr& rhs) const
     {
         return strings < rhs.strings;
     }
 
-    inline size_t
-    binarySearch(string searched) const
+    size_t binarySearch(string searched) const
     {
         size_t idx;
         size_t l = 0;
@@ -383,111 +353,112 @@ class StringShadowPtrBase
 {
 protected:
     //! strings (front) and temporary shadow (back) array
-    string* m_active, * m_shadow;
+    string* active_, * shadow_;
 
     //! length of subarray
-    size_t m_size;
+    size_t size_;
 
-    //! false if m_active is original, true if m_shadow is original
-    bool m_flipped;
+    //! false if active_ is original, true if shadow_ is original
+    bool flipped_;
 
 public:
     //! constructor specifying all attributes
-    inline StringShadowPtrBase(string* original, string* shadow = NULL,
-                               size_t size = 0, bool flipped = false)
-        : m_active(original), m_shadow(shadow), m_size(size), m_flipped(flipped)
+    StringShadowPtrBase(string* original, string* shadow = NULL,
+                        size_t size = 0, bool flipped = false)
+        : active_(original), shadow_(shadow), size_(size), flipped_(flipped)
     { }
 
     //! true if flipped to back array
-    inline bool flipped() const { return m_flipped; }
+    bool flipped() const { return flipped_; }
 
     //! return currently active array
-    inline string * active() const { return m_active; }
+    string * active() const { return active_; }
 
     //! return current shadow array
-    inline string * shadow() const { return m_shadow; }
+    string * shadow() const { return shadow_; }
 
     //! return valid length
-    inline size_t size() const { return m_size; }
+    size_t size() const { return size_; }
 
     //! ostream-able
-    friend inline std::ostream& operator << (std::ostream& os, const StringShadowPtrBase& sp)
+    friend std::ostream& operator << (std::ostream& os, const StringShadowPtrBase& sp)
     {
-        return os << '(' << sp.active() << '/' << sp.shadow() << '|' << sp.flipped() << ':' << sp.size() << ')';
+        return os << '(' << sp.active() << '/' << sp.shadow()
+                  << '|' << sp.flipped() << ':' << sp.size() << ')';
     }
 
     //! Advance (both) pointers by given offset, return sub-array
-    inline StringShadowPtrBase sub(size_t offset, size_t size) const
+    StringShadowPtrBase sub(size_t offset, size_t size) const
     {
-        assert(offset + size <= m_size);
-        return StringShadowPtrBase(m_active + offset, m_shadow + offset, size, m_flipped);
+        assert(offset + size <= size_);
+        return StringShadowPtrBase(active_ + offset, shadow_ + offset, size, flipped_);
     }
 
     //! construct a StringShadowPtrBase object specifying a sub-array with flipping to
     //! other array.
-    inline StringShadowPtrBase flip(size_t offset, size_t size) const
+    StringShadowPtrBase flip(size_t offset, size_t size) const
     {
-        assert(offset + size <= m_size);
-        return StringShadowPtrBase(m_shadow + offset, m_active + offset, size, !m_flipped);
+        assert(offset + size <= size_);
+        return StringShadowPtrBase(shadow_ + offset, active_ + offset, size, !flipped_);
     }
 
     //! Return the original for this StringShadowPtr for LCP calculation
-    inline StringShadowPtrBase original() const
+    StringShadowPtrBase original() const
     {
-        return m_flipped ? flip(0, m_size) : *this;
+        return flipped_ ? flip(0, size_) : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
     //! shadow before returning.
-    inline StringShadowPtrBase copy_back() const
+    StringShadowPtrBase copy_back() const
     {
-        if (!m_flipped) {
+        if (!flipped_) {
             return *this;
         }
         else {
-            memcpy(m_shadow, m_active, m_size * sizeof(string));
-            return flip(0, m_size);
+            memcpy(shadow_, active_, size_ * sizeof(string));
+            return flip(0, size_);
         }
     }
 
     //! check sorted order of strings
-    inline bool check() const
+    bool check() const
     {
-        for (size_t i = 1; i < m_size; ++i)
+        for (size_t i = 1; i < size_; ++i)
             assert(scmp(out(i - 1), out(i)) <= 0);
         return true;
     }
 
-    //! Return i-th string pointer from m_active
-    inline string & str(size_t i) const
+    //! Return i-th string pointer from active_
+    string & str(size_t i) const
     {
-        assert(i < m_size);
-        return m_active[i];
+        assert(i < size_);
+        return active_[i];
     }
 
     //! if we want to save the LCPs
-    static inline bool with_lcp()
+    static bool with_lcp()
     {
         return WithLcp;
     }
 
     //! return reference to the i-th lcp
-    inline uintptr_t & lcp(size_t i) const
+    uintptr_t & lcp(size_t i) const
     {
         if (!WithLcp) assert(0);
 
-        assert(!m_flipped);
-        assert(i < m_size);
-        return ((uintptr_t*)m_shadow)[i];
+        assert(!flipped_);
+        assert(i < size_);
+        return ((uintptr_t*)shadow_)[i];
     }
 
     //! set the i-th lcp to v and check its value
-    inline void set_lcp(size_t i, const uintptr_t& v) const
+    void set_lcp(size_t i, const uintptr_t& v) const
     {
         if (!WithLcp) return;
 
         assert(i > 0);
-        assert(i < m_size);
+        assert(i < size_);
         assert(v == calc_lcp(out(i - 1), out(i)));
 
         lcp(i) = v;
@@ -495,11 +466,11 @@ public:
 
     //! Fill whole LCP array with n times the value v, ! excluding the first
     //! LCP[0] position
-    inline void fill_lcp(uintptr_t v)
+    void fill_lcp(uintptr_t v)
     {
         if (!WithLcp) return;
 
-        for (size_t i = 1; i < m_size; ++i)
+        for (size_t i = 1; i < size_; ++i)
         {
             set_lcp(i, v);
             set_cache(i, 0);
@@ -507,31 +478,31 @@ public:
     }
 
     //! set the i-th distinguishing cache charater to c
-    inline void set_cache(size_t, const char_type&) const
+    void set_cache(size_t, const char_type&) const
     {
         // no-op
     }
 
     //! Return pointer to LCP array
-    inline uintptr_t * lcparray() const
+    uintptr_t * lcparray() const
     {
         if (!WithLcp) assert(0);
 
-        assert(!m_flipped);
-        return (uintptr_t*)m_shadow;
+        assert(!flipped_);
+        return (uintptr_t*)shadow_;
     }
 
     //! Return the output string array
-    inline string * output() const
+    string * output() const
     {
-        assert(!m_flipped); // m_active is original/output array
-        return m_active;
+        assert(!flipped_); // active_ is original/output array
+        return active_;
     }
 
-    //! Return i-th output string pointer from m_active / output()
-    inline string & out(size_t i) const
+    //! Return i-th output string pointer from active_ / output()
+    string & out(size_t i) const
     {
-        assert(!m_flipped); // m_active is original/output array
+        assert(!flipped_); // active_ is original/output array
         return str(i);
     }
 };
@@ -555,85 +526,88 @@ protected:
     base_type sp;
 
     //! output string array
-    string* m_output;
+    string* output_;
 
 public:
     //! constructor specifying all attributes
-    inline StringShadowOutPtrBase(string* original, string* shadow = NULL, string* output = NULL,
-                                  size_t size = 0, bool flipped = false)
+    StringShadowOutPtrBase(
+        string* original, string* shadow = NULL, string* output = NULL,
+        size_t size = 0, bool flipped = false)
         : sp(original, shadow, size, flipped),
-          m_output(output)
+          output_(output)
     { }
 
     //! true if flipped to back array
-    inline bool flipped() const { return sp.flipped(); }
+    bool flipped() const { return sp.flipped(); }
 
     //! return currently active array
-    inline string * active() const { return sp.active(); }
+    string * active() const { return sp.active(); }
 
     //! return current shadow array
-    inline string * shadow() const { return sp.shadow(); }
+    string * shadow() const { return sp.shadow(); }
 
     //! return valid length
-    inline size_t size() const { return sp.size(); }
+    size_t size() const { return sp.size(); }
 
     //! ostream-able
-    friend inline std::ostream& operator << (std::ostream& os, const StringShadowOutPtrBase& sp)
+    friend std::ostream& operator << (std::ostream& os, const StringShadowOutPtrBase& sp)
     {
         return os << '(' << sp.active() << '/' << sp.shadow() << '/' << sp.output()
                   << '|' << sp.flipped() << ':' << sp.size() << ')';
     }
 
     //! Advance (both) pointers by given offset, return sub-array
-    inline StringShadowOutPtrBase sub(size_t offset, size_t size) const
+    StringShadowOutPtrBase sub(size_t offset, size_t size) const
     {
         assert(offset + size <= sp.size());
-        return StringShadowOutPtrBase(active() + offset, shadow() + offset, m_output + offset,
-                                      size, flipped());
+        return StringShadowOutPtrBase(
+            active() + offset, shadow() + offset, output_ + offset,
+            size, flipped());
     }
 
     //! construct a StringShadowOutPtrBase object specifying a sub-array with flipping to
     //! other array.
-    inline StringShadowOutPtrBase flip(size_t offset, size_t size) const
+    StringShadowOutPtrBase flip(size_t offset, size_t size) const
     {
         assert(offset + size <= sp.size());
-        return StringShadowOutPtrBase(shadow() + offset, active() + offset, m_output + offset,
-                                      size, !flipped());
+        return StringShadowOutPtrBase(
+            shadow() + offset, active() + offset, output_ + offset,
+            size, !flipped());
     }
 
     //! Return the original for this StringShadowOutPtr for LCP calculation
-    inline StringShadowOutPtrBase original() const
+    StringShadowOutPtrBase original() const
     {
         return flipped() ? flip(0, size()) : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
     //! shadow before returning.
-    inline StringShadowOutPtrBase copy_back() const
+    StringShadowOutPtrBase copy_back() const
     {
-        memcpy(m_output, active(), size() * sizeof(string));
+        memcpy(output_, active(), size() * sizeof(string));
         return original();
     }
 
     //! check sorted order of strings
-    inline bool check() const
+    bool check() const
     {
         for (size_t i = 1; i < size(); ++i)
             assert(scmp(out(i - 1), out(i)) <= 0);
         return true;
     }
 
-    //! Return i-th string pointer from m_active
-    inline string & str(size_t i) const { return sp.str(i); }
+    //! Return i-th string pointer from active_
+    string & str(size_t i) const { return sp.str(i); }
 
     //! if we want to save the LCPs
-    static inline bool with_lcp() { return base_type::with_lcp(); }
+    static bool with_lcp() { return base_type::with_lcp(); }
 
     //! return reference to the i-th lcp
-    inline uintptr_t & lcp(size_t i) const { return sp.lcp(i); }
+    uintptr_t & lcp(size_t i) const { return sp.lcp(i); }
 
     //! set the i-th lcp to v and check its value
-    inline void set_lcp(size_t i, const uintptr_t& v) const
+    void set_lcp(size_t i, const uintptr_t& v) const
     {
         if (!WithLcp) return;
 
@@ -646,7 +620,7 @@ public:
 
     //! Fill whole LCP array with n times the value v, ! excluding the first
     //! LCP[0] position
-    inline void fill_lcp(uintptr_t v)
+    void fill_lcp(uintptr_t v)
     {
         if (!WithLcp) return;
 
@@ -658,25 +632,25 @@ public:
     }
 
     //! set the i-th distinguishing cache charater to c
-    inline void set_cache(size_t, const char_type&) const
+    void set_cache(size_t, const char_type&) const
     {
         // no-op
     }
 
     //! Return pointer to LCP array
-    inline uintptr_t * lcparray() const { return sp.lcparray(); }
+    uintptr_t * lcparray() const { return sp.lcparray(); }
 
     //! Return the output string array
-    inline string * output() const
+    string * output() const
     {
-        return m_output;
+        return output_;
     }
 
-    //! Return i-th output string pointer from m_active / output()
-    inline string & out(size_t i) const
+    //! Return i-th output string pointer from active_ / output()
+    string & out(size_t i) const
     {
         assert(i < size());
-        return m_output[i];
+        return output_[i];
     }
 };
 
@@ -698,61 +672,62 @@ protected:
     typedef StringShadowLcpOutPtr super_type;
 
     //! character cache array
-    char_type* m_cache;
+    char_type* cache_;
 
 public:
     //! constructor specifying all attributes
-    inline StringShadowLcpCacheOutPtr(string* original = NULL, string* shadow = NULL, string* output = NULL,
-                                      char_type* cache = NULL,
-                                      size_t size = 0, bool flipped = false)
+    StringShadowLcpCacheOutPtr(
+        string* original = NULL, string* shadow = NULL, string* output = NULL,
+        char_type* cache = NULL,
+        size_t size = 0, bool flipped = false)
         : super_type(original, shadow, output, size, flipped),
-          m_cache(cache)
+          cache_(cache)
     { }
 
     //! return character cache of distinguishing chars
-    char_type * cache() const { return m_cache; }
+    char_type * cache() const { return cache_; }
 
     //! Advance (all) pointers by given offset, return sub-array
-    inline self_type sub(size_t offset, size_t size) const
+    self_type sub(size_t offset, size_t size) const
     {
         assert(offset + size <= this->size());
         return self_type(active() + offset, shadow() + offset, output() + offset,
-                         m_cache + offset, size, flipped());
+                         cache_ + offset, size, flipped());
     }
 
     //! construct a StringShadowOutPtrBase object specifying a sub-array with
     //! flipping to other array.
-    inline self_type flip(size_t offset, size_t size) const
+    self_type flip(size_t offset, size_t size) const
     {
         assert(offset + size <= this->size());
-        return self_type(shadow() + offset, active() + offset, m_output + offset,
-                         m_cache + offset, size, !flipped());
+        return self_type(shadow() + offset, active() + offset, output_ + offset,
+                         cache_ + offset, size, !flipped());
     }
 
     //! Return the original of this StringPtr for LCP calculation
-    inline self_type original() const
+    self_type original() const
     {
         return flipped() ? flip(0, size()) : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
     //! shadow before returning.
-    inline self_type copy_back() const
+    self_type copy_back() const
     {
-        memcpy(super_type::m_output, active(), size() * sizeof(string));
+        memcpy(super_type::output_, active(), size() * sizeof(string));
         return original();
     }
 
     //! set the i-th distinguishing cache charater to c
-    inline void set_cache(size_t i, const char_type& c) const
+    void set_cache(size_t i, const char_type& c) const
     {
         assert(i < size());
-        m_cache[i] = c;
+        cache_[i] = c;
     }
 
     //! Fill whole LCP array with n times the value v, ! excluding the first
     //! LCP[0] position
-    inline void fill_lcp(uintptr_t v)
+    void fill_lcp(uintptr_t v)
     {
         if (!with_lcp()) return;
 
@@ -840,7 +815,8 @@ verify_lcp(string* strings, lcp_t* lcps, size_t n, lcp_t expectedFirstLcp)
 }
 
 static inline bool
-verify_lcp_cache(string* strings, lcp_t* lcps, char_type* cache, size_t n, lcp_t expectedFirstLcp)
+verify_lcp_cache(string* strings, lcp_t* lcps,
+                 char_type* cache, size_t n, lcp_t expectedFirstLcp)
 {
     return verify_lcp_cache<true>(
         parallel_string_sorting::UCharStringSet(strings, strings + n),
