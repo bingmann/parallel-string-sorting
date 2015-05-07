@@ -51,39 +51,8 @@ typedef uintptr_t lcp_t;
 // CharIterator -> character group functions
 
 template <typename CharIterator>
-inline uint8_t get_char_uint8(CharIterator str, size_t depth)
+inline uint32_t get_char_uint32_bswap32(CharIterator str, size_t depth)
 {
-    return (uint8_t)(str[depth]);
-}
-
-template <typename CharIterator>
-inline uint16_t get_char_uint16(CharIterator str, size_t depth)
-{
-    uint16_t v = 0;
-    if (str[depth] == 0) return v;
-    v |= (uint16_t(str[depth]) << 8);
-    ++str;
-    v |= (uint16_t(str[depth]) << 0);
-    return v;
-}
-
-template <typename CharIterator>
-inline uint32_t get_char_uint32(CharIterator str, size_t depth)
-{
-#if 0
-    uint32_t v = 0;
-    if (str[depth] == 0) return v;
-    v |= (uint32_t(str[depth]) << 24);
-    ++str;
-    if (str[depth] == 0) return v;
-    v |= (uint32_t(str[depth]) << 16);
-    ++str;
-    if (str[depth] == 0) return v;
-    v |= (uint32_t(str[depth]) << 8);
-    ++str;
-    v |= (uint32_t(str[depth]) << 0);
-    return v;
-#else
     uint32_t v = __builtin_bswap32(*(uint32_t*)(str + depth));
     if ((v & 0xFF000000LU) == 0)
         return 0;
@@ -91,36 +60,6 @@ inline uint32_t get_char_uint32(CharIterator str, size_t depth)
         return (v & 0xFFFF0000LU);
     else if ((v & 0x0000FF00LU) == 0)
         return (v & 0xFFFFFF00LU);
-    return v;
-#endif
-}
-
-template <typename CharIterator>
-inline uint64_t get_char_uint64_simple(CharIterator str, size_t depth)
-{
-    uint64_t v = 0;
-    if (str[depth] == 0) return v;
-    v = (uint64_t(str[depth]) << 56);
-    ++str;
-    if (str[depth] == 0) return v;
-    v |= (uint64_t(str[depth]) << 48);
-    ++str;
-    if (str[depth] == 0) return v;
-    v |= (uint64_t(str[depth]) << 40);
-    ++str;
-    if (str[depth] == 0) return v;
-    v |= (uint64_t(str[depth]) << 32);
-    ++str;
-    if (str[depth] == 0) return v;
-    v |= (uint64_t(str[depth]) << 24);
-    ++str;
-    if (str[depth] == 0) return v;
-    v |= (uint64_t(str[depth]) << 16);
-    ++str;
-    if (str[depth] == 0) return v;
-    v |= (uint64_t(str[depth]) << 8);
-    ++str;
-    v |= (uint64_t(str[depth]) << 0);
     return v;
 }
 
@@ -145,27 +84,6 @@ inline uint64_t get_char_uint64_bswap64(CharIterator str, size_t depth)
     return v;
 }
 
-template <typename CharIterator>
-inline uint64_t get_char_uint64(CharIterator str, size_t depth);
-
-template <>
-inline uint64_t get_char_uint64(unsigned char* str, size_t depth)
-{
-    return get_char_uint64_bswap64(str, depth);
-}
-
-template <>
-inline uint64_t get_char_uint64(char* str, size_t depth)
-{
-    return get_char_uint64_bswap64(str, depth);
-}
-
-template <>
-inline uint64_t get_char_uint64(std::string::const_iterator str, size_t depth)
-{
-    return get_char_uint64_bswap64(&(*str), depth);
-}
-
 /******************************************************************************/
 
 /*!
@@ -175,6 +93,9 @@ template <typename StringSet, typename Traits>
 class StringSetBase
 {
 public:
+    //! \name CharIterator Comparisons
+    //! \{
+
     //! check equality of two strings a and b at char iterators ai and bi.
     bool is_equal(const typename Traits::String& a,
                   const typename Traits::CharIterator& ai,
@@ -205,6 +126,67 @@ public:
         const StringSet& ss = *static_cast<const StringSet*>(this);
         return ss.is_end(a, ai) ||
                (!ss.is_end(a, ai) && !ss.is_end(b, bi) && *ai <= *bi);
+    }
+
+    //! \}
+
+    //! \name Character Extractors
+    //! \{
+
+    typename Traits::Char
+    get_char(const typename Traits::String& s, size_t depth) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return *ss.get_chars(s, depth);
+    }
+
+    //! Return up to 1 characters of string s at iterator i packed into a uint8
+    //! (only works correctly for 8-bit characters)
+    uint8_t get_char_uint8_simple(
+        const typename Traits::String& s, typename Traits::CharIterator i) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+
+        if (ss.is_end(s, i)) return 0;
+        return uint8_t(*i);
+    }
+
+    //! Return up to 2 characters of string s at iterator i packed into a uint16
+    //! (only works correctly for 8-bit characters)
+    uint16_t get_char_uint16_simple(
+        const typename Traits::String& s, typename Traits::CharIterator i) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+
+        uint16_t v = 0;
+        if (ss.is_end(s, i)) return v;
+        v = (uint16_t(*i) << 8);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint16_t(*i) << 0);
+        return v;
+    }
+
+    //! Return up to 4 characters of string s at iterator i packed into a uint32
+    //! (only works correctly for 8-bit characters)
+    uint32_t get_char_uint32_simple(
+        const typename Traits::String& s, typename Traits::CharIterator i) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+
+        uint32_t v = 0;
+        if (ss.is_end(s, i)) return v;
+        v = (uint32_t(*i) << 24);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint32_t(*i) << 16);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint32_t(*i) << 8);
+        ++i;
+        if (ss.is_end(s, i)) return v;
+        v |= (uint32_t(*i) << 0);
+        return v;
     }
 
     //! Return up to 8 characters of string s at iterator i packed into a uint64
@@ -241,29 +223,22 @@ public:
         return v;
     }
 
-    typename Traits::Char
-    get_char(const typename Traits::String& s, size_t depth) const
-    {
-        const StringSet& ss = *static_cast<const StringSet*>(this);
-        return *ss.get_chars(s, depth);
-    }
-
     uint8_t get_uint8(const typename Traits::String& s, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-        return get_char_uint8(ss.get_chars(s, 0), depth);
+        return get_char_uint8_simple(s, ss.get_chars(s, depth));
     }
 
     uint16_t get_uint16(const typename Traits::String& s, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-        return get_char_uint16(ss.get_chars(s, 0), depth);
+        return get_char_uint16_simple(s, ss.get_chars(s, depth));
     }
 
     uint32_t get_uint32(const typename Traits::String& s, size_t depth) const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
-        return get_char_uint32(ss.get_chars(s, 0), depth);
+        return get_char_uint32_simple(s, ss.get_chars(s, depth));
     }
 
     uint64_t get_uint64(const typename Traits::String& s, size_t depth) const
@@ -271,6 +246,8 @@ public:
         const StringSet& ss = *static_cast<const StringSet*>(this);
         return get_char_uint64_simple(s, ss.get_chars(s, depth));
     }
+
+    //! \}
 
     //! Subset this string set using begin and size range.
     StringSet subr(const typename Traits::Iterator& begin, size_t size) const
