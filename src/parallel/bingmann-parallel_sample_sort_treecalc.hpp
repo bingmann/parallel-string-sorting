@@ -29,11 +29,12 @@
 //! Recursive TreeBuilder for full-descent and unrolled variants, constructs
 //! only a binary tree
 template <size_t numsplitters>
-struct TreeBuilderFullDescentTreeCalc
+class TreeBuilderFullDescentTreeCalc
 {
-    key_type     * m_tree;
+public:
+    key_type* m_tree;
     unsigned char* m_lcp_iter;
-    key_type     * m_samples;
+    key_type* m_samples;
 
     TreeBuilderFullDescentTreeCalc(key_type* splitter_tree, unsigned char* splitter_lcp,
                                    key_type* samples, size_t samplesize)
@@ -49,13 +50,13 @@ struct TreeBuilderFullDescentTreeCalc
         splitter_lcp[numsplitters] = 0; // sentinel for > everything bucket
     }
 
-    ptrdiff_t    snum(key_type* s) const
+    ptrdiff_t snum(key_type* s) const
     {
         return (ptrdiff_t)(s - m_samples);
     }
 
-    key_type     recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                         key_type& rec_prevkey)
+    key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
+                     key_type& rec_prevkey)
     {
         DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
                                              << ", treeidx=" << treeidx << ")");
@@ -89,8 +90,8 @@ struct TreeBuilderFullDescentTreeCalc
                                             << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
                                             << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                             | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                            | ((mykey & 0xFF) ? 0 : 0x80);  // marker for done splitters
 
             return recurse(midhi, hi, 2 * treeidx + 1, mykey);
         }
@@ -102,8 +103,8 @@ struct TreeBuilderFullDescentTreeCalc
                                             << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
                                             << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                             | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                            | ((mykey & 0xFF) ? 0 : 0x80);  // marker for done splitters
 
             return mykey;
         }
@@ -111,15 +112,15 @@ struct TreeBuilderFullDescentTreeCalc
 };
 
 template <size_t treebits>
-struct ClassifySimpleTreeCalc
+class ClassifySimpleTreeCalc
 {
+public:
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    key_type            splitter_tree[numsplitters + 1];
+    key_type splitter_tree[numsplitters + 1];
 
     /// binary search on splitter array for bucket number
-    inline unsigned int
-                        find_bkt_tree(const key_type& key) const
+    unsigned int find_bkt_tree(const key_type& key) const
     {
         // binary tree traversal without left branch
 
@@ -148,25 +149,23 @@ struct ClassifySimpleTreeCalc
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    inline void
-                    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
-            * bktout++ = find_bkt_tree(key);
+            *bktout++ = find_bkt_tree(key);
         }
     }
 
     //! return a splitter
-    inline key_type get_splitter(unsigned int i) const
+    key_type get_splitter(unsigned int i) const
     {
         return splitter_tree[TreeCalculations < treebits > ::in_to_levelorder(i + 1)];
     }
 
     /// build tree and splitter array from sample
-    inline void
-                    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         TreeBuilderFullDescentTreeCalc<numsplitters>
             (splitter_tree, splitter_lcp, samples, samplesize);
@@ -174,16 +173,16 @@ struct ClassifySimpleTreeCalc
 };
 
 template <size_t treebits>
-struct ClassifyUnrollTreeCalc
+class ClassifyUnrollTreeCalc
 {
+public:
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    key_type            splitter_tree[numsplitters + 1];
+    key_type splitter_tree[numsplitters + 1];
 
     /// binary search on splitter array for bucket number
     __attribute__ ((optimize("unroll-all-loops")))
-    inline unsigned int
-    find_bkt_tree(const key_type& key) const
+    unsigned int find_bkt_tree(const key_type& key) const
     {
         // binary tree traversal without left branch
 
@@ -212,26 +211,24 @@ struct ClassifyUnrollTreeCalc
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    inline void
-                    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
 
-            * bktout++ = find_bkt_tree(key);
+            *bktout++ = find_bkt_tree(key);
         }
     }
 
     //! return a splitter
-    inline key_type get_splitter(unsigned int i) const
+    key_type get_splitter(unsigned int i) const
     {
         return splitter_tree[TreeCalculations < treebits > ::in_to_levelorder(i + 1)];
     }
 
     /// build tree and splitter array from sample
-    inline void
-                    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         TreeBuilderFullDescentTreeCalc<numsplitters>
             (splitter_tree, splitter_lcp, samples, samplesize);
@@ -239,13 +236,13 @@ struct ClassifyUnrollTreeCalc
 };
 
 template <size_t treebits>
-struct ClassifyUnrollBothTreeCalc : public ClassifyUnrollTreeCalc<treebits>
+class ClassifyUnrollBothTreeCalc : public ClassifyUnrollTreeCalc<treebits>
 {
+public:
     /// search in splitter tree for bucket number, unrolled for U keys at once.
     template <int U>
     __attribute__ ((optimize("unroll-all-loops")))
-    inline void
-    find_bkt_tree_unroll(const key_type key[U], uint16_t obkt[U]) const
+    void find_bkt_tree_unroll(const key_type key[U], uint16_t obkt[U]) const
     {
         // binary tree traversal without left branch
 
@@ -285,8 +282,7 @@ struct ClassifyUnrollBothTreeCalc : public ClassifyUnrollTreeCalc<treebits>
     }
 
     /// classify all strings in area by walking tree and saving bucket id, unrolled loops
-    inline void
-    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {

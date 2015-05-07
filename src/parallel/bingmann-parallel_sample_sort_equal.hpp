@@ -27,11 +27,12 @@
 #define PSS_SRC_PARALLEL_BINGMANN_PARALLEL_SAMPLE_SORT_EQUAL_HEADER
 
 template <size_t numsplitters>
-struct TreeBuilderEqual
+class TreeBuilderEqual
 {
-    key_type     * m_tree;
+public:
+    key_type* m_tree;
     unsigned char* m_lcp_iter;
-    key_type     * m_samples;
+    key_type* m_samples;
 
     TreeBuilderEqual(key_type* splitter_tree, unsigned char* splitter_lcp,
                      key_type* samples, size_t samplesize)
@@ -47,13 +48,13 @@ struct TreeBuilderEqual
         splitter_lcp[numsplitters] = 0; // sentinel for > everything bucket
     }
 
-    ptrdiff_t    snum(key_type* s) const
+    ptrdiff_t snum(key_type* s) const
     {
         return (ptrdiff_t)(s - m_samples);
     }
 
-    key_type     recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                         key_type& rec_prevkey)
+    key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
+                     key_type& rec_prevkey)
     {
         DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
                                              << ", treeidx=" << treeidx << ")");
@@ -83,12 +84,14 @@ struct TreeBuilderEqual
 
             key_type xorSplit = prevkey ^ mykey;
 
-            DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
-                                            << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                            << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            DBG(debug_splitter, "    lcp: " <<
+                toHex(prevkey) << " XOR " << toHex(mykey) << " = " <<
+                toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
+                " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                             | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+            // marker for done splitters
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                            | ((mykey & 0xFF) ? 0 : 0x80);
 
             return recurse(midhi, hi, 2 * treeidx + 1, mykey);
         }
@@ -96,12 +99,14 @@ struct TreeBuilderEqual
         {
             key_type xorSplit = rec_prevkey ^ mykey;
 
-            DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
-                                            << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                            << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            DBG(debug_splitter, "    lcp: " <<
+                toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = " <<
+                toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
+                " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                             | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+            // marker for done splitters
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                            | ((mykey & 0xFF) ? 0 : 0x80);
 
             return mykey;
         }
@@ -109,15 +114,15 @@ struct TreeBuilderEqual
 };
 
 template <size_t treebits>
-struct ClassifyEqual
+class ClassifyEqual
 {
+public:
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    key_type            splitter_tree[numsplitters + 1];
+    key_type splitter_tree[numsplitters + 1];
 
     /// binary search on splitter array for bucket number
-    inline unsigned int
-                        find_bkt_tree(const key_type& key) const
+    unsigned int find_bkt_tree(const key_type& key) const
     {
         unsigned int i;
 
@@ -193,27 +198,25 @@ struct ClassifyEqual
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    inline void
-                    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
 
             unsigned int b = find_bkt_tree(key);
-            * bktout++ = b;
+            *bktout++ = b;
         }
     }
 
     //! return a splitter
-    inline key_type get_splitter(unsigned int i) const
+    key_type get_splitter(unsigned int i) const
     {
         return splitter_tree[TreeCalculations < treebits > ::in_to_levelorder(i)];
     }
 
     /// build tree and splitter array from sample
-    inline void
-                    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         TreeBuilderEqual<numsplitters>(splitter_tree, splitter_lcp,
                                        samples, samplesize);
@@ -221,39 +224,40 @@ struct ClassifyEqual
 };
 
 template <size_t TreeBits>
-struct ClassifyEqualUnrollTree
+class ClassifyEqualUnrollTree
 {
+public:
     static const size_t treebits = TreeBits;
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    key_type            splitter_tree[numsplitters + 1];
+    key_type splitter_tree[numsplitters + 1];
 
     /// specialized implementation of this find_bkt_tree are below
-    inline unsigned int
-                        find_bkt_tree(const key_type& key) const;
+    unsigned int
+    find_bkt_tree(const key_type& key) const;
 
     /// classify all strings in area by walking tree and saving bucket id
-    inline void
-                        classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    void
+    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
 
             unsigned int b = find_bkt_tree(key);
-            * bktout++ = b;
+            *bktout++ = b;
         }
     }
 
     //! return a splitter
-    inline key_type     get_splitter(unsigned int i) const
+    key_type get_splitter(unsigned int i) const
     {
         return splitter_tree[TreeCalculations < treebits > ::in_to_levelorder(i)];
     }
 
     /// build tree and splitter array from sample
-    inline void
-                        build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    void
+    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         TreeBuilderEqual<numsplitters>(splitter_tree, splitter_lcp,
                                        samples, samplesize);

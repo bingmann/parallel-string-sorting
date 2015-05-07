@@ -170,7 +170,7 @@ public:
     { }
 
     //! return sequential sorting threshold
-    inline size_t sequential_threshold()
+    size_t sequential_threshold()
     {
 #if PS5_ENABLE_RESTSIZE
         size_t wholesize = restsize.update().get();
@@ -181,7 +181,7 @@ public:
     }
 
     //! decrement number of unordered strings
-    inline void donesize(size_t n, size_t tid)
+    void donesize(size_t n, size_t tid)
     {
 #if PS5_ENABLE_RESTSIZE
         restsize.add(-n, tid);
@@ -273,15 +273,18 @@ getCharAtDepth(const key_type& a, unsigned char d)
 //! Recursive TreeBuilder for full-descent and unrolled variants, constructs a
 //! binary tree and the plain splitter array.
 template <size_t numsplitters>
-struct TreeBuilderFullDescent
+class TreeBuilderFullDescent
 {
-    key_type     * m_splitter;
-    key_type     * m_tree;
+public:
+    key_type* m_splitter;
+    key_type* m_tree;
     unsigned char* m_lcp_iter;
-    key_type     * m_samples;
+    key_type* m_samples;
 
-    TreeBuilderFullDescent(key_type* splitter, key_type* splitter_tree, unsigned char* splitter_lcp,
-                           key_type* samples, size_t samplesize)
+    TreeBuilderFullDescent(
+        key_type* splitter, key_type* splitter_tree,
+        unsigned char* splitter_lcp,
+        key_type* samples, size_t samplesize)
         : m_splitter(splitter),
           m_tree(splitter_tree),
           m_lcp_iter(splitter_lcp),
@@ -292,8 +295,10 @@ struct TreeBuilderFullDescent
 
         assert(m_splitter == splitter + numsplitters);
         assert(m_lcp_iter == splitter_lcp + numsplitters);
-        splitter_lcp[0] &= 0x80;        // overwrite sentinel lcp for first < everything bucket
-        splitter_lcp[numsplitters] = 0; // sentinel for > everything bucket
+        // overwrite sentinel lcp for first < everything bucket
+        splitter_lcp[0] &= 0x80;
+        // sentinel for > everything bucket
+        splitter_lcp[numsplitters] = 0;
     }
 
     ptrdiff_t snum(key_type* s) const
@@ -301,8 +306,8 @@ struct TreeBuilderFullDescent
         return (ptrdiff_t)(s - m_samples);
     }
 
-    key_type  recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                      key_type& rec_prevkey)
+    key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
+                     key_type& rec_prevkey)
     {
         DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
                                              << ", treeidx=" << treeidx << ")");
@@ -310,8 +315,8 @@ struct TreeBuilderFullDescent
         // pick middle element as splitter
         key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
 
-        DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                                    << toHex(*mid));
+        DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) <<
+            "] = " << toHex(*mid));
 
         key_type mykey = m_tree[treeidx] = *mid;
 #if 1
@@ -332,14 +337,16 @@ struct TreeBuilderFullDescent
 
             key_type xorSplit = prevkey ^ mykey;
 
-            DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
-                                            << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                            << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            DBG(debug_splitter, "    lcp: " <<
+                toHex(prevkey) << " XOR " << toHex(mykey) << " = " <<
+                toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
+                " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-            * m_splitter++ = mykey;
+            *m_splitter++ = mykey;
 
-            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                             | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+            // marker for done splitters
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                            | ((mykey & 0xFF) ? 0 : 0x80);
 
             return recurse(midhi, hi, 2 * treeidx + 1, mykey);
         }
@@ -347,14 +354,16 @@ struct TreeBuilderFullDescent
         {
             key_type xorSplit = rec_prevkey ^ mykey;
 
-            DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
-                                            << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                            << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            DBG(debug_splitter, "    lcp: " <<
+                toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = " <<
+                toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
+                " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-            * m_splitter++ = mykey;
+            *m_splitter++ = mykey;
 
-            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                             | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+            // marker for done splitters
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
+                            | ((mykey & 0xFF) ? 0 : 0x80);
 
             return mykey;
         }
@@ -366,16 +375,16 @@ struct TreeBuilderFullDescent
 // * unrolled variants
 
 template <size_t treebits>
-struct ClassifySimple
+class ClassifySimple
 {
+public:
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    key_type            splitter[numsplitters];
-    key_type            splitter_tree[numsplitters + 1];
+    key_type splitter[numsplitters];
+    key_type splitter_tree[numsplitters + 1];
 
     /// binary search on splitter array for bucket number
-    inline unsigned int
-                        find_bkt_tree(const key_type& key) const
+    unsigned int find_bkt_tree(const key_type& key) const
     {
         // binary tree traversal without left branch
 
@@ -387,7 +396,8 @@ struct ClassifySimple
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
 #else
-            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is slightly faster
+            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is
+            // slightly faster
             if (key <= splitter_tree[i])
                 i = 2 * i + 0;
             else    // (key > splitter_tree[i])
@@ -404,42 +414,44 @@ struct ClassifySimple
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    inline void
-                    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    void classify(string* strB, string* strE, uint16_t* bktout,
+                  size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
 
             unsigned int b = find_bkt_tree(key);
-            * bktout++ = b;
+            *bktout++ = b;
         }
     }
 
     //! return a splitter
-    inline key_type get_splitter(unsigned int i) const
+    key_type get_splitter(unsigned int i) const
     { return splitter[i]; }
 
     /// build tree and splitter array from sample
-    inline void
-                    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    void build(key_type* samples, size_t samplesize,
+               unsigned char* splitter_lcp)
     {
-        TreeBuilderFullDescent<numsplitters>(splitter, splitter_tree, splitter_lcp,
-                                             samples, samplesize);
+        TreeBuilderFullDescent<numsplitters>(
+            splitter, splitter_tree, splitter_lcp,
+            samples, samplesize);
     }
 };
 
 template <size_t treebits>
-struct ClassifyUnrollTree
+class ClassifyUnrollTree
 {
+public:
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    key_type            splitter[numsplitters];
-    key_type            splitter_tree[numsplitters + 1];
+    key_type splitter[numsplitters];
+    key_type splitter_tree[numsplitters + 1];
 
     /// binary search on splitter array for bucket number
     __attribute__ ((optimize("unroll-all-loops")))
-    inline unsigned int
+    unsigned int
     find_bkt_tree(const key_type& key) const
     {
         // binary tree traversal without left branch
@@ -452,7 +464,8 @@ struct ClassifyUnrollTree
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
 #else
-            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is slightly faster
+            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is
+            // slightly faster
             if (key <= splitter_tree[i])
                 i = 2 * i + 0;
             else    // (key > splitter_tree[i])
@@ -469,38 +482,40 @@ struct ClassifyUnrollTree
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    inline void
-                    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    void
+    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
 
             unsigned int b = find_bkt_tree(key);
-            * bktout++ = b;
+            *bktout++ = b;
         }
     }
 
     //! return a splitter
-    inline key_type get_splitter(unsigned int i) const
+    key_type get_splitter(unsigned int i) const
     { return splitter[i]; }
 
     /// build tree and splitter array from sample
-    inline void
-                    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    void
+    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
-        TreeBuilderFullDescent<numsplitters>(splitter, splitter_tree, splitter_lcp,
-                                             samples, samplesize);
+        TreeBuilderFullDescent<numsplitters>(
+            splitter, splitter_tree, splitter_lcp,
+            samples, samplesize);
     }
 };
 
 template <size_t treebits>
-struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
+class ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
 {
+public:
     /// search in splitter tree for bucket number, unrolled for U keys at once.
     template <int U>
     __attribute__ ((optimize("unroll-all-loops")))
-    inline void
+    void
     find_bkt_tree_unroll(const key_type key[U], uint16_t obkt[U]) const
     {
         // binary tree traversal without left branch
@@ -520,7 +535,8 @@ struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
                 // in gcc-4.6.3 this produces a SETA, LEA sequence
                 i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
 #else
-                // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is slightly faster
+                // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which
+                // is slightly faster
                 if (key[u] <= splitter_tree[i[u]])
                     i[u] = 2 * i[u] + 0;
                 else    // (key > splitter_tree[i[u]])
@@ -532,17 +548,21 @@ struct ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
         for (int u = 0; u < U; ++u)
             i[u] -= numsplitters + 1;
 
-        for (int u = 0; u < U; ++u)
-            obkt[u] = i[u] * 2;                                                 // < bucket
+        for (int u = 0; u < U; ++u) {
+            // < bucket
+            obkt[u] = i[u] * 2;
+        }
 
         for (int u = 0; u < U; ++u)
         {
-            if (i[u] < numsplitters && splitter[i[u]] == key[u]) obkt[u] += 1;  // equal bucket
+            // equal bucket
+            if (i[u] < numsplitters && splitter[i[u]] == key[u]) obkt[u] += 1;
         }
     }
 
-    /// classify all strings in area by walking tree and saving bucket id, unrolled loops
-    inline void
+    /// classify all strings in area by walking tree and saving bucket id,
+    /// unrolled loops
+    void
     classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
@@ -630,7 +650,9 @@ insertion_sort(const stringtools::StringShadowLcpCacheOutPtr& strptr, size_t dep
 // *** LCP Calculation for finished Sample Sort Steps
 
 template <size_t bktnum, typename Classify, typename StringPtr, typename BktSizeType>
-void sample_sort_lcp(const Classify& classifier, const StringPtr& strptr, size_t depth, const BktSizeType* bkt)
+void sample_sort_lcp(const Classify& classifier,
+                     const StringPtr& strptr, size_t depth,
+                     const BktSizeType* bkt)
 {
     assert(!strptr.flipped());
     assert(strptr.check());
@@ -682,8 +704,9 @@ even_first:
             strptr.set_lcp(bkt[b], depth + rlcp);
             strptr.set_cache(bkt[b], getCharAtDepth(thiskey, rlcp));
 
-            DBG(debug_lcp, "LCP at odd-bucket " << b << " [" << bkt[b] << "," << bkt[b + 1]
-                                                << ") is " << strptr.lcp(bkt[b]));
+            DBG(debug_lcp, "LCP at odd-bucket " << b <<
+                " [" << bkt[b] << "," << bkt[b + 1] << ")" <<
+                " is " << strptr.lcp(bkt[b]));
 
             prevkey = thiskey;
             assert(prevkey == get_char<key_type>(strptr.out(bkt[b + 1] - 1), depth));
@@ -699,8 +722,9 @@ even_bucket:
             strptr.set_lcp(bkt[b], depth + rlcp);
             strptr.set_cache(bkt[b], getCharAtDepth(thiskey, rlcp));
 
-            DBG(debug_lcp, "LCP at even-bucket " << b << " [" << bkt[b] << "," << bkt[b + 1]
-                                                 << ") is " << strptr.lcp(bkt[b]));
+            DBG(debug_lcp, "LCP at even-bucket " << b <<
+                " [" << bkt[b] << "," << bkt[b + 1] << ")" <<
+                " is " << strptr.lcp(bkt[b]));
 
             prevkey = get_char<key_type>(strptr.out(bkt[b + 1] - 1), depth);
         }
@@ -716,15 +740,16 @@ void Enqueue(Context& ctx, SortStep* sstep, const StringPtr& strptr, size_t dept
 
 template <typename Context, template <size_t> class Classify, typename StringPtr,
           typename BktSizeType>
-struct SmallsortJob : public Context::job_type, public SortStep
+class SmallsortJob : public Context::job_type, public SortStep
 {
+public:
     //! parent sort step
-    SortStep  * pstep;
+    SortStep* pstep;
 
-    size_t    thrid;
+    size_t thrid;
 
     StringPtr in_strptr;
-    size_t    in_depth;
+    size_t in_depth;
 
     typedef BktSizeType bktsize_type;
 
@@ -732,20 +757,23 @@ struct SmallsortJob : public Context::job_type, public SortStep
                  const StringPtr& strptr, size_t depth)
         : pstep(_pstep), in_strptr(strptr), in_depth(depth)
     {
-        DBG(debug_steps, "enqueue depth=" << in_depth << " size=" << in_strptr.size() << " flip=" << in_strptr.flipped());
+        DBG(debug_steps, "enqueue depth=" << in_depth <<
+            " size=" << in_strptr.size() << " flip=" << in_strptr.flipped());
 
         ctx.jobqueue.enqueue(this);
     }
 
-    struct SeqSampleSortStep
+    class SeqSampleSortStep
     {
+    public:
 #if 0
         static const size_t numsplitters2 = 2 * 16;
 #else
         // bounding equations:
         // a) K * key_type splitter_tree size (and maybe K * key_type equal-cmp splitters)
         // b) 2 * K + 1 buckets (bktsize_type) when counting bkt occurances.
-        static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
+        static const size_t numsplitters2
+            = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 #endif
 
         static const size_t treebits = logfloor_<numsplitters2>::value;
@@ -753,18 +781,19 @@ struct SmallsortJob : public Context::job_type, public SortStep
 
         static const size_t bktnum = 2 * numsplitters + 1;
 
-        StringPtr           strptr;
-        size_t              idx;
-        size_t              depth;
+        StringPtr strptr;
+        size_t idx;
+        size_t depth;
 
-        bktsize_type        bkt[bktnum + 1];
+        bktsize_type bkt[bktnum + 1];
 
 #if CALC_LCP
-        Classify<treebits>  classifier;
+        Classify<treebits> classifier;
 #endif
-        unsigned char       splitter_lcp[numsplitters + 1];
+        unsigned char splitter_lcp[numsplitters + 1];
 
-        SeqSampleSortStep(Context& ctx, const StringPtr& _strptr, size_t _depth, uint16_t* bktcache)
+        SeqSampleSortStep(Context& ctx, const StringPtr& _strptr, size_t _depth,
+                          uint16_t* bktcache)
             : strptr(_strptr), idx(0), depth(_depth)
         {
             size_t n = strptr.size();
@@ -839,10 +868,10 @@ struct SmallsortJob : public Context::job_type, public SortStep
 
     // *** Stack of Recursive Sample Sort Steps
 
-    uint16_t                       * bktcache;
-    size_t                         bktcache_size;
+    uint16_t* bktcache;
+    size_t bktcache_size;
 
-    size_t                         ss_pop_front;
+    size_t ss_pop_front;
     std::vector<SeqSampleSortStep> ss_stack;
 
     virtual bool run(Context& ctx)
@@ -1040,7 +1069,7 @@ struct SmallsortJob : public Context::job_type, public SortStep
         ++ss_pop_front;
     }
 
-    // *********************************************************************************
+    // *************************************************************************
     // *** Stack of Recursive MKQS Steps
 
     static inline int cmp(const key_type& a, const key_type& b)
@@ -1137,21 +1166,23 @@ struct SmallsortJob : public Context::job_type, public SortStep
         }
     }
 
-    struct MKQSStep
+    class MKQSStep
     {
-        StringPtr     strptr;
-        key_type      * cache;
-        size_t        num_lt, num_eq, num_gt, depth;
-        size_t        idx;
+    public:
+        StringPtr strptr;
+        key_type* cache;
+        size_t num_lt, num_eq, num_gt, depth;
+        size_t idx;
         unsigned char eq_recurse;
 #if CALC_LCP_MKQS == 1
-        char_type     dchar_eq, dchar_gt;
+        char_type dchar_eq, dchar_gt;
         unsigned char lcp_lt, lcp_eq, lcp_gt;
 #elif CALC_LCP_MKQS == 2
-        key_type      pivot;
+        key_type pivot;
 #endif
 
-        MKQSStep(Context& ctx, const StringPtr& _strptr, key_type* _cache, size_t _depth, bool CacheDirty)
+        MKQSStep(Context& ctx, const StringPtr& _strptr,
+                 key_type* _cache, size_t _depth, bool CacheDirty)
             : strptr(_strptr), cache(_cache), depth(_depth), idx(0)
         {
             size_t n = strptr.size();
@@ -1319,7 +1350,7 @@ struct SmallsortJob : public Context::job_type, public SortStep
         }
     };
 
-    size_t                ms_pop_front;
+    size_t ms_pop_front;
     std::vector<MKQSStep> ms_stack;
 
     void sort_mkqs_cache(Context& ctx, const StringPtr& strptr, size_t depth)
@@ -1517,45 +1548,46 @@ struct SmallsortJob : public Context::job_type, public SortStep
 // *** SampleSortStep out-of-place parallel sample sort with separate Jobs
 
 template <typename Context, template <size_t> class Classify, typename StringPtr>
-struct SampleSortStep : public SortStep
+class SampleSortStep : public SortStep
 {
+public:
 #if 0
-    static const size_t       numsplitters2 = 16;
+    static const size_t numsplitters2 = 16;
 #else
     // bounding equation: 2*K+1 buckets when counting bkt occurances.
-    static const size_t       numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
+    static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 #endif
-    static const size_t       treebits = logfloor_<numsplitters2>::value;
-    static const size_t       numsplitters = (1 << treebits) - 1;
+    static const size_t treebits = logfloor_<numsplitters2>::value;
+    static const size_t numsplitters = (1 << treebits) - 1;
 
-    static const size_t       bktnum = 2 * numsplitters + 1;
+    static const size_t bktnum = 2 * numsplitters + 1;
 
     //! type of Job
     typedef typename Context::job_type job_type;
 
     //! parent sort step notification
-    SortStep                  * pstep;
+    SortStep* pstep;
 
     //! string pointers, size, and current sorting depth
-    StringPtr                 strptr;
-    size_t                    depth;
+    StringPtr strptr;
+    size_t depth;
 
     //! number of parts into which the strings were split
-    unsigned int              parts;
+    unsigned int parts;
     //! size of all parts except the last
-    size_t                    psize;
+    size_t psize;
     //! number of threads still working
     std::atomic<unsigned int> pwork;
 
     //! classifier instance and variables (contains splitter tree
-    Classify<treebits>        classifier;
+    Classify<treebits> classifier;
     //! LCPs of splitters, needed for recursive calls
-    unsigned char             splitter_lcp[numsplitters + 1];
+    unsigned char splitter_lcp[numsplitters + 1];
 
     //! individual bucket array of threads, keep bkt[0] for DistributeJob
-    size_t                    * bkt[MAXPROCS];
+    size_t* bkt[MAXPROCS];
     //! bucket ids cache, created by classifier and later counted
-    uint16_t                  * bktcache[MAXPROCS];
+    uint16_t* bktcache[MAXPROCS];
 
     // *** Classes for JobQueue
 
@@ -2134,18 +2166,18 @@ PSS_CONTESTANT_PARALLEL_LCP(
 // *** Classification with Binary Search in Splitter Array (old BSC variant)
 
 template <size_t treebits>
-struct ClassifyBinarySearch
+class ClassifyBinarySearch
 {
+public:
     // NOTE: for binary search numsplitters need not be 2^k-1, any size will
     // do, but the tree implementations are always faster, so we keep this only
     // for historical reasons.
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    key_type            splitter[numsplitters];
+    key_type splitter[numsplitters];
 
     /// binary search on splitter array for bucket number
-    inline unsigned int
-                        find_bkt_tree(const key_type& key) const
+    unsigned int find_bkt_tree(const key_type& key) const
     {
         unsigned int lo = 0, hi = numsplitters;
 
@@ -2167,25 +2199,23 @@ struct ClassifyBinarySearch
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    inline void
-                    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
     {
         for (string* str = strB; str != strE; )
         {
             key_type key = get_char<key_type>(*str++, depth);
 
             unsigned int b = find_bkt_tree(key);
-            * bktout++ = b;
+            *bktout++ = b;
         }
     }
 
     //! return a splitter
-    inline key_type get_splitter(unsigned int i) const
+    key_type get_splitter(unsigned int i) const
     { return splitter[i]; }
 
     /// build tree and splitter array from sample
-    inline void
-                    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
         const size_t oversample_factor = samplesize / numsplitters;
         DBG(debug_splitter, "oversample_factor: " << oversample_factor);
@@ -2202,8 +2232,8 @@ struct ClassifyBinarySearch
 
                 DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
 
-                DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                                                                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                DBG3(debug_splitter, count_high_zero_bits(xorSplit) <<
+                     " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                 splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
             }
