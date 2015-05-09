@@ -149,11 +149,15 @@ public:
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            key_type key = get_char<key_type>(*str++, depth);
+            key_type key = strset.get_uint64(*begin++, depth);
             *bktout++ = find_bkt_tree(key);
         }
     }
@@ -211,12 +215,15 @@ public:
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            key_type key = get_char<key_type>(*str++, depth);
-
+            key_type key = strset.get_uint64(*begin++, depth);
             *bktout++ = find_bkt_tree(key);
         }
     }
@@ -281,30 +288,34 @@ public:
         }
     }
 
-    /// classify all strings in area by walking tree and saving bucket id, unrolled loops
-    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    /// classify all strings in area by walking tree and saving bucket id,
+    /// unrolled loops
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
             static const int rollout = 4;
-            if (str + rollout < strE)
+            if (begin + rollout < end)
             {
                 key_type key[rollout];
-                key[0] = get_char<key_type>(str[0], depth);
-                key[1] = get_char<key_type>(str[1], depth);
-                key[2] = get_char<key_type>(str[2], depth);
-                key[3] = get_char<key_type>(str[3], depth);
+                key[0] = strset.get_uint64(begin[0], depth);
+                key[1] = strset.get_uint64(begin[1], depth);
+                key[2] = strset.get_uint64(begin[2], depth);
+                key[3] = strset.get_uint64(begin[3], depth);
 
                 find_bkt_tree_unroll<rollout>(key, bktout);
 
-                str += rollout;
+                begin += rollout;
                 bktout += rollout;
             }
             else
             {
                 // binary search in splitter with equal check
-                key_type key = get_char<key_type>(*str++, depth);
-
+                key_type key = strset.get_uint64(*begin++, depth);
                 *bktout++ = this->find_bkt_tree(key);
             }
         }

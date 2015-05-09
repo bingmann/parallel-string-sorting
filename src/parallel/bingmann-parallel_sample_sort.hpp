@@ -76,6 +76,7 @@ namespace bingmann_parallel_sample_sort_lcp {
 #endif
 
 using namespace stringtools;
+using namespace parallel_string_sorting;
 using namespace jobqueue;
 
 static const bool debug_steps = false;
@@ -414,15 +415,16 @@ public:
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    void classify(string* strB, string* strE, uint16_t* bktout,
-                  size_t depth) const
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            key_type key = get_char<key_type>(*str++, depth);
-
-            unsigned int b = find_bkt_tree(key);
-            *bktout++ = b;
+            key_type key = strset.get_uint64(*begin++, depth);
+            *bktout++ = find_bkt_tree(key);
         }
     }
 
@@ -482,15 +484,16 @@ public:
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    void
-    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            key_type key = get_char<key_type>(*str++, depth);
-
-            unsigned int b = find_bkt_tree(key);
-            *bktout++ = b;
+            key_type key = strset.get_uint64(*begin++, depth);
+            *bktout++ = find_bkt_tree(key);
         }
     }
 
@@ -562,32 +565,33 @@ public:
 
     /// classify all strings in area by walking tree and saving bucket id,
     /// unrolled loops
-    void
-    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
             static const int rollout = 4;
-            if (str + rollout < strE)
+            if (begin + rollout < end)
             {
                 key_type key[rollout];
-                key[0] = get_char<key_type>(str[0], depth);
-                key[1] = get_char<key_type>(str[1], depth);
-                key[2] = get_char<key_type>(str[2], depth);
-                key[3] = get_char<key_type>(str[3], depth);
+                key[0] = strset.get_uint64(begin[0], depth);
+                key[1] = strset.get_uint64(begin[1], depth);
+                key[2] = strset.get_uint64(begin[2], depth);
+                key[3] = strset.get_uint64(begin[3], depth);
 
                 find_bkt_tree_unroll<rollout>(key, bktout);
 
-                str += rollout;
+                begin += rollout;
                 bktout += rollout;
             }
             else
             {
                 // binary search in splitter with equal check
-                key_type key = get_char<key_type>(*str++, depth);
-
-                unsigned int b = this->find_bkt_tree(key);
-                *bktout++ = b;
+                key_type key = strset.get_uint64(*begin++, depth);
+                *bktout++ = this->find_bkt_tree(key);
             }
         }
     }
@@ -596,54 +600,63 @@ public:
 // ****************************************************************************
 // *** Insertion Sort Type-Switch
 
+template <typename StringSet>
 static inline void
-insertion_sort(const stringtools::StringShadowPtr& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowPtr<StringSet>& strptr,
+               size_t depth)
 {
     assert(!strptr.flipped());
 
     if (!use_lcp_inssort)
-        inssort::inssort(strptr.output(), strptr.size(), depth);
+        inssort::inssort_generic(strptr.output(), depth);
     else
-        bingmann_lcp_inssort::lcp_insertion_sort(strptr.output(), strptr.size(), depth);
+        bingmann_lcp_inssort::lcp_insertion_sort_nolcp(strptr.output(), depth);
 }
 
+template <typename StringSet>
 static inline void
-insertion_sort(const stringtools::StringShadowLcpPtr& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowLcpPtr<StringSet>& strptr,
+               size_t depth)
 {
     assert(!strptr.flipped());
 
     bingmann_lcp_inssort::lcp_insertion_sort(
-        strptr.output(), strptr.lcparray(), strptr.size(), depth);
+        strptr.output(), strptr.lcparray(), depth);
 }
 
+template <typename StringSet>
 static inline void
-insertion_sort(const stringtools::StringShadowOutPtr& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowOutPtr<StringSet>& strptr,
+               size_t depth)
 {
     assert(!strptr.flipped());
 
     if (!use_lcp_inssort)
-        inssort::inssort(strptr.output(), strptr.size(), depth);
+        inssort::inssort_generic(strptr.output(), depth);
     else
-        bingmann_lcp_inssort::lcp_insertion_sort(strptr.output(), strptr.size(), depth);
+        bingmann_lcp_inssort::lcp_insertion_sort_nolcp(strptr.output(), depth);
 }
 
+template <typename StringSet>
 static inline void
-insertion_sort(const stringtools::StringShadowLcpOutPtr& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowLcpOutPtr<StringSet>& strptr,
+               size_t depth)
 {
     assert(!strptr.flipped());
 
     bingmann_lcp_inssort::lcp_insertion_sort(
-        strptr.output(), strptr.lcparray(), strptr.size(), depth);
+        strptr.output(), strptr.lcparray(), depth);
 }
 
+template <typename StringSet>
 static inline void
-insertion_sort(const stringtools::StringShadowLcpCacheOutPtr& strptr, size_t depth)
+insertion_sort(const stringtools::StringShadowLcpCacheOutPtr<StringSet>& strptr,
+               size_t depth)
 {
     assert(!strptr.flipped());
 
     bingmann_lcp_inssort::lcp_insertion_sort_cache(
-        strptr.output(), strptr.lcparray(), strptr.cache(),
-        strptr.size(), depth);
+        strptr.output(), strptr.lcparray(), strptr.cache(), depth);
 }
 
 // ****************************************************************************
@@ -656,6 +669,8 @@ void sample_sort_lcp(const Classify& classifier,
 {
     assert(!strptr.flipped());
     assert(strptr.check());
+
+    const typename StringPtr::StringSet& strset = strptr.output();
 
     size_t b = 0;         // current bucket number
     key_type prevkey = 0; // previous key
@@ -672,7 +687,7 @@ void sample_sort_lcp(const Classify& classifier,
         if (bkt[b] != bkt[b + 1])
         {
             prevkey = classifier.get_splitter(b / 2);
-            assert(prevkey == get_char<key_type>(strptr.out(bkt[b + 1] - 1), depth));
+            assert(prevkey == strset.get_uint64(strset.at(bkt[b + 1] - 1), depth));
             break;
         }
         ++b;
@@ -680,7 +695,7 @@ even_first:
         // even bucket: <, << or > bkt
         if (bkt[b] != bkt[b + 1])
         {
-            prevkey = get_char<key_type>(strptr.out(bkt[b + 1] - 1), depth);
+            prevkey = strset.get_uint64(strset.at(bkt[b + 1] - 1), depth);
             break;
         }
         ++b;
@@ -698,7 +713,7 @@ even_first:
         if (bkt[b] != bkt[b + 1])
         {
             key_type thiskey = classifier.get_splitter(b / 2);
-            assert(thiskey == get_char<key_type>(strptr.out(bkt[b]), depth));
+            assert(thiskey == strset.get_uint64(strset.at(bkt[b]), depth));
 
             int rlcp = lcpKeyType(prevkey, thiskey);
             strptr.set_lcp(bkt[b], depth + rlcp);
@@ -709,14 +724,14 @@ even_first:
                 " is " << strptr.lcp(bkt[b]));
 
             prevkey = thiskey;
-            assert(prevkey == get_char<key_type>(strptr.out(bkt[b + 1] - 1), depth));
+            assert(prevkey == strset.get_uint64(strset.at(bkt[b + 1] - 1), depth));
         }
         ++b;
 even_bucket:
         // even bucket: <, << or > bkt
         if (bkt[b] != bkt[b + 1])
         {
-            key_type thiskey = get_char<key_type>(strptr.out(bkt[b]), depth);
+            key_type thiskey = strset.get_uint64(strset.at(bkt[b]), depth);
 
             int rlcp = lcpKeyType(prevkey, thiskey);
             strptr.set_lcp(bkt[b], depth + rlcp);
@@ -726,7 +741,7 @@ even_bucket:
                 " [" << bkt[b] << "," << bkt[b + 1] << ")" <<
                 " is " << strptr.lcp(bkt[b]));
 
-            prevkey = get_char<key_type>(strptr.out(bkt[b + 1] - 1), depth);
+            prevkey = strset.get_uint64(strset.at(bkt[b + 1] - 1), depth);
         }
         ++b;
     }
@@ -738,8 +753,8 @@ even_bucket:
 template <template <size_t> class Classify, typename Context, typename StringPtr>
 void Enqueue(Context& ctx, SortStep* sstep, const StringPtr& strptr, size_t depth);
 
-template <typename Context, template <size_t> class Classify, typename StringPtr,
-          typename BktSizeType>
+template <typename Context, template <size_t> class Classify,
+          typename StringPtr, typename BktSizeType>
 class SmallsortJob : public Context::job_type, public SortStep
 {
 public:
@@ -750,6 +765,8 @@ public:
 
     StringPtr in_strptr;
     size_t in_depth;
+
+    typedef typename StringPtr::StringSet StringSet;
 
     typedef BktSizeType bktsize_type;
 
@@ -805,12 +822,14 @@ public:
 
             key_type samples[samplesize];
 
-            string* strings = strptr.active();
-            LCGRandom rng(strings);
+            const StringSet& strset = strptr.active();
+            typename StringSet::Iterator begin = strset.begin();
+
+            LCGRandom rng(&samples);
 
             for (unsigned int i = 0; i < samplesize; ++i)
             {
-                samples[i] = get_char<key_type>(strings[rng() % n], depth);
+                samples[i] = strset.get_uint64(strset[begin + rng() % n], depth);
             }
 
             std::sort(samples, samples + samplesize);
@@ -822,7 +841,8 @@ public:
 
             // step 2: classify all strings
 
-            classifier.classify(strings, strings + n, bktcache, depth);
+            classifier.classify(
+                strset, strset.begin(), strset.end(), bktcache, depth);
 
             // step 2.5: count bucket sizes
 
@@ -843,12 +863,14 @@ public:
 
             // step 4: premute out-of-place
 
-            string* strB = strptr.active();
-            string* strE = strptr.active() + strptr.size();
-            string* sorted = strptr.shadow(); // get alternative shadow pointer array
+            const StringSet& strB = strptr.active();
+            // get alternative shadow pointer array
+            const StringSet& sorted = strptr.shadow();
+            typename StringSet::Iterator sbegin = sorted.begin();
 
-            for (string* str = strB; str != strE; ++str, ++bktcache)
-                sorted[--bkt[*bktcache]] = *str;
+            for (typename StringSet::Iterator str = strB.begin();
+                 str != strB.end(); ++str, ++bktcache)
+                *(sbegin + --bkt[*bktcache]) = std::move(*str);
 
             // bkt is afterwards the exclusive prefix sum of bktsize
 
@@ -860,7 +882,7 @@ public:
         void calculate_lcp()
         {
 #if CALC_LCP
-            DBG(debug_lcp, "Calculate LCP after sample sort step " << strptr);
+            //DBG(debug_lcp, "Calculate LCP after sample sort step " << strptr);
             sample_sort_lcp<bktnum>(classifier, strptr.original(), depth, bkt);
 #endif
         }
@@ -966,9 +988,11 @@ public:
                         ;
                     else if (s.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
                         DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " is done!");
-                        sp = sp.copy_back();
+                        StringPtr spb = sp.copy_back();
 #if CALC_LCP
-                        sp.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
+                        spb.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
+#else
+                        UNUSED(spb);
 #endif
                         ctx.donesize(bktsize, thrid);
                     }
@@ -1049,9 +1073,11 @@ public:
                     ;
                 else if (s.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
                     DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " is done!");
-                    sp = sp.copy_back();
+                    StringPtr spb = sp.copy_back();
 #if CALC_LCP
-                    sp.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
+                    spb.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
+#else
+                    UNUSED(spb);
 #endif
                     ctx.donesize(bktsize, thrid);
                 }
@@ -1099,19 +1125,19 @@ public:
     static inline void
     insertion_sort_cache_block(const StringPtr& strptr, key_type* cache)
     {
-        string* strings = strptr.output();
+        const StringSet& strings = strptr.output();
         unsigned int n = strptr.size();
         unsigned int pi, pj;
         for (pi = 1; --n > 0; ++pi) {
-            string tmps = strings[pi];
+            typename StringSet::String tmps = std::move(strings.at(pi));
             key_type tmpc = cache[pi];
             for (pj = pi; pj > 0; --pj) {
                 if (cache[pj - 1] <= tmpc)
                     break;
-                strings[pj] = strings[pj - 1];
+                strings.at(pj) = std::move(strings.at(pj - 1));
                 cache[pj] = cache[pj - 1];
             }
-            strings[pj] = tmps;
+            strings.at(pj) = std::move(tmps);
             cache[pj] = tmpc;
         }
     }
@@ -1187,11 +1213,12 @@ public:
         {
             size_t n = strptr.size();
 
-            string* strings = strptr.active();
+            const StringSet& strset = strptr.active();
 
             if (CacheDirty) {
-                for (size_t i = 0; i < n; ++i) {
-                    cache[i] = get_char<key_type>(strings[i], depth);
+                typename StringSet::Iterator it = strset.begin();
+                for (size_t i = 0; i < n; ++i, ++it) {
+                    cache[i] = strset.get_uint64(*it, depth);
                 }
             }
             // select median of 9
@@ -1201,7 +1228,7 @@ public:
                             med3(cache, n - 1 - n / 4, n - 1 - n / 8, n - 3)
                             );
             // swap pivot to first position
-            std::swap(strings[0], strings[p]);
+            std::swap(strset.at(0), strset.at(p));
             std::swap(cache[0], cache[p]);
             // save the pivot value
             key_type pivot = cache[0];
@@ -1225,7 +1252,7 @@ public:
                         break;
                     }
                     else if (r == 0) {
-                        std::swap(strings[leq], strings[llt]);
+                        std::swap(strset.at(leq), strset.at(llt));
                         std::swap(cache[leq], cache[llt]);
                         leq++;
                     }
@@ -1246,7 +1273,7 @@ public:
                         break;
                     }
                     else if (r == 0) {
-                        std::swap(strings[req], strings[rgt]);
+                        std::swap(strset.at(req), strset.at(rgt));
                         std::swap(cache[req], cache[rgt]);
                         req--;
                     }
@@ -1259,7 +1286,7 @@ public:
                 }
                 if (llt > rgt)
                     break;
-                std::swap(strings[llt], strings[rgt]);
+                std::swap(strset.at(llt), strset.at(rgt));
                 std::swap(cache[llt], cache[rgt]);
                 ++llt;
                 --rgt;
@@ -1274,13 +1301,16 @@ public:
 
             // swap equal values from left to center
             const size_t size1 = std::min(num_leq, num_lt);
-            std::swap_ranges(strings, strings + size1, strings + llt - size1);
+            std::swap_ranges(strset.begin(), strset.begin() + size1,
+                             strset.begin() + llt - size1);
             std::swap_ranges(cache, cache + size1, cache + llt - size1);
 
             // swap equal values from right to center
             const size_t size2 = std::min(num_req, num_gt);
-            std::swap_ranges(strings + llt, strings + llt + size2, strings + n - size2);
-            std::swap_ranges(cache + llt, cache + llt + size2, cache + n - size2);
+            std::swap_ranges(strset.begin() + llt, strset.begin() + llt + size2,
+                             strset.begin() + n - size2);
+            std::swap_ranges(cache + llt, cache + llt + size2,
+                             cache + n - size2);
 
             // No recursive sorting if pivot has a zero byte
             this->eq_recurse = (pivot & 0xFF);
@@ -1328,7 +1358,8 @@ public:
 #elif CALC_LCP_MKQS == 2
             if (num_lt > 0)
             {
-                key_type max_lt = get_char<key_type>(strptr.original().out(num_lt - 1), depth);
+                key_type max_lt = strptr.original().output().get_uint64(
+                    strptr.original().out(num_lt - 1), depth);
 
                 unsigned int rlcp = lcpKeyType(max_lt, pivot);
                 DBG(debug_lcp, "LCP lt with pivot: " << depth + rlcp);
@@ -1338,7 +1369,8 @@ public:
             }
             if (num_gt > 0)
             {
-                key_type min_gt = get_char<key_type>(strptr.original().out(num_lt + num_eq), depth);
+                key_type min_gt = strptr.original().output().get_uint64(
+                    strptr.original().out(num_lt + num_eq), depth);
 
                 unsigned int rlcp = lcpKeyType(pivot, min_gt);
                 DBG(debug_lcp, "LCP pivot with gt: " << depth + rlcp);
@@ -1375,7 +1407,8 @@ public:
         assert(ms_pop_front == 0);
         assert(ms_stack.size() == 0);
 
-        // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
+        // std::deque is much slower than std::vector, so we use an artificial
+        // pop_front variable.
         ms_stack.push_back(MKQSStep(ctx, strptr, cache, depth, true));
 
         while (ms_stack.size() > ms_pop_front)
@@ -1409,13 +1442,13 @@ public:
                 assert(ms.num_eq > 0);
 
                 if (!ms.eq_recurse) {
-                    sp = sp.copy_back();
+                    StringPtr spb = sp.copy_back();
 #if CALC_LCP_MKQS == 1
-                    sp.fill_lcp(ms.depth + ms.lcp_eq);
+                    spb.fill_lcp(ms.depth + ms.lcp_eq);
 #elif CALC_LCP_MKQS == 2
-                    sp.fill_lcp(ms.depth + lcpKeyDepth(ms.pivot));
+                    spb.fill_lcp(ms.depth + lcpKeyDepth(ms.pivot));
 #endif
-                    ctx.donesize(sp.size(), thrid);
+                    ctx.donesize(spb.size(), thrid);
                 }
                 else if (ms.num_eq < g_inssort_threshold) {
                     ScopedTimerKeeperMT tm_inssort(ctx.timers, TM_INSSORT);
@@ -1501,11 +1534,13 @@ public:
                                       ms.depth + sizeof(key_type));
                 }
                 else {
-                    sp = sp.copy_back();
+                    StringPtr spb = sp.copy_back();
 #if CALC_LCP_MKQS == 1
-                    sp.fill_lcp(ms.depth + ms.lcp_eq);
+                    spb.fill_lcp(ms.depth + ms.lcp_eq);
 #elif CALC_LCP_MKQS == 2
-                    sp.fill_lcp(ms.depth + lcpKeyDepth(ms.pivot));
+                    spb.fill_lcp(ms.depth + lcpKeyDepth(ms.pivot));
+#else
+                    UNUSED(spb);
 #endif
                     ctx.donesize(ms.num_eq, thrid);
                 }
@@ -1561,6 +1596,9 @@ public:
     static const size_t numsplitters = (1 << treebits) - 1;
 
     static const size_t bktnum = 2 * numsplitters + 1;
+
+    typedef typename StringPtr::StringSet StringSet;
+    typedef typename StringSet::Iterator StrIterator;
 
     //! type of Job
     typedef typename Context::job_type job_type;
@@ -1668,14 +1706,17 @@ public:
         const size_t oversample_factor = 2;
         size_t samplesize = oversample_factor * numsplitters;
 
-        string* strings = strptr.active();
+        const StringSet& strset = strptr.active();
+        StrIterator begin = strset.begin();
+        size_t n = strset.size();
+
         key_type samples[samplesize];
 
         LCGRandom rng(&samples);
 
         for (unsigned int i = 0; i < samplesize; ++i)
         {
-            samples[i] = get_char<key_type>(strings[rng() % strptr.size()], depth);
+            samples[i] = strset.get_uint64(strset[begin + rng() % n], depth);
         }
 
         std::sort(samples, samples + samplesize);
@@ -1694,12 +1735,14 @@ public:
     {
         DBG(debug_jobs, "Process CountJob " << p << " @ " << this);
 
-        string* strB = strptr.active() + p * psize;
-        string* strE = strptr.active() + std::min((p + 1) * psize, strptr.size());
+        const StringSet& strset = strptr.active();
+
+        StrIterator strB = strset.begin() + p * psize;
+        StrIterator strE = strset.begin() + std::min((p + 1) * psize, strptr.size());
         if (strE < strB) strE = strB;
 
         uint16_t* mybktcache = bktcache[p] = new uint16_t[strE - strB];
-        classifier.classify(strB, strE, mybktcache, depth);
+        classifier.classify(strset, strB, strE, mybktcache, depth);
 
         size_t* mybkt = bkt[p] = new size_t[bktnum + (p == 0 ? 1 : 0)];
         memset(mybkt, 0, bktnum * sizeof(size_t));
@@ -1742,17 +1785,20 @@ public:
     {
         DBG(debug_jobs, "Process DistributeJob " << p << " @ " << this);
 
-        string* strB = strptr.active() + p * psize;
-        string* strE = strptr.active() + std::min((p + 1) * psize, strptr.size());
+        const StringSet& strset = strptr.active();
+
+        StrIterator strB = strset.begin() + p * psize;
+        StrIterator strE = strset.begin() + std::min((p + 1) * psize, strptr.size());
         if (strE < strB) strE = strB;
 
-        string* sorted = strptr.shadow(); // get alternative shadow pointer array
+        const StringSet& sorted = strptr.shadow(); // get alternative shadow pointer array
+        typename StringSet::Iterator sbegin = sorted.begin();
 
         uint16_t* mybktcache = bktcache[p];
         size_t* mybkt = bkt[p];
 
-        for (string* str = strB; str != strE; ++str, ++mybktcache)
-            sorted[--mybkt[*mybktcache]] = *str;
+        for (StrIterator str = strB; str != strE; ++str, ++mybktcache)
+            *(sbegin + --mybkt[*mybktcache]) = std::move(*str);
 
         if (p != 0) // p = 0 is needed for recursion into bkts
             delete[] bkt[p];
@@ -1888,29 +1934,18 @@ void Enqueue(Context& ctx, SortStep* pstep,
     }
 }
 
-#if CALC_LCP
-typedef stringtools::StringShadowLcpPtr StringPtr;
-typedef stringtools::StringShadowLcpOutPtr StringOutPtr;
-#else
-typedef stringtools::StringShadowPtr StringPtr;
-typedef stringtools::StringShadowOutPtr StringOutPtr;
-#endif
-
-template <template <size_t> class Classify>
-void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
+template <template <size_t> class Classify = ClassifyUnrollBoth,
+          typename StringPtr>
+void parallel_sample_sort(const StringPtr& strptr, size_t depth)
 {
     Context<> ctx;
-    ctx.totalsize = n;
+    ctx.totalsize = strptr.size();
 #if PS5_ENABLE_RESTSIZE
-    ctx.restsize = n;
+    ctx.restsize = strptr.size();
 #endif
     ctx.threadnum = omp_get_max_threads();
 
     SampleSortStep<Context<>, Classify, StringPtr>::put_stats();
-
-    string* shadow = new string[n]; // allocate shadow pointer array
-
-    StringPtr strptr(strings, shadow, n);
 
     ctx.timers.start(ctx.threadnum);
 
@@ -1923,26 +1958,6 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
     assert(!PS5_ENABLE_RESTSIZE || ctx.restsize.update().get() == 0);
 #endif
 
-#if CALC_LCP
-    if (0)
-    {
-        unsigned int err = 0;
-        for (size_t i = 1; i < n; ++i)
-        {
-            string s1 = strptr.out(i - 1), s2 = strptr.out(i);
-            size_t h = calc_lcp(s1, s2);
-
-            if (h != strptr.lcp(i)) {
-                std::cout << "lcp[" << i << "] mismatch " << h << " != " << strptr.lcp(i) << std::endl;
-                ++err;
-            }
-        }
-        std::cout << err << " lcp errors" << std::endl;
-    }
-#endif
-
-    delete[] shadow;
-
     g_stats >> "steps_para_sample_sort" << ctx.para_ss_steps
         >> "steps_seq_sample_sort" << ctx.seq_ss_steps
         >> "steps_base_sort" << ctx.bs_steps;
@@ -1958,73 +1973,107 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
             >> "tm_inssort" << ctx.timers.get(TM_INSSORT)
             >> "tm_sum" << ctx.timers.get_sum();
     }
+}
+
+template <template <size_t> class Classify = ClassifyUnrollBoth,
+          typename StringSet>
+void parallel_sample_sort_base(const StringSet& strset, size_t depth)
+{
+    typedef stringtools::StringShadowPtr<StringSet> StringPtr;
+    typedef typename StringSet::Container Container;
+
+    // allocate shadow pointer array
+    Container shadow = strset.allocate(strset.size());
+
+    StringPtr strptr(strset, StringSet(shadow));
+
+    parallel_sample_sort<Classify, StringPtr>(strptr, depth);
+
+    StringSet::deallocate(shadow);
 }
 
 template <template <size_t> class Classify>
-void parallel_sample_sort_out_base(string* strings, string* output, size_t n, size_t depth)
+void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 {
-    Context<> ctx;
-    ctx.totalsize = n;
-#if PS5_ENABLE_RESTSIZE
-    ctx.restsize = n;
-#endif
-    ctx.threadnum = omp_get_max_threads();
-
-    SampleSortStep<Context<>, Classify, StringOutPtr>::put_stats();
-
-    string* shadow = new string[n]; // allocate shadow pointer array
-
-    StringOutPtr strptr(strings, shadow, output, n);
-
-    ctx.timers.start(ctx.threadnum);
-
-    Enqueue<Classify>(ctx, NULL, strptr, depth);
-    ctx.jobqueue.loop();
-
-    ctx.timers.stop();
-
-#if PS5_ENABLE_RESTSIZE
-    assert(ctx.restsize.update().get() == 0);
-#endif
-
-#if CALC_LCP
-    if (0)
-    {
-        unsigned int err = 0;
-        for (size_t i = 1; i < n; ++i)
-        {
-            string s1 = strptr.out(i - 1), s2 = strptr.out(i);
-            size_t h = calc_lcp(s1, s2);
-
-            if (h != strptr.lcp(i)) {
-                std::cout << "lcp[" << i << "] mismatch " << h << " != " << strptr.lcp(i) << std::endl;
-                ++err;
-            }
-        }
-        std::cout << err << " lcp errors" << std::endl;
-    }
-#endif
-
-    delete[] shadow;
-
-    g_stats >> "steps_para_sample_sort" << ctx.para_ss_steps
-        >> "steps_seq_sample_sort" << ctx.seq_ss_steps
-        >> "steps_base_sort" << ctx.bs_steps;
-
-    if (ctx.timers.is_real)
-    {
-        g_stats >> "tm_waiting" << ctx.timers.get(TM_WAITING)
-            >> "tm_jq_work" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_WORK)
-            >> "tm_jq_idle" << ctx.jobqueue.m_timers.get(ctx.jobqueue.TM_IDLE)
-            >> "tm_para_ss" << ctx.timers.get(TM_PARA_SS)
-            >> "tm_seq_ss" << ctx.timers.get(TM_SEQ_SS)
-            >> "tm_mkqs" << ctx.timers.get(TM_MKQS)
-            >> "tm_inssort" << ctx.timers.get(TM_INSSORT)
-            >> "tm_sum" << ctx.timers.get_sum();
-    }
+    return parallel_sample_sort_base<Classify>(
+        UCharStringSet(strings, strings + n), depth);
 }
 
-#ifdef CALC_LCP
+template <template <size_t> class Classify = ClassifyUnrollBoth,
+          typename StringSet>
+void parallel_sample_sort_out_base(
+    const StringSet& strset, const StringSet& output, size_t depth)
+{
+    typedef stringtools::StringShadowOutPtr<StringSet> StringOutPtr;
+    typedef typename StringSet::Container Container;
+
+    // allocate shadow pointer array
+    Container shadow = strset.allocate(strset.size());
+
+    StringOutPtr strptr(strset, StringSet(shadow), output);
+
+    parallel_sample_sort<Classify, StringOutPtr>(strptr, depth);
+
+    StringSet::deallocate(shadow);
+}
+
+template <template <size_t> class Classify>
+void parallel_sample_sort_out_base(
+    string* strings, string* output, size_t n, size_t depth)
+{
+    return parallel_sample_sort_out_base<Classify>(
+        UCharStringSet(strings, strings + n),
+        UCharStringSet(output, output + n),
+        depth);
+}
+
+template <template <size_t> class Classify = ClassifyUnrollBoth,
+          typename StringSet>
+void parallel_sample_sort_out_test(const StringSet& strset, size_t depth)
+{
+    typename StringSet::Container out = strset.allocate(strset.size());
+    StringSet output(out);
+    parallel_sample_sort_out_base(strset, output, depth);
+
+    // move strings back to strset
+    std::move(output.begin(), output.end(), strset.begin());
+
+    StringSet::deallocate(out);
+}
+
+/******************************************************************************/
+
+#if CALC_LCP
+
+template <template <size_t> class Classify = ClassifyUnrollBoth,
+          typename StringSet>
+void parallel_sample_sort_lcp_base(
+    const StringSet& strset, uintptr_t* lcp, size_t depth)
+{
+    typedef stringtools::StringShadowLcpPtr<StringSet> StringPtr;
+    typedef typename StringSet::Container Container;
+
+    // allocate shadow pointer array
+    Container shadow = strset.allocate(strset.size());
+
+    StringPtr strptr(strset, StringSet(shadow), lcp);
+
+    parallel_sample_sort<Classify, StringPtr>(strptr, depth);
+
+    StringSet::deallocate(shadow);
+}
+
+template <template <size_t> class Classify = ClassifyUnrollBoth,
+          typename StringSet>
+void parallel_sample_sort_lcp_verify(const StringSet& strset, size_t depth)
+{
+    std::vector<uintptr_t> tmp_lcp(strset.size());
+    tmp_lcp[0] = 42;                 // must keep lcp[0] unchanged
+    std::fill(tmp_lcp.begin() + 1, tmp_lcp.end(), -1);
+    parallel_sample_sort_lcp_base<Classify>(strset, tmp_lcp.data(), depth);
+    assert(stringtools::verify_lcp(strset, tmp_lcp.data(), 42));
+}
+
 //! Call for NUMA aware parallel sorting
 void parallel_sample_sort_numa(string* strings, size_t n,
                                int numaNode, int numberOfThreads,
@@ -2041,9 +2090,13 @@ void parallel_sample_sort_numa(string* strings, size_t n,
 #endif
     ctx.threadnum = numberOfThreads;
 
-    StringShadowLcpCacheOutPtr
-        strptr(strings, (string*)output.lcps, output.strings,
-               output.cachedChars, n);
+    typedef UCharStringSet StringSet;
+    StringSet strset(strings, strings + n);
+    StringSet shadow((string*)output.lcps, (string*)output.lcps + n);
+    StringSet outputss((string*)output.strings, (string*)output.strings + n);
+
+    StringShadowLcpCacheOutPtr<StringSet>
+    strptr(strset, shadow, outputss, output.lcps, output.cachedChars);
 
     Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads);
@@ -2062,7 +2115,7 @@ void parallel_sample_sort_numa(string* strings, size_t n,
 }
 
 //! Call for NUMA aware parallel sorting
-void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* strptr,
+void parallel_sample_sort_numa2(const UCharStringShadowLcpCacheOutPtr* strptr,
                                 unsigned numInputs)
 {
     typedef Context<NumaJobQueueGroup> context_type;
@@ -2108,7 +2161,10 @@ void parallel_sample_sort_numa2(const StringShadowLcpCacheOutPtr* strptr,
         delete ctx[i];
     }
 }
-#endif
+
+#endif // CALC_LCP
+
+/******************************************************************************/
 
 static inline void
 parallel_sample_sortBTC(string* strings, size_t n)
@@ -2199,14 +2255,16 @@ public:
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            key_type key = get_char<key_type>(*str++, depth);
-
-            unsigned int b = find_bkt_tree(key);
-            *bktout++ = b;
+            key_type key = strset.get_uint64(*begin++, depth);
+            *bktout++ = find_bkt_tree(key);
         }
     }
 

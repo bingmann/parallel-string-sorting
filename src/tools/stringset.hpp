@@ -93,6 +93,13 @@ template <typename StringSet, typename Traits>
 class StringSetBase
 {
 public:
+    //! index-based array access (readable and writable) to String objects.
+    typename Traits::String & at(size_t i) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+        return *(ss.begin() + i);
+    }
+
     //! \name CharIterator Comparisons
     //! \{
 
@@ -281,21 +288,31 @@ public:
         }
     }
 
-    bool check_order()
+    bool check_order(const typename Traits::String& s1,
+                     const typename Traits::String& s2) const
+    {
+        const StringSet& ss = *static_cast<const StringSet*>(this);
+
+        typename StringSet::CharIterator c1 = ss.get_chars(s1, 0);
+        typename StringSet::CharIterator c2 = ss.get_chars(s2, 0);
+
+        while (ss.is_equal(s1, c1, s2, c2))
+            ++c1, ++c2;
+
+        if (!ss.is_leq(s1, c2, s2, c2))
+            return false;
+
+        return true;
+    }
+
+    bool check_order() const
     {
         const StringSet& ss = *static_cast<const StringSet*>(this);
 
         for (typename Traits::Iterator pi = ss.begin() + 1;
              pi != ss.end(); ++pi)
         {
-            typename StringSet::CharIterator
-            s = ss.get_chars(ss[pi - 1], 0),
-            t = ss.get_chars(ss[pi], 0);
-
-            while (ss.is_equal(ss[pi - 1], s, ss[pi], t))
-                ++s, ++t;
-
-            if (!ss.is_leq(ss[pi - 1], s, ss[pi], t))
+            if (!check_order(ss[pi - 1], ss[pi]))
                 return false;
         }
 
@@ -324,6 +341,9 @@ public:
 
     //! iterator of characters in a string
     typedef Char* CharIterator;
+
+    //! exported alias for assumed string container
+    typedef std::pair<Iterator, size_t> Container;
 };
 
 /*!
@@ -342,6 +362,7 @@ public:
     using typename Traits::String;
     using typename Traits::Iterator;
     using typename Traits::CharIterator;
+    using typename Traits::Container;
 
     //! Construct from begin and end string pointers
     GenericCharStringSet(Iterator begin, Iterator end)
@@ -374,6 +395,19 @@ public:
     //! Subset this string set using iterator range.
     GenericCharStringSet sub(Iterator begin, Iterator end) const
     { return GenericCharStringSet(begin, end); }
+
+    //! Allocate a new temporary string container with n empty Strings
+    static Container allocate(size_t n)
+    { return std::make_pair(new String[n], n); }
+
+    //! Deallocate a temporary string container
+    static void deallocate(Container& c)
+    { delete[] c.first; c.first = NULL; }
+
+    //! Construct from a string container
+    explicit GenericCharStringSet(const Container& c)
+        : GenericCharStringSet(c.first, c.first + c.second)
+    { }
 
 protected:
     //! array of string pointers
@@ -439,7 +473,7 @@ public:
 
     //! Returns true if CharIterator is at end of the given String
     bool is_end(const String& s, const CharIterator& i) const
-    { return (i == s.end()); }
+    { return (i >= s.end()); }
 
     //! Return complete string (for debugging purposes)
     std::string get_string(const String&& s, size_t depth = 0) const
@@ -448,6 +482,19 @@ public:
     //! Subset this string set using iterator range.
     VectorStringSet sub(Iterator begin, Iterator end) const
     { return VectorStringSet(begin, end); }
+
+    //! Allocate a new temporary string container with n empty Strings
+    static Container allocate(size_t n)
+    { return std::move(Container(n)); }
+
+    //! Deallocate a temporary string container
+    static void deallocate(Container& c)
+    { Container v; v.swap(c); }
+
+    //! Construct from a string container
+    explicit VectorStringSet(Container& c)
+        : begin_(c.begin()), end_(c.end())
+    { }
 
 protected:
     //! vector of std::string objects
@@ -510,7 +557,7 @@ public:
 
     //! Returns true if CharIterator is at end of the given String
     bool is_end(const String& s, const CharIterator& i) const
-    { return (i == s->end()); }
+    { return (i >= s->end()); }
 
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const
@@ -519,6 +566,19 @@ public:
     //! Subset this string set using iterator range.
     VectorPtrStringSet sub(Iterator begin, Iterator end) const
     { return VectorPtrStringSet(begin, end); }
+
+    //! Allocate a new temporary string container with n empty Strings
+    static Container allocate(size_t n)
+    { return std::move(Container(n)); }
+
+    //! Deallocate a temporary string container
+    static void deallocate(Container& c)
+    { Container v; v.swap(c); }
+
+    //! Construct from a string container
+    explicit VectorPtrStringSet(Container& c)
+        : begin_(c.begin()), end_(c.end())
+    { }
 
 protected:
     //! vector of std::string objects
@@ -534,8 +594,8 @@ protected:
 class UCharSuffixSetTraits
 {
 public:
-    //! exported alias for assumed string container
-    typedef unsigned char* Container;
+    //! exported alias for assumed text container
+    typedef unsigned char* Text;
 
     //! exported alias for character type
     typedef unsigned char Char;
@@ -549,6 +609,9 @@ public:
 
     //! iterator of characters in a string
     typedef Char* CharIterator;
+
+    //! exported alias for assumed string container
+    typedef std::tuple<Text, Text, Iterator, size_t> Container;
 };
 
 /*!
@@ -561,7 +624,7 @@ class UCharSuffixSet
 {
 public:
     //! Construct from begin and end string pointers
-    UCharSuffixSet(const Container& text, const Container& text_end,
+    UCharSuffixSet(const Text& text, const Text& text_end,
                    const Iterator& begin, const Iterator& end)
         : text_(text), text_end_(text_end),
           begin_(begin), end_(end)
@@ -584,7 +647,7 @@ public:
 
     //! Returns true if CharIterator is at end of the given String
     bool is_end(const String&, const CharIterator& i) const
-    { return (i == text_end_); }
+    { return (i >= text_end_); }
 
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const
@@ -594,9 +657,23 @@ public:
     UCharSuffixSet sub(Iterator begin, Iterator end) const
     { return UCharSuffixSet(text_, text_end_, begin, end); }
 
+    //! Allocate a new temporary string container with n empty Strings
+    Container allocate(size_t n) const
+    { return std::make_tuple(text_, text_end_, new String[n], n); }
+
+    //! Deallocate a temporary string container
+    static void deallocate(Container& c)
+    { delete[] std::get<2>(c); }
+
+    //! Construct from a string container
+    explicit UCharSuffixSet(Container& c)
+        : text_(std::get<0>(c)), text_end_(std::get<1>(c)),
+          begin_(std::get<2>(c)), end_(std::get<2>(c) + std::get<3>(c))
+    { }
+
 protected:
     //! reference to base text
-    const Container text_, text_end_;
+    const Text& text_, & text_end_;
 
     //! iterators inside the output suffix array.
     Iterator begin_, end_;
@@ -612,13 +689,13 @@ class StringSuffixSetTraits
 {
 public:
     //! exported alias for assumed string container
-    typedef std::string Container;
+    typedef std::string Text;
 
     //! exported alias for character type
     typedef std::string::value_type Char;
 
     //! String reference: suffix index of the text.
-    typedef typename Container::size_type String;
+    typedef typename Text::size_type String;
 
     //! Iterator over string references: using std::vector's iterator over
     //! suffix array vector
@@ -626,6 +703,9 @@ public:
 
     //! iterator of characters in a string
     typedef std::string::const_iterator CharIterator;
+
+    //! exported alias for assumed string container
+    typedef std::tuple<Text, std::vector<String> > Container;
 };
 
 /*!
@@ -638,7 +718,7 @@ class StringSuffixSet
 {
 public:
     //! Construct from begin and end string pointers
-    StringSuffixSet(const Container& text,
+    StringSuffixSet(const Text& text,
                     const Iterator& begin, const Iterator& end)
         : text_(text),
           begin_(begin), end_(end)
@@ -646,7 +726,7 @@ public:
 
     //! Initializing constructor which fills output vector sa with indices.
     static StringSuffixSet
-    Initialize(const Container& text, std::vector<String>& sa)
+    Initialize(const Text& text, std::vector<String>& sa)
     {
         sa.resize(text.size());
         for (size_t i = 0; i < text.size(); ++i)
@@ -671,7 +751,7 @@ public:
 
     //! Returns true if CharIterator is at end of the given String
     bool is_end(const String&, const CharIterator& i) const
-    { return (i == text_.end()); }
+    { return (i >= text_.end()); }
 
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const
@@ -681,9 +761,23 @@ public:
     StringSuffixSet sub(Iterator begin, Iterator end) const
     { return StringSuffixSet(text_, begin, end); }
 
+    //! Allocate a new temporary string container with n empty Strings
+    Container allocate(size_t n) const
+    { return std::make_tuple(text_, std::move(std::vector<String>(n))); }
+
+    //! Deallocate a temporary string container
+    static void deallocate(Container& c)
+    { std::vector<String> v; v.swap(std::get<1>(c)); }
+
+    //! Construct from a string container
+    explicit StringSuffixSet(Container& c)
+        : text_(std::get<0>(c)),
+          begin_(std::get<1>(c).begin()), end_(std::get<1>(c).end())
+    { }
+
 protected:
     //! reference to base text
-    const Container& text_;
+    const Text& text_;
 
     //! iterators inside the output suffix array.
     Iterator begin_, end_;

@@ -233,7 +233,8 @@ eberle_ps5_parallel_toplevel_merge_assisting(string* strings, size_t n, void (* 
     LcpCacheStringPtr outputs[numNumaNodes];
 
     // create in/output StringPtrs
-    StringShadowLcpCacheOutPtr inputs[numNumaNodes];
+    typedef UCharStringSet StringSet;
+    std::vector<UCharStringShadowLcpCacheOutPtr> inputs;
 
     for (int k = 0; k < numNumaNodes; k++)
     {
@@ -242,15 +243,16 @@ eberle_ps5_parallel_toplevel_merge_assisting(string* strings, size_t n, void (* 
 
         outputs[k].allocateNumaMemory(k % realNumaNodes, length);
 
-        inputs[k] = StringShadowLcpCacheOutPtr(
-            strings + start,
-            (string*)outputs[k].lcps, outputs[k].strings, outputs[k].cachedChars,
-            length);
+        inputs.emplace_back(
+            StringSet(strings + start, strings + start + length),
+            StringSet((string*)outputs[k].lcps, (string*)outputs[k].lcps + length),
+            StringSet(outputs[k].strings, outputs[k].strings + length),
+            outputs[k].lcps, outputs[k].cachedChars);
     }
 
     DBG(debug_toplevel_merge_duration, "allocation needed: " << timer.elapsed() << " s");
 
-    parallel_sample_sort_numa2(inputs, numNumaNodes);
+    parallel_sample_sort_numa2(inputs.data(), numNumaNodes);
 
     if (debug_verify_ps5_lcp_cache)
     {

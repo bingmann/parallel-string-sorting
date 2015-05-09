@@ -41,6 +41,8 @@
 #define CONCAT(a, b)     a ## b
 #define CONCAT_EXPANDED(a, b) CONCAT(a, b)
 
+#define UNUSED(x) do { (void)x; } while (0)
+
 // *** Support for multi-threaded programs, to activate:
 // #undef DBGX
 // #define DBGX DBGX_OMP

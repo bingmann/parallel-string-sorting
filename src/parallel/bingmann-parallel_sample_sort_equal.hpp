@@ -198,14 +198,16 @@ public:
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            key_type key = get_char<key_type>(*str++, depth);
-
-            unsigned int b = find_bkt_tree(key);
-            *bktout++ = b;
+            key_type key = strset.get_uint64(*begin++, depth);
+            *bktout++ = find_bkt_tree(key);
         }
     }
 
@@ -237,15 +239,16 @@ public:
     find_bkt_tree(const key_type& key) const;
 
     /// classify all strings in area by walking tree and saving bucket id
-    void
-    classify(string* strB, string* strE, uint16_t* bktout, size_t depth) const
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            key_type key = get_char<key_type>(*str++, depth);
-
-            unsigned int b = find_bkt_tree(key);
-            *bktout++ = b;
+            key_type key = strset.get_uint64(*begin++, depth);
+            *bktout++ = find_bkt_tree(key);
         }
     }
 

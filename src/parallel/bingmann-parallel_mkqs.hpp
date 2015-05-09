@@ -330,7 +330,8 @@ public:
             std::swap_ranges(cache, cache + size1, cache + first - size1);
             // Swap the equal pointers from the end to proper position.
             const size_t size2 = std::min(num_eq_end, num_gt);
-            std::swap_ranges(cache + first, cache + first + size2, cache + n - size2);
+            std::swap_ranges(cache + first, cache + first + size2,
+                             cache + n - size2);
 
             // Save offsets for recursive sorting
             this->cache = cache;

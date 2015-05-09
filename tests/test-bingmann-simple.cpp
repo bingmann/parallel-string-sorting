@@ -24,6 +24,8 @@
 #include <sequential/bingmann-lcp_inssort.hpp>
 #include <sequential/bingmann-radix_sort.hpp>
 #include <parallel/bingmann-parallel_mkqs.hpp>
+#include <parallel/bingmann-parallel_sample_sort.hpp>
+#include <parallel/bingmann-parallel_sample_sort_lcp.hpp>
 #include <tools/stringset.hpp>
 #include <tools/lcgrandom.hpp>
 
@@ -64,8 +66,10 @@ void TestUCharString(const size_t nstrings, const size_t nchars,
     if (0) ss.print();
 
     // check result
-    if (!ss.check_order())
+    if (!ss.check_order()) {
+        std::cout << "Result is not sorted!" << std::endl;
         abort();
+    }
 
     // free memory.
     for (size_t i = 0; i < nstrings; ++i)
@@ -98,8 +102,10 @@ void TestVectorString(const size_t nstrings, const size_t nchars,
     //if (0) ss.print();
 
     // check result
-    if (!ss.check_order())
+    if (!ss.check_order()) {
+        std::cout << "Result is not sorted!" << std::endl;
         abort();
+    }
 }
 
 template <void(* Algo)(const VectorPtrStringSet& ss, size_t depth)>
@@ -127,8 +133,10 @@ void TestVectorPtrString(const size_t nstrings, const size_t nchars,
     //ss.print();
 
     // check result
-    if (!ss.check_order())
+    if (!ss.check_order()) {
+        std::cout << "Result is not sorted!" << std::endl;
         abort();
+    }
 }
 
 template <void(* Algo)(const UCharSuffixSet& ss, size_t depth)>
@@ -154,8 +162,10 @@ void TestUCharSuffixString(const size_t nchars, const std::string& letters)
     if (0) ss.print();
 
     // check result
-    if (!ss.check_order())
+    if (!ss.check_order()) {
+        std::cout << "Result is not sorted!" << std::endl;
         abort();
+    }
 }
 
 template <void(* Algo)(const StringSuffixSet& ss, size_t depth)>
@@ -175,8 +185,10 @@ void TestStringSuffixString(const size_t nchars, const std::string& letters)
     if (0) ss.print();
 
     // check result
-    if (!ss.check_order())
+    if (!ss.check_order()) {
+        std::cout << "Result is not sorted!" << std::endl;
         abort();
+    }
 }
 
 const std::string letters_alnum
@@ -195,12 +207,17 @@ void test_all(const size_t nstrings)
     if (nstrings <= 1024) {
         run_tests(inssort::inssort_generic);
         run_tests(bingmann_lcp_inssort::lcp_insertion_sort_verify);
+        run_tests(bingmann_lcp_inssort::lcp_insertion_sort_pseudocode_verify);
+        run_tests(bingmann_lcp_inssort::lcp_insertion_sort_cache_verify);
     }
     run_tests(bingmann_radix_sort::msd_CE_generic);
     run_tests(bingmann_radix_sort::msd_CE2_generic);
     run_tests(bingmann_radix_sort::msd_CI5_generic);
     run_tests(bingmann_parallel_mkqs::bingmann_sequential_mkqs_cache8);
     run_tests(bingmann_parallel_mkqs::bingmann_parallel_mkqs);
+    run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_base);
+    run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_out_test);
+    run_tests(bingmann_parallel_sample_sort_lcp::parallel_sample_sort_lcp_verify);
 }
 
 int main()
@@ -208,6 +225,8 @@ int main()
     test_all(16);
     test_all(256);
     test_all(65550);
+    test_all(1024 * 1024);
+    test_all(16 * 1024 * 1024);
 
     return 0;
 }

@@ -30,7 +30,7 @@ set(PSSLIB_SOURCES
   rantala/multikey_multipivot.cpp
   rantala/multikey_simd.cpp
   parallel/akiba-parallel_string_radix_sort.cpp
-  parallel/bingmann-parallel_radix_sort.cpp
+  #parallel/bingmann-parallel_radix_sort.cpp
   parallel/bingmann-parallel_mkqs.cpp
   parallel/shamsundar-lcp-merge-string-sort.cpp
   )
