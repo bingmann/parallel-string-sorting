@@ -117,13 +117,13 @@ public:
         size_t           fill;
         StrCache         cache[block_size];
 
-        String &         str(size_t i)
+        const String &   str(size_t i) const
         {
             assert(i < block_size);
             return cache[i].str;
         }
 
-        const key_type & key(size_t i)
+        const key_type & key(size_t i) const
         {
             assert(i < block_size);
             return cache[i].key;
@@ -838,8 +838,8 @@ jumpout:
             StrCacheBlockPtr blk;
             if (!block_queue->try_pop(blk)) return NULL;
 
-            DBG(debug_blocks, "pop()ed input block " /* << blk*/
-                << " fill " << blk->fill);
+            DBG(debug_blocks, "pop()ed input block " <<
+                blk.get() << " fill " << blk->fill);
             fill = blk->fill;
 
             // refill key cache
@@ -976,7 +976,7 @@ jumpout:
 
         // *** Helper to Output to One of the oblk Queues
 
-        void oblk_push(const int type, StrCacheBlockPtr&& blk)
+        void oblk_push(const int type, const StrCacheBlockPtr&& blk)
         {
             // hopefully this function will be optimized, a templated version is
             // very obfuscated.
@@ -1084,9 +1084,12 @@ jump2:
             eq.template finish_partial<EQ>(*this, lt, eq, gt);
             gt.template finish_partial<GT>(*this, lt, eq, gt);
 
-            if (lt.blk) lt.blk->fill = lt.fill, oblk_push(LT, std::move(lt.blk));
-            if (eq.blk) eq.blk->fill = eq.fill, oblk_push(EQ, std::move(eq.blk));
-            if (gt.blk) gt.blk->fill = gt.fill, oblk_push(GT, std::move(gt.blk));
+            if (lt.blk && lt.fill)
+                lt.blk->fill = lt.fill, oblk_push(LT, std::move(lt.blk));
+            if (eq.blk && eq.fill)
+                eq.blk->fill = eq.fill, oblk_push(EQ, std::move(eq.blk));
+            if (gt.blk && gt.fill)
+                gt.blk->fill = gt.fill, oblk_push(GT, std::move(gt.blk));
 
             if (--pwork == 0)
                 partition_finished(jobqueue);
@@ -1230,7 +1233,8 @@ jump2:
                 }
                 // switch to new block
                 pos = 0, fill = newfill, blk = std::move(newblk);
-                return true;
+                assert(blk || newfill == 0);
+                return (newfill != 0);
             }
             else
             {
@@ -1273,7 +1277,8 @@ jump2:
         {
             if (!partial && pos < block_size) {
                 if (pos < fill) {
-                    DBG(debug_cmp2, "swap with unpartitioned blk[" << pos << "] = " << front_key() << ".");
+                    DBG(debug_cmp2, "swap with unpartitioned blk[" << pos <<
+                        "] = " << front_key() << ".");
                     std::swap(from.front_cache(), front_cache()), pos++;
                 }
                 else {
@@ -1309,8 +1314,8 @@ jump2:
             {
                 int res = cmp(front_key(), pivot);
                 if (res < 0) {        // < than pivot
-                    DBG(debug_cmp2, "blk[" << pos << "] = "
-                                           << front_key() << " < pivot " << toHex(pivot) << ".");
+                    DBG(debug_cmp2, "blk[" << pos << "] = " <<
+                        front_key() << " < pivot " << toHex(pivot) << ".");
 
                     if (type == LT) { // good.
                         pos++;
@@ -1320,8 +1325,8 @@ jump2:
                     }
                 }
                 else if (res == 0) {  // = pivot
-                    DBG(debug_cmp2, "blk[" << pos << "] = "
-                                           << front_key() << " = pivot " << toHex(pivot) << ".");
+                    DBG(debug_cmp2, "blk[" << pos << "] = " <<
+                        front_key() << " = pivot " << toHex(pivot) << ".");
 
                     if (type == EQ) { // good.
                         pos++;
@@ -1331,8 +1336,8 @@ jump2:
                     }
                 }
                 else {                // > than pivot
-                    DBG(debug_cmp2, "blk[" << pos << "] = "
-                                           << front_key() << " > pivot " << toHex(pivot) << ".");
+                    DBG(debug_cmp2, "blk[" << pos << "] = " <<
+                        front_key() << " > pivot " << toHex(pivot) << ".");
 
                     if (type == GT) { // good.
                         pos++;
