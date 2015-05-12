@@ -340,7 +340,7 @@ public:
     typedef String* Iterator;
 
     //! iterator of characters in a string
-    typedef Char* CharIterator;
+    typedef const Char* CharIterator;
 
     //! exported alias for assumed string container
     typedef std::pair<Iterator, size_t> Container;
@@ -595,7 +595,7 @@ class UCharSuffixSetTraits
 {
 public:
     //! exported alias for assumed text container
-    typedef unsigned char* Text;
+    typedef const unsigned char* Text;
 
     //! exported alias for character type
     typedef unsigned char Char;
@@ -608,7 +608,7 @@ public:
     typedef String* Iterator;
 
     //! iterator of characters in a string
-    typedef Char* CharIterator;
+    typedef const Char* CharIterator;
 
     //! exported alias for assumed string container
     typedef std::tuple<Text, Text, Iterator, size_t> Container;
@@ -673,7 +673,7 @@ public:
 
 protected:
     //! reference to base text
-    const Text& text_, & text_end_;
+    Text text_, text_end_;
 
     //! iterators inside the output suffix array.
     Iterator begin_, end_;

@@ -253,13 +253,16 @@ void lcp_insertion_sort_pseudocode(
             // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
             str[begin + i] = std::move(str[begin + i - 1]);
-            lcp[i + 1] = lcp[i];
+
+            if (i + 1 < n) // check out-of-bounds save
+                lcp[i + 1] = lcp[i];
 
             --i;
         }
 
         str[begin + i] = std::move(snew);
-        lcp[i + 1] = h;
+        if (i + 1 < n) // check out-of-bounds save
+            lcp[i + 1] = h;
     }
 
     std::cout << "lcp_inssort comparisons = " << cmp << "\n";
@@ -399,21 +402,20 @@ void lcp_insertion_sort_cache(
             {
                 // CASE 2: compare more characters
 
-                //const String& s2 = cur_str + new_lcp;
+                CharIterator c1 = str.get_chars(new_str, new_lcp);
                 CharIterator c2 = str.get_chars(cur_str, new_lcp);
 
-                while (new_ch != 0 && new_ch == *c2)
+                while (str.is_equal(new_str, c1, cur_str, c2))
                 {
-                    ++c2, ++new_lcp;
-                    new_ch = str.get_char(new_str, new_lcp);
+                    ++new_lcp, ++c1, ++c2;
                 }
 
                 // if (new_str >= curr_str) -> insert string
-                if (new_ch >= *c2)
+                if (!str.is_less(new_str, c1, cur_str, c2))
                 {
                     // update lcp of prev (smaller string) with inserted string
                     lcp[i] = new_lcp;
-                    cache[i] = new_ch;
+                    cache[i] = str.is_end(new_str, c1) ? 0 : *c1;
 
                     // lcp of inserted string with next string
                     new_lcp = prev_lcp;
@@ -469,21 +471,20 @@ void lcp_insertion_sort_cache(
             {
                 // CASE 2: compare more characters
 
-                //const String& s2 = cur_str + new_lcp;
+                CharIterator c1 = str.get_chars(new_str, new_lcp);
                 CharIterator c2 = str.get_chars(cur_str, new_lcp);
 
-                while (new_ch != 0 && new_ch == *c2)
+                while (str.is_equal(new_str, c1, cur_str, c2))
                 {
-                    ++c2, ++new_lcp;
-                    new_ch = str.get_char(new_str, new_lcp);
+                    ++new_lcp, ++c1, ++c2;
                 }
 
                 // if (new_str >= curr_str) -> insert string
-                if (new_ch >= *c2)
+                if (!str.is_less(new_str, c1, cur_str, c2))
                 {
                     // update lcp of prev (smaller string) with inserted string
                     lcp[i] = new_lcp;
-                    cache[i] = new_ch;
+                    cache[i] = str.is_end(new_str, c1) ? 0 : *c1;
 
                     // lcp of inserted string with next string
                     new_lcp = prev_lcp;
