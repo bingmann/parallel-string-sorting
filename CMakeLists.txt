@@ -4,7 +4,7 @@
 # CMake file for parallel-string-sorting project
 ################################################################################
 
-project(parallel-string-sorting)
+project(parallel-string-sorting CXX)
 
 cmake_minimum_required(VERSION 2.8)
 
