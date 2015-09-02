@@ -220,8 +220,8 @@ class LcpLoserTree
     };
 
 private:
-    Stream streams[K];
-    Node nodes[K];
+    Stream streams[K+1];
+    Node nodes[K+1];
 
     //! play one comparison edge game: contender is the node below
     //! defender. After the game, defender contains the lower index, contender
@@ -284,21 +284,23 @@ private:
     initTree(lcp_t knownCommonLcp)
     {
         //std::cout << "inittree start\n";
-        for (unsigned i = 0; i < K; i++)
+        for (unsigned k = 1; k <= K; k++)
         {
-            unsigned nodeIdx = K + i;
-
             Node contender;
-            contender.idx = i;
+            contender.idx = k;
             contender.lcp = knownCommonLcp;
 
-            while (nodeIdx % 2 == 1 && nodeIdx > 1)
+            unsigned nodeIdx = K + k;
+
+            //std::cout << "nodeIdx " << nodeIdx << "\n";
+
+            while (nodeIdx % 2 == 0 && nodeIdx > 2)
             {
                 nodeIdx >>= 1;
                 //std::cout << "play against " << nodeIdx << "\n";
                 updateNode(contender, nodes[nodeIdx]);
             }
-            nodeIdx >>= 1;
+            nodeIdx = (nodeIdx + 1) / 2;
             //std::cout << "save as " << nodeIdx << "\n";
             nodes[nodeIdx] = contender;
         }
@@ -308,9 +310,9 @@ private:
 public:
     LcpLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
     {
-        for (unsigned i = 0; i < K; i++)
+        for (unsigned i = 1; i <= K; i++)
         {
-            const std::pair<size_t, size_t> currRange = ranges[i];
+            const std::pair<size_t, size_t> currRange = ranges[i - 1];
 
             streams[i] = input.sub(currRange.first, currRange.second);
         }
@@ -327,9 +329,10 @@ public:
         {
             // take winner and put into output
 
-            unsigned winnerIdx = nodes[0].idx;
+            unsigned winnerIdx = nodes[1].idx;
+            //std::cout << "winnerIdx " << winnerIdx << std::endl;
 
-            outStream.setFirst(streams[winnerIdx].firstString(), nodes[0].lcp);
+            outStream.setFirst(streams[winnerIdx].firstString(), nodes[1].lcp);
             ++outStream;
 
             // advance winner stream
@@ -339,15 +342,25 @@ public:
 
             // run new items from winner stream up the tree
 
-            Node& contender = nodes[0];
+            Node& contender = nodes[1];
 
             if (!stream.empty())
                 contender.lcp = streams[winnerIdx].firstLcp();
 
-            for (unsigned nodeIdx = (K + winnerIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
-            {
+            unsigned nodeIdx = winnerIdx + K;
+            //std::cout << "nodeIdx " << nodeIdx << "\n";
+
+            while (nodeIdx > 2) {
+                nodeIdx = (nodeIdx + 1) / 2;
+                //std::cout << "play against " << nodeIdx << "\n";
                 updateNode(contender, nodes[nodeIdx]);
             }
+            //std::cout << "play against " << nodeIdx << "\n";
+
+            // for (unsigned nodeIdx = (K + winnerIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
+            // {
+            //     updateNode(contender, nodes[nodeIdx]);
+            // }
         }
     }
 };
@@ -359,7 +372,7 @@ lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp,
 {
     if (length <= 2 * K)
     {
-        memcpy(output.strings, strings, length * sizeof(string));
+        memmove(output.strings, strings, length * sizeof(string));
         return bingmann_lcp_inssort::lcp_insertion_sort(
             output.strings, output.lcps, length, 0);
     }
