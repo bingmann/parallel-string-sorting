@@ -40,12 +40,16 @@ void fill_random(LCGRandom& rng, const std::string& letters,
 }
 
 template <void(* Algo)(const UCharStringSet& ss, size_t depth)>
-void TestUCharString(const size_t nstrings, const size_t nchars,
+void TestUCharString(const char* name,
+                     const size_t nstrings, const size_t nchars,
                      const std::string& letters)
 {
     typedef unsigned char* string;
 
     LCGRandom rng(1234567);
+
+    std::cout << "Running " << name
+              << " on " << nstrings << " uchar* strings" << std::endl;
 
     // array of string pointers
     string* cstrings = new string[nstrings];
@@ -79,10 +83,15 @@ void TestUCharString(const size_t nstrings, const size_t nchars,
 }
 
 template <void(* Algo)(const VectorStringSet& ss, size_t depth)>
-void TestVectorString(const size_t nstrings, const size_t nchars,
+void TestVectorString(const char* name,
+                      const size_t nstrings, const size_t nchars,
                       const std::string& letters)
 {
     LCGRandom rng(1234567);
+
+    std::cout << "Running " << name
+              << " on " << nstrings
+              << " std::vector<std::string> strings" << std::endl;
 
     // vector of std::string objects
     std::vector<std::string> strings(nstrings);
@@ -109,10 +118,16 @@ void TestVectorString(const size_t nstrings, const size_t nchars,
 }
 
 template <void(* Algo)(const VectorPtrStringSet& ss, size_t depth)>
-void TestVectorPtrString(const size_t nstrings, const size_t nchars,
+void TestVectorPtrString(const char* name,
+                         const size_t nstrings, const size_t nchars,
                          const std::string& letters)
 {
     LCGRandom rng(1234567);
+
+    std::cout << "Running " << name
+              << " on " << nstrings
+              << " std::vector<std::unique_ptr<std::string>> strings"
+              << std::endl;
 
     // vector of pointers to std::string objects
     typedef std::unique_ptr<std::string> unique_ptr_string;
@@ -140,9 +155,13 @@ void TestVectorPtrString(const size_t nstrings, const size_t nchars,
 }
 
 template <void(* Algo)(const UCharSuffixSet& ss, size_t depth)>
-void TestUCharSuffixString(const size_t nchars, const std::string& letters)
+void TestUCharSuffixString(const char* name,
+                           const size_t nchars, const std::string& letters)
 {
     LCGRandom rng(1234567);
+
+    std::cout << "Running " << name
+              << " on " << nchars << " uchar* suffixes" << std::endl;
 
     // std::string text object
     std::vector<unsigned char> text(nchars);
@@ -169,9 +188,14 @@ void TestUCharSuffixString(const size_t nchars, const std::string& letters)
 }
 
 template <void(* Algo)(const StringSuffixSet& ss, size_t depth)>
-void TestStringSuffixString(const size_t nchars, const std::string& letters)
+void TestStringSuffixString(const char* name,
+                            const size_t nchars, const std::string& letters)
 {
     LCGRandom rng(1234567);
+
+    std::cout << "Running " << name
+              << " on " << nchars
+              << " std::vector<size_t> suffixes" << std::endl;
 
     // std::string text object
     std::string text(nchars, 0);
@@ -195,12 +219,12 @@ const std::string letters_alnum
     = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 // use macro because one cannot pass template functions as template parameters:
-#define run_tests(func)                                    \
-    TestUCharString<func>(nstrings, 16, letters_alnum);    \
-    TestVectorString<func>(nstrings, 16, letters_alnum);   \
-    TestUCharSuffixString<func>(nstrings, letters_alnum);  \
-    TestStringSuffixString<func>(nstrings, letters_alnum); \
-    TestVectorPtrString<func>(nstrings, 16, letters_alnum);
+#define run_tests(func)                                           \
+    TestUCharString<func>(#func, nstrings, 16, letters_alnum);    \
+    TestVectorString<func>(#func, nstrings, 16, letters_alnum);   \
+    TestUCharSuffixString<func>(#func, nstrings, letters_alnum);  \
+    TestStringSuffixString<func>(#func, nstrings, letters_alnum); \
+    TestVectorPtrString<func>(#func, nstrings, 16, letters_alnum);
 
 void test_all(const size_t nstrings)
 {
