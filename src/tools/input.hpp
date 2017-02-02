@@ -312,6 +312,8 @@ bool load_compressed(const std::string& path)
         decompressor = "xz";
     else if (path.substr(path.size() - 4, 4) == ".lzo")
         decompressor = "lzop";
+    else if (path.substr(path.size() - 4, 4) == ".zst")
+        decompressor = "zstd";
 
     if (!decompressor) return false;
 
