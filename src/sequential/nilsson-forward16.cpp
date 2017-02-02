@@ -31,16 +31,16 @@ typedef unsigned char* string;
 #define FALSE 0
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-typedef int boolean;
-typedef int character;
+typedef long boolean;
+typedef long character;
 
 /******************* A simple memory allocator ********************/
 
 typedef struct {
 	void *block[MAXBLOCKS];
-	int allocnr;
-	int nr;
-	int blocksize;
+        long allocnr;
+        long nr;
+        long blocksize;
 	void *current, *first, *last;
 } memory;
 
@@ -49,7 +49,7 @@ typedef struct {
    blocksize * MAXBLOCKS memory slots each consisting of
    elemsize bytes.
 */
-static inline void initmem(memory *m, int elemsize, int blocksize)
+static inline void initmem(memory *m, long elemsize, long blocksize)
 {
    m->blocksize = MAX(blocksize, 1000) * elemsize;
    m->block[0] = malloc(m->blocksize);
@@ -58,7 +58,7 @@ static inline void initmem(memory *m, int elemsize, int blocksize)
    m->current = m->first = m->last = NULL;
 }
 
-static inline void *allocmem(memory *m, int elemsize)
+static inline void *allocmem(memory *m, long elemsize)
 {
    if (m->current < m->last)
       m->current = (void *) ((char *) (m->current) + elemsize);
@@ -75,7 +75,7 @@ static inline void *allocmem(memory *m, int elemsize)
    return m->current;
 }
 
-static inline void *deallocmem(memory *m, int elemsize)
+static inline void *deallocmem(memory *m, long elemsize)
 {
    if (m->current > m->first)
       m->current = (void *) ((char *) (m->current) - elemsize);
@@ -99,7 +99,7 @@ static inline void resetmem(memory *m)
 
 static inline void freemem(memory *m)
 {
-   int i;
+   long i;
 
    for (i = 0; i <= m->allocnr; i++)
       free(m->block[i]);
@@ -113,10 +113,10 @@ typedef struct listrec *list;
 struct listrec {
    string str;
    list next;
-   int length;
+   long length;
 };
 
-static inline int scmp(unsigned char *s1, unsigned char *s2)
+static inline long scmp(unsigned char *s1, unsigned char *s2)
 {
     while( *s1 != '\0' && *s1 == *s2 )
         s1++, s2++;
@@ -125,7 +125,7 @@ static inline int scmp(unsigned char *s1, unsigned char *s2)
 
 /* Insertion sort for linked lists of character strings.
    The strings all have a common prefix of length p. */
-static inline list Insertsort(list r, list *tail, int p)
+static inline list Insertsort(list r, list *tail, long p)
 {
    list fi, la, t;
 
@@ -169,7 +169,7 @@ struct grouprec {
 
 struct bucketrec {
    list head, tail; /* a list of elements */
-   int size;        /* list length */
+   long size;        /* list length */
    group tag;       /* group tag */
    bucket next;     /* next bucket item */
 };
@@ -179,7 +179,7 @@ static memory bucketmem[1];
 
 /* Put a list of elements into a bucket. */
 static void intobucket(bucket *b, list head, list tail,
-                       int size, group g)
+                       long size, group g)
 {
    bucket btemp = *b, newb;
 
@@ -202,13 +202,13 @@ static void intobucket(bucket *b, list head, list tail,
    Finished groups are located and skipped.
    The elements are moved in blocks. */
 static void intobuckets(group g, bucket b[], 
-                        int *used1, int *used2, int pos)
+                        long *used1, long *used2, long pos)
 {
    group prevg;
    character ch, prevch;
    boolean split;
    list tail, tailn;
-   int size;
+   long size;
    character buckets1, buckets2;
 
    for (ch = 0; ch < CHARS; ch++)
@@ -275,7 +275,7 @@ static void intogroup(group g, list head, list tail, boolean finis)
 /* Traverse the buckets and put the elements back into their groups.
    Split the groups and mark all finished groups.
    The elements are moved in blocks. */
-static void intogroups(bucket b[], int *used1, int *used2, int pos)
+static void intogroups(bucket b[], long *used1, long *used2, long pos)
 {
    character ch, ch1, ch2, high;
    bucket s;
@@ -315,13 +315,13 @@ static list collect(group g)
    return head;
 }
 
-static inline list forward2(list t, int n)
+static inline list forward2(list t, long n)
 {
    static bucket b[BUCKETS]; /* buckets */
    character used1[CHARS+1]; /* What buckets are used? The number of */
    character used2[CHARS+1]; /* buckets is stored in the last element */
    group g, g2;              /* groups */
-   int pos = 0;              /* pos in string */
+   long pos = 0;              /* pos in string */
 
    if (n<2) return t;
 
