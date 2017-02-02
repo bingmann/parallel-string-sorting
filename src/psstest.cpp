@@ -76,6 +76,7 @@ size_t gopt_repeats = 1;
 size_t gopt_repeats_inner = 1;
 std::vector<const char*> gopt_algorithm;
 std::vector<const char*> gopt_algorithm_full;
+std::vector<const char*> gopt_algorithm_exclude;
 int gopt_timeout = 0;
 
 const char* g_datapath = NULL;       // path of input
@@ -182,6 +183,11 @@ static inline bool gopt_algorithm_select(const Contestant* c)
 {
     if (gopt_sequential_only && c->is_parallel()) return false;
     if (gopt_parallel_only && !c->is_parallel()) return false;
+
+    for (size_t ai = 0; ai < gopt_algorithm_exclude.size(); ++ai) {
+        if (strstr(c->m_algoname, gopt_algorithm_exclude[ai]) != NULL)
+            return false;
+    }
 
     if (gopt_algorithm.size() || gopt_algorithm_full.size())
     {
@@ -794,7 +800,7 @@ int main(int argc, char* argv[])
     while (1)
     {
         int index;
-        int argi = getopt_long(argc, argv, "hs:S:a:A:r:R:o:i:T:DFNM:", longopts, &index);
+        int argi = getopt_long(argc, argv, "hs:S:a:A:e:r:R:o:i:T:DFNM:", longopts, &index);
 
         if (argi < 0) break;
 
@@ -832,6 +838,11 @@ int main(int argc, char* argv[])
         case 'D':
             gopt_forkrun = gopt_forkdataload = true;
             std::cout << "Option -D: forking before each algorithm run and loading data after fork." << std::endl;
+            break;
+
+        case 'e':
+            gopt_algorithm_exclude.push_back(optarg);
+            std::cout << "Option -e: excluding algorithms containing " << optarg << std::endl;
             break;
 
         case 'F':
