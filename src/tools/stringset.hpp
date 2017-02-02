@@ -358,15 +358,20 @@ class GenericCharStringSet
 public:
     typedef GenericCharStringSetTraits<CharType> Traits;
 
-    using typename Traits::Char;
-    using typename Traits::String;
-    using typename Traits::Iterator;
-    using typename Traits::CharIterator;
-    using typename Traits::Container;
+    typedef typename Traits::Char Char;
+    typedef typename Traits::String String;
+    typedef typename Traits::Iterator Iterator;
+    typedef typename Traits::CharIterator CharIterator;
+    typedef typename Traits::Container Container;
 
     //! Construct from begin and end string pointers
     GenericCharStringSet(Iterator begin, Iterator end)
         : begin_(begin), end_(end)
+    { }
+
+    //! Construct from a string container
+    explicit GenericCharStringSet(const Container& c)
+        : begin_(c.first), end_(c.first + c.second)
     { }
 
     //! Return size of string array
@@ -403,11 +408,6 @@ public:
     //! Deallocate a temporary string container
     static void deallocate(Container& c)
     { delete[] c.first; c.first = NULL; }
-
-    //! Construct from a string container
-    explicit GenericCharStringSet(const Container& c)
-        : GenericCharStringSet(c.first, c.first + c.second)
-    { }
 
 protected:
     //! array of string pointers

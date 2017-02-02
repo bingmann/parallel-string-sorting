@@ -80,11 +80,13 @@ public:
     {
     public:
         //! total size of input
-        const StringSet* g_strings = NULL;
+        const StringSet* g_strings;
         //! calculated threshold for sequential sorting
         size_t g_sequential_threshold;
         //! number of threads overall
         size_t g_threadnum;
+
+        Context() : g_strings(NULL) { }
 
         //! output string ranges for debugging
         std::string srange(const StringSet& ss)
@@ -1210,9 +1212,11 @@ jump2:
     class PartitionBlock
     {
     public:
-        size_t pos = 0, fill = 0;
+        size_t pos, fill;
         StrCacheBlockPtr blk;
-        bool partial = false;
+        bool partial;
+
+        PartitionBlock() : pos(0), fill(0), partial(false) { }
 
         template <int type>
         bool has_src_block(ParallelJob& mkqs)
