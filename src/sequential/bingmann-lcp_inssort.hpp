@@ -380,7 +380,7 @@ void lcp_insertion_sort_cache(
 
         String new_str = std::move(str[begin + j]);
         size_t new_lcp = depth; // start with LCP depth
-        Char new_ch = str.get_char(new_str, new_lcp);
+        // Char new_ch = str.get_char(new_str, new_lcp);
 
         size_t i = j;
         while (i > 0)
@@ -449,7 +449,7 @@ void lcp_insertion_sort_cache(
 
         String new_str = std::move(str[begin + j]);
         size_t new_lcp = depth; // start with LCP depth
-        Char new_ch = str.get_char(new_str, new_lcp);
+        // Char new_ch = str.get_char(new_str, new_lcp);
 
         size_t i = j;
         while (i > 0)

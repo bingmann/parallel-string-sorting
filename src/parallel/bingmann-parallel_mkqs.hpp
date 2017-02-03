@@ -193,7 +193,7 @@ public:
                            size_t n, size_t depth)
     {
         StrCache* pi, * pj;
-        String s, t;
+        // String s, t;
         for (pi = cache + 1; --n > 0; ++pi) {
             String tmp = std::move(pi->str);
             for (pj = pi; pj > cache; --pj) {

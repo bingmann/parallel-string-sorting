@@ -720,7 +720,7 @@ public:
     //! Construct from begin and end string pointers
     StringSuffixSet(const Text& text,
                     const Iterator& begin, const Iterator& end)
-        : text_(text),
+        : text_(&text),
           begin_(begin), end_(end)
     { }
 
@@ -747,23 +747,23 @@ public:
 
     //! Return CharIterator for referenced string, which belongs to this set.
     CharIterator get_chars(const String& s, size_t depth) const
-    { return text_.begin() + s + depth; }
+    { return text_->begin() + s + depth; }
 
     //! Returns true if CharIterator is at end of the given String
     bool is_end(const String&, const CharIterator& i) const
-    { return (i >= text_.end()); }
+    { return (i >= text_->end()); }
 
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const
-    { return text_.substr(s + depth); }
+    { return text_->substr(s + depth); }
 
     //! Subset this string set using iterator range.
     StringSuffixSet sub(Iterator begin, Iterator end) const
-    { return StringSuffixSet(text_, begin, end); }
+    { return StringSuffixSet(*text_, begin, end); }
 
     //! Allocate a new temporary string container with n empty Strings
     Container allocate(size_t n) const
-    { return std::make_tuple(text_, std::move(std::vector<String>(n))); }
+    { return std::make_tuple(*text_, std::move(std::vector<String>(n))); }
 
     //! Deallocate a temporary string container
     static void deallocate(Container& c)
@@ -771,13 +771,13 @@ public:
 
     //! Construct from a string container
     explicit StringSuffixSet(Container& c)
-        : text_(std::get<0>(c)),
+        : text_(&std::get<0>(c)),
           begin_(std::get<1>(c).begin()), end_(std::get<1>(c).end())
     { }
 
 protected:
     //! reference to base text
-    const Text& text_;
+    const Text* text_;
 
     //! iterators inside the output suffix array.
     Iterator begin_, end_;
