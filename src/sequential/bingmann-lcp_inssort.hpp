@@ -337,10 +337,11 @@ PSS_CONTESTANT(test_lcp_insertion_sort_nolcp,
 static inline
 void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
 {
-    string* shadow = new string[n + 1]; // allocate shadow pointer array
-    StringShadowPtr<parallel_string_sorting::UCharStringSet> strptr(
+    lcp_t* lcp_array = new lcp_t[n + 1]; // allocate shadow pointer array
+    StringShadowLcpPtr<parallel_string_sorting::UCharStringSet> strptr(
         parallel_string_sorting::UCharStringSet(strings, strings + n),
-        parallel_string_sorting::UCharStringSet(shadow, shadow + n));
+        parallel_string_sorting::UCharStringSet(nullptr, 0),
+        lcp_array);
 
     strptr.lcp(0) = 42;                 // must keep lcp[0] unchanged
 
@@ -348,7 +349,7 @@ void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
 
     stringtools::verify_lcp(strptr.active(), strptr.lcparray(), 42);
 
-    delete[] shadow;
+    delete[] lcp_array;
 }
 
 PSS_CONTESTANT(test_lcp_insertion_sort_pseudocode,
