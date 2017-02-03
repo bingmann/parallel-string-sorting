@@ -202,7 +202,8 @@ std::string strip_datapath(const std::string& path)
     if (name.substr(name.size() - 3, 3) == ".gz" ||
         name.substr(name.size() - 4, 4) == ".bz2" ||
         name.substr(name.size() - 3, 3) == ".xz" ||
-        name.substr(name.size() - 4, 4) == ".lzo")
+        name.substr(name.size() - 4, 4) == ".lzo" ||
+        name.substr(name.size() - 4, 4) == ".zst")
     {
         // remove compression suffix and size, both separated by dots
         std::string::size_type dotpos = name.rfind('.');
