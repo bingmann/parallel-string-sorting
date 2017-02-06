@@ -128,23 +128,31 @@ PSS_CONTESTANT(qsort8,
 ////////////////////////////////////////////////////////////////////////////////
 
 static inline
-bool stdcompare_byte(const string a, const string b)
+bool stdcompare_strcmp(const string& a, const string& b)
 {
-    for (size_t i = 0; ; i++)
-    {
-        if (a[i] != b[i]) {
-            return (a[i] > b[i]) ? false : true;
-        }
+    return strcmp((const char*)a, (const char*)b) < 0;
+}
 
-        // check byte for zero -> both strings end
-        if (a[i] == 0)
-            return false;
+static inline
+bool stdcompare_byte(const string& _a, const string& _b)
+{
+    string a = _a, b = _b;
+
+    while (*a != 0)
+    {
+        if (*a != *b)
+            return (*a < *b);
+
+        ++a, ++b;
     }
+
+    // check byte for zero -> both strings end, random tie break
+    return false;
 }
 
 template <typename key_type>
 static inline
-bool stdcompare_uint(const string a, const string b)
+bool stdcompare_uint(const string& a, const string& b)
 {
     for (size_t depth = 0; ; depth += sizeof(key_type))
     {
@@ -162,6 +170,11 @@ bool stdcompare_uint(const string a, const string b)
     }
 }
 
+void stdsort(string* strings, size_t n)
+{
+    std::sort(strings, strings + n, stdcompare_strcmp);
+}
+
 void stdsort1(string* strings, size_t n)
 {
     std::sort(strings, strings + n, stdcompare_byte);
@@ -176,6 +189,10 @@ void stdsort8(string* strings, size_t n)
 {
     std::sort(strings, strings + n, stdcompare_uint<uint64_t>);
 }
+
+PSS_CONTESTANT(stdsort,
+               "bingmann/stdsort",
+               "Run std::sort with strcmp() string comparsions")
 
 PSS_CONTESTANT(stdsort1,
                "bingmann/stdsort1",
