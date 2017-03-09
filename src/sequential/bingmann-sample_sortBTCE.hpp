@@ -22,11 +22,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#include <tlx/string/hexdump.hpp>
-#include <tlx/meta/log2.hpp>
-
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTCE_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTCE_HEADER
+
+#include <tlx/string/hexdump.hpp>
+#include <tlx/meta/log2.hpp>
 
 namespace bingmann_sample_sortBTCE {
 

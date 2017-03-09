@@ -212,7 +212,7 @@ sub process_cpp {
         my $namespace = 0;
         for(my $i = 0; $i < @data-1; ++$i)
         {
-            if ($data[$i] =~ m!^namespace \S+ {!) {
+            if ($data[$i] =~ m!^namespace \S+ \{!) {
                 splice(@data, $i+1, 0, "\n");
                 ++$namespace;
             }
@@ -328,6 +328,8 @@ foreach my $file (@filelist)
     elsif ($file =~ m!(^|/)\.[^/]*$!) {
     }
     elsif ($file =~ m!^minitbb!) {
+    }
+    elsif ($file =~ m!^tlx!) {
     }
     elsif ($file =~ m!^tools!) {
     }

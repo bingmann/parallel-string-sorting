@@ -22,10 +22,10 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#include <tlx/meta/log2.hpp>
-
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTC_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTC_HEADER
+
+#include <tlx/meta/log2.hpp>
 
 namespace bingmann_sample_sortBTC {
 

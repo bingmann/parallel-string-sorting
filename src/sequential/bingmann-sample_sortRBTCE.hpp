@@ -28,11 +28,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#include <tlx/string/hexdump.hpp>
-#include <tlx/meta/log2.hpp>
-
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTRBTCE_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTRBTCE_HEADER
+
+#include <tlx/string/hexdump.hpp>
+#include <tlx/meta/log2.hpp>
 
 namespace bingmann_sample_sortRBTCE {
 
@@ -114,12 +114,12 @@ struct SplitterTree
             key_type xorSplit = prevkey ^ mykey;
 
             DBG(debug_splitter,
-                "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = " <<
+                tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = " <<
+                count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                             | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8) |
+                             ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
             DBG(debug_splitter, "key range = [" << snum(midlo) << "," << snum(midhi) << ") - " << midhi - midlo);
 
@@ -498,7 +498,7 @@ struct SplitterTree
 void bingmann_sample_sortRBTCE(string* strings, size_t n)
 {
     sample_sort_pre();
-    SplitterTree::sort<& SplitterTree::find_bkt_tree_equal>(strings, n, 0);
+    SplitterTree::sort<&SplitterTree::find_bkt_tree_equal>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -508,7 +508,7 @@ PSS_CONTESTANT(bingmann_sample_sortRBTCE, "bingmann/sample_sortRBTCE",
 void bingmann_sample_sortRBTCEA(string* strings, size_t n)
 {
     sample_sort_pre();
-    SplitterTree::sort<& SplitterTree::find_bkt_tree_asmequal>(strings, n, 0);
+    SplitterTree::sort<&SplitterTree::find_bkt_tree_asmequal>(strings, n, 0);
     sample_sort_post();
 }
 

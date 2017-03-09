@@ -125,8 +125,8 @@ enum { TM_WAITING, TM_PARA_SS, TM_SEQ_SS, TM_MKQS, TM_INSSORT };
 
 //! replace TimerArrayMT with a no-op implementation
 #ifndef TIMERARRAY_REAL
-typedef::TimerArrayDummy TimerArrayMT;
-typedef::ScopedTimerKeeperDummy ScopedTimerKeeperMT;
+typedef ::TimerArrayDummy TimerArrayMT;
+typedef ::ScopedTimerKeeperDummy ScopedTimerKeeperMT;
 #endif
 
 // ****************************************************************************

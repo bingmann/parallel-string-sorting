@@ -1364,7 +1364,7 @@ bingmann_sequential_mkqs_cache8(const StringSet& ss, size_t depth)
     typename MKQS::Context ctx;
     ctx.g_strings = &ss;
 
-    typename MKQS::StrCache * cache = new typename MKQS::StrCache[ss.size()];
+    typename MKQS::StrCache* cache = new typename MKQS::StrCache[ss.size()];
 
     typename StringSet::Iterator begin = ss.begin();
     for (size_t i = 0; i < ss.size(); ++i)
@@ -1408,7 +1408,7 @@ void bingmann_parallel_mkqs_enqueue(
         return;
 
     if (strset.size() <= ctx.g_sequential_threshold) {
-        typename MKQS::StrCache * cache =
+        typename MKQS::StrCache* cache =
             new typename MKQS::StrCache[strset.size()];
 
         typename StringSet::Iterator begin = strset.begin();

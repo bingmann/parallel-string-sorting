@@ -22,10 +22,10 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#include <tlx/string/hexdump.hpp>
-
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
+
+#include <tlx/string/hexdump.hpp>
 
 namespace bingmann_sample_sortBS {
 

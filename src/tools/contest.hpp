@@ -103,12 +103,12 @@ public:
     virtual bool is_parallel() const { return false; }
 };
 
-#define PSS_CONTESTANT(func, algoname, desc)                           \
-    static const class Contestant* _Contestant_ ## func ## _register = \
+#define PSS_CONTESTANT(func, algoname, desc)                    \
+    const class Contestant* _Contestant_ ## func ## _register = \
             new Contestant_UCArray(NULL, func, algoname, desc);
 
-#define PSS_CONTESTANT_PREPARE(pfunc, func, algoname, desc)            \
-    static const class Contestant* _Contestant_ ## func ## _register = \
+#define PSS_CONTESTANT_PREPARE(pfunc, func, algoname, desc)     \
+    const class Contestant* _Contestant_ ## func ## _register = \
             new Contestant_UCArray(pfunc, func, algoname, desc);
 
 class Contestant_UCArray_Parallel : public Contestant_UCArray

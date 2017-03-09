@@ -40,7 +40,7 @@ void fill_random(LCGRandom& rng, const std::string& letters,
 }
 
 void TestUCharString(const char* name,
-                     void (*algo)(const UCharStringSet& ss, size_t depth),
+                     void (* algo)(const UCharStringSet& ss, size_t depth),
                      const size_t nstrings, const size_t nchars,
                      const std::string& letters)
 {
@@ -83,7 +83,7 @@ void TestUCharString(const char* name,
 }
 
 void TestVectorString(const char* name,
-                      void (*algo)(const VectorStringSet& ss, size_t depth),
+                      void (* algo)(const VectorStringSet& ss, size_t depth),
                       const size_t nstrings, const size_t nchars,
                       const std::string& letters)
 {
@@ -119,7 +119,7 @@ void TestVectorString(const char* name,
 
 void TestVectorPtrString(
     const char* name,
-    void (*algo)(const VectorPtrStringSet& ss, size_t depth),
+    void (* algo)(const VectorPtrStringSet& ss, size_t depth),
     const size_t nstrings, const size_t nchars,
     const std::string& letters)
 {
@@ -157,7 +157,7 @@ void TestVectorPtrString(
 
 void TestUCharSuffixString(
     const char* name,
-    void (*algo)(const UCharSuffixSet& ss, size_t depth),
+    void (* algo)(const UCharSuffixSet& ss, size_t depth),
     const size_t nchars, const std::string& letters)
 {
     LCGRandom rng(1234567);
@@ -191,7 +191,7 @@ void TestUCharSuffixString(
 
 void TestStringSuffixString(
     const char* name,
-    void (*algo)(const StringSuffixSet& ss, size_t depth),
+    void (* algo)(const StringSuffixSet& ss, size_t depth),
     const size_t nchars, const std::string& letters)
 {
     LCGRandom rng(1234567);

@@ -220,8 +220,8 @@ class LcpLoserTree
     };
 
 private:
-    Stream streams[K+1];
-    Node nodes[K+1];
+    Stream streams[K + 1];
+    Node nodes[K + 1];
 
     //! play one comparison edge game: contender is the node below
     //! defender. After the game, defender contains the lower index, contender
