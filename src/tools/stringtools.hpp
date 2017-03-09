@@ -38,22 +38,6 @@ typedef unsigned char char_type;
 /// hacky gcc synthesised 128-bit datatype
 typedef unsigned int uint128_t __attribute__ ((mode(TI)));
 
-/// represent hex octets of large integer datatypes
-template <typename Type>
-static inline std::string toHex(Type v)
-{
-    char out[2 * sizeof(v) + 1];
-    static const char hex[17] = "0123456789ABCDEF";
-    for (unsigned int i = 1; i <= sizeof(v); ++i)
-    {
-        out[2 * (sizeof(v) - i) + 0] = hex[(v & 0xF0) >> 4];
-        out[2 * (sizeof(v) - i) + 1] = hex[(v & 0x0F) >> 0];
-        v >>= 8;
-    }
-    out[2 * sizeof(v)] = 0;
-    return out;
-}
-
 /// represent binary digits of large integer datatypes
 template <typename Type>
 static inline std::string toBinary(Type v, const int width = (1 << sizeof(Type)))
@@ -115,33 +99,6 @@ unsigned int calc_lcp(const StringSet& ss,
         ++h, ++c1, ++c2;
 
     return h;
-}
-
-static inline std::string hexdump(const void* data, size_t size)
-{
-    const unsigned char* cdata = static_cast<const unsigned char*>(data);
-
-    std::string out;
-    out.resize(size * 2);
-
-    static const char xdigits[16] = {
-        '0', '1', '2', '3', '4', '5', '6', '7',
-        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-    };
-
-    std::string::iterator oi = out.begin();
-    for (const unsigned char* si = cdata; si != cdata + size; ++si)
-    {
-        *oi++ = xdigits[(*si & 0xF0) >> 4];
-        *oi++ = xdigits[(*si & 0x0F)];
-    }
-
-    return out;
-}
-
-static inline std::string hexdump(const std::string& str)
-{
-    return hexdump(str.data(), str.size());
 }
 
 /// Return traits of key_type

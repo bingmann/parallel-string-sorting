@@ -40,11 +40,13 @@
 #include "../tools/contest.hpp"
 #include "../tools/stringtools.hpp"
 #include "../tools/jobqueue.hpp"
-#include "../tools/logfloor.hpp"
 #include "../tools/lockfree.hpp"
 
 #include "../sequential/inssort.hpp"
 #include "../sequential/bingmann-lcp_inssort.hpp"
+
+#include <tlx/string/hexdump.hpp>
+#include <tlx/meta/log2.hpp>
 
 #ifndef CALC_LCP
 #define CALC_LCP 0
@@ -317,7 +319,7 @@ public:
         key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
 
         DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) <<
-            "] = " << toHex(*mid));
+            "] = " << tlx::hexdump_type(*mid));
 
         key_type mykey = m_tree[treeidx] = *mid;
 #if 1
@@ -339,8 +341,8 @@ public:
             key_type xorSplit = prevkey ^ mykey;
 
             DBG(debug_splitter, "    lcp: " <<
-                toHex(prevkey) << " XOR " << toHex(mykey) << " = " <<
-                toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
+                tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = " <<
+                tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
                 " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
             *m_splitter++ = mykey;
@@ -356,8 +358,8 @@ public:
             key_type xorSplit = rec_prevkey ^ mykey;
 
             DBG(debug_splitter, "    lcp: " <<
-                toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = " <<
-                toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
+                tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = " <<
+                tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
                 " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
             *m_splitter++ = mykey;
@@ -793,7 +795,7 @@ public:
             = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 #endif
 
-        static const size_t treebits = logfloor_<numsplitters2>::value;
+        static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
         static const size_t numsplitters = (1 << treebits) - 1;
 
         static const size_t bktnum = 2 * numsplitters + 1;
@@ -1592,7 +1594,7 @@ public:
     // bounding equation: 2*K+1 buckets when counting bkt occurances.
     static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 #endif
-    static const size_t treebits = logfloor_<numsplitters2>::value;
+    static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
     static const size_t numsplitters = (1 << treebits) - 1;
 
     static const size_t bktnum = 2 * numsplitters + 1;
@@ -2283,12 +2285,12 @@ public:
         for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
         {
             splitter[i] = samples[j];
-            DBG(debug_splitter, "key " << toHex(splitter[i]));
+            DBG(debug_splitter, "key " << tlx::hexdump_type(splitter[i]));
 
             if (i != 0) {
                 key_type xorSplit = splitter[i - 1] ^ splitter[i];
 
-                DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
+                DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
 
                 DBG3(debug_splitter, count_high_zero_bits(xorSplit) <<
                      " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");

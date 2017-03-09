@@ -125,7 +125,6 @@ std::vector<size_t> g_numa_string_count;      // pointer to strings on NUMA node
 #include "tools/input.hpp"
 #include "tools/checker.hpp"
 #include "tools/stringtools.hpp"
-#include "tools/logfloor.hpp"
 
 #include "sequential/inssort.hpp"
 #include "sequential/mbm-radix.hpp"

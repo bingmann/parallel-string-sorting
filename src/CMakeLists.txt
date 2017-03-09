@@ -41,7 +41,7 @@ set(PSSBIN_SOURCES
   sinha-copy-burstsort/glue.cpp
   )
 
-set(PSSBIN_LIBRARIES ${TBB_LIBRARIES} ${GMP_LIBRARIES} ${NUMA_LIBRARIES} rt dl)
+set(PSSBIN_LIBRARIES ${TBB_LIBRARIES} ${GMP_LIBRARIES} ${NUMA_LIBRARIES} tlx rt dl)
 
 set(PSSBIN_LIBRARIES ${PSSBIN_LIBRARIES} CACHE STRING "Pssbin Libraries" FORCE)
 
@@ -84,6 +84,7 @@ endif(PSS_BINARY)
 if(PSS_STATIC)
 
   add_library(pss_static STATIC ${PSSLIB_SOURCES})
+  target_link_libraries(pss_static tlx)
 
   set_target_properties(pss_static PROPERTIES
     VERSION   "${PSSLIB_VERSION}"
@@ -95,6 +96,7 @@ endif()
 if(PSS_SHARED)
 
   add_library(pss_shared SHARED ${PSSLIB_SOURCES})
+  target_link_libraries(pss_shared tlx)
 
   set_target_properties(pss_shared PROPERTIES
     VERSION   "${PSSLIB_VERSION}"

@@ -39,10 +39,10 @@
 
 #include <tr1/memory>
 #include <tbb/concurrent_queue.h>
+#include <tlx/string/hexdump.hpp>
 
 namespace bingmann_parallel_mkqs {
 
-using stringtools::toHex;
 using namespace jobqueue;
 
 static const size_t g_inssort_threshold = 64;
@@ -110,7 +110,7 @@ public:
 
         friend std::ostream& operator << (std::ostream& os, const StrCache& sc)
         {
-            return os << toHex(sc.key);
+            return os << tlx::hexdump_type(sc.key);
         }
     };
 
@@ -1009,7 +1009,7 @@ jumpout:
         void partition(size_t p, JobQueue& jobqueue)
         {
             DBG(debug_parajobs, "process PartitionJob " << p << " @ " <<
-                this << " with pivot " << toHex(pivot));
+                this << " with pivot " << tlx::hexdump_type(pivot));
 
             // phase 1: partition blocks in-place
 
@@ -1023,18 +1023,18 @@ jumpout:
                     int res = cmp(lt.front_key(), pivot);
                     if (res < 0) {       // < than pivot
                         DBG(debug_cmp1, "blk_lt[" << lt.pos << "] = " <<
-                            lt.front_key() << " < pivot " << toHex(pivot) << ", continue.");
+                            lt.front_key() << " < pivot " << tlx::hexdump_type(pivot) << ", continue.");
                         lt.pos++;
                     }
                     else if (res == 0) { // = pivot
                         DBG(debug_cmp1, "blk_lt[" << lt.pos << "] = " <<
-                            lt.front_key() << " = pivot " << toHex(pivot) << ", swap to blk_eq");
+                            lt.front_key() << " = pivot " << tlx::hexdump_type(pivot) << ", swap to blk_eq");
                         std::swap(lt.front_cache(), eq.front_cache());
                         eq.pos++;
                     }
                     else {  // > than pivot
                         DBG(debug_cmp1, "blk_lt[" << lt.pos << "] = " <<
-                            lt.front_key() << " > pivot " << toHex(pivot) << ", break.");
+                            lt.front_key() << " > pivot " << tlx::hexdump_type(pivot) << ", break.");
                         goto jump1;
                     }
                 }
@@ -1047,18 +1047,18 @@ jump1:
                     int res = cmp(gt.front_key(), pivot);
                     if (res < 0) {       // < than pivot
                         DBG(debug_cmp1, "blk_gt[" << gt.pos << "] = " <<
-                            gt.front_key() << " < pivot " << toHex(pivot) << ", break.");
+                            gt.front_key() << " < pivot " << tlx::hexdump_type(pivot) << ", break.");
                         goto jump2;
                     }
                     else if (res == 0) { // = pivot
                         DBG(debug_cmp1, "blk_gt[" << gt.pos << "] = " <<
-                            gt.front_key() << " = pivot " << toHex(pivot) << ", swap to blk_eq");
+                            gt.front_key() << " = pivot " << tlx::hexdump_type(pivot) << ", swap to blk_eq");
                         std::swap(gt.front_cache(), eq.front_cache());
                         eq.pos++;
                     }
                     else {  // > than pivot
                         DBG(debug_cmp1, "blk_gt[" << gt.pos << "] = " <<
-                            gt.front_key() << " > pivot " << toHex(pivot) << ", continue.");
+                            gt.front_key() << " > pivot " << tlx::hexdump_type(pivot) << ", continue.");
                         gt.pos++;
                     }
                 }
@@ -1319,7 +1319,7 @@ jump2:
                 int res = cmp(front_key(), pivot);
                 if (res < 0) {        // < than pivot
                     DBG(debug_cmp2, "blk[" << pos << "] = " <<
-                        front_key() << " < pivot " << toHex(pivot) << ".");
+                        front_key() << " < pivot " << tlx::hexdump_type(pivot) << ".");
 
                     if (type == LT) { // good.
                         pos++;
@@ -1330,7 +1330,7 @@ jump2:
                 }
                 else if (res == 0) {  // = pivot
                     DBG(debug_cmp2, "blk[" << pos << "] = " <<
-                        front_key() << " = pivot " << toHex(pivot) << ".");
+                        front_key() << " = pivot " << tlx::hexdump_type(pivot) << ".");
 
                     if (type == EQ) { // good.
                         pos++;
@@ -1341,7 +1341,7 @@ jump2:
                 }
                 else {                // > than pivot
                     DBG(debug_cmp2, "blk[" << pos << "] = " <<
-                        front_key() << " > pivot " << toHex(pivot) << ".");
+                        front_key() << " > pivot " << tlx::hexdump_type(pivot) << ".");
 
                     if (type == GT) { // good.
                         pos++;

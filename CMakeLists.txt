@@ -99,6 +99,9 @@ set(TBB_LIBRARIES minitbb)
 
 include_directories("${PROJECT_SOURCE_DIR}/minitbb/")
 
+# compile TLX
+add_subdirectory(tlx)
+
 # descend into source
 add_subdirectory(src)
 

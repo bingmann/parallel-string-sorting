@@ -28,6 +28,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
+#include <tlx/string/hexdump.hpp>
+#include <tlx/meta/log2.hpp>
+
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTRBTCE_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTRBTCE_HEADER
 
@@ -52,7 +55,7 @@ struct SplitterTree
     static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
 #endif
 
-    static const size_t treebits = logfloor_<numsplitters2>::value;
+    static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
     static const size_t numsplitters = (1 << treebits) - 1;
 
     static const size_t bktnum = 2 * numsplitters + 1;
@@ -110,9 +113,10 @@ struct SplitterTree
         {
             key_type xorSplit = prevkey ^ mykey;
 
-            DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
-                                            << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                            << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            DBG(debug_splitter,
+                "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
             * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
                              | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
@@ -125,7 +129,7 @@ struct SplitterTree
                 && m_treelist.size() < 255)                    // not too many subtrees
             {
                 DBG(debug_subtree, "creating subtree for equal range of key "
-                    << toHex(mykey) << " with " << (midhi - midlo) << " samples");
+                    << tlx::hexdump_type(mykey) << " with " << (midhi - midlo) << " samples");
 
                 for (samplepair_type* s = midlo; s < midhi; ++s)
                 {
@@ -156,7 +160,7 @@ struct SplitterTree
             samplepair_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
 
             DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                                        << toHex(mid->first));
+                                        << tlx::hexdump_type(mid->first));
 
             key_type mykey = m_tree[treeidx] = mid->first;
 

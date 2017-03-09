@@ -22,6 +22,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
+#include <tlx/string/hexdump.hpp>
+#include <tlx/meta/log2.hpp>
+
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTCE_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTCE_HEADER
 
@@ -31,7 +34,7 @@ using namespace bingmann_sample_sort;
 
 #if 0
 static const size_t numsplitters2 = 16;
-static const size_t treebits = logfloor_<numsplitters2>::value;
+static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
 static const size_t numsplitters = (1 << treebits) - 1;
 #else
 //static const size_t l2cache = 256*1024;
@@ -46,7 +49,7 @@ static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(siz
 
 //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
 
-static const size_t treebits = logfloor_<numsplitters2>::value;
+static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
 static const size_t numsplitters = (1 << treebits) - 1;
 #endif
 
@@ -352,13 +355,13 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
 
             int l = __builtin_ctz(i + 1);
             DBG(debug_splitter, "splitter[" << i << "] on level " << l
-                                            << " = tree[" << treelvl[l] << "] = key " << toHex(splitter));
+                                            << " = tree[" << treelvl[l] << "] = key " << tlx::hexdump_type(splitter));
             splitter_tree1[treelvl[l]++] = samples[j];
 
             if (i != 0) {
                 key_type xorSplit = prevsplitter ^ splitter;
 
-                DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
+                DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
 
                 DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
                                                                     << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
@@ -548,7 +551,7 @@ public:
             size_t mid = (lo + hi) >> 1;
 
             DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << mid << "] = "
-                                        << toHex(samples[mid]));
+                                        << tlx::hexdump_type(samples[mid]));
 
             key_type mykey = splitter_tree[treeidx] = samples[mid];
 #if 1
@@ -569,8 +572,8 @@ public:
 
                 key_type xorSplit = prevkey ^ mykey;
 
-                DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
-                                                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                                                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
                                                 << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                 splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8)
@@ -582,8 +585,8 @@ public:
             {
                 key_type xorSplit = rec_prevkey ^ mykey;
 
-                DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
-                                                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                                                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
                                                 << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                 splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8)
@@ -627,7 +630,7 @@ public:
             key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
 
             DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                                        << toHex(*mid));
+                                        << tlx::hexdump_type(*mid));
 
             key_type mykey = m_tree[treeidx] = *mid;
 #if 1
@@ -648,8 +651,8 @@ public:
 
                 key_type xorSplit = prevkey ^ mykey;
 
-                DBG(debug_splitter, "    lcp: " << toHex(prevkey) << " XOR " << toHex(mykey) << " = "
-                                                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                                                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
                                                 << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                 * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
@@ -661,8 +664,8 @@ public:
             {
                 key_type xorSplit = rec_prevkey ^ mykey;
 
-                DBG(debug_splitter, "    lcp: " << toHex(rec_prevkey) << " XOR " << toHex(mykey) << " = "
-                                                << toHex(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                                                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
                                                 << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
                 * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
@@ -745,13 +748,13 @@ public:
 
                 int l = __builtin_ctz(i + 1);
                 DBG(debug_splitter, "splitter[" << i << "] on level " << l
-                                                << " = tree[" << treelvl[l] << "] = key " << toHex(splitter));
+                                                << " = tree[" << treelvl[l] << "] = key " << tlx::hexdump_type(splitter));
                 splitter_tree[treelvl[l]++] = splitter;
 
                 if (i != 0) {
                     key_type xorSplit = prevsplitter ^ splitter;
 
-                    DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
+                    DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
 
                     DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
                                                                         << count_high_zero_bits(xorSplit) / 8 << " chars lcp");

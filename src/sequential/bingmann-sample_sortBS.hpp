@@ -22,6 +22,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
+#include <tlx/string/hexdump.hpp>
+
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
 
@@ -112,12 +114,12 @@ void sample_sortBS(string* strings, size_t n, size_t depth)
     for (size_t i = 0, j = oversample_factor / 2; i < leaves; ++i)
     {
         splitter[i] = samples[j];
-        DBG(debug_splitter, "key " << toHex(splitter[i]));
+        DBG(debug_splitter, "key " << tlx::hexdump_type(splitter[i]));
 
         if (i != 0) {
             key_type xorSplit = splitter[i - 1] ^ splitter[i];
 
-            DBG1(debug_splitter, "    XOR -> " << toHex(xorSplit) << " - ");
+            DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
 
             DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
                                                                 << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
