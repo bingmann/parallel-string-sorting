@@ -30,6 +30,14 @@
 
 */
 
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#include "bs-mkqs.hpp"
+#include "inssort.hpp"
+#include "../tools/contest.hpp"
+
 namespace sinha_burstsortA {
 
 static const int THRESHOLD = 8192;

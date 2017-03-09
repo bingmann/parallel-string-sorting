@@ -127,13 +127,7 @@ std::vector<size_t> g_numa_string_count;      // pointer to strings on NUMA node
 #include "tools/stringtools.hpp"
 
 #include "sequential/inssort.hpp"
-#include "sequential/mbm-radix.hpp"
 #include "sequential/bs-mkqs.hpp"
-#include "sequential/sinha-burstsortA.hpp"
-#include "sequential/sinha-burstsortL.hpp"
-#include "sequential/ng-cradix.hpp"
-#include "sequential/ng-cradix-rantala.hpp"
-#include "sequential/ng-lcpmergesort.hpp"
 
 #include "sequential/bingmann-radix_sort.hpp"
 #include "sequential/bingmann-sample_sort.hpp"

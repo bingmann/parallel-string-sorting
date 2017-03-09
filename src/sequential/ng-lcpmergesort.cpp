@@ -6,6 +6,11 @@
  * Appendix: Source Code of LCP Merge sort
  */
 
+#include <stdlib.h>
+#include <string.h>
+
+#include "../tools/contest.hpp"
+
 namespace ng_lcpmergesort {
 
 /*

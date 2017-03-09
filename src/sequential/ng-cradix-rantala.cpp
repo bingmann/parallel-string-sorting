@@ -46,13 +46,22 @@
 
   RDFK() -- the function which read the keys directly as described in Sect. 6.2
 
-  isort() - the insertion sort routine as described in Sect. 6.3
-
   Other modifications are mainly for assembling the improvements into the
   original code
 */
 
-namespace ng_cradix {
+/* Copyright 2008 by Tommi Rantala <tt.rantala@gmail.com>
+ *  - replace original isort() with slightly different insertion_sort()
+ *  - re-implement FillKeyBuffer() to reduce memory stalls
+ *  - use caching in RDFK() to reduce memory stalls
+ */
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "../tools/contest.hpp"
+
+namespace ng_cradix_rantala {
 
 typedef size_t UINT;
 typedef unsigned char BYTE, *LPBYTE, **LPPBYTE;
@@ -66,52 +75,72 @@ static const UINT IC = 20;       /* Insertion sort cut off */
 static const UINT KBC = 128;     /* Cache cut off */
 static const UINT SS = 4096;     /* stack size */
 
-#define push(a, k, n, b) sp->sa=a, sp->sk=k, sp->sn=n, (sp++)->sb=b
-#define pop(a, k, n, b) a=(--sp)->sa, k=sp->sk, n=sp->sn, b=sp->sb
-#define stackempty() (sp<=stack)
+#define push(a, k, n, b) _sp->sa=a, _sp->sk=k, _sp->sn=n, (_sp++)->sb=b
+#define pop(a, k, n, b) a=(--_sp)->sa, k=_sp->sk, n=_sp->sn, b=_sp->sb
+#define stackempty() (_sp<=stack)
 #define splittable(c) c > 0 && count[c] > IC
 
 struct Stack {
 	LPSTR* sa; LPBYTE sk;
 	int sn, sb;
-} stack[SS], *sp=stack;
+} stack[SS], *_sp=stack;
+
+static void
+insertion_sort(unsigned char** strings, int n, size_t depth)
+{
+	for (unsigned char** i = strings + 1; --n > 0; ++i) {
+		unsigned char** j = i;
+		unsigned char* tmp = *i;
+		while (j > strings) {
+			unsigned char* s = *(j-1)+depth;
+			unsigned char* t = tmp+depth;
+			while (*s == *t && *s) {
+				++s;
+				++t;
+			}
+			if (*s <= *t) break;
+			*j = *(j-1);
+			--j;
+		}
+		*j = tmp;
+	}
+}
 
 static
 void FillKeyBuffer(LPPSTR a, LPBYTE kb, UINT* count, UINT n, UINT d)
 {
-	UINT i, j; LPSTR c, x;
-	for (i=0; i<n; i++) {
-		x=a[i]+d; count[*x]++;
-		for (j=0, c=x; *c!=0 && j<BS; j++)
-		{ *kb=*c; kb++; c++; }
-		if (j<BS) { *kb='\0'; kb+=BS-j; }
-	}
-}
-static
-void isort(unsigned char **a, int n, int d)
-{
-	unsigned char **pi, **pj, *s, *t;
-	for (pi = a + 1; --n > 0; pi++)
-		for (pj = pi; pj > a; pj--) {
-			for (s=*(pj-1)+d, t=*pj+d;
-					*s==*t && *s!=0; s++, t++) ;
-			if (*s <= *t) break;
-			t = *(pj); *(pj) = *(pj-1);
-			*(pj-1) = t;
+	for (size_t i=0; i<n; ++i) {
+		const unsigned char* str = a[i];
+		unsigned j=0;
+		for (; j<BS; ++j) {
+			unsigned char c = str[d+j];
+			kb[BS*i+j] = c;
+			if (c==0) break;
 		}
+		if (j<BS) kb[BS*i+j] = 0;
+	}
+	// Make another sweep through data to calculate counts. Should be very
+	// fast, because we access 'count' linearly from start to finish.
+	for (size_t i=0; i<n; ++i) ++count[kb[BS*i]];
 }
+
 static
 void RDFK(LPPSTR* GrpKP, LPPSTR a, UINT n, LPPSTR ta,
 		UINT* count, UINT d)
 { /* Read Directly From Keys */
 	LPPSTR ak, tc; UINT i, *cptr, gs; unsigned char c=0;
-	for (i=0; i<n; i++) count[a[i][d]]++;
+	for (i=0; i<n-n%32; i+=32) {
+		unsigned char cache[32];
+		for (unsigned j=0; j<32; ++j) cache[j] = a[i+j][d];
+		for (unsigned j=0; j<32; ++j) ++count[cache[j]];
+	}
+	for (; i<n; i++) count[a[i][d]]++;
 	cptr=&count[AL]; while (*cptr<1) cptr++;
 	if (*cptr<n) gs=n;
 	else { c=(cptr-&count[AL])+AL; gs=0; }
 	if (!gs) {
 		if (splittable(c)) push(a, 0, n, d+1);
-		else if (n>1 && c>0) isort(a, n, d);
+		else if (n>1 && c>0) insertion_sort(a, n, d);
 		count[c]=0; return;
 	}
 	GrpKP[AL]=a;
@@ -122,11 +151,12 @@ void RDFK(LPPSTR* GrpKP, LPPSTR a, UINT n, LPPSTR ta,
 	}
 	for (ak=a, i=AL; i<AH; i++) {
 		if (splittable(i)) push(ak, 0, count[i], d+1);
-		else if (count[i]>1 && i>0) isort(ak, count[i], d);
+		else if (count[i]>1 && i>0) insertion_sort(ak, count[i], d);
 		ak+=count[i]; count[i]=0;
 	}
 }
-void CRadix(LPPSTR a, UINT n)
+
+void cradix_rantala(LPPSTR a, UINT n)
 {
 	UINT kbsd, kbsd1, i, j, stage, d, MEMSIZE;
 	UINT *cptr, gs, count[AS];
@@ -190,7 +220,7 @@ void CRadix(LPPSTR a, UINT n)
 				if (splittable(i))
 				{ push(ak, ax, count[i], stage+1); }
 				else if (count[i]>1 && i>0)
-					isort(ak, count[i], stage);
+					insertion_sort(ak, count[i], stage);
 				ak+=count[i]; ax+=count[i]*(kbsd1);
 				count[i]=0;
 			}
@@ -201,18 +231,13 @@ void CRadix(LPPSTR a, UINT n)
 	free((void*)tj);
 }
 
-void cradix(unsigned char **strings, size_t n)
-{
-    return CRadix(strings, n);
-}
-
-PSS_CONTESTANT(cradix,
-               "ng/cradix",
-               "CRadix Original by Waihong Ng and Katsuhiko Kakehi")
+PSS_CONTESTANT(cradix_rantala,
+               "ng/rantala_cradix",
+               "CRadix by Waihong Ng and Katsuhiko Kakehi modified by Rantala")
 
 #undef push
 #undef pop
 #undef stackempty
 #undef splittable
 
-} // namespace ng_cradix
+} // namespace ng_cradix_rantala

@@ -20,6 +20,12 @@
    Updated to use std::swap by Timo Bingmann in 2013
 */
 
+#include <stdlib.h>
+#include <string.h>
+
+#include "../tools/contest.hpp"
+#include "../tools/stringtools.hpp"
+
 namespace mbm_radixsort {
 
 typedef unsigned char* string;

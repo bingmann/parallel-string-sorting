@@ -29,6 +29,15 @@
        4. It is solely meant for academic use
 */
 
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
+#include <stdio.h>
+
+#include "bs-mkqs.hpp"
+#include "inssort.hpp"
+#include "../tools/contest.hpp"
+
 namespace sinha_burstsortL {
 
 static const int THRESHOLD = 8192;

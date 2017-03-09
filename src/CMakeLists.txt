@@ -16,6 +16,12 @@ set(PSSLIB_SOURCES
   sequential/nilsson-forward16.cpp
   sequential/bingmann-qsort.cpp
   sequential/bingmann-lcp-mergesort.cpp
+  sequential/mbm-radix.cpp
+  sequential/ng-cradix.cpp
+  sequential/ng-cradix-rantala.cpp
+  sequential/ng-lcpmergesort.cpp
+  sequential/sinha-burstsortA.cpp
+  sequential/sinha-burstsortL.cpp
   rantala/burstsort.cpp
   rantala/burstsort2.cpp
   rantala/burstsort_mkq.cpp
