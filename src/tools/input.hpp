@@ -543,30 +543,6 @@ bool load_artifical(const std::string& path)
         return false;
 }
 
-/// Parse a string like "343KB" or "44g" into the corresponding size in bytes
-bool parse_filesize(const char* str, size_t& outsize)
-{
-    char* endptr;
-    outsize = strtoul(str, &endptr, 10);
-    if (!endptr) return false;
-
-    if (*endptr == 0 || ((*endptr == 'b' || *endptr == 'B') && *(endptr + 1) == 0))
-        outsize *= 1;
-    else if ((*endptr == 'k' || *endptr == 'K') &&
-             (*(endptr + 1) == 0 || ((*(endptr + 1) == 'b' || *(endptr + 1) == 'B') && *(endptr + 2) == 0)))
-        outsize *= 1024;
-    else if ((*endptr == 'm' || *endptr == 'M') &&
-             (*(endptr + 1) == 0 || ((*(endptr + 1) == 'b' || *(endptr + 1) == 'B') && *(endptr + 2) == 0)))
-        outsize *= 1024 * 1024;
-    else if ((*endptr == 'g' || *endptr == 'G') &&
-             (*(endptr + 1) == 0 || ((*(endptr + 1) == 'b' || *(endptr + 1) == 'B') && *(endptr + 2) == 0)))
-        outsize *= 1024 * 1024 * 1024;
-    else
-        return false;
-
-    return true;
-}
-
 /// Load an input set into memory
 bool load(const std::string& path)
 {

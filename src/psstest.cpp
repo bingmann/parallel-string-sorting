@@ -53,6 +53,8 @@
 #include <boost/array.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 
+#include <tlx/string/parse_si_iec_units.hpp>
+
 #include "src/config.h"
 
 #include "tools/stats_writer.hpp"
@@ -876,7 +878,7 @@ int main(int argc, char* argv[])
             break;
 
         case 's':
-            if (!input::parse_filesize(optarg, gopt_inputsize_minlimit)) {
+            if (!tlx::parse_si_iec_units(optarg, &gopt_inputsize_minlimit)) {
                 std::cout << "Option -s: invalid size parameter: " << optarg << std::endl;
                 exit(EXIT_FAILURE);
             }
@@ -884,7 +886,7 @@ int main(int argc, char* argv[])
             break;
 
         case 'S':
-            if (!input::parse_filesize(optarg, gopt_inputsize_maxlimit)) {
+            if (!tlx::parse_si_iec_units(optarg, &gopt_inputsize_maxlimit)) {
                 std::cout << "Option -S: invalid maxsize parameter: " << optarg << std::endl;
                 exit(EXIT_FAILURE);
             }
