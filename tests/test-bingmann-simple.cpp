@@ -237,7 +237,7 @@ void test_all(const size_t nstrings)
         run_tests(bingmann_lcp_inssort::lcp_insertion_sort_pseudocode_verify);
         run_tests(bingmann_lcp_inssort::lcp_insertion_sort_cache_verify);
     }
-    run_tests(bingmann_radix_sort::msd_CE_generic);
+    run_tests(bingmann_radix_sort::msd_CE0_generic);
     run_tests(bingmann_radix_sort::msd_CE2_generic);
     run_tests(bingmann_radix_sort::msd_CI5_generic);
     run_tests(bingmann_parallel_mkqs::bingmann_sequential_mkqs_cache8);
