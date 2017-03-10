@@ -40,7 +40,7 @@ typedef unsigned char* string;
 /******************************************************************************/
 
 static inline void
-msd_CE(string* strings, size_t n, size_t depth)
+msd_CE0(string* strings, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, depth);
@@ -69,18 +69,18 @@ msd_CE(string* strings, size_t n, size_t depth)
     size_t bsum = bktsize[0];
     for (size_t i = 1; i < 256; ++i) {
         if (bktsize[i] == 0) continue;
-        msd_CE(strings + bsum, bktsize[i], depth + 1);
+        msd_CE0(strings + bsum, bktsize[i], depth + 1);
         bsum += bktsize[i];
     }
 }
 
 void bingmann_msd_CE(string* strings, size_t n)
 {
-    return msd_CE(strings, n, 0);
+    return msd_CE0(strings, n, 0);
 }
 
-PSS_CONTESTANT(bingmann_msd_CE, "bingmann/msd_CE",
-               "bingmann/msd_CE (rantala CE original)")
+PSS_CONTESTANT(bingmann_msd_CE, "bingmann/msd_CE0",
+               "bingmann/msd_CE0 (rantala CE original)")
 
 /******************************************************************************/
 
@@ -127,14 +127,14 @@ msd_CE_generic(const StringSet& ss, size_t depth)
     }
 }
 
-void bingmann_msd_CE_generic(string* strings, size_t n)
+void bingmann_msd_CE0_generic(string* strings, size_t n)
 {
     return msd_CE_generic(
         parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
 }
 
-PSS_CONTESTANT(bingmann_msd_CE_generic, "bingmann/msd_CE_gen",
-               "bingmann/msd_CE generic (rantala CE original)")
+PSS_CONTESTANT(bingmann_msd_CE0_generic, "bingmann/msd_CE_gen",
+               "bingmann/msd_CE0 generic (rantala CE original)")
 
 /******************************************************************************/
 
