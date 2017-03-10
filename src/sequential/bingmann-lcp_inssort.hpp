@@ -368,7 +368,6 @@ void lcp_insertion_sort_cache(
     typedef typename StringSet::String String;
     typedef typename StringSet::Iterator Iterator;
     typedef typename StringSet::CharIterator CharIterator;
-    typedef typename StringSet::Char Char;
 
     Iterator begin = str.begin();
     size_t n = str.size();

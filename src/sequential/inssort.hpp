@@ -23,6 +23,7 @@
 
 #include "../tools/contest.hpp"
 #include "../tools/stringset.hpp"
+#include <tlx/define/likely.hpp>
 
 namespace inssort {
 
@@ -35,13 +36,13 @@ inssort(string* str, int n, int d)
 {
     string *pj, s, t;
 
-    for (string* pi = str + 1; --n > 0; pi++) {
+    for (string* pi = str + 1; TLX_UNLIKELY(--n > 0); pi++) {
         string tmp = *pi;
 
-        for (pj = pi; pj > str; pj--) {
-            for (s = *(pj-1)+d, t = tmp+d; *s == *t && *s != 0; ++s, ++t)
+        for (pj = pi; TLX_LIKELY(pj > str); pj--) {
+            for (s = *(pj-1)+d, t = tmp+d; TLX_LIKELY(*s == *t && *s != 0); ++s, ++t)
                 ;
-            if (*s <= *t)
+            if (TLX_UNLIKELY(*s <= *t))
                 break;
             *pj = *(pj-1);
         }
@@ -57,26 +58,6 @@ PSS_CONTESTANT(insertion_sort, "insertion_sort", "String Insertion-Sort")
 
 /******************************************************************************/
 
-static inline void
-inssort_range(string* str_begin, string* str_end, size_t depth)
-{
-    for (string* i = str_begin + 1; i != str_end; ++i) {
-        string* j = i;
-        string tmp = *i;
-        while (j > str_begin) {
-            string s = *(j - 1) + depth;
-            string t = tmp + depth;
-            while (*s == *t && *s != 0) ++s, ++t;
-            if (*s <= *t) break;
-            *j = *(j - 1);
-            --j;
-        }
-        *j = tmp;
-    }
-}
-
-/******************************************************************************/
-
 //! Generic insertion sort for objectified string sets
 template <typename StringSet>
 static inline void inssort_generic(const StringSet& ss, size_t depth)
@@ -85,30 +66,33 @@ static inline void inssort_generic(const StringSet& ss, size_t depth)
     typedef typename StringSet::String String;
     typedef typename StringSet::CharIterator CharIterator;
 
-    for (Iterator pi = ss.begin() + 1; pi != ss.end(); ++pi)
+    // this stores the begin iterator and size n, making the loops faster
+    const Iterator begin = ss.begin();
+    Iterator j;
+    size_t n = ss.size();
+
+    for (Iterator i = begin + 1; TLX_UNLIKELY(--n != 0); ++i)
     {
-        String tmp = std::move(ss[pi]);
-        Iterator pj = pi;
+        String tmp = std::move(ss[i]);
+        j = i;
 
-        while (pj != ss.begin())
+        while (TLX_LIKELY(j != begin))
         {
-            --pj;
-
-            CharIterator s = ss.get_chars(ss[pj], depth);
+            CharIterator s = ss.get_chars(ss[j - 1], depth);
             CharIterator t = ss.get_chars(tmp, depth);
 
-            while (ss.is_equal(ss[pj], s, tmp, t))
+            while (TLX_LIKELY(ss.is_equal(ss[j - 1], s, tmp, t)))
                 ++s, ++t;
 
-            if (ss.is_leq(ss[pj], s, tmp, t)) {
-                ++pj;
+            if (TLX_UNLIKELY(ss.is_leq(ss[j - 1], s, tmp, t))) {
                 break;
             }
 
-            ss[pj + 1] = std::move(ss[pj]);
+            ss[j] = std::move(ss[j - 1]);
+            --j;
         }
 
-        ss[pj] = std::move(tmp);
+        ss[j] = std::move(tmp);
     }
 }
 
