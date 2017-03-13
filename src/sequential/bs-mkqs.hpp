@@ -22,6 +22,9 @@
    Updated with std::swap and std::min by Timo Bingmann in 2012.
 */
 
+#ifndef BS_MKQS_HEADER
+#define BS_MKQS_HEADER
+
 #include "inssort.hpp"
 
 namespace bs_mkqs {
@@ -162,7 +165,9 @@ PSS_CONTESTANT(bs_mkqsort,
 } // namespace bs_mkqs
 
 // global procedure for base sorting
-static inline void mkqsort(unsigned char **strings, size_t n, int depth)
+static inline void mkqsort(unsigned char **strings, size_t n, int depth = 0)
 {
     return bs_mkqs::ssort2(strings, n, depth);
 }
+
+#endif // BS_MKQS_HEADER

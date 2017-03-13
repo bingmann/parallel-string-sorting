@@ -91,13 +91,15 @@ protected:
             }
 
             if (c1 < c2)
-            {       // CASE 1.1: defender < contender
+            {
+                // CASE 1.1: defender < contender
                 contenderLcp = lcp;
                 cached[contenderIdx] = c2;
                 std::swap(defenderIdx, contenderIdx);
             }
             else
-            {       // CASE 1.2: defender >= contender
+            {
+                // CASE 1.2: defender >= contender
                 defenderLcp = lcp;
                 cached[defenderIdx] = c1;
             }
@@ -124,7 +126,8 @@ public:
     LcpStringLoserTree()
     { }
 
-    LcpStringLoserTree(const Stream& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
+    LcpStringLoserTree(const Stream& input, std::pair<size_t, size_t>* ranges,
+                       lcp_t knownCommonLcp = 0)
     {
         for (unsigned i = 0; i < K; i++)
         {
@@ -260,7 +263,8 @@ public:
 
         while (outStream < end)
         {
-            outStream.setFirst(streams[contenderIdx].firstString(), lcps[contenderIdx], cached[contenderIdx]);
+            outStream.setFirst(streams[contenderIdx].firstString(),
+                               lcps[contenderIdx], cached[contenderIdx]);
             ++outStream;
 
             removeTopFromStream(contenderIdx);

@@ -2,7 +2,7 @@
  * src/sequential/bingmann-lcp-mergesort.cpp
  *
  * LCP aware binary and k-way mergesort, implemented to verify pseudo-code in
- * journal.  Not necessarily the fastest implementations.
+ * journal.
  *
  *******************************************************************************
  * Copyright (C) 2013-2014 Andreas Eberle <email@andreas-eberle.com>
@@ -22,8 +22,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#ifndef BINGMANN_LCP_MERGESORT_H_
-#define BINGMANN_LCP_MERGESORT_H_
+#ifndef BINGMANN_LCP_MERGESORT_KWAY_H_
+#define BINGMANN_LCP_MERGESORT_KWAY_H_
 
 #include <iostream>
 #include <cstring>
@@ -35,182 +35,6 @@
 namespace bingmann_lcp_mergesort {
 
 using namespace stringtools;
-
-//! archetypal lcp-aware comparison method
-static inline void
-lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
-            unsigned int b, string inputB, lcp_t lcpB,
-            unsigned int& outSmaller, lcp_t& outLcpSmaller,
-            unsigned int& outLarger, lcp_t& outLcpAB)
-{
-    if (lcpA == lcpB)
-    {
-        // CASE 1 lcps are equal => do string comparision starting at lcp+1st
-        // position
-        string sA = inputA + lcpA;
-        string sB = inputB + lcpA;
-
-        // check the strings starting after lcp and calculate new lcp
-        while (*sA != 0 && *sA == *sB)
-            sA++, sB++;
-
-        const lcp_t h = sA - inputA;
-
-        if (*sA <= *sB) // CASE 1.1: s1 <= s2
-        {
-            outSmaller = a;
-            outLcpSmaller = lcpA;
-            outLarger = b;
-            outLcpAB = h;
-        }
-        else // CASE 1.2: s1 > s2
-        {
-            outSmaller = b;
-            outLcpSmaller = lcpB;
-            outLarger = a;
-            outLcpAB = h;
-        }
-    }
-    else if (lcpA > lcpB) // CASE 2: lcp1 < lcp2 -> s_1 > s_2
-    {
-        outSmaller = a;
-        outLcpSmaller = lcpA;
-        outLarger = b;
-        outLcpAB = lcpB;
-    }
-    else // CASE 3: lcp1 > lcp2 -> s_1 < s_2
-    {
-        outSmaller = b;
-        outLcpSmaller = lcpB;
-        outLarger = a;
-        outLcpAB = lcpA;
-    }
-
-    assert(calc_lcp(inputA, inputB) == outLcpAB);
-}
-
-/******************************************************************************/
-// bingmann/lcp_mergesort_binary
-
-static inline void
-lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
-                 string* input2, lcp_t* lcps2, size_t length2,
-                 string* output, lcp_t* outputLcps)
-{
-    const string* end1 = input1 + length1;
-    const string* end2 = input2 + length2;
-
-    string prev = (string)""; // sentinel
-    (void)prev;
-
-    lcp_t lcp1 = *lcps1;
-    lcp_t lcp2 = *lcps2;
-
-    // do the merge
-    while (input1 < end1 && input2 < end2)
-    {
-        unsigned int cmpSmaller, cmpLarger;
-        lcp_t cmpLcp, cmpLcpSmaller;
-
-        //std::cout << "prev = " << prev << " - input1 = " << *input1 << "\n";
-        assert(calc_lcp(prev, *input1) == lcp1);
-        assert(calc_lcp(prev, *input2) == lcp2);
-
-        lcp_compare(0, *input1, lcp1, 1, *input2, lcp2,
-                    cmpSmaller, cmpLcpSmaller, cmpLarger, cmpLcp);
-
-        if (cmpSmaller == 0)
-        {
-            prev = *input1;
-            *output++ = *input1;
-            *outputLcps++ = lcp1;
-
-            ++input1;
-            ++lcps1;
-
-            lcp1 = input1 < end1 ? *lcps1 : 0;
-            lcp2 = cmpLcp;
-        }
-        else
-        {
-            prev = *input2;
-            *output++ = *input2;
-            *outputLcps++ = lcp2;
-
-            ++input2;
-            ++lcps2;
-
-            lcp1 = cmpLcp;
-            lcp2 = input2 < end2 ? *lcps2 : 0;
-        }
-    }
-
-    if (input1 < end1)
-    {
-        // if there are remaining elements in stream1, copy them to the end
-        memcpy(output, input1, (end1 - input1) * sizeof(string));
-        memcpy(outputLcps, lcps1, (end1 - input1) * sizeof(lcp_t));
-        *outputLcps = lcp1;
-    }
-    else
-    {
-        memcpy(output, input2, (end2 - input2) * sizeof(string));
-        memcpy(outputLcps, lcps2, (end2 - input2) * sizeof(lcp_t));
-        *outputLcps = lcp2;
-    }
-}
-
-static inline void
-lcp_mergesort_binary(string* strings, const LcpStringPtr& tmp,
-                     const LcpStringPtr& out, size_t length)
-{
-    if (length == 0) {
-        return;
-    }
-    else if (length == 1) {
-        out.setFirst(*strings, 0);
-        return;
-    }
-
-    size_t length1 = length / 2;
-    size_t length2 = length - length1;
-
-    LcpStringPtr out1 = out.sub(0, length1);
-    LcpStringPtr out2 = out.sub(length1, length2);
-
-    LcpStringPtr tmp1 = tmp.sub(0, length1);
-    LcpStringPtr tmp2 = tmp.sub(length1, length2);
-
-    lcp_mergesort_binary(strings, out1, tmp1, length1);
-    lcp_mergesort_binary(strings + length1, out2, tmp2, length2);
-
-    lcp_merge_binary(tmp1.strings, tmp1.lcps, tmp1.size,
-                     tmp2.strings, tmp2.lcps, tmp2.size,
-                     out.strings, out.lcps);
-}
-
-static inline void
-lcp_mergesort_binary(string* strings, uintptr_t* lcp, size_t n)
-{
-    // Allocate memory for LCPs and temporary string array
-    string* tmpStrings = new string[n];
-    lcp_t* tmpLcps = new lcp_t[n];
-
-    LcpStringPtr output(strings, lcp, n);
-    LcpStringPtr tmp(tmpStrings, tmpLcps, n);
-
-    // execute lcp mergesort
-    lcp_mergesort_binary(strings, tmp, output, n);
-
-    delete[] tmpStrings;
-    delete[] tmpLcps;
-    lcp[0] = 42;
-}
-
-PSS_CONTESTANT(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
-               "Binary Mergesort with LCP-merge by Andreas Eberle and Timo Bingmann")
-
-////////////////////////////////////////////////////////////////////////////////
 
 template <unsigned K>
 class LcpLoserTree
@@ -460,6 +284,6 @@ PSS_CONTESTANT(lcp_mergesort_128way, "bingmann/lcp_mergesort_128way",
 
 } // namespace bingmann_lcp_mergesort
 
-#endif // BINGMANN_LCP_MERGESORT_H_
+#endif // BINGMANN_LCP_MERGESORT_KWAY_H_
 
 /******************************************************************************/

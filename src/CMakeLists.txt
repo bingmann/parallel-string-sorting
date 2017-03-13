@@ -15,7 +15,6 @@ set(PSSLIB_SOURCES
   sequential/nilsson-forward8.cpp
   sequential/nilsson-forward16.cpp
   sequential/bingmann-qsort.cpp
-  sequential/bingmann-lcp-mergesort.cpp
   sequential/mbm-radix.cpp
   sequential/ng-cradix.cpp
   sequential/ng-cradix-rantala.cpp

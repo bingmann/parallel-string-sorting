@@ -28,7 +28,7 @@
 #include <utility>
 
 #include "../tools/eberle-lcp-losertree.hpp"
-#include "../sequential/eberle-mergesort-lcp.hpp"
+#include "../sequential/bingmann-lcp_mergesort.hpp"
 
 #include "../tools/jobqueue.hpp"
 #include "../tools/stringtools.hpp"
@@ -42,7 +42,6 @@ namespace eberle_parallel_lcp_merge {
 using std::numeric_limits;
 
 using namespace eberle_lcp_utils;
-using namespace eberle_mergesort_lcp;
 
 using namespace jobqueue;
 using namespace stringtools;
@@ -119,7 +118,7 @@ struct BinaryMergeJob : public Job
         input1.firstCached() = input1.firstString()[firstLcp];
         input2.firstCached() = input2.firstString()[firstLcp];
 
-        eberle_lcp_merge(input1, input2, output);
+        bingmann_lcp_mergesort::lcp_merge_binary_cache_opt(input1, input2, output);
 
         return true;
     }

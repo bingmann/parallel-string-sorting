@@ -25,6 +25,7 @@
 
 #include "eberle-parallel-lcp-merge.hpp"
 
+#include "../sequential/bs-mkqs.hpp"
 #include "../tools/debug.hpp"
 #undef DBGX
 #define DBGX DBGX_OMP
@@ -196,7 +197,8 @@ createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputSt
         }
     }
 
-    eberle_mergesort_lcp::eberle_lcp_mergesort(splitters, numSplitters);
+    //bingmann_lcp_mergesort::lcp_mergesort_binary_opt(splitters, numSplitters);
+    mkqsort(splitters, numSplitters);
 
     for (unsigned job = 0; job < numSplitters; job++)
     {
