@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-lcp-mergesort.cpp
+ * src/sequential/bingmann-lcp_mergesort_binary.hpp
  *
  * LCP aware binary and k-way mergesort, implemented to verify pseudo-code in
  * journal.
@@ -22,14 +22,14 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#ifndef BINGMANN_LCP_MERGESORT_H_
-#define BINGMANN_LCP_MERGESORT_H_
+#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_LCP_MERGESORT_BINARY_HEADER
+#define PSS_SRC_SEQUENTIAL_BINGMANN_LCP_MERGESORT_BINARY_HEADER
 
 #include "../tools/stringtools.hpp"
 #include "../tools/contest.hpp"
 #include "bingmann-lcp_inssort.hpp"
 
-namespace bingmann_lcp_mergesort {
+namespace bingmann {
 
 using namespace stringtools;
 
@@ -159,7 +159,7 @@ lcp_mergesort_binary(string* strings, const LcpStringPtr& tmp,
 {
     if (length <= 32) {
         std::copy(strings, strings + length, out.strings);
-        return bingmann_lcp_inssort::lcp_insertion_sort(
+        return bingmann::lcp_insertion_sort(
             out.strings, out.lcps, length, /* depth */ 0);
     }
 
@@ -300,7 +300,7 @@ lcp_mergesort_binary_opt(
 {
     if (length <= 32) {
         std::copy(strings, strings + length, out.strings);
-        return bingmann_lcp_inssort::lcp_insertion_sort(
+        return bingmann::lcp_insertion_sort(
             out.strings, out.lcps, length, /* depth */ 0);
     }
 
@@ -532,7 +532,7 @@ lcp_mergesort_binary_cache_opt(
 {
     if (length <= 32) {
         std::copy(strings, strings + length, out.strings);
-        return bingmann_lcp_inssort::lcp_insertion_sort_cache(
+        return bingmann::lcp_insertion_sort_cache(
             out.strings, out.lcps, out.cachedChars, length);
     }
 
@@ -575,8 +575,8 @@ PSS_CONTESTANT(lcp_mergesort_binary_cache_opt,
                "bingmann/lcp_mergesort_binary_cache_opt",
                "Binary LCP-Mergesort by Timo Bingmann and Andreas Eberle")
 
-} // namespace bingmann_lcp_mergesort
+} // namespace bingmann
 
-#endif // BINGMANN_LCP_MERGESORT_H_
+#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_LCP_MERGESORT_BINARY_HEADER
 
 /******************************************************************************/

@@ -43,11 +43,11 @@ createJobsBinarySplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStre
 template <unsigned K>
 struct MergeJobBinarySplitting : public Job
 {
-    LcpStringLoserTree<K> loserTree;
+    LcpCacheStringLoserTree<K> loserTree;
 
-    string                * output;
-    size_t                length;
-    bool                  splittable;
+    string                     * output;
+    size_t                     length;
+    bool                       splittable;
 
     MergeJobBinarySplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length, bool splittable)
         : loserTree(inputs, numInputs), output(output), length(length), splittable(splittable)

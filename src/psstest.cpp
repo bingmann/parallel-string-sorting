@@ -147,7 +147,6 @@ std::vector<size_t> g_numa_string_count;      // pointer to strings on NUMA node
 #include "parallel/bingmann-parallel_sample_sort_lcp.hpp"
 #include "parallel/eberle-ps5-parallel-toplevel-merge.hpp"
 #include "parallel/eberle-parallel-lcp-mergesort.hpp"
-#include "sequential/eberle-mergesort-lcp-losertree.hpp"
 
 #include "rantala/tools/debug.hpp"
 #include "rantala/tools/get_char.hpp"
@@ -613,7 +612,7 @@ void Contestant_UCArray::real_run()
 #endif
 
     g_stats >> "time" << timer.delta() / gopt_repeats_inner
-            >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
+        >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
     (std::cout << timer.delta() << "\tchecking ").flush();
 
     if (gopt_repeats_inner != 1)
@@ -626,9 +625,9 @@ void Contestant_UCArray::real_run()
             ok = stringtools::verify_lcp(
                 stringptr.data(), lcp.data(), stringptr.size(), 42);
         }
-       if (ok && is_lcp_cache_func()) {
-           ok = stringtools::verify_lcp_cache(
-               stringptr.data(), lcp.data(), charcache.data(), stringptr.size(), 42);
+        if (ok && is_lcp_cache_func()) {
+            ok = stringtools::verify_lcp_cache(
+                stringptr.data(), lcp.data(), charcache.data(), stringptr.size(), 42);
         }
         if (ok) {
             std::cout << "ok" << std::endl;
@@ -642,7 +641,7 @@ void Contestant_UCArray::real_run()
             g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_lcpsum);
 
         g_stats
-            >> "dprefix" << g_string_dprefix
+        >> "dprefix" << g_string_dprefix
             >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize)
             >> "lcpsum" << g_string_lcpsum
             >> "avg-lcpsum" << g_string_lcpsum / (double)g_string_count;

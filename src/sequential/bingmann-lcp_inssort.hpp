@@ -29,7 +29,7 @@
 #include "../tools/contest.hpp"
 #include <tlx/die.hpp>
 
-namespace bingmann_lcp_inssort {
+namespace bingmann {
 
 using namespace stringtools;
 
@@ -371,7 +371,7 @@ PSS_CONTESTANT(lcp_insertion_sort_cache,
                "bingmann/lcp_insertion_sort_cache",
                "LCP-aware insertion sort (with distinguishing character cache)")
 
-} // namespace bingmann_lcp_inssort
+} // namespace bingmann
 
 #endif // !PSS_SRC_SEQUENTIAL_BINGMANN_LCP_INSSORT_HEADER
 

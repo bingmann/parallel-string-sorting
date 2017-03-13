@@ -51,13 +51,13 @@ createJobsLcpSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* input, unsig
 template <unsigned K>
 struct MergeJobLcpSplitting : public Job
 {
-    LcpStringLoserTree<K> loserTree;
+    LcpCacheStringLoserTree<K> loserTree;
 
-    string                * output;
-    size_t                length;
+    string                     * output;
+    size_t                     length;
 
-    lcp_t                 baseLcp;
-    lcp_t                 nextBaseLcp;
+    lcp_t                      baseLcp;
+    lcp_t                      nextBaseLcp;
 
     MergeJobLcpSplitting(string* output, size_t length, lcp_t baseLcp, lcp_t nextBaseLcp)
         : output(output), length(length), baseLcp(baseLcp), nextBaseLcp(nextBaseLcp)

@@ -138,12 +138,12 @@ public:
 
 #define PSS_CONTESTANT(func, algoname, desc)                         \
     static const class Contestant* _Contestant_ ## func ## _register \
-    __attribute__((unused)) =                                        \
+        __attribute__ ((unused)) =                                   \
             new Contestant_UCArray(NULL, func, algoname, desc);
 
 #define PSS_CONTESTANT_PREPARE(pfunc, func, algoname, desc)          \
     static const class Contestant* _Contestant_ ## func ## _register \
-    __attribute__((unused)) =                                        \
+        __attribute__ ((unused)) =                                   \
             new Contestant_UCArray(pfunc, func, algoname, desc);
 
 class Contestant_UCArray_Parallel : public Contestant_UCArray
@@ -161,14 +161,14 @@ public:
     virtual bool is_parallel() const { return true; }
 };
 
-#define PSS_CONTESTANT_PARALLEL(func, algoname, desc)                    \
-    static const class Contestant* _Contestant_ ## func ## _register     \
-    __attribute__((unused)) =                                            \
+#define PSS_CONTESTANT_PARALLEL(func, algoname, desc)                \
+    static const class Contestant* _Contestant_ ## func ## _register \
+        __attribute__ ((unused)) =                                   \
             new Contestant_UCArray_Parallel(NULL, func, algoname, desc);
 
-#define PSS_CONTESTANT_PARALLEL_PREPARE(pfunc, func, algoname, desc)      \
-    static const class Contestant* _Contestant_ ## func ## _register      \
-    __attribute__((unused)) =                                             \
+#define PSS_CONTESTANT_PARALLEL_PREPARE(pfunc, func, algoname, desc) \
+    static const class Contestant* _Contestant_ ## func ## _register \
+        __attribute__ ((unused)) =                                   \
             new Contestant_UCArray_Parallel(pfunc, func, algoname, desc);
 
 #else // !PSS_CONTEST

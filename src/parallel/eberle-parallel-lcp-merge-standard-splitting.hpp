@@ -43,10 +43,10 @@ createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputSt
 template <unsigned K>
 struct MergeJobStandardSplitting : public Job
 {
-    LcpStringLoserTree<K> loserTree;
+    LcpCacheStringLoserTree<K> loserTree;
 
-    string                * output;
-    size_t                length;
+    string                     * output;
+    size_t                     length;
 
     MergeJobStandardSplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length)
         : loserTree(inputs, numInputs), output(output), length(length)

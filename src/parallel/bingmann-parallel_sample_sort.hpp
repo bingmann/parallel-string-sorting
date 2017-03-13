@@ -612,7 +612,7 @@ insertion_sort(const stringtools::StringShadowPtr<StringSet>& strptr,
     if (!use_lcp_inssort)
         inssort::inssort_generic(strptr.output(), depth);
     else
-        bingmann_lcp_inssort::lcp_insertion_sort_nolcp(strptr.output(), depth);
+        bingmann::lcp_insertion_sort_nolcp(strptr.output(), depth);
 }
 
 template <typename StringSet>
@@ -622,7 +622,7 @@ insertion_sort(const stringtools::StringShadowLcpPtr<StringSet>& strptr,
 {
     assert(!strptr.flipped());
 
-    bingmann_lcp_inssort::lcp_insertion_sort</* SaveCache */ false, StringSet>(
+    bingmann::lcp_insertion_sort</* SaveCache */ false, StringSet>(
         strptr.output(), strptr.lcparray(), nullptr, depth);
 }
 
@@ -636,7 +636,7 @@ insertion_sort(const stringtools::StringShadowOutPtr<StringSet>& strptr,
     if (!use_lcp_inssort)
         inssort::inssort_generic(strptr.output(), depth);
     else
-        bingmann_lcp_inssort::lcp_insertion_sort_nolcp(strptr.output(), depth);
+        bingmann::lcp_insertion_sort_nolcp(strptr.output(), depth);
 }
 
 template <typename StringSet>
@@ -646,7 +646,7 @@ insertion_sort(const stringtools::StringShadowLcpOutPtr<StringSet>& strptr,
 {
     assert(!strptr.flipped());
 
-    bingmann_lcp_inssort::lcp_insertion_sort(
+    bingmann::lcp_insertion_sort(
         strptr.output(), strptr.lcparray(), depth);
 }
 
@@ -657,7 +657,7 @@ insertion_sort(const stringtools::StringShadowLcpCacheOutPtr<StringSet>& strptr,
 {
     assert(!strptr.flipped());
 
-    bingmann_lcp_inssort::lcp_insertion_sort</* SaveCache */ true>(
+    bingmann::lcp_insertion_sort</* SaveCache */ true>(
         strptr.output(), strptr.lcparray(), strptr.cache(), depth);
 }
 

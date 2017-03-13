@@ -31,7 +31,7 @@
 
 #include <stack>
 
-namespace bingmann_radix_sort {
+namespace bingmann {
 
 static const size_t g_inssort_threshold = 32;
 
@@ -75,7 +75,7 @@ void bingmann_msd_CE0(string* strings, size_t n)
 {
     string* sorted = new string[n];
     msd_CE0(strings, sorted, n, 0);
-    delete [] sorted;
+    delete[] sorted;
 }
 
 PSS_CONTESTANT(bingmann_msd_CE0, "bingmann/msd_CE0",
@@ -158,7 +158,7 @@ msd_CE1(string* strings, string* sorted, size_t n, size_t depth)
 
     // recursion
     for (size_t i = 1; i < 256; ++i) {
-        if (bkt[i]+1 >= bkt[i+1]) continue;
+        if (bkt[i] + 1 >= bkt[i + 1]) continue;
         msd_CE1(strings + bkt[i], sorted, bkt[i + 1] - bkt[i], depth + 1);
     }
 }
@@ -167,7 +167,7 @@ void bingmann_msd_CE1(string* strings, size_t n)
 {
     string* sorted = new string[n];
     msd_CE1(strings, sorted, n, 0);
-    delete [] sorted;
+    delete[] sorted;
 }
 
 PSS_CONTESTANT(bingmann_msd_CE1, "bingmann/msd_CE1",
@@ -206,7 +206,7 @@ msd_CE1_generic(const StringSet& ss, size_t depth)
 
     // recursion
     for (size_t i = 1; i < 256; ++i) {
-        if (bkt[i]+1 >= bkt[i+1]) continue;
+        if (bkt[i] + 1 >= bkt[i + 1]) continue;
         msd_CE1_generic(ss.sub(ss.begin() + bkt[i], ss.begin() + bkt[i + 1]),
                         depth + 1);
     }
@@ -220,7 +220,6 @@ void bingmann_msd_CE1_generic(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_msd_CE1_generic, "bingmann/msd_CE1_gen",
                "bingmann/msd_CE1 generic (CE with reused prefix sum)")
-
 
 /******************************************************************************/
 
@@ -248,7 +247,7 @@ msd_CE1_c(string* strings, string* sorted, uint8_t* charcache,
 
     // recursion
     for (size_t i = 1; i < 256; ++i) {
-        if (bkt[i]+1 >= bkt[i+1]) continue;
+        if (bkt[i] + 1 >= bkt[i + 1]) continue;
         msd_CE1_c(strings + bkt[i], sorted, charcache,
                   bkt[i + 1] - bkt[i], depth + 1);
     }
@@ -261,8 +260,8 @@ void bingmann_msd_CE1_c(string* strings, size_t n)
 
     msd_CE1_c(strings, sorted, charcache, n, 0);
 
-    delete [] charcache;
-    delete [] sorted;
+    delete[] charcache;
+    delete[] sorted;
 }
 
 PSS_CONTESTANT(bingmann_msd_CE1_c, "bingmann/msd_CE1_c",
@@ -296,7 +295,7 @@ msd_CE1_cf(string* strings, string* sorted, uint8_t* charcache,
 
     // recursion
     for (size_t i = 1; i < 256; ++i) {
-        if (bkt[i]+1 >= bkt[i+1]) continue;
+        if (bkt[i] + 1 >= bkt[i + 1]) continue;
         msd_CE1_cf(strings + bkt[i], sorted, charcache,
                    bkt[i + 1] - bkt[i], depth + 1);
     }
@@ -309,8 +308,8 @@ void bingmann_msd_CE1_cf(string* strings, size_t n)
 
     msd_CE1_cf(strings, sorted, charcache, n, 0);
 
-    delete [] charcache;
-    delete [] sorted;
+    delete[] charcache;
+    delete[] sorted;
 }
 
 PSS_CONTESTANT(bingmann_msd_CE1_cf, "bingmann/msd_CE1_cf",
@@ -381,7 +380,7 @@ PSS_CONTESTANT(bingmann_msd_CI0, "bingmann/msd_CI0",
 
 static inline size_t *
 msd_CI0_c_make_bkt_size(
-    string * strings, uint8_t* charcache, size_t n, size_t depth)
+    string * strings, uint8_t * charcache, size_t n, size_t depth)
 {
     // cache and count character occurrences
     size_t* bkt_size = new size_t[256];
@@ -438,7 +437,7 @@ void bingmann_msd_CI0_c(string* strings, size_t n)
 {
     uint8_t* charcache = new uint8_t[n];
     msd_CI0_c(strings, charcache, n, 0);
-    delete [] charcache;
+    delete[] charcache;
 }
 
 PSS_CONTESTANT(bingmann_msd_CI0_c, "bingmann/msd_CI0_c",
@@ -449,7 +448,7 @@ PSS_CONTESTANT(bingmann_msd_CI0_c, "bingmann/msd_CI0_c",
 
 static inline size_t *
 msd_CI0_cf_run(
-    string * strings, uint8_t* charcache, size_t n, size_t depth)
+    string * strings, uint8_t * charcache, size_t n, size_t depth)
 {
     // cache characters
     for (size_t i = 0; i < n; ++i)
@@ -510,7 +509,7 @@ void bingmann_msd_CI0_cf(string* strings, size_t n)
 {
     uint8_t* charcache = new uint8_t[n];
     msd_CI0_cf(strings, charcache, n, 0);
-    delete [] charcache;
+    delete[] charcache;
 }
 
 PSS_CONTESTANT(bingmann_msd_CI0_cf, "bingmann/msd_CI0_cf",
@@ -520,7 +519,7 @@ void msd_CI(string* strings, size_t n, size_t depth)
 {
     uint8_t* charcache = new uint8_t[n];
     msd_CI0_cf(strings, charcache, n, depth);
-    delete [] charcache;
+    delete[] charcache;
 }
 
 /******************************************************************************/
@@ -617,7 +616,7 @@ PSS_CONTESTANT(bingmann_msd_CI0_cf_generic, "bingmann/msd_CI0_cf_gen",
 /******************************************************************************/
 
 static inline size_t *
-msd_CI0_cf_16bit_run(string * strings, uint16_t* charcache, size_t n, size_t depth)
+msd_CI0_cf_16bit_run(string * strings, uint16_t * charcache, size_t n, size_t depth)
 {
     static const size_t RADIX = 0x10000;
     using namespace stringtools;
@@ -683,7 +682,7 @@ void bingmann_msd_CI0_cf_16bit(string* strings, size_t n)
 {
     uint16_t* charcache = new uint16_t[n];
     msd_CI0_cf_16bit(strings, charcache, n, 0);
-    delete [] charcache;
+    delete[] charcache;
 }
 
 PSS_CONTESTANT(bingmann_msd_CI0_cf_16bit, "bingmann/msd_CI0_cf_16bit",
@@ -847,8 +846,8 @@ bingmann_msd_CE1_cf_sb(string* strings, size_t n)
             radixstack.pop();
     }
 
-    delete [] charcache;
-    delete [] sorted;
+    delete[] charcache;
+    delete[] sorted;
 }
 
 PSS_CONTESTANT(bingmann_msd_CE1_cf_sb, "bingmann/msd_CE1_cf_sb",
@@ -947,7 +946,7 @@ PSS_CONTESTANT(bingmann_msd_CI0_cf_sb, "bingmann/msd_CI0_cf_sb",
 
 /******************************************************************************/
 
-} // namespace bingmann_radix_sort
+} // namespace bingmann
 
 #endif // !PSS_SRC_SEQUENTIAL_BINGMANN_RADIX_SORT_HEADER
 

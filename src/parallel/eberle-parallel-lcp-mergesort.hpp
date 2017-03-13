@@ -29,7 +29,7 @@
 #include "eberle-parallel-lcp-merge-lcp-splitting.hpp"
 #include "eberle-parallel-lcp-merge-standard-splitting.hpp"
 #include "eberle-parallel-lcp-merge-binary-splitting.hpp"
-#include "../sequential/eberle-mergesort-lcp-losertree.hpp"
+#include "../sequential/bingmann-lcp_mergesort_kway.hpp"
 
 #include "../tools/eberle-utilities.hpp"
 
@@ -90,7 +90,8 @@ eberle_parallel_lcp_mergesort(string* strings, size_t n, void (* parallelMerge)(
         stringPtr[k].allocateNumaMemory(numaNode, length);
 
         // execute mergesort
-        eberle_mergesort::eberle_mergesort_losertree_lcp_kway<MERGESORT_BRANCHES>(strings + ranges[k].first, stringPtr[k]);
+        bingmann::lcp_mergesort_cache_kway<MERGESORT_BRANCHES>(
+            strings + ranges[k].first, stringPtr[k]);
     }
 
     // do top level merge

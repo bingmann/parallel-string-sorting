@@ -137,7 +137,7 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
     if (n < g_samplesort_smallsort)
     {
         g_rs_steps++;
-        return bingmann_radix_sort::msd_CI(strings, n, depth);
+        return bingmann::msd_CI(strings, n, depth);
     }
     g_ss_steps++;
 
