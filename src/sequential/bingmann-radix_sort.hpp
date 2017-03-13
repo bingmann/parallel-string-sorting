@@ -595,12 +595,20 @@ msd_CI0_cf_generic(
     delete[] bkt_size;
 }
 
+template <typename StringSet>
+static inline void
+msd_CI0_cf_generic(const StringSet& ss, size_t depth)
+{
+    typedef typename StringSet::Char Char;
+    Char* charcache = new Char[ss.size()];
+    msd_CI0_cf_generic(ss, charcache, depth);
+    delete[] charcache;
+}
+
 void bingmann_msd_CI0_cf_generic(string* strings, size_t n)
 {
-    uint8_t* charcache = new uint8_t[n];
     msd_CI0_cf_generic(
-        parallel_string_sorting::UCharStringSet(strings, strings + n), charcache, 0);
-    delete[] charcache;
+        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
 }
 
 PSS_CONTESTANT(bingmann_msd_CI0_cf_generic, "bingmann/msd_CI0_cf_gen",
