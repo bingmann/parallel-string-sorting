@@ -28,7 +28,7 @@
 #include <utility>
 
 #include "../tools/eberle-lcp-losertree.hpp"
-#include "../sequential/bingmann-lcp_mergesort.hpp"
+#include "../sequential/bingmann-lcp_mergesort_binary.hpp"
 
 #include "../tools/jobqueue.hpp"
 #include "../tools/stringtools.hpp"
