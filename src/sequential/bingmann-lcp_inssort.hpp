@@ -359,7 +359,7 @@ void lcp_insertion_sort_cache_verify(const StringSet& ss, size_t depth)
 }
 
 static inline
-void test_lcp_insertion_sort_cache(
+void lcp_insertion_sort_cache(
     string* strings, uintptr_t* lcp, uint8_t* cache, size_t n)
 {
     return lcp_insertion_sort</* SaveCache */ true>(
@@ -367,7 +367,7 @@ void test_lcp_insertion_sort_cache(
         lcp, cache, /* depth */ 0);
 }
 
-PSS_CONTESTANT(test_lcp_insertion_sort_cache,
+PSS_CONTESTANT(lcp_insertion_sort_cache,
                "bingmann/lcp_insertion_sort_cache",
                "LCP-aware insertion sort (with distinguishing character cache)")
 

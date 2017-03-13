@@ -413,28 +413,22 @@ public:
     //! \{
 
     //! check equality of two strings a and b at char iterators ai and bi.
-    bool is_equal(const typename Traits::String&,
-                  const typename Traits::CharIterator& ai,
-                  const typename Traits::String&,
-                  const typename Traits::CharIterator& bi) const
+    bool is_equal(const String&, const CharIterator& ai,
+                  const String&, const CharIterator& bi) const
     {
         return (*ai == *bi) && (*ai != 0);
     }
 
     //! check if string a is less or equal to string b at iterators ai and bi.
-    bool is_less(const typename Traits::String&,
-                 const typename Traits::CharIterator& ai,
-                 const typename Traits::String&,
-                 const typename Traits::CharIterator& bi) const
+    bool is_less(const String&, const CharIterator& ai,
+                 const String&, const CharIterator& bi) const
     {
         return (*ai < *bi);
     }
 
     //! check if string a is less or equal to string b at iterators ai and bi.
-    bool is_leq(const typename Traits::String&,
-                const typename Traits::CharIterator& ai,
-                const typename Traits::String&,
-                const typename Traits::CharIterator& bi) const
+    bool is_leq(const String&, const CharIterator& ai,
+                const String&, const CharIterator& bi) const
     {
         return (*ai <= *bi);
     }
@@ -446,8 +440,7 @@ public:
 
     //! Return up to 1 characters of string s at iterator i packed into a uint8
     //! (only works correctly for 8-bit characters)
-    uint8_t get_char_uint8_simple(
-        const typename Traits::String&, typename Traits::CharIterator i) const
+    uint8_t get_char_uint8_simple(const String&, CharIterator i) const
     {
         return uint8_t(*i);
     }
