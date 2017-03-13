@@ -93,8 +93,8 @@ lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
 // bingmann/lcp_mergesort_binary
 
 static inline void
-lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
-                 string* input2, lcp_t* lcps2, size_t length2,
+lcp_merge_binary(const string* input1, const lcp_t* lcps1, size_t length1,
+                 const string* input2, const lcp_t* lcps2, size_t length2,
                  string* output, lcp_t* output_lcp)
 {
     const string* end1 = input1 + length1;
@@ -213,8 +213,8 @@ PSS_CONTESTANT(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
 /******************************************************************************/
 
 static inline void
-lcp_merge_binary_opt(string* input1, lcp_t* lcps1, size_t length1,
-                     string* input2, lcp_t* lcps2, size_t length2,
+lcp_merge_binary_opt(const string* input1, const lcp_t* lcps1, size_t length1,
+                     const string* input2, const lcp_t* lcps2, size_t length2,
                      string* output, lcp_t* output_lcp)
 {
     const string* end1 = input1 + length1;
@@ -240,7 +240,8 @@ lcp_merge_binary_opt(string* input1, lcp_t* lcps1, size_t length1,
             const lcp_t lcp = s1 - *input1;
 
             if (*s1 <= *s2)
-            {       // CASE 1.1: input1 <= input2
+            {
+                // CASE 1.1: input1 <= input2
                 *output = *input1;
                 *output_lcp = lcp1;
                 ++input1;
@@ -360,8 +361,8 @@ PSS_CONTESTANT(lcp_mergesort_binary_opt, "eberle/mergesort_lcp_binary_opt",
 template <bool OutputLcp, bool OutputCache>
 static inline void
 lcp_merge_binary_cache_opt(
-    string* input1, lcp_t* lcps1, char_type* cache1, size_t length1,
-    string* input2, lcp_t* lcps2, char_type* cache2, size_t length2,
+    const string* input1, const lcp_t* lcps1, char_type* cache1, size_t length1,
+    const string* input2, const lcp_t* lcps2, char_type* cache2, size_t length2,
     string* output, lcp_t* output_lcp, char_type* output_cache)
 {
     const string* end1 = input1 + length1;
@@ -393,7 +394,8 @@ lcp_merge_binary_cache_opt(
             }
 
             if (ch1 < ch2)
-            {       // CASE 1.1: lcp1 < lcp2
+            {
+                // CASE 1.1: lcp1 < lcp2
                 *output = *input1;
                 if (OutputLcp)
                     *output_lcp = lcp1;
@@ -406,7 +408,8 @@ lcp_merge_binary_cache_opt(
                 *cache2 = ch2;
             }
             else
-            {       // CASE 1.2: lcp1 >= lcp2
+            {
+                // CASE 1.2: lcp1 >= lcp2
                 *output = *input2;
                 if (OutputLcp)
                     *output_lcp = lcp2;
@@ -420,7 +423,8 @@ lcp_merge_binary_cache_opt(
             }
         }
         else if (lcp1 < lcp2)
-        {       // CASE 2: lcp1 > lcp2
+        {
+            // CASE 2: lcp1 > lcp2
             *output = *input2;
             if (OutputLcp)
                 *output_lcp = lcp2;
@@ -430,7 +434,8 @@ lcp_merge_binary_cache_opt(
             lcp2 = *lcps2;
         }
         else
-        {       // CASE 3: lcp1 < lcp2
+        {
+            // CASE 3: lcp1 < lcp2
             *output = *input1;
             if (OutputLcp)
                 *output_lcp = lcp1;
