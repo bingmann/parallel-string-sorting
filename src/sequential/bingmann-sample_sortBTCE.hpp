@@ -307,7 +307,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
         //return inssort::inssort(strings, n, depth);
         //return bs_mkqs::ssort2(strings, n, depth);
         g_timer.change(TM_SMALLSORT);
-        bingmann_radix_sort::msd_CI5(strings, n, depth);
+        bingmann_radix_sort::msd_CI(strings, n, depth);
         g_timer.change(TM_GENERAL);
         return;
     }
@@ -686,7 +686,7 @@ public:
             //return inssort::inssort(strings, n, depth);
             //return bs_mkqs::ssort2(strings, n, depth);
             g_timer.change(TM_SMALLSORT);
-            bingmann_radix_sort::msd_CI5(strings, n, depth);
+            bingmann_radix_sort::msd_CI(strings, n, depth);
             g_timer.change(TM_GENERAL);
             return;
         }
