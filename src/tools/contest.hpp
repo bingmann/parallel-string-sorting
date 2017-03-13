@@ -25,6 +25,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <cstdint>
 #include <vector>
 
 #if PSS_CONTEST
@@ -83,9 +84,14 @@ class Contestant_UCArray : public Contestant
 {
 public:
     typedef void (* func_type)(unsigned char** strings, size_t n);
+    typedef void (* func_lcp_type)(unsigned char** strings, uintptr_t* lcp, size_t n);
+    typedef void (* func_lcp_cache_type)(
+        uint8_t** strings, uintptr_t* lcp, uint8_t* cache, size_t n);
 
     func_type m_prepare_func;
     func_type m_run_func;
+    func_lcp_type m_run_lcp_func;
+    func_lcp_cache_type m_run_lcp_cache_func;
 
     Contestant_UCArray(func_type prepare_func,
                        func_type run_func,
@@ -93,7 +99,31 @@ public:
                        const char* description)
         : Contestant(algoname, description),
           m_prepare_func(prepare_func),
-          m_run_func(run_func)
+          m_run_func(run_func),
+          m_run_lcp_func(nullptr),
+          m_run_lcp_cache_func(nullptr)
+    { }
+
+    Contestant_UCArray(func_type prepare_func,
+                       func_lcp_type run_lcp_func,
+                       const char* algoname,
+                       const char* description)
+        : Contestant(algoname, description),
+          m_prepare_func(prepare_func),
+          m_run_func(nullptr),
+          m_run_lcp_func(run_lcp_func),
+          m_run_lcp_cache_func(nullptr)
+    { }
+
+    Contestant_UCArray(func_type prepare_func,
+                       func_lcp_cache_type run_lcp_cache_func,
+                       const char* algoname,
+                       const char* description)
+        : Contestant(algoname, description),
+          m_prepare_func(prepare_func),
+          m_run_func(nullptr),
+          m_run_lcp_func(nullptr),
+          m_run_lcp_cache_func(run_lcp_cache_func)
     { }
 
     virtual void run();         // implemented in main.cc
@@ -101,6 +131,9 @@ public:
     void real_run();            // implemented in main.cc
 
     virtual bool is_parallel() const { return false; }
+
+    bool is_lcp_func() const { return m_run_lcp_func; }
+    bool is_lcp_cache_func() const { return m_run_lcp_cache_func; }
 };
 
 #define PSS_CONTESTANT(func, algoname, desc)                         \

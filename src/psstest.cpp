@@ -252,9 +252,7 @@ void Contest::run_contest(const char* path)
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
         if (gopt_algorithm_select(*c))
-        {
             (*c)->run();
-        }
     }
 }
 
@@ -294,7 +292,9 @@ void Contest::list_contentants()
     for (list_type::iterator c = m_list.begin(); c != m_list.end(); ++c)
     {
         if (!gopt_algorithm_select(*c)) continue;
-        std::cout << std::left << std::setw(w_algoname) << (*c)->m_algoname << "  " << (*c)->m_description << std::endl;
+        std::cout << std::left << std::setw(w_algoname)
+                  << (*c)->m_algoname << "  " << (*c)->m_description
+                  << std::endl;
     }
 
     if (w_algoname == 0)
@@ -490,7 +490,8 @@ void Contestant_UCArray::real_run()
     PermutationCheck pc;
     if (!gopt_no_check) pc = PermutationCheck(stringptr);
 
-    std::cout << "Running " << m_algoname << " - " << m_description << std::endl;
+    std::cout << "Running " << m_algoname << " - " << m_description
+              << std::endl;
 
     g_stats >> "algo" << m_algoname
         >> "data" << g_dataname
@@ -525,6 +526,21 @@ void Contestant_UCArray::real_run()
     if (m_prepare_func)
         m_prepare_func(stringptr.data(), stringptr.size());
 
+    std::vector<uintptr_t> lcp;
+    if (is_lcp_func() || is_lcp_cache_func()) {
+        lcp.resize(g_string_count);
+        // must keep lcp[0] unchanged
+        lcp[0] = 42;
+        std::fill(lcp.begin() + 1, lcp.end(), -1);
+    }
+
+    std::vector<uint8_t> charcache;
+    if (is_lcp_cache_func()) {
+        charcache.resize(g_string_count);
+        charcache[0] = 0;
+        std::fill(charcache.begin() + 1, charcache.end(), -1);
+    }
+
     ClockIntervalBase<CLOCK_MONOTONIC> timer;
     ClockIntervalBase<CLOCK_PROCESS_CPUTIME_ID> cpu_timer;
 
@@ -532,7 +548,13 @@ void Contestant_UCArray::real_run()
     {
         cpu_timer.start(), timer.start();
         {
-            m_run_func(stringptr.data(), stringptr.size());
+            if (is_lcp_func())
+                m_run_lcp_func(stringptr.data(), lcp.data(), stringptr.size());
+            else if (is_lcp_cache_func())
+                m_run_lcp_cache_func(
+                    stringptr.data(), lcp.data(), charcache.data(), stringptr.size());
+            else
+                m_run_func(stringptr.data(), stringptr.size());
         }
         timer.stop(), cpu_timer.stop();
     }
@@ -551,9 +573,25 @@ void Contestant_UCArray::real_run()
             {
                 memcpy(stringptr.data(), stringptr_copy.data(),
                        stringptr_copy.size() * sizeof(string));
+
+                if (is_lcp_func()) {
+                    // must keep lcp[0] unchanged
+                    lcp[0] = 42;
+                    std::fill(lcp.begin() + 1, lcp.end(), -1);
+                }
+                if (is_lcp_cache_func()) {
+                    charcache[0] = 0;
+                    std::fill(charcache.begin() + 1, charcache.end(), -1);
+                }
             }
 
-            m_run_func(stringptr.data(), stringptr.size());
+            if (is_lcp_func())
+                m_run_lcp_func(stringptr.data(), lcp.data(), stringptr.size());
+            else if (is_lcp_cache_func())
+                m_run_lcp_cache_func(
+                    stringptr.data(), lcp.data(), charcache.data(), stringptr.size());
+            else
+                m_run_func(stringptr.data(), stringptr.size());
         }
         timer.stop(), cpu_timer.stop();
     }
@@ -568,12 +606,13 @@ void Contestant_UCArray::real_run()
 
     if (memuse < malloc_count_current())
     {
-        std::cout << "MEMORY LEAKED: " << (malloc_count_current() - memuse) << " B" << std::endl;
+        std::cout << "MEMORY LEAKED: " << (malloc_count_current() - memuse)
+                  << " B" << std::endl;
     }
 #endif
 
     g_stats >> "time" << timer.delta() / gopt_repeats_inner
-        >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
+            >> "cpu_time" << cpu_timer.delta() / gopt_repeats_inner;
     (std::cout << timer.delta() << "\tchecking ").flush();
 
     if (gopt_repeats_inner != 1)
@@ -581,7 +620,16 @@ void Contestant_UCArray::real_run()
 
     if (!gopt_no_check)
     {
-        if (check_sorted_order(stringptr, pc)) {
+        bool ok = check_sorted_order(stringptr, pc);
+        if (ok && is_lcp_func()) {
+            ok = stringtools::verify_lcp(
+                stringptr.data(), lcp.data(), stringptr.size(), 42);
+        }
+       if (ok && is_lcp_cache_func()) {
+           ok = stringtools::verify_lcp_cache(
+               stringptr.data(), lcp.data(), charcache.data(), stringptr.size(), 42);
+        }
+        if (ok) {
             std::cout << "ok" << std::endl;
             g_stats >> "status" << "ok";
         }
@@ -592,7 +640,8 @@ void Contestant_UCArray::real_run()
         if (!g_string_dprefix)
             g_string_dprefix = calc_distinguishing_prefix(stringptr, g_string_lcpsum);
 
-        g_stats >> "dprefix" << g_string_dprefix
+        g_stats
+            >> "dprefix" << g_string_dprefix
             >> "dprefix_percent" << (g_string_dprefix * 100.0 / g_string_datasize)
             >> "lcpsum" << g_string_lcpsum
             >> "avg-lcpsum" << g_string_lcpsum / (double)g_string_count;

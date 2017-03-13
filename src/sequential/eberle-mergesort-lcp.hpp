@@ -31,7 +31,9 @@ namespace eberle_mergesort_lcp {
 using namespace stringtools;
 
 static inline void
-eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, lcp_t* lcps2, size_t length2, string* output, lcp_t* outputLcps)
+eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1,
+                 string* input2, lcp_t* lcps2, size_t length2,
+                 string* output, lcp_t* outputLcps)
 {
     const string* end1 = input1 + length1;
     const string* end2 = input2 + length2;
@@ -43,7 +45,9 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
     while (input1 < end1 && input2 < end2)
     {
         if (lcp1 == lcp2)
-        {       // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
+        {
+            // CASE 1 lcps are equal => do string comparision starting at
+            // lcp+1st position
             string s1 = *input1 + lcp1;
             string s2 = *input2 + lcp1;
 
@@ -59,34 +63,41 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
                 *outputLcps = lcp1;
                 ++input1;
                 ++lcps1;
-                lcp1 = *lcps1;
+                lcp1 = input1 < end1 ? *lcps1 : 0;
+                //lcp1 = *lcps1;
                 lcp2 = lcp;
             }
             else
-            {       // CASE 1.2: input1 > input2
+            {
+                // CASE 1.2: input1 > input2
                 *output = *input2;
                 *outputLcps = lcp2;
                 ++input2;
                 ++lcps2;
                 lcp1 = lcp;
-                lcp2 = *lcps2;
+                lcp2 = input2 < end2 ? *lcps2 : 0;
+                //lcp2 = *lcps2;
             }
         }
         else if (lcp1 < lcp2)
-        {       // CASE 2: input1 > input2
+        {
+            // CASE 2: input1 > input2
             *output = *input2;
             *outputLcps = lcp2;
             ++input2;
             ++lcps2;
-            lcp2 = *lcps2;
+            //lcp2 = *lcps2;
+            lcp2 = input2 < end2 ? *lcps2 : 0;
         }
         else
-        {       // CASE 3: input1 < input2
+        {
+            // CASE 3: input1 < input2
             *output = *input1;
             *outputLcps = lcp1;
             ++input1;
             ++lcps1;
-            lcp1 = *lcps1;
+            lcp1 = input1 < end1 ? *lcps1 : 0;
+            //lcp1 = *lcps1;
         }
 
         ++output;
@@ -108,7 +119,8 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1, string* input2, l
 }
 
 static inline void
-eberle_lcp_merge(const LcpStringPtr& input1, const LcpStringPtr& input2, const LcpStringPtr& output)
+eberle_lcp_merge(const LcpStringPtr& input1, const LcpStringPtr& input2,
+                 const LcpStringPtr& output)
 {
     eberle_lcp_merge(input1.strings, input1.lcps, input1.size,
                      input2.strings, input2.lcps, input2.size,
@@ -116,7 +128,8 @@ eberle_lcp_merge(const LcpStringPtr& input1, const LcpStringPtr& input2, const L
 }
 
 static inline void
-eberle_lcp_mergesort(string* strings, size_t length, const LcpStringPtr& tmp, const LcpStringPtr& out)
+eberle_lcp_mergesort(string* strings, size_t length, const LcpStringPtr& tmp,
+                     const LcpStringPtr& out)
 {
     if (length <= 1)
     {
@@ -158,7 +171,8 @@ eberle_lcp_mergesort(string* strings, size_t n)
     delete[] tmpLcps;
 }
 
-PSS_CONTESTANT(eberle_lcp_mergesort, "eberle/mergesort_lcp_binary", "Binary Mergesort with LCP-usage by Andreas Eberle")
+PSS_CONTESTANT(eberle_lcp_mergesort, "eberle/mergesort_lcp_binary",
+               "Binary Mergesort with LCP-usage by Andreas Eberle")
 
 static inline void
 eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1,
@@ -175,7 +189,9 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, size_t length1,
     while (input1 < end1 && input2 < end2)
     {
         if (lcp1 == lcp2)
-        {       // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
+        {
+            // CASE 1 lcps are equal => do string comparision starting at
+            // lcp+1st position
             string s1 = *input1 + lcp1;
             string s2 = *input2 + lcp1;
 
@@ -252,7 +268,8 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, char_type* cache1, size_t length1
     while (input1 < end1 && input2 < end2)
     {
         if (lcp1 == lcp2)
-        {       // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
+        {
+            // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
             lcp_t lcp = lcp1;
 
             char_type ch1 = *cache1;
@@ -305,7 +322,8 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, char_type* cache1, size_t length1
     }
 
     if (input1 < end1)
-    {       // if there are remaining elements in stream1, copy them to the end
+    {
+        // if there are remaining elements in stream1, copy them to the end
         memcpy(output, input1, (end1 - input1) * sizeof(string));
     }
     else
@@ -315,7 +333,9 @@ eberle_lcp_merge(string* input1, lcp_t* lcps1, char_type* cache1, size_t length1
 }
 
 static inline void
-eberle_lcp_merge(const LcpCacheStringPtr& input1, const LcpCacheStringPtr& input2, string* output)
+eberle_lcp_merge(
+    const LcpCacheStringPtr& input1, const LcpCacheStringPtr& input2,
+    string* output)
 {
     if (0)
     {

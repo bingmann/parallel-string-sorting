@@ -36,6 +36,7 @@ namespace bingmann_lcp_mergesort {
 
 using namespace stringtools;
 
+//! archetypal lcp-aware comparison method
 static inline void
 lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
             unsigned int b, string inputB, lcp_t lcpB,
@@ -43,7 +44,9 @@ lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
             unsigned int& outLarger, lcp_t& outLcpAB)
 {
     if (lcpA == lcpB)
-    {       // CASE 1 lcps are equal => do string comparision starting at lcp+1st position
+    {
+        // CASE 1 lcps are equal => do string comparision starting at lcp+1st
+        // position
         string sA = inputA + lcpA;
         string sB = inputB + lcpA;
 
@@ -85,6 +88,9 @@ lcp_compare(unsigned int a, string inputA, lcp_t lcpA,
 
     assert(calc_lcp(inputA, inputB) == outLcpAB);
 }
+
+/******************************************************************************/
+// bingmann/lcp_mergesort_binary
 
 static inline void
 lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
@@ -140,7 +146,8 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
     }
 
     if (input1 < end1)
-    {       // if there are remaining elements in stream1, copy them to the end
+    {
+        // if there are remaining elements in stream1, copy them to the end
         memcpy(output, input1, (end1 - input1) * sizeof(string));
         memcpy(outputLcps, lcps1, (end1 - input1) * sizeof(lcp_t));
         *outputLcps = lcp1;
@@ -154,7 +161,8 @@ lcp_merge_binary(string* input1, lcp_t* lcps1, size_t length1,
 }
 
 static inline void
-lcp_mergesort_binary(string* strings, const LcpStringPtr& tmp, const LcpStringPtr& out, size_t length)
+lcp_mergesort_binary(string* strings, const LcpStringPtr& tmp,
+                     const LcpStringPtr& out, size_t length)
 {
     if (length == 0) {
         return;
@@ -182,25 +190,21 @@ lcp_mergesort_binary(string* strings, const LcpStringPtr& tmp, const LcpStringPt
 }
 
 static inline void
-lcp_mergesort_binary(string* strings, size_t n)
+lcp_mergesort_binary(string* strings, uintptr_t* lcp, size_t n)
 {
     // Allocate memory for LCPs and temporary string array
-    lcp_t* outputLcps = new lcp_t[n];
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n];
 
-    LcpStringPtr output(strings, outputLcps, n);
+    LcpStringPtr output(strings, lcp, n);
     LcpStringPtr tmp(tmpStrings, tmpLcps, n);
 
     // execute lcp mergesort
     lcp_mergesort_binary(strings, tmp, output, n);
 
-    // verify result
-    stringtools::verify_lcp(strings, output.lcps, n, 0);
-
-    delete[] outputLcps;
     delete[] tmpStrings;
     delete[] tmpLcps;
+    lcp[0] = 42;
 }
 
 PSS_CONTESTANT(lcp_mergesort_binary, "bingmann/lcp_mergesort_binary",
@@ -308,7 +312,8 @@ private:
     }
 
 public:
-    LcpLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges, lcp_t knownCommonLcp = 0)
+    LcpLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges,
+                 lcp_t knownCommonLcp = 0)
     {
         for (unsigned i = 1; i <= K; i++)
         {
@@ -392,7 +397,9 @@ lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp,
     {
         const size_t offset = ranges[i].first;
         const size_t size = ranges[i].second;
-        lcp_mergesort_kway<K>(strings + offset, output.sub(offset, size), tmp.sub(offset, size), size);
+        lcp_mergesort_kway<K>(strings + offset,
+                              output.sub(offset, size),
+                              tmp.sub(offset, size), size);
     }
 
     // K-way merge
@@ -403,47 +410,43 @@ lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp,
 // K must be a power of two
 template <unsigned K>
 static inline void
-lcp_mergesort_kway(string* strings, size_t n)
+lcp_mergesort_kway(string* strings, uintptr_t* lcp, size_t n)
 {
-    lcp_t* outputLcps = new lcp_t[n + 1];
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n + 1];
 
-    LcpStringPtr output(strings, outputLcps, n);
+    LcpStringPtr output(strings, lcp, n);
     LcpStringPtr tmp(tmpStrings, tmpLcps, n);
 
     lcp_mergesort_kway<K>(strings, tmp, output, n);
 
-    // check lcps
-    stringtools::verify_lcp(output.strings, output.lcps, n, 0);
-
-    delete[] outputLcps;
     delete[] tmpStrings;
     delete[] tmpLcps;
+    lcp[0] = 42;
 }
 
 static inline void
-lcp_mergesort_4way(string* strings, size_t n)
+lcp_mergesort_4way(string* strings, uintptr_t* lcp, size_t n)
 {
-    lcp_mergesort_kway<4>(strings, n);
+    lcp_mergesort_kway<4>(strings, lcp, n);
 }
 
 static inline void
-lcp_mergesort_8way(string* strings, size_t n)
+lcp_mergesort_8way(string* strings, uintptr_t* lcp, size_t n)
 {
-    lcp_mergesort_kway<8>(strings, n);
+    lcp_mergesort_kway<8>(strings, lcp, n);
 }
 
 static inline void
-lcp_mergesort_16way(string* strings, size_t n)
+lcp_mergesort_16way(string* strings, uintptr_t* lcp, size_t n)
 {
-    lcp_mergesort_kway<16>(strings, n);
+    lcp_mergesort_kway<16>(strings, lcp, n);
 }
 
 static inline void
-lcp_mergesort_128way(string* strings, size_t n)
+lcp_mergesort_128way(string* strings, uintptr_t* lcp, size_t n)
 {
-    lcp_mergesort_kway<128>(strings, n);
+    lcp_mergesort_kway<128>(strings, lcp, n);
 }
 
 PSS_CONTESTANT(lcp_mergesort_4way, "bingmann/lcp_mergesort_4way",

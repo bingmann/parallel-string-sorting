@@ -281,38 +281,14 @@ void lcp_insertion_sort_pseudocode_verify(const StringSet& ss, size_t depth)
     die_unless(stringtools::verify_lcp(ss, tmp_lcp.data(), 42));
 }
 
-// *** Externally Called Functions ***
-
-static inline
-void lcp_insertion_sort(string* str, size_t n, size_t depth)
-{
-    uintptr_t* tmp_lcp = new uintptr_t[n];
-    lcp_insertion_sort(
-        parallel_string_sorting::UCharStringSet(str, str + n),
-        tmp_lcp, depth);
-    delete [] tmp_lcp;
-}
-
-template <typename StringSet>
-static inline
-void lcp_insertion_sort(StringShadowPtr<StringSet>& str, size_t depth)
-{
-    return lcp_insertion_sort_nolcp(str.active(), depth);
-}
-
-template <typename StringSet>
-static inline
-void lcp_insertion_sort(StringShadowLcpPtr<StringSet>& str, size_t depth)
-{
-    return lcp_insertion_sort(str.active(), str.lcparray(), depth);
-}
-
 // *** Registered Test Functions ***
 
 static inline
-void test_lcp_insertion_sort(string* strings, size_t n)
+void test_lcp_insertion_sort(string* strings, uintptr_t* lcp, size_t n)
 {
-    lcp_insertion_sort(strings, n, 0);
+    lcp_insertion_sort(
+        parallel_string_sorting::UCharStringSet(strings, strings + n),
+        lcp, /* depth */ 0);
 }
 
 PSS_CONTESTANT(test_lcp_insertion_sort,
@@ -320,49 +296,14 @@ PSS_CONTESTANT(test_lcp_insertion_sort,
                "LCP-aware insertion sort")
 
 static inline
-void test_lcp_insertion_sort_verify(string* strings, size_t n)
+void test_lcp_insertion_sort_pseudocode(string* strings, uintptr_t* lcp, size_t n)
 {
-    lcp_insertion_sort_verify(
-        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
-}
-
-PSS_CONTESTANT(test_lcp_insertion_sort_verify,
-               "bingmann/lcp_insertion_sort_verify",
-               "LCP-aware insertion sort with verification")
-
-static inline
-void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
-{
-    string* shadow = new string[n]; // allocate shadow pointer array
-    StringShadowPtr<parallel_string_sorting::UCharStringSet> strptr(
-        parallel_string_sorting::UCharStringSet(strings, strings + n),
-        parallel_string_sorting::UCharStringSet(shadow, shadow + n));
-
-    lcp_insertion_sort(strptr, 0);
-
-    delete[] shadow;
-}
-
-PSS_CONTESTANT(test_lcp_insertion_sort_nolcp,
-               "bingmann/lcp_insertion_sort_nolcp",
-               "LCP-aware insertion sort (without LCP output)")
-
-static inline
-void test_lcp_insertion_sort_pseudocode(string* strings, size_t n)
-{
-    lcp_t* lcp_array = new lcp_t[n + 1]; // allocate shadow pointer array
     StringShadowLcpPtr<parallel_string_sorting::UCharStringSet> strptr(
         parallel_string_sorting::UCharStringSet(strings, strings + n),
         parallel_string_sorting::UCharStringSet(nullptr, 0),
-        lcp_array);
-
-    strptr.lcp(0) = 42;                 // must keep lcp[0] unchanged
+        lcp);
 
     lcp_insertion_sort_pseudocode(strptr.active(), strptr.lcparray(), 0);
-
-    stringtools::verify_lcp(strptr.active(), strptr.lcparray(), 42);
-
-    delete[] lcp_array;
 }
 
 PSS_CONTESTANT(test_lcp_insertion_sort_pseudocode,
@@ -546,10 +487,12 @@ void lcp_insertion_sort_cache_verify(const StringSet& ss, size_t depth)
 }
 
 static inline
-void test_lcp_insertion_sort_cache(string* strings, size_t n)
+void test_lcp_insertion_sort_cache(
+    string* strings, uintptr_t* lcp, uint8_t* cache, size_t n)
 {
-    return lcp_insertion_sort_cache_verify(
-        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
+    return lcp_insertion_sort_cache(
+        parallel_string_sorting::UCharStringSet(strings, strings + n),
+        lcp, cache, /* depth */ 0);
 }
 
 PSS_CONTESTANT(test_lcp_insertion_sort_cache,
