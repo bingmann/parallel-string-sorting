@@ -27,6 +27,7 @@
 
 #include "../tools/stringtools.hpp"
 #include "../tools/contest.hpp"
+#include <tlx/die.hpp>
 
 namespace bingmann_lcp_inssort {
 
@@ -195,7 +196,7 @@ void lcp_insertion_sort_verify(const StringSet& ss, size_t depth)
     tmp_lcp[0] = 42;                 // must keep lcp[0] unchanged
     std::fill(tmp_lcp.begin() + 1, tmp_lcp.end(), -1);
     lcp_insertion_sort(ss, tmp_lcp.data(), depth);
-    assert(stringtools::verify_lcp(ss, tmp_lcp.data(), 42));
+    die_unless(stringtools::verify_lcp(ss, tmp_lcp.data(), 42));
 }
 
 //! LCP insertion sort, close to journal's pseudo-code
@@ -277,7 +278,7 @@ void lcp_insertion_sort_pseudocode_verify(const StringSet& ss, size_t depth)
     tmp_lcp[0] = 42;                 // must keep lcp[0] unchanged
     std::fill(tmp_lcp.begin() + 1, tmp_lcp.end(), -1);
     lcp_insertion_sort_pseudocode(ss, tmp_lcp.data(), depth);
-    assert(stringtools::verify_lcp(ss, tmp_lcp.data(), 42));
+    die_unless(stringtools::verify_lcp(ss, tmp_lcp.data(), 42));
 }
 
 // *** Externally Called Functions ***
@@ -285,10 +286,11 @@ void lcp_insertion_sort_pseudocode_verify(const StringSet& ss, size_t depth)
 static inline
 void lcp_insertion_sort(string* str, size_t n, size_t depth)
 {
-    uintptr_t tmp_lcp[n];
-    return lcp_insertion_sort(
+    uintptr_t* tmp_lcp = new uintptr_t[n];
+    lcp_insertion_sort(
         parallel_string_sorting::UCharStringSet(str, str + n),
         tmp_lcp, depth);
+    delete [] tmp_lcp;
 }
 
 template <typename StringSet>
@@ -316,6 +318,17 @@ void test_lcp_insertion_sort(string* strings, size_t n)
 PSS_CONTESTANT(test_lcp_insertion_sort,
                "bingmann/lcp_insertion_sort",
                "LCP-aware insertion sort")
+
+static inline
+void test_lcp_insertion_sort_verify(string* strings, size_t n)
+{
+    lcp_insertion_sort_verify(
+        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
+}
+
+PSS_CONTESTANT(test_lcp_insertion_sort_verify,
+               "bingmann/lcp_insertion_sort_verify",
+               "LCP-aware insertion sort with verification")
 
 static inline
 void test_lcp_insertion_sort_nolcp(string* strings, size_t n)
@@ -529,7 +542,7 @@ void lcp_insertion_sort_cache_verify(const StringSet& ss, size_t depth)
 
     lcp_insertion_sort_cache(ss, lcps.data(), cache.data(), depth);
 
-    assert(stringtools::verify_lcp_cache(ss, lcps.data(), cache.data(), -1));
+    die_unless(stringtools::verify_lcp_cache(ss, lcps.data(), cache.data(), -1));
 }
 
 static inline
