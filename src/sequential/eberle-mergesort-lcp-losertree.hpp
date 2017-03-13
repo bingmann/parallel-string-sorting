@@ -27,7 +27,7 @@
 
 #include "../tools/eberle-utilities.hpp"
 #include "../tools/eberle-lcp-losertree.hpp"
-#include "../sequential/eberle-inssort-lcp.hpp"
+#include "../sequential/bingmann-lcp_inssort.hpp"
 
 //#define EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
 
@@ -44,7 +44,11 @@ eberle_mergesort_losertree_lcp_kway(string* strings, const LcpCacheStringPtr& tm
 {
     if (length <= 2 * K)
     {
-        return eberle_inssort_lcp::inssort_lcp(strings, output, length);
+        // return eberle_inssort_lcp::inssort_lcp(strings, output, length);
+        if (strings != output.strings)
+            std::copy(strings, strings + length, output.strings);
+        return bingmann_lcp_inssort::lcp_insertion_sort(
+            output.strings, output.lcps, output.cachedChars, length, 0);
     }
 
     //create ranges of the parts

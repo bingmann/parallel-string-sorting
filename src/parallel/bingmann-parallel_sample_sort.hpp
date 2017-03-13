@@ -622,8 +622,8 @@ insertion_sort(const stringtools::StringShadowLcpPtr<StringSet>& strptr,
 {
     assert(!strptr.flipped());
 
-    bingmann_lcp_inssort::lcp_insertion_sort(
-        strptr.output(), strptr.lcparray(), depth);
+    bingmann_lcp_inssort::lcp_insertion_sort</* SaveCache */ false, StringSet>(
+        strptr.output(), strptr.lcparray(), nullptr, depth);
 }
 
 template <typename StringSet>
@@ -657,7 +657,7 @@ insertion_sort(const stringtools::StringShadowLcpCacheOutPtr<StringSet>& strptr,
 {
     assert(!strptr.flipped());
 
-    bingmann_lcp_inssort::lcp_insertion_sort_cache(
+    bingmann_lcp_inssort::lcp_insertion_sort</* SaveCache */ true>(
         strptr.output(), strptr.lcparray(), strptr.cache(), depth);
 }
 

@@ -34,9 +34,11 @@ namespace bingmann_lcp_inssort {
 using namespace stringtools;
 
 //! LCP insertion sort
-template <typename StringSet>
+template <bool SaveCache, typename StringSet>
 static inline
-void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
+void lcp_insertion_sort(
+    const StringSet& str, uintptr_t* lcp, typename StringSet::Char* cache,
+    size_t depth)
 {
     typedef typename StringSet::String String;
     typedef typename StringSet::Iterator Iterator;
@@ -85,6 +87,8 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
                 {
                     // update lcp of prev (smaller string) with inserted string
                     lcp[i] = new_lcp;
+                    if (SaveCache)
+                        cache[i] = str.is_end(new_str, c1) ? 0 : *c1;
                     // lcp of inserted string with next string
                     new_lcp = prev_lcp;
 
@@ -96,6 +100,9 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
             // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
             str[begin + i] = std::move(cur_str);
+            if (SaveCache)
+                cache[i] = cache[i - 1];
+
             lcp[i + 1] = cur_lcp;
 
             --i;
@@ -103,6 +110,8 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
 
         str[begin + i] = std::move(new_str);
         lcp[i + 1] = new_lcp;
+        if (SaveCache)
+            cache[i + 1] = str.get_char(str[begin + i + 1], new_lcp);
     }
 
     // last loop specialized with checks for out-of-bound access to lcp.
@@ -145,6 +154,8 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
                 {
                     // update lcp of prev (smaller string) with inserted string
                     lcp[i] = new_lcp;
+                    if (SaveCache)
+                        cache[i] = str.is_end(new_str, c1) ? 0 : *c1;
                     // lcp of inserted string with next string
                     new_lcp = prev_lcp;
 
@@ -156,6 +167,8 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
             // else (cur_lcp > new_lcp), CASE 3: nothing to do
 
             str[begin + i] = std::move(cur_str);
+            if (SaveCache)
+                cache[i] = cache[i - 1];
 
             if (i + 1 < n) // check out-of-bounds copy
                 lcp[i + 1] = cur_lcp;
@@ -165,8 +178,11 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
 
         str[begin + i] = std::move(new_str);
 
-        if (i + 1 < n) // check out-of-bounds save
+        if (i + 1 < n) { // check out-of-bounds save
             lcp[i + 1] = new_lcp;
+            if (SaveCache)
+                cache[i + 1] = str.get_char(str[begin + i + 1], new_lcp);
+        }
     }
 }
 
@@ -174,8 +190,19 @@ void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
 static inline
 void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
 {
-    return lcp_insertion_sort(
-        parallel_string_sorting::UCharStringSet(str, str + n), lcp, depth);
+    return lcp_insertion_sort</* SaveCache */ false>(
+        parallel_string_sorting::UCharStringSet(str, str + n),
+        lcp, (uint8_t*)(nullptr), depth);
+}
+
+//! LCP insertion sort, plain arguments version.
+static inline
+void lcp_insertion_sort(
+    string* str, uintptr_t* lcp, uint8_t* cache, size_t n, size_t depth)
+{
+    return lcp_insertion_sort</* SaveCache */ true>(
+        parallel_string_sorting::UCharStringSet(str, str + n),
+        lcp, cache, depth);
 }
 
 //! LCP insertion sort, but immediately discard the lcp
@@ -184,7 +211,8 @@ static inline
 void lcp_insertion_sort_nolcp(const StringSet& ss, size_t depth)
 {
     uintptr_t tmp_lcp[ss.size()];
-    return lcp_insertion_sort(ss, tmp_lcp, depth);
+    return lcp_insertion_sort</* SaveCache */ false, StringSet>(
+        ss, tmp_lcp, nullptr, depth);
 }
 
 //! LCP insertion sort, but immediately discard the lcp
@@ -195,7 +223,8 @@ void lcp_insertion_sort_verify(const StringSet& ss, size_t depth)
     std::vector<uintptr_t> tmp_lcp(ss.size());
     tmp_lcp[0] = 42;                 // must keep lcp[0] unchanged
     std::fill(tmp_lcp.begin() + 1, tmp_lcp.end(), -1);
-    lcp_insertion_sort(ss, tmp_lcp.data(), depth);
+    lcp_insertion_sort</* SaveCache */ false, StringSet>(
+        ss, tmp_lcp.data(), nullptr, depth);
     die_unless(stringtools::verify_lcp(ss, tmp_lcp.data(), 42));
 }
 
@@ -286,9 +315,9 @@ void lcp_insertion_sort_pseudocode_verify(const StringSet& ss, size_t depth)
 static inline
 void test_lcp_insertion_sort(string* strings, uintptr_t* lcp, size_t n)
 {
-    lcp_insertion_sort(
+    lcp_insertion_sort<false>(
         parallel_string_sorting::UCharStringSet(strings, strings + n),
-        lcp, /* depth */ 0);
+        lcp, (uint8_t*)(nullptr), /* depth */ 0);
 }
 
 PSS_CONTESTANT(test_lcp_insertion_sort,
@@ -312,163 +341,6 @@ PSS_CONTESTANT(test_lcp_insertion_sort_pseudocode,
 
 ////////////////////////////////////////////////////////////////////////////////
 
-//! LCP insertion sort
-template <typename StringSet>
-static inline
-void lcp_insertion_sort_cache(
-    const StringSet& str, uintptr_t* lcp,
-    typename StringSet::Char* cache, size_t depth)
-{
-    typedef typename StringSet::String String;
-    typedef typename StringSet::Iterator Iterator;
-    typedef typename StringSet::CharIterator CharIterator;
-
-    Iterator begin = str.begin();
-    size_t n = str.size();
-
-    if (n <= 1) return;
-
-    for (size_t j = 0; j < n - 1; ++j)
-    {
-        // insert strings[j] into sorted strings[0..j-1]
-
-        String new_str = std::move(str[begin + j]);
-        size_t new_lcp = depth; // start with LCP depth
-        // Char new_ch = str.get_char(new_str, new_lcp);
-
-        size_t i = j;
-        while (i > 0)
-        {
-            size_t prev_lcp = new_lcp;
-
-            String cur_str = std::move(str[begin + i - 1]);
-            size_t cur_lcp = lcp[i];
-
-            if (cur_lcp < new_lcp)
-            {
-                // CASE 1: lcp goes down -> insert string
-
-                // move comparison string back
-                str[begin + i - 1] = std::move(cur_str);
-                break;
-            }
-            else if (cur_lcp == new_lcp)
-            {
-                // CASE 2: compare more characters
-
-                CharIterator c1 = str.get_chars(new_str, new_lcp);
-                CharIterator c2 = str.get_chars(cur_str, new_lcp);
-
-                while (str.is_equal(new_str, c1, cur_str, c2))
-                {
-                    ++new_lcp, ++c1, ++c2;
-                }
-
-                // if (new_str >= curr_str) -> insert string
-                if (!str.is_less(new_str, c1, cur_str, c2))
-                {
-                    // update lcp of prev (smaller string) with inserted string
-                    lcp[i] = new_lcp;
-                    cache[i] = str.is_end(new_str, c1) ? 0 : *c1;
-
-                    // lcp of inserted string with next string
-                    new_lcp = prev_lcp;
-
-                    // move comparison string back
-                    str[begin + i - 1] = std::move(cur_str);
-                    break;
-                }
-            }
-            // else (cur_lcp > new_lcp), CASE 3: nothing to do
-
-            str[begin + i] = std::move(cur_str);
-            cache[i] = cache[i - 1];
-
-            lcp[i + 1] = cur_lcp;
-
-            --i;
-        }
-
-        str[begin + i] = std::move(new_str);
-
-        lcp[i + 1] = new_lcp;
-        cache[i + 1] = str.get_char(str[begin + i + 1], new_lcp);
-    }
-
-    // last loop specialized with checks for out-of-bound access to lcp.
-    {
-        size_t j = n - 1;
-
-        // insert strings[j] into sorted strings[0..j-1]
-
-        String new_str = std::move(str[begin + j]);
-        size_t new_lcp = depth; // start with LCP depth
-        // Char new_ch = str.get_char(new_str, new_lcp);
-
-        size_t i = j;
-        while (i > 0)
-        {
-            size_t prev_lcp = new_lcp;
-
-            String cur_str = std::move(str[begin + i - 1]);
-            size_t cur_lcp = lcp[i];
-
-            if (cur_lcp < new_lcp)
-            {
-                // CASE 1: lcp goes down -> insert string
-
-                // move comparison string back
-                str[begin + i - 1] = std::move(cur_str);
-                break;
-            }
-            else if (cur_lcp == new_lcp)
-            {
-                // CASE 2: compare more characters
-
-                CharIterator c1 = str.get_chars(new_str, new_lcp);
-                CharIterator c2 = str.get_chars(cur_str, new_lcp);
-
-                while (str.is_equal(new_str, c1, cur_str, c2))
-                {
-                    ++new_lcp, ++c1, ++c2;
-                }
-
-                // if (new_str >= curr_str) -> insert string
-                if (!str.is_less(new_str, c1, cur_str, c2))
-                {
-                    // update lcp of prev (smaller string) with inserted string
-                    lcp[i] = new_lcp;
-                    cache[i] = str.is_end(new_str, c1) ? 0 : *c1;
-
-                    // lcp of inserted string with next string
-                    new_lcp = prev_lcp;
-
-                    // move comparison string back
-                    str[begin + i - 1] = std::move(cur_str);
-                    break;
-                }
-            }
-            // else (cur_lcp > new_lcp), CASE 3: nothing to do
-
-            str[begin + i] = std::move(cur_str);
-            cache[i] = cache[i - 1];
-
-            if (i + 1 < n) // check out-of-bounds copy
-                lcp[i + 1] = cur_lcp;
-
-            --i;
-        }
-
-        str[begin + i] = std::move(new_str);
-
-        if (i + 1 < n) // check out-of-bounds save
-        {
-            lcp[i + 1] = new_lcp;
-            cache[i + 1] = str.get_char(str[begin + i + 1], new_lcp);
-        }
-    }
-}
-
 template <typename StringSet>
 static inline
 void lcp_insertion_sort_cache_verify(const StringSet& ss, size_t depth)
@@ -481,7 +353,7 @@ void lcp_insertion_sort_cache_verify(const StringSet& ss, size_t depth)
     lcps[0] = -1;                 // must keep lcp[0] unchanged
     std::fill(lcps.begin() + 1, lcps.end(), -1);
 
-    lcp_insertion_sort_cache(ss, lcps.data(), cache.data(), depth);
+    lcp_insertion_sort</* SaveCache */ true>(ss, lcps.data(), cache.data(), depth);
 
     die_unless(stringtools::verify_lcp_cache(ss, lcps.data(), cache.data(), -1));
 }
@@ -490,7 +362,7 @@ static inline
 void test_lcp_insertion_sort_cache(
     string* strings, uintptr_t* lcp, uint8_t* cache, size_t n)
 {
-    return lcp_insertion_sort_cache(
+    return lcp_insertion_sort</* SaveCache */ true>(
         parallel_string_sorting::UCharStringSet(strings, strings + n),
         lcp, cache, /* depth */ 0);
 }
