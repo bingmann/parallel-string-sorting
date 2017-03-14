@@ -11,14 +11,15 @@ include_directories("${NUMA_INCLUDE_DIR}")
 
 set(PSSLIB_SOURCES
   tools/globals.cpp
-  sequential/nilsson-adaptive.cpp
-  sequential/nilsson-forward8.cpp
-  sequential/nilsson-forward16.cpp
+  sequential/bingmann-lcp_mergesort_kway.cpp
   sequential/bingmann-qsort.cpp
   sequential/mbm-radix.cpp
-  sequential/ng-cradix.cpp
   sequential/ng-cradix-rantala.cpp
+  sequential/ng-cradix.cpp
   sequential/ng-lcpmergesort.cpp
+  sequential/nilsson-adaptive.cpp
+  sequential/nilsson-forward16.cpp
+  sequential/nilsson-forward8.cpp
   sequential/sinha-burstsortA.cpp
   sequential/sinha-burstsortL.cpp
   rantala/burstsort.cpp

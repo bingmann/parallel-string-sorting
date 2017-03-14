@@ -41,12 +41,12 @@ using namespace stringtools;
 /******************************************************************************/
 // lcp_mergesort_kway
 
-template <unsigned K>
+template <size_t K>
 static inline void
 lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp,
                    const LcpStringPtr& output, size_t length)
 {
-    if (length <= 2 * K)
+    if (length <= 2 * K || length <= 32)
     {
         memmove(output.strings, strings, length * sizeof(string));
         return bingmann::lcp_insertion_sort(
@@ -55,16 +55,10 @@ lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp,
 
     // create ranges of the parts
     std::pair<size_t, size_t> ranges[K];
-
-    const size_t split = length / K;
-    for (unsigned i = 0; i < K - 1; ++i)
-    {
-        ranges[i] = std::make_pair(i * split, split);
-    }
-    ranges[K - 1] = std::make_pair((K - 1) * split, length - (K - 1) * split);
+    eberle_utils::calculateRanges(ranges, K, length);
 
     // execute mergesorts for parts
-    for (unsigned i = 0; i < K; i++)
+    for (size_t i = 0; i < K; i++)
     {
         const size_t offset = ranges[i].first;
         const size_t size = ranges[i].second;
@@ -79,12 +73,12 @@ lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp,
 }
 
 // K must be a power of two
-template <unsigned K>
+template <size_t K>
 static inline void
 lcp_mergesort_kway(string* strings, uintptr_t* lcp, size_t n)
 {
     string* tmpStrings = new string[n];
-    lcp_t* tmpLcps = new lcp_t[n + 1];
+    lcp_t* tmpLcps = new lcp_t[n];
 
     LcpStringPtr output(strings, lcp, n);
     LcpStringPtr tmp(tmpStrings, tmpLcps, n);
@@ -96,62 +90,28 @@ lcp_mergesort_kway(string* strings, uintptr_t* lcp, size_t n)
     lcp[0] = 42;
 }
 
-static inline void
-lcp_mergesort_4way(string* strings, uintptr_t* lcp, size_t n)
-{
-    lcp_mergesort_kway<4>(strings, lcp, n);
-}
-
-static inline void
-lcp_mergesort_8way(string* strings, uintptr_t* lcp, size_t n)
-{
-    lcp_mergesort_kway<8>(strings, lcp, n);
-}
-
-static inline void
-lcp_mergesort_16way(string* strings, uintptr_t* lcp, size_t n)
-{
-    lcp_mergesort_kway<16>(strings, lcp, n);
-}
-
-static inline void
-lcp_mergesort_64way(string* strings, uintptr_t* lcp, size_t n)
-{
-    lcp_mergesort_kway<64>(strings, lcp, n);
-}
-
-PSS_CONTESTANT(lcp_mergesort_4way, "bingmann/lcp_mergesort_4way",
-               "4-way LCP-Mergesort by Timo Bingmann and Andreas Eberle")
-PSS_CONTESTANT(lcp_mergesort_8way, "bingmann/lcp_mergesort_8way",
-               "8-way LCP-Mergesort by Timo Bingmann and Andreas Eberle")
-PSS_CONTESTANT(lcp_mergesort_16way, "bingmann/lcp_mergesort_16way",
-               "16-way LCP-Mergesort by Timo Bingmann and Andreas Eberle")
-PSS_CONTESTANT(lcp_mergesort_64way, "bingmann/lcp_mergesort_64way",
-               "64-way LCP-Mergesort by Timo Bingmann and Andreas Eberle")
-
 /******************************************************************************/
 // lcp_mergesort_cache_kway
 
-template <unsigned K>
+template <size_t K>
 static inline void
 lcp_mergesort_cache_kway(string* strings, const LcpCacheStringPtr& tmp,
                          const LcpCacheStringPtr& output, size_t length)
 {
-    if (length <= 2 * K)
+    if (length <= 2 * K || length <= 32)
     {
-        // return eberle_inssort_lcp::inssort_lcp(strings, output, length);
         if (strings != output.strings)
             std::copy(strings, strings + length, output.strings);
         return bingmann::lcp_insertion_sort(
             output.strings, output.lcps, output.cachedChars, length, 0);
     }
 
-    //create ranges of the parts
+    // create ranges of the parts
     std::pair<size_t, size_t> ranges[K];
     eberle_utils::calculateRanges(ranges, K, length);
 
     // execute mergesorts for parts
-    for (unsigned i = 0; i < K; i++)
+    for (size_t i = 0; i < K; i++)
     {
         const size_t offset = ranges[i].first;
         const size_t size = ranges[i].second;
@@ -160,17 +120,18 @@ lcp_mergesort_cache_kway(string* strings, const LcpCacheStringPtr& tmp,
             output.sub(offset, size), tmp.sub(offset, size), size);
     }
 
-    //merge
+    // merge
     LcpCacheStringLoserTree<K> loserTree(tmp, ranges);
     loserTree.writeElementsToStream(output);
 }
 
-template <unsigned K>
+template <size_t K>
 static inline void
 lcp_mergesort_cache_kway(string* strings, const LcpCacheStringPtr& outputPtr)
 {
     size_t length = outputPtr.size;
-    LcpCacheStringPtr tmpPtr(new string[length], new lcp_t[length], new char_type[length], length);
+    LcpCacheStringPtr tmpPtr(
+        new string[length], new lcp_t[length], new char_type[length], length);
 
     lcp_mergesort_cache_kway<K>(strings, tmpPtr, outputPtr, length);
 
@@ -180,67 +141,24 @@ lcp_mergesort_cache_kway(string* strings, const LcpCacheStringPtr& outputPtr)
 }
 
 // K must be a power of two
-template <unsigned K>
+template <size_t K>
 static inline void
-lcp_mergesort_cache_kway(string* strings, size_t n)
+lcp_mergesort_cache_kway(string* strings, lcp_t* lcp, uint8_t* cache, size_t n)
 {
-    lcp_t* outputLcps = new lcp_t[n];
     string* tmpStrings = new string[n];
     lcp_t* tmpLcps = new lcp_t[n];
-
-    char_type* outputCache = new char_type[n];
     char_type* tmpCache = new char_type[n];
 
-    LcpCacheStringPtr output(strings, outputLcps, outputCache, n);
+    LcpCacheStringPtr output(strings, lcp, cache, n);
     LcpCacheStringPtr tmp(tmpStrings, tmpLcps, tmpCache, n);
 
     lcp_mergesort_cache_kway<K>(strings, tmp, output, n);
 
-#ifdef EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
-    //check lcps
-    stringtools::verify_lcp_cache(output.strings, output.lcps, output.cachedChars, output.size, 0);
-#endif  //EBERLE_LCP_LOSERTREE_MERGESORT_CHECK_LCPS
-
-    delete[] outputLcps;
     delete[] tmpStrings;
     delete[] tmpLcps;
-
-    delete[] outputCache;
     delete[] tmpCache;
+    lcp[0] = 42;
 }
-
-void
-lcp_mergesort_cache_4way(string* strings, size_t n)
-{
-    lcp_mergesort_cache_kway<4>(strings, n);
-}
-
-void
-lcp_mergesort_cache_8way(string* strings, size_t n)
-{
-    lcp_mergesort_cache_kway<8>(strings, n);
-}
-
-void
-lcp_mergesort_cache_16way(string* strings, size_t n)
-{
-    lcp_mergesort_cache_kway<16>(strings, n);
-}
-
-void
-lcp_mergesort_cache_64way(string* strings, size_t n)
-{
-    lcp_mergesort_cache_kway<64>(strings, n);
-}
-
-PSS_CONTESTANT(lcp_mergesort_cache_4way, "bingmann/lcp_mergesort_cache_4way",
-               "4-way LCP-Mergesort by Timo Bingmann and Andreas Eberle")
-PSS_CONTESTANT(lcp_mergesort_cache_8way, "bingmann/lcp_mergesort_cache_8way",
-               "8-way LCP-Mergesort by Timo Bingmann and Andreas Eberle")
-PSS_CONTESTANT(lcp_mergesort_cache_16way, "bingmann/lcp_mergesort_cache_16way",
-               "16-way LCP-Mergesort by Timo Bingmann and Andreas Eberle")
-PSS_CONTESTANT(lcp_mergesort_cache_64way, "bingmann/lcp_mergesort_cache_64way",
-               "64-way LCP-Mergesort by Timo Bingmann and Andreas Eberle")
 
 } // namespace bingmann
 

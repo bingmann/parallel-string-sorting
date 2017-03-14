@@ -29,6 +29,7 @@
 #include <utility>
 
 #include "../tools/stringtools.hpp"
+#include <tlx/define/likely.hpp>
 
 namespace bingmann {
 
@@ -39,15 +40,15 @@ typedef unsigned char* string;
 /******************************************************************************/
 // LcpStringLoserTree
 
-template <unsigned K>
+template <size_t K>
 class LcpStringLoserTree
 {
     typedef LcpStringPtr Stream;
 
     struct Node
     {
-        unsigned int idx;
-        lcp_t        lcp;
+        size_t idx;
+        lcp_t  lcp;
     };
 
 private:
@@ -57,17 +58,16 @@ private:
     //! play one comparison edge game: contender is the node below
     //! defender. After the game, defender contains the lower index, contender
     //! the winning index, and defender.lcp = lcp(s_loser,s_winner).
-    inline void
-    updateNode(Node& contender, Node& defender)
+    void updateNode(Node& contender, Node& defender)
     {
         const Stream& defenderStream = streams[defender.idx];
 
-        if (defenderStream.empty())
+        if (TLX_UNLIKELY(defenderStream.empty()))
             return;
 
         const Stream& contenderStream = streams[contender.idx];
 
-        if (contenderStream.empty())
+        if (TLX_UNLIKELY(contenderStream.empty()))
         {
             std::swap(defender, contender);
             return;
@@ -111,17 +111,16 @@ private:
                         streams[defender.idx].firstString()) == defender.lcp);
     }
 
-    inline void
-    initTree(lcp_t knownCommonLcp)
+    void initTree(lcp_t knownCommonLcp)
     {
         //std::cout << "inittree start\n";
-        for (unsigned k = 1; k <= K; k++)
+        for (size_t k = 1; k <= K; k++)
         {
             Node contender;
             contender.idx = k;
             contender.lcp = knownCommonLcp;
 
-            unsigned nodeIdx = K + k;
+            size_t nodeIdx = K + k;
 
             //std::cout << "nodeIdx " << nodeIdx << "\n";
 
@@ -142,7 +141,7 @@ public:
     LcpStringLoserTree(const LcpStringPtr& input, std::pair<size_t, size_t>* ranges,
                        lcp_t knownCommonLcp = 0)
     {
-        for (unsigned i = 1; i <= K; i++)
+        for (size_t i = 1; i <= K; i++)
         {
             const std::pair<size_t, size_t> currRange = ranges[i - 1];
 
@@ -152,8 +151,7 @@ public:
         initTree(knownCommonLcp);
     }
 
-    inline void
-    writeElementsToStream(LcpStringPtr outStream, const size_t length)
+    void writeElementsToStream(LcpStringPtr outStream, const size_t length)
     {
         const LcpStringPtr end = outStream.sub(length, 0);
 
@@ -161,7 +159,7 @@ public:
         {
             // take winner and put into output
 
-            unsigned winnerIdx = nodes[1].idx;
+            size_t winnerIdx = nodes[1].idx;
             //std::cout << "winnerIdx " << winnerIdx << std::endl;
 
             outStream.setFirst(streams[winnerIdx].firstString(), nodes[1].lcp);
@@ -179,7 +177,7 @@ public:
             if (!stream.empty())
                 contender.lcp = streams[winnerIdx].firstLcp();
 
-            unsigned nodeIdx = winnerIdx + K;
+            size_t nodeIdx = winnerIdx + K;
             //std::cout << "nodeIdx " << nodeIdx << "\n";
 
             while (nodeIdx > 2) {
@@ -189,7 +187,7 @@ public:
             }
             //std::cout << "play against " << nodeIdx << "\n";
 
-            // for (unsigned nodeIdx = (K + winnerIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
+            // for (size_t nodeIdx = (K + winnerIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
             // {
             //     updateNode(contender, nodes[nodeIdx]);
             // }
@@ -200,7 +198,7 @@ public:
 /******************************************************************************/
 // LcpCacheStringLoserTree
 
-template <unsigned K>
+template <size_t K>
 class LcpCacheStringLoserTree
 {
     typedef LcpCacheStringPtr Stream;
@@ -210,19 +208,18 @@ public:
     Stream streams[K];
 
 protected:
-    unsigned nodes[K];
+    size_t nodes[K];
     lcp_t lcps[K];
     char_type cached[K];
 
     /*
      * Returns the winner of all games.
      */
-    inline void
-    updateNode(unsigned& defenderIdx, unsigned& contenderIdx)
+    void updateNode(size_t& contenderIdx, size_t& defenderIdx)
     {
         const Stream& defenderStream = streams[defenderIdx];
 
-        if (defenderStream.empty())
+        if (TLX_UNLIKELY(defenderStream.empty()))
             return;
 
         const Stream& contenderStream = streams[contenderIdx];
@@ -230,12 +227,14 @@ protected:
         lcp_t& contenderLcp = lcps[contenderIdx];
         lcp_t& defenderLcp = lcps[defenderIdx];
 
-        if (contenderStream.empty() || defenderLcp > contenderLcp)
-        { // CASE 2: defender->lcp > contender->lcp => defender < contender
+        if (TLX_UNLIKELY(contenderStream.empty()) || defenderLcp > contenderLcp)
+        {
+            // CASE 2: defender->lcp > contender->lcp => defender < contender
             std::swap(defenderIdx, contenderIdx);
         }
         else if (defenderLcp == contenderLcp)
-        { // CASE 1: defender.lcp == contender.lcp
+        {
+            // CASE 1: defender.lcp == contender.lcp
             lcp_t lcp = defenderLcp;
 
             char_type c1 = cached[defenderIdx];
@@ -251,32 +250,31 @@ protected:
                 c2 = contenderStream.firstString()[lcp];
             }
 
-            if (c1 < c2)
-            {
+            if (c1 < c2) {
                 // CASE 1.1: defender < contender
                 contenderLcp = lcp;
                 cached[contenderIdx] = c2;
                 std::swap(defenderIdx, contenderIdx);
             }
-            else
-            {
+            else {
                 // CASE 1.2: defender >= contender
                 defenderLcp = lcp;
                 cached[defenderIdx] = c1;
             }
         }
-        // else
-        // CASE 3: defender->lcp < contender->lcp => contender < defender  => nothing to do
+        else {
+            // CASE 3: defender->lcp < contender->lcp => contender < defender
+            // => nothing to do
+        }
     }
 
-    inline void
-    removeTopFromStream(unsigned streamIdx)
+    void removeTopFromStream(size_t streamIdx)
     {
         Stream& stream = streams[streamIdx];
 
         ++stream;
 
-        if (!stream.empty())
+        if (TLX_LIKELY(!stream.empty()))
         {
             lcps[streamIdx] = stream.firstLcp();
             cached[streamIdx] = stream.firstCached();
@@ -284,13 +282,13 @@ protected:
     }
 
 public:
-    LcpCacheStringLoserTree()
-    { }
+    LcpCacheStringLoserTree() { }
 
-    LcpCacheStringLoserTree(const Stream& input, std::pair<size_t, size_t>* ranges,
-                            lcp_t knownCommonLcp = 0)
+    LcpCacheStringLoserTree(
+        const Stream& input, std::pair<size_t, size_t>* ranges,
+        lcp_t knownCommonLcp = 0)
     {
-        for (unsigned i = 0; i < K; i++)
+        for (size_t i = 0; i < K; i++)
         {
             const std::pair<size_t, size_t> currRange = ranges[i];
             Stream* curr = streams + i;
@@ -300,15 +298,16 @@ public:
         initTree(knownCommonLcp);
     }
 
-    LcpCacheStringLoserTree(const Stream* inputs, unsigned numInputs, lcp_t knownCommonLcp = 0)
+    LcpCacheStringLoserTree(
+        const Stream* inputs, size_t numInputs, lcp_t knownCommonLcp = 0)
     {
         assert(numInputs <= K);
 
-        for (unsigned i = 0; i < numInputs; i++)
+        for (size_t i = 0; i < numInputs; i++)
         {
             streams[i] = inputs[i];
         }
-        for (unsigned i = numInputs; i < K; ++i)
+        for (size_t i = numInputs; i < K; ++i)
         {
             streams[i] = Stream();
         }
@@ -316,34 +315,32 @@ public:
         initTree(knownCommonLcp);
     }
 
-    inline void
-    initTree(lcp_t knownCommonLcp)
+    void initTree(lcp_t knownCommonLcp)
     {
-        for (unsigned i = 0; i < K; i++)
+        for (size_t i = 0; i < K; i++)
         {
             lcps[i] = knownCommonLcp;
 
             if (streams[i].size > 0)
                 cached[i] = streams[i].firstString()[knownCommonLcp];
 
-            unsigned nodeIdx = K + i;
-            unsigned contenderIdx = i;
+            size_t nodeIdx = K + i;
+            size_t contenderIdx = i;
 
             while (nodeIdx % 2 == 1 && nodeIdx > 1)
             {
                 nodeIdx >>= 1;
-                updateNode(nodes[nodeIdx], contenderIdx);
+                updateNode(contenderIdx, nodes[nodeIdx]);
             }
             nodes[nodeIdx >> 1] = contenderIdx;
         }
     }
 
-    void
-    printTree()
+    void printTree()
     {
-        unsigned levelSize = 1;
+        size_t levelSize = 1;
 
-        for (unsigned i = 0; i < K; ++i)
+        for (size_t i = 0; i < K; ++i)
         {
             if (i >= levelSize)
             {
@@ -354,7 +351,7 @@ public:
         }
         std::cout << std::endl;
 
-        for (unsigned i = 0; i < K; ++i)
+        for (size_t i = 0; i < K; ++i)
         {
             const Stream& stream = streams[i];
             if (stream.size > 0)
@@ -371,59 +368,60 @@ public:
         std::cout << std::endl;
     }
 
-    inline void
-    replay(unsigned& contenderIdx)
+    void replay(size_t& contenderIdx)
     {
 #if 0
-        for (unsigned nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
+        for (size_t nodeIdx = (K + contenderIdx) >> 1; nodeIdx >= 1; nodeIdx >>= 1)
         {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
         }
 #else
-        unsigned nodeIdx = (K + contenderIdx) >> 1;
+        size_t nodeIdx = (K + contenderIdx) >> 1;
 
         if (K >= 256) {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
             nodeIdx >>= 1;
         }
         if (K >= 128) {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
             nodeIdx >>= 1;
         }
         if (K >= 64) {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
             nodeIdx >>= 1;
         }
         if (K >= 32) {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
             nodeIdx >>= 1;
         }
         if (K >= 16) {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
             nodeIdx >>= 1;
         }
         if (K >= 8) {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
             nodeIdx >>= 1;
         }
         if (K >= 4) {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
             nodeIdx >>= 1;
         }
         if (K >= 2) {
-            updateNode(nodes[nodeIdx], contenderIdx);
+            updateNode(contenderIdx, nodes[nodeIdx]);
         }
 #endif
     }
 
-    inline void
-    writeElementsToStream(Stream outStream)
+    void writeElementsToStream(Stream outStream)
     {
         const Stream end = outStream.end();
-        unsigned contenderIdx = nodes[0];
+        size_t contenderIdx = nodes[0];
 
         while (outStream < end)
         {
+            assert(cached[contenderIdx] ==
+                   streams[contenderIdx].firstString()[lcps[contenderIdx]]);
+
             outStream.setFirst(streams[contenderIdx].firstString(),
                                lcps[contenderIdx], cached[contenderIdx]);
             ++outStream;
@@ -436,11 +434,10 @@ public:
         nodes[0] = contenderIdx;
     }
 
-    inline void
-    writeElementsToStream(string* outStream, const size_t length)
+    void writeElementsToStream(string* outStream, const size_t length)
     {
         const string* end = outStream + length;
-        unsigned contenderIdx = nodes[0];
+        size_t contenderIdx = nodes[0];
 
         while (outStream < end)
         {
@@ -455,10 +452,9 @@ public:
         nodes[0] = contenderIdx;
     }
 
-    inline string
-    deleteMin()
+    string deleteMin()
     {
-        unsigned contenderIdx = nodes[0];
+        size_t contenderIdx = nodes[0];
         string min = streams[contenderIdx].firstString();
         removeTopFromStream(contenderIdx);
         replay(contenderIdx);
@@ -466,17 +462,16 @@ public:
         return min;
     }
 
-    inline void
-    getRangesOfRemaining(std::pair<size_t, size_t>* ranges, const LcpStringPtr& inputBase)
+    void getRangesOfRemaining(
+        std::pair<size_t, size_t>* ranges, const LcpStringPtr& inputBase)
     {
-        for (unsigned k = 0; k < K; k++)
+        for (size_t k = 0; k < K; k++)
         {
-            ranges[k] = std::make_pair(size_t(streams[k] - inputBase), streams[k].length);
+            ranges[k] = std::make_pair(streams[k] - inputBase, streams[k].length);
         }
     }
 
-    inline const LcpCacheStringPtr*
-    getRemaining()
+    const LcpCacheStringPtr* getRemaining()
     {
         return streams;
     }
