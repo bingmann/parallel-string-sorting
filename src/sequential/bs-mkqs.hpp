@@ -107,7 +107,7 @@ static inline void ssort2(string a[], size_t n, int depth)
 {
     int d, r, partval;
     string *pa, *pb, *pc, *pd, *pl, *pm, *pn;
-    if (n < 64) {
+    if (n < 32) {
         return inssort::inssort(a, n, depth);
     }
     pl = a;

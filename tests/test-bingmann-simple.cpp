@@ -23,6 +23,7 @@
 #include <sequential/inssort.hpp>
 #include <sequential/bingmann-lcp_inssort.hpp>
 #include <sequential/bingmann-radix_sort.hpp>
+#include <sequential/bingmann-mkqs.hpp>
 #include <parallel/bingmann-parallel_mkqs.hpp>
 #include <parallel/bingmann-parallel_sample_sort.hpp>
 #include <parallel/bingmann-parallel_sample_sort_lcp.hpp>
@@ -237,6 +238,7 @@ void test_all(const size_t nstrings)
         run_tests(bingmann::lcp_insertion_sort_pseudocode_verify);
         run_tests(bingmann::lcp_insertion_sort_cache_verify);
     }
+    run_tests(bingmann::mkqs_generic);
     run_tests(bingmann::msd_CE0_generic);
     run_tests(bingmann::msd_CE1_generic);
     run_tests(bingmann::msd_CI0_cf_generic);

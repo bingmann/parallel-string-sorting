@@ -132,6 +132,7 @@ std::vector<size_t> g_numa_string_count;      // pointer to strings on NUMA node
 #include "sequential/bs-mkqs.hpp"
 
 #include "sequential/bingmann-radix_sort.hpp"
+#include "sequential/bingmann-mkqs.hpp"
 #include "sequential/bingmann-sample_sort.hpp"
 #include "sequential/bingmann-sample_sortBS.hpp"
 #include "sequential/bingmann-sample_sortBSC.hpp"

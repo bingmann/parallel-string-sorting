@@ -471,7 +471,7 @@ public:
         }
     }
 
-    const LcpCacheStringPtr* getRemaining()
+    const LcpCacheStringPtr * getRemaining()
     {
         return streams;
     }
