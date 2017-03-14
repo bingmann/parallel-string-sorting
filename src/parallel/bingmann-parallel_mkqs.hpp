@@ -45,7 +45,7 @@ namespace bingmann_parallel_mkqs {
 
 using namespace jobqueue;
 
-static const size_t g_inssort_threshold = 64;
+static const size_t g_inssort_threshold = 32;
 
 static const size_t block_size = 128 * 1024;
 

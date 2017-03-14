@@ -65,7 +65,7 @@ static const bool use_work_sharing = true;
 typedef unsigned char* string;
 typedef StringShadowPtr StringPtr;
 
-static const size_t g_inssort_threshold = 64;
+static const size_t g_inssort_threshold = 32;
 
 size_t g_totalsize;             // total size of input
 size_t g_sequential_threshold;  // calculated threshold for sequential sorting

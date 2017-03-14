@@ -116,7 +116,7 @@ static const size_t MAXPROCS = 2 * 64 + 1; // +1 due to round up of processor nu
 static const size_t l2cache = PS5_L2CACHE;
 
 static const size_t g_smallsort_threshold = 1024 * 1024;
-static const size_t g_inssort_threshold = 64;
+static const size_t g_inssort_threshold = 32;
 
 typedef uint64_t key_type;
 
