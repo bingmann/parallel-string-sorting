@@ -29,7 +29,6 @@
 #include <cstring>
 
 #include "../tools/stringtools.hpp"
-#include "../tools/eberle-utilities.hpp"
 #include "../tools/contest.hpp"
 #include "bingmann-lcp_losertree.hpp"
 #include "bingmann-lcp_inssort.hpp"
@@ -55,7 +54,7 @@ lcp_mergesort_kway(string* strings, const LcpStringPtr& tmp,
 
     // create ranges of the parts
     std::pair<size_t, size_t> ranges[K];
-    eberle_utils::calculateRanges(ranges, K, length);
+    calculateRanges(ranges, K, length);
 
     // execute mergesorts for parts
     for (size_t i = 0; i < K; i++)
@@ -108,7 +107,7 @@ lcp_mergesort_cache_kway(string* strings, const LcpCacheStringPtr& tmp,
 
     // create ranges of the parts
     std::pair<size_t, size_t> ranges[K];
-    eberle_utils::calculateRanges(ranges, K, length);
+    calculateRanges(ranges, K, length);
 
     // execute mergesorts for parts
     for (size_t i = 0; i < K; i++)

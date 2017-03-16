@@ -28,6 +28,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "membuffer.hpp"
+
 #if PSS_CONTEST
 
 //! forward declaration
@@ -128,7 +130,12 @@ public:
 
     virtual void run();         // implemented in main.cc
     void run_forked();          // implemented in main.cc
-    void real_run();            // implemented in main.cc
+    void prepare_run();         // implemented in main.cc
+
+    // implemented in main.cc
+    void real_run(
+        membuffer<uint8_t*>& stringptr,
+        std::vector<uintptr_t>& lcp, std::vector<uint8_t>& charcache);
 
     virtual bool is_parallel() const { return false; }
 

@@ -31,8 +31,6 @@
 #include "eberle-parallel-lcp-merge-binary-splitting.hpp"
 #include "../sequential/bingmann-lcp_mergesort_kway.hpp"
 
-#include "../tools/eberle-utilities.hpp"
-
 #include "../tools/jobqueue.hpp"
 #include "../tools/stringtools.hpp"
 
@@ -43,8 +41,6 @@
 namespace eberle_parallel_lcp_mergesort {
 
 using std::numeric_limits;
-
-using namespace eberle_utils;
 
 using namespace jobqueue;
 using namespace stringtools;

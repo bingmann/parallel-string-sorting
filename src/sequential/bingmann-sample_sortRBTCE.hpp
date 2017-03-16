@@ -414,7 +414,7 @@ struct SplitterTree
         //const size_t oversample_factor = 8;
         const size_t samplesize = oversample_factor * numsplitters;
 
-        static samplepair_type samples[samplesize];
+        samplepair_type samples[samplesize];
 
         LCGRandom rng(&strings);
 

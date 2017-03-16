@@ -341,6 +341,20 @@ inline int count_low_zero_bits<uint64_t>(const uint64_t& t)
     return __builtin_ctzll(t);
 }
 
+static inline
+void
+calculateRanges(
+    std::pair<size_t, size_t>* ranges, unsigned numberOfSplits, size_t lengthToSplit)
+{
+    const size_t split = lengthToSplit / numberOfSplits;
+    for (unsigned i = 0; i < numberOfSplits - 1; ++i)
+    {
+        ranges[i] = std::make_pair(i * split, split);
+    }
+    ranges[numberOfSplits - 1] = std::make_pair(
+        (numberOfSplits - 1) * split, lengthToSplit - (numberOfSplits - 1) * split);
+}
+
 //! Class to transform in-order to level-order indexes in a perfect binary tree
 template <size_t treebits>
 struct TreeCalculations

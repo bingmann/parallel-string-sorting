@@ -37,6 +37,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <thread>
 #include <iomanip>
 
 #include <sys/wait.h>
@@ -100,6 +101,7 @@ bool gopt_all_threads = false;       // argument --all-threads
 bool gopt_some_threads = false;      // argument --some-threads
 bool gopt_no_check = false;          // argument --no-check
 bool gopt_mlockall = false;          // argument --mlockall
+bool gopt_segment_threads = false;   // argument --segment-threads
 
 std::vector<size_t> gopt_threadlist; // argument --thread-list
 
@@ -312,7 +314,7 @@ void Contestant_UCArray::run_forked()
         return;
     }
 
-    if (!gopt_forkrun) return real_run();
+    if (!gopt_forkrun) return prepare_run();
 
     pid_t p = fork();
     if (p == 0)
@@ -333,7 +335,7 @@ void Contestant_UCArray::run_forked()
         }
 
         if (gopt_timeout) alarm(gopt_timeout); // terminate child program after gopt_timeout seconds
-        real_run();
+        prepare_run();
 
         input::free_stringdata();
         exit(0);
@@ -391,7 +393,52 @@ void Contestant_UCArray::run_forked()
     g_stats.clear();
 }
 
-void Contestant_UCArray::real_run()
+void Contestant_UCArray::real_run(
+    membuffer<uint8_t*>& stringptr,
+    std::vector<uintptr_t>& lcp, std::vector<uint8_t>& charcache)
+{
+    if (!gopt_segment_threads)
+    {
+        if (is_lcp_func())
+            m_run_lcp_func(stringptr.data(), lcp.data(), stringptr.size());
+        else if (is_lcp_cache_func())
+            m_run_lcp_cache_func(
+                stringptr.data(), lcp.data(), charcache.data(), stringptr.size());
+        else
+            m_run_func(stringptr.data(), stringptr.size());
+    }
+    else {
+        // segment input
+        size_t nthr = std::thread::hardware_concurrency();
+
+        std::vector<std::pair<size_t, size_t> > ranges(nthr);
+        stringtools::calculateRanges(ranges.data(), nthr, stringptr.size());
+
+        std::vector<std::thread> threads(nthr);
+        for (size_t i = 0; i < nthr; ++i) {
+            threads[i] = std::thread(
+                [this, &stringptr, &lcp, &charcache, &ranges, i]() {
+                size_t begin, length;
+                std::tie(begin, length) = ranges[i];
+
+                if (is_lcp_func())
+                    m_run_lcp_func(
+                        stringptr.data() + begin, lcp.data() + begin, length);
+                else if (is_lcp_cache_func())
+                    m_run_lcp_cache_func(
+                        stringptr.data() + begin, lcp.data() + begin,
+                        charcache.data() + begin, length);
+                else
+                    m_run_func(stringptr.data() + begin, length);
+            });
+        }
+
+        for (size_t i = 0; i < nthr; ++i)
+            threads[i].join();
+    }
+}
+
+void Contestant_UCArray::prepare_run()
 {
     typedef unsigned char* string;
 
@@ -549,13 +596,7 @@ void Contestant_UCArray::real_run()
     {
         cpu_timer.start(), timer.start();
         {
-            if (is_lcp_func())
-                m_run_lcp_func(stringptr.data(), lcp.data(), stringptr.size());
-            else if (is_lcp_cache_func())
-                m_run_lcp_cache_func(
-                    stringptr.data(), lcp.data(), charcache.data(), stringptr.size());
-            else
-                m_run_func(stringptr.data(), stringptr.size());
+            real_run(stringptr, lcp, charcache);
         }
         timer.stop(), cpu_timer.stop();
     }
@@ -572,8 +613,8 @@ void Contestant_UCArray::real_run()
             // restore array
             if (rep != 0)
             {
-                memcpy(stringptr.data(), stringptr_copy.data(),
-                       stringptr_copy.size() * sizeof(string));
+                std::copy(stringptr_copy.begin(), stringptr_copy.end(),
+                          stringptr.begin());
 
                 if (is_lcp_func()) {
                     // must keep lcp[0] unchanged
@@ -586,13 +627,7 @@ void Contestant_UCArray::real_run()
                 }
             }
 
-            if (is_lcp_func())
-                m_run_lcp_func(stringptr.data(), lcp.data(), stringptr.size());
-            else if (is_lcp_cache_func())
-                m_run_lcp_cache_func(
-                    stringptr.data(), lcp.data(), charcache.data(), stringptr.size());
-            else
-                m_run_func(stringptr.data(), stringptr.size());
+            real_run(stringptr, lcp, charcache);
         }
         timer.stop(), cpu_timer.stop();
     }
@@ -780,6 +815,7 @@ void print_usage(const char* prog)
               << "  -R, --repeat-inner <n> Repeat inner experiment loop a number of times and divide by repetition count." << std::endl
               << "  -s, --size <size>      Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>   Run through powers of two for input size limit." << std::endl
+              << "      --segment-threads  Run sequential algorithms in parallel on segments of input." << std::endl
               << "      --sequential       Run only sequential algorithms." << std::endl
               << "      --some-threads     Run specific selected thread counts from 1 to max_processors." << std::endl
               << "      --suffix           Suffix sort the input file." << std::endl
@@ -791,6 +827,19 @@ void print_usage(const char* prog)
 
 int main(int argc, char* argv[])
 {
+    enum {
+        OPT_SUFFIX = 1,
+        OPT_SEGMENT_THREADS,
+        OPT_SEQUENTIAL,
+        OPT_PARALLEL,
+        OPT_THREADS,
+        OPT_ALL_THREADS,
+        OPT_SOME_THREADS,
+        OPT_THREAD_LIST,
+        OPT_MLOCKALL,
+        OPT_NUMA_NODES
+    };
+
     static const struct option longopts[] = {
         { "help", no_argument, 0, 'h' },
         { "algo", required_argument, 0, 'a' },
@@ -806,15 +855,16 @@ int main(int argc, char* argv[])
         { "size", required_argument, 0, 's' },
         { "maxsize", required_argument, 0, 'S' },
         { "timeout", required_argument, 0, 'T' },
-        { "suffix", no_argument, 0, 1 },
-        { "sequential", no_argument, 0, 2 },
-        { "parallel", no_argument, 0, 3 },
-        { "threads", no_argument, 0, 4 },
-        { "all-threads", no_argument, 0, 5 },
-        { "some-threads", no_argument, 0, 6 },
-        { "thread-list", required_argument, 0, 7 },
-        { "mlockall", no_argument, 0, 8 },
-        { "numa-nodes", required_argument, 0, 9 },
+        { "suffix", no_argument, 0, OPT_SUFFIX },
+        { "segment-threads", no_argument, 0, OPT_SEGMENT_THREADS },
+        { "sequential", no_argument, 0, OPT_SEQUENTIAL },
+        { "parallel", no_argument, 0, OPT_PARALLEL },
+        { "threads", no_argument, 0, OPT_THREADS },
+        { "all-threads", no_argument, 0, OPT_ALL_THREADS },
+        { "some-threads", no_argument, 0, OPT_SOME_THREADS },
+        { "thread-list", required_argument, 0, OPT_THREAD_LIST },
+        { "mlockall", no_argument, 0, OPT_MLOCKALL },
+        { "numa-nodes", required_argument, 0, OPT_NUMA_NODES },
         { 0, 0, 0, 0 },
     };
 
@@ -948,37 +998,37 @@ int main(int argc, char* argv[])
             std::cout << "Option -T: aborting algorithms after " << gopt_timeout << " seconds timeout." << std::endl;
             break;
 
-        case 1: // --suffix
+        case OPT_SUFFIX: // --suffix
             gopt_suffixsort = true;
             std::cout << "Option --suffix: running as suffix sorter on input file." << std::endl;
             break;
 
-        case 2: // --sequential
+        case OPT_SEQUENTIAL: // --sequential
             gopt_sequential_only = true;
             std::cout << "Option --sequential: running only sequential algorithms." << std::endl;
             break;
 
-        case 3: // --parallel
+        case OPT_PARALLEL: // --parallel
             gopt_parallel_only = true;
             std::cout << "Option --parallel: running only parallelized algorithms." << std::endl;
             break;
 
-        case 4: // --threads
+        case OPT_THREADS: // --threads
             gopt_threads = true;
             std::cout << "Option --threads: running test with exponentially increasing thread count." << std::endl;
             break;
 
-        case 5: // --all-threads
+        case OPT_ALL_THREADS: // --all-threads
             gopt_threads = gopt_all_threads = true;
             std::cout << "Option --all-threads: running test with linear increasing thread count." << std::endl;
             break;
 
-        case 6: // --some-threads
+        case OPT_SOME_THREADS: // --some-threads
             gopt_threads = gopt_some_threads = true;
             std::cout << "Option --some-threads: running test with specifically selected thread counts." << std::endl;
             break;
 
-        case 7: // --thread-list
+        case OPT_THREAD_LIST: // --thread-list
         {
             char* endptr = optarg;
             while (*endptr) {
@@ -990,14 +1040,19 @@ int main(int argc, char* argv[])
             }
             break;
         }
-        case 8: // --mlockall
+        case OPT_MLOCKALL: // --mlockall
             gopt_mlockall = true;
             std::cout << "Option --mlockall: calling mlockall() to lock memory." << std::endl;
             break;
 
-        case 9: // --numa-nodes <n>
+        case OPT_NUMA_NODES: // --numa-nodes <n>
             g_numa_nodes = atoi(optarg);
             std::cout << "Option --numa-nodes: set number of (fake) NUMA nodes to " << g_numa_nodes << "." << std::endl;
+            break;
+
+        case OPT_SEGMENT_THREADS: // --segment-threads
+            gopt_segment_threads = gopt_no_check = true;
+            std::cout << "Option --segment-threads: running sequential algorithms in parallel on segments of the input. This implies skipping checking." << std::endl;
             break;
 
         default:

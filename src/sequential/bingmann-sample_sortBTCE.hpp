@@ -318,7 +318,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
 
     const size_t samplesize = oversample_factor * numsplitters;
 
-    static key_type samples[samplesize];
+    key_type samples[samplesize];
 
     LCGRandom rng(&strings);
 
@@ -697,7 +697,7 @@ public:
 
         const size_t samplesize = oversample_factor * numsplitters;
 
-        static key_type samples[samplesize];
+        key_type samples[samplesize];
 
         LCGRandom rng(&strings);
 

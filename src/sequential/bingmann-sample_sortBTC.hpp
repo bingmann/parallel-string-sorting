@@ -278,14 +278,12 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
     const size_t samplesize = oversample_factor * numsplitters;
 
-    static key_type samples[samplesize];
+    key_type samples[samplesize];
 
     LCGRandom rng(&strings);
 
     for (unsigned int i = 0; i < samplesize; ++i)
-    {
         samples[i] = get_char<key_type>(strings[rng() % n], depth);
-    }
 
     std::sort(samples, samples + samplesize);
 

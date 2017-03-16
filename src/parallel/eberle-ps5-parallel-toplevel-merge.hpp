@@ -32,8 +32,6 @@
 #include "eberle-parallel-lcp-merge-binary-splitting.hpp"
 #include "bingmann-parallel_sample_sort.hpp"
 
-#include "../tools/eberle-utilities.hpp"
-
 #include "../tools/jobqueue.hpp"
 #include "../tools/stringtools.hpp"
 
@@ -44,8 +42,6 @@
 namespace eberle_ps5_parallel_toplevel_merge {
 
 using std::numeric_limits;
-
-using namespace eberle_utils;
 
 using namespace jobqueue;
 using namespace stringtools;
