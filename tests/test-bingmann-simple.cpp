@@ -240,8 +240,7 @@ void test_all(const size_t nstrings)
     }
     run_tests(bingmann::mkqs_generic);
     run_tests(bingmann::msd_CE0_generic);
-    run_tests(bingmann::msd_CE1_generic);
-    run_tests(bingmann::msd_CI0_cf_generic);
+    run_tests(bingmann::msd_CI2_generic);
     run_tests(bingmann_parallel_mkqs::bingmann_sequential_mkqs_cache8);
     run_tests(bingmann_parallel_mkqs::bingmann_parallel_mkqs);
     run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_base);

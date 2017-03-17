@@ -47,26 +47,28 @@ msd_CE0(string* strings, string* sorted, size_t n, size_t depth)
 
     // count character occurances
     size_t bkt_size[256] = { 0 };
-    for (size_t i = 0; i < n; ++i)
-        ++bkt_size[strings[i][depth]];
+    for (string* s = strings; s != strings + n; ++s)
+        ++bkt_size[(*s)[depth]];
 
-    // prefix sum
-    size_t bkt_index[256];
-    bkt_index[0] = 0;
-    for (size_t i = 1; i < 256; ++i)
-        bkt_index[i] = bkt_index[i - 1] + bkt_size[i - 1];
+    {
+        // prefix sum
+        string* bkt[256];
+        bkt[0] = sorted;
+        for (size_t i = 1; i < 256; ++i)
+            bkt[i] = bkt[i - 1] + bkt_size[i - 1];
 
-    // distribute
-    for (size_t i = 0; i < n; ++i)
-        sorted[bkt_index[strings[i][depth]]++] = strings[i];
+        // distribute
+        for (string* s = strings; s != strings + n; ++s)
+            *(bkt[(*s)[depth]]++) = *s;
 
-    std::copy(sorted, sorted + n, strings);
+        std::copy(sorted, sorted + n, strings);
+    }
 
     // recursion
-    size_t bsum = bkt_size[0];
+    string* bsum = strings + bkt_size[0];
     for (size_t i = 1; i < 256; ++i) {
         if (bkt_size[i] > 1)
-            msd_CE0(strings + bsum, sorted, bkt_size[i], depth + 1);
+            msd_CE0(bsum, sorted, bkt_size[i], depth + 1);
         bsum += bkt_size[i];
     }
 }
@@ -85,10 +87,9 @@ PSS_CONTESTANT(bingmann_msd_CE0, "bingmann/msd_CE0",
 
 template <typename StringSet>
 static inline void
-msd_CE0_generic(const StringSet& ss, size_t depth)
+msd_CE0_generic(const StringSet& ss, const StringSet& sorted, size_t depth)
 {
     typedef typename StringSet::Iterator Iterator;
-    typedef typename StringSet::String String;
 
     if (ss.size() < g_inssort_threshold)
         return inssort::inssort_generic(ss, depth);
@@ -98,21 +99,19 @@ msd_CE0_generic(const StringSet& ss, size_t depth)
     for (Iterator i = ss.begin(); i != ss.end(); ++i)
         ++bkt_size[ss.get_uint8(ss[i], depth)];
 
-    String* sorted = new String[ss.size()];
+    {
+        // prefix sum
+        Iterator bkt_index[256];
+        bkt_index[0] = sorted.begin();
+        for (size_t i = 1; i < 256; ++i)
+            bkt_index[i] = bkt_index[i - 1] + bkt_size[i - 1];
 
-    // prefix sum
-    size_t bkt_index[256];
-    bkt_index[0] = 0;
-    for (size_t i = 1; i < 256; ++i)
-        bkt_index[i] = bkt_index[i - 1] + bkt_size[i - 1];
+        // distribute
+        for (Iterator i = ss.begin(); i != ss.end(); ++i)
+            *(bkt_index[ss.get_uint8(ss[i], depth)]++) = std::move(ss[i]);
 
-    // distribute
-    for (Iterator i = ss.begin(); i != ss.end(); ++i)
-        sorted[bkt_index[ss.get_uint8(ss[i], depth)]++] = std::move(ss[i]);
-
-    std::move(sorted, sorted + ss.size(), ss.begin());
-
-    delete[] sorted;
+        std::move(sorted.begin(), sorted.begin() + ss.size(), ss.begin());
+    }
 
     // recursion
     Iterator bsum = ss.begin() + bkt_size[0];
@@ -120,13 +119,22 @@ msd_CE0_generic(const StringSet& ss, size_t depth)
         Iterator bsum_begin = bsum;
         bsum += bkt_size[i];
         if (bkt_size[i] > 1)
-            msd_CE0_generic(ss.sub(bsum_begin, bsum), depth + 1);
+            msd_CE0_generic(ss.sub(bsum_begin, bsum), sorted, depth + 1);
     }
+}
+
+template <typename StringSet>
+static inline void
+msd_CE0_generic(const StringSet& ss, size_t depth)
+{
+    typename StringSet::Container sorted = ss.allocate(ss.size());
+    msd_CE0_generic(ss, StringSet(sorted), depth);
+    StringSet::deallocate(sorted);
 }
 
 void bingmann_msd_CE0_generic(string* strings, size_t n)
 {
-    return msd_CE0_generic(
+    msd_CE0_generic(
         parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
 }
 
@@ -136,184 +144,169 @@ PSS_CONTESTANT(bingmann_msd_CE0_generic, "bingmann/msd_CE0_gen",
 /******************************************************************************/
 
 static inline void
-msd_CE1(string* strings, string* sorted, size_t n, size_t depth)
+msd_CE1(string* strings, string* sorted, uint8_t* charcache,
+        size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, depth);
 
-    // count character occurances
-    size_t bkt[256 + 1] = { 0 };
-    for (size_t i = 0; i < n; ++i)
-        ++bkt[strings[i][depth]];
+    // read characters and count character occurances
+    size_t bkt_size[256] = { 0 };
+    uint8_t* cc = charcache;
+    for (string* s = strings; s != strings + n; ++s, ++cc)
+        ++bkt_size[*cc = (*s)[depth]];
 
-    // prefix sum
-    for (size_t i = 1; i <= 256; ++i)
-        bkt[i] += bkt[i - 1];
+    {
+        // prefix sum
+        string* bkt[256];
+        bkt[0] = sorted;
+        for (size_t i = 1; i < 256; ++i)
+            bkt[i] = bkt[i - 1] + bkt_size[i - 1];
 
-    // distribute
-    for (size_t i = 0; i < n; ++i)
-        sorted[--bkt[strings[i][depth]]] = strings[i];
+        // distribute
+        uint8_t* cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *(bkt[*cc]++) = *s;
 
-    std::copy(sorted, sorted + n, strings);
+        std::copy(sorted, sorted + n, strings);
+    }
 
     // recursion
+    string* bsum = strings + bkt_size[0];
     for (size_t i = 1; i < 256; ++i) {
-        if (bkt[i] + 1 >= bkt[i + 1]) continue;
-        msd_CE1(strings + bkt[i], sorted, bkt[i + 1] - bkt[i], depth + 1);
+        if (bkt_size[i] > 1)
+            msd_CE1(bsum, sorted, charcache, bkt_size[i], depth + 1);
+        bsum += bkt_size[i];
     }
 }
 
 void bingmann_msd_CE1(string* strings, size_t n)
 {
     string* sorted = new string[n];
-    msd_CE1(strings, sorted, n, 0);
+    uint8_t* charcache = new uint8_t[n];
+
+    msd_CE1(strings, sorted, charcache, n, 0);
+
+    delete[] charcache;
     delete[] sorted;
 }
 
 PSS_CONTESTANT(bingmann_msd_CE1, "bingmann/msd_CE1",
-               "bingmann/msd_CE1 (CE0 with reused prefix sum)")
-
-/******************************************************************************/
-
-template <typename StringSet>
-static inline void
-msd_CE1_generic(const StringSet& ss, size_t depth)
-{
-    typedef typename StringSet::Iterator Iterator;
-    typedef typename StringSet::String String;
-
-    if (ss.size() < g_inssort_threshold)
-        return inssort::inssort_generic(ss, depth);
-
-    // count character occurances
-    size_t bkt[256 + 1] = { 0 };
-    for (Iterator i = ss.begin(); i != ss.end(); ++i)
-        ++bkt[ss.get_uint8(ss[i], depth)];
-
-    String* sorted = new String[ss.size()];
-
-    // prefix sum
-    for (size_t i = 1; i <= 256; ++i)
-        bkt[i] += bkt[i - 1];
-
-    // distribute
-    for (Iterator i = ss.begin(); i != ss.end(); ++i)
-        sorted[--bkt[ss.get_uint8(ss[i], depth)]] = std::move(ss[i]);
-
-    std::move(sorted, sorted + ss.size(), ss.begin());
-
-    delete[] sorted;
-
-    // recursion
-    for (size_t i = 1; i < 256; ++i) {
-        if (bkt[i] + 1 >= bkt[i + 1]) continue;
-        msd_CE1_generic(ss.sub(ss.begin() + bkt[i], ss.begin() + bkt[i + 1]),
-                        depth + 1);
-    }
-}
-
-void bingmann_msd_CE1_generic(string* strings, size_t n)
-{
-    return msd_CE1_generic(
-        parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
-}
-
-PSS_CONTESTANT(bingmann_msd_CE1_generic, "bingmann/msd_CE1_gen",
-               "bingmann/msd_CE1 generic (CE with reused prefix sum)")
+               "bingmann/msd_CE1 (with charcache, fused loop)")
 
 /******************************************************************************/
 
 static inline void
-msd_CE1_c(string* strings, string* sorted, uint8_t* charcache,
-          size_t n, size_t depth)
+msd_CE2(string* strings, string* sorted, uint8_t* charcache,
+        size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, depth);
 
     // read characters and count character occurances
-    size_t bkt[256 + 1] = { 0 };
-    for (size_t i = 0; i < n; ++i)
-        ++bkt[charcache[i] = static_cast<uint8_t>(strings[i][depth])];
+    size_t bkt_size[256] = { 0 };
+    uint8_t* cc = charcache;
+    for (string* s = strings; s != strings + n; ++s, ++cc)
+        *cc = (*s)[depth];
+    for (cc = charcache; cc != charcache + n; ++cc)
+        ++bkt_size[*cc];
 
-    // prefix sum
-    for (size_t i = 1; i <= 256; ++i)
-        bkt[i] += bkt[i - 1];
+    {
+        // prefix sum
+        string* bkt[256];
+        bkt[0] = sorted;
+        for (size_t i = 1; i < 256; ++i)
+            bkt[i] = bkt[i - 1] + bkt_size[i - 1];
 
-    // distribute
-    for (size_t i = 0; i < n; ++i)
-        sorted[--bkt[charcache[i]]] = strings[i];
+        // distribute
+        uint8_t* cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *(bkt[*cc]++) = *s;
 
-    std::copy(sorted, sorted + n, strings);
+        std::copy(sorted, sorted + n, strings);
+    }
 
     // recursion
+    string* bsum = strings + bkt_size[0];
     for (size_t i = 1; i < 256; ++i) {
-        if (bkt[i] + 1 >= bkt[i + 1]) continue;
-        msd_CE1_c(strings + bkt[i], sorted, charcache,
-                  bkt[i + 1] - bkt[i], depth + 1);
+        if (bkt_size[i] > 1)
+            msd_CE2(bsum, sorted, charcache, bkt_size[i], depth + 1);
+        bsum += bkt_size[i];
     }
 }
 
-void bingmann_msd_CE1_c(string* strings, size_t n)
+void bingmann_msd_CE2(string* strings, size_t n)
 {
     string* sorted = new string[n];
     uint8_t* charcache = new uint8_t[n];
 
-    msd_CE1_c(strings, sorted, charcache, n, 0);
+    msd_CE2(strings, sorted, charcache, n, 0);
 
     delete[] charcache;
     delete[] sorted;
 }
 
-PSS_CONTESTANT(bingmann_msd_CE1_c, "bingmann/msd_CE1_c",
-               "bingmann/msd_CE1_c (CE1 with charcache)")
+PSS_CONTESTANT(bingmann_msd_CE2, "bingmann/msd_CE2",
+               "bingmann/msd_CE2 (with charcache, fissioned loop)")
 
 /******************************************************************************/
 
 static inline void
-msd_CE1_cf(string* strings, string* sorted, uint8_t* charcache,
-           size_t n, size_t depth)
+msd_CE3(string* strings, string* sorted, uint16_t* charcache,
+        size_t n, size_t depth)
 {
-    if (n < g_inssort_threshold)
-        return inssort::inssort(strings, n, depth);
+    static const size_t RADIX = 0x10000;
+    using namespace stringtools;
+
+    if (n < 0x10000)
+        return msd_CE2(strings, sorted,
+                       reinterpret_cast<uint8_t*>(charcache), n, depth);
 
     // read characters and count character occurances
-    size_t bkt[256 + 1] = { 0 };
-    for (size_t i = 0; i < n; ++i)
-        charcache[i] = static_cast<uint8_t>(strings[i][depth]);
-    for (size_t i = 0; i < n; ++i)
-        ++bkt[charcache[i]];
+    size_t bkt_size[RADIX] = { 0 };
+    uint16_t* cc = charcache;
+    for (string* s = strings; s != strings + n; ++s, ++cc)
+        *cc = get_char<uint16_t>(*s, depth);
+    for (cc = charcache; cc != charcache + n; ++cc)
+        ++bkt_size[*cc];
 
-    // prefix sum
-    for (size_t i = 1; i <= 256; ++i)
-        bkt[i] += bkt[i - 1];
+    {
+        // prefix sum
+        string* bkt[RADIX];
+        bkt[0] = sorted;
+        for (size_t i = 1; i < RADIX; ++i)
+            bkt[i] = bkt[i - 1] + bkt_size[i - 1];
 
-    // distribute
-    for (size_t i = 0; i < n; ++i)
-        sorted[--bkt[charcache[i]]] = strings[i];
+        // distribute
+        uint16_t* cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *(bkt[*cc]++) = *s;
 
-    std::copy(sorted, sorted + n, strings);
+        std::copy(sorted, sorted + n, strings);
+    }
 
     // recursion
-    for (size_t i = 1; i < 256; ++i) {
-        if (bkt[i] + 1 >= bkt[i + 1]) continue;
-        msd_CE1_cf(strings + bkt[i], sorted, charcache,
-                   bkt[i + 1] - bkt[i], depth + 1);
+    string* bsum = strings + bkt_size[0];
+    for (size_t i = 1; i < RADIX; ++i) {
+        if ((i & 0xFF) != 0 && bkt_size[i] > 1) // not zero-terminated
+            msd_CE3(bsum, sorted, charcache, bkt_size[i], depth + 2);
+        bsum += bkt_size[i];
     }
 }
 
-void bingmann_msd_CE1_cf(string* strings, size_t n)
+void bingmann_msd_CE3(string* strings, size_t n)
 {
     string* sorted = new string[n];
-    uint8_t* charcache = new uint8_t[n];
+    uint16_t* charcache = new uint16_t[n];
 
-    msd_CE1_cf(strings, sorted, charcache, n, 0);
+    msd_CE3(strings, sorted, charcache, n, 0);
 
     delete[] charcache;
     delete[] sorted;
 }
 
-PSS_CONTESTANT(bingmann_msd_CE1_cf, "bingmann/msd_CE1_cf",
-               "bingmann/msd_CE1_cf (CE1 with charcache, fissioned)")
+PSS_CONTESTANT(bingmann_msd_CE3, "bingmann/msd_CE3",
+               "bingmann/msd_CE3 (with charcache, fissioned loop, 16-bit adaptive)")
 
 /******************************************************************************/
 // CI Variants
@@ -334,35 +327,37 @@ msd_CI0(string* strings, size_t n, size_t depth)
 
     // count character occurances
     size_t bkt_size[256] = { 0 };
-    for (size_t i = 0; i < n; ++i)
-        ++bkt_size[strings[i][depth]];
+    for (string* s = strings; s != strings + n; ++s)
+        ++bkt_size[(*s)[depth]];
 
-    // inclusive prefix sum
-    size_t bkt_index[256];
-    bkt_index[0] = bkt_size[0];
-    size_t last_bkt_size = bkt_size[0];
-    for (unsigned i = 1; i < 256; ++i) {
-        bkt_index[i] = bkt_index[i - 1] + bkt_size[i];
-        if (bkt_size[i]) last_bkt_size = bkt_size[i];
-    }
-
-    // premute in-place
-    for (size_t i = 0, j; i < n - last_bkt_size; )
     {
-        string perm = strings[i];
-        while ((j = --bkt_index[perm[depth]]) > i)
-        {
-            std::swap(perm, strings[j]);
+        // inclusive prefix sum
+        string* bkt[256];
+        bkt[0] = strings + bkt_size[0];
+        size_t last_bkt_size = bkt_size[0];
+        for (unsigned i = 1; i < 256; ++i) {
+            bkt[i] = bkt[i - 1] + bkt_size[i];
+            if (bkt_size[i]) last_bkt_size = bkt_size[i];
         }
-        strings[i] = perm;
-        i += bkt_size[perm[depth]];
+
+        // premute in-place
+        for (string* i = strings, * j; i < strings + n - last_bkt_size; )
+        {
+            string perm = *i;
+            while ((j = --bkt[perm[depth]]) > i)
+            {
+                std::swap(perm, *j);
+            }
+            *i = perm;
+            i += bkt_size[perm[depth]];
+        }
     }
 
     // recursion
-    size_t bsum = bkt_size[0];
+    string* bsum = strings + bkt_size[0];
     for (size_t i = 1; i < 256; ++i) {
         if (bkt_size[i] > 1)
-            msd_CI0(strings + bsum, bkt_size[i], depth + 1);
+            msd_CI0(bsum, bkt_size[i], depth + 1);
         bsum += bkt_size[i];
     }
 }
@@ -373,20 +368,20 @@ void bingmann_msd_CI0(string* strings, size_t n)
 }
 
 PSS_CONTESTANT(bingmann_msd_CI0, "bingmann/msd_CI0",
-               "bingmann/msd_CI0 (CE0 in-place baseline)")
+               "bingmann/msd_CI0 (in-place baseline)")
 
 /******************************************************************************/
-// msd_CI0_c
+// msd_CI1
 
 static inline size_t *
-msd_CI0_c_make_bkt_size(
+msd_CI1_make_bkt_size(
     string * strings, uint8_t * charcache, size_t n, size_t depth)
 {
     // cache and count character occurrences
-    size_t* bkt_size = new size_t[256];
-    memset(bkt_size, 0, 256 * sizeof(size_t));
-    for (size_t i = 0; i < n; ++i)
-        ++bkt_size[charcache[i] = strings[i][depth]];
+    size_t* bkt_size = new size_t[256]();
+    uint8_t* cc = charcache;
+    for (string* s = strings; s != strings + n; ++s, ++cc)
+        ++bkt_size[*cc = (*s)[depth]];
 
     // inclusive prefix sum
     size_t bkt[256];
@@ -415,50 +410,50 @@ msd_CI0_c_make_bkt_size(
 }
 
 void
-msd_CI0_c(string* strings, uint8_t* charcache, size_t n, size_t depth)
+msd_CI1(string* strings, uint8_t* charcache, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, depth);
 
-    size_t* bkt_size = msd_CI0_c_make_bkt_size(strings, charcache, n, depth);
+    size_t* bkt_size = msd_CI1_make_bkt_size(strings, charcache, n, depth);
 
     // recursion
-    size_t bsum = bkt_size[0];
+    string* bsum = strings + bkt_size[0];
     for (size_t i = 1; i < 256; ++i) {
         if (bkt_size[i] > 1)
-            msd_CI0_c(strings + bsum, charcache, bkt_size[i], depth + 1);
+            msd_CI1(bsum, charcache, bkt_size[i], depth + 1);
         bsum += bkt_size[i];
     }
 
     delete[] bkt_size;
 }
 
-void bingmann_msd_CI0_c(string* strings, size_t n)
+void bingmann_msd_CI1(string* strings, size_t n)
 {
     uint8_t* charcache = new uint8_t[n];
-    msd_CI0_c(strings, charcache, n, 0);
+    msd_CI1(strings, charcache, n, 0);
     delete[] charcache;
 }
 
-PSS_CONTESTANT(bingmann_msd_CI0_c, "bingmann/msd_CI0_c",
-               "bingmann/msd_CI0_c (CI0 with charcache)")
+PSS_CONTESTANT(bingmann_msd_CI1, "bingmann/msd_CI1",
+               "bingmann/msd_CI1 (with charcache, fused loop)")
 
 /******************************************************************************/
-// msd_CI0_cf
+// msd_CI2
 
 static inline size_t *
-msd_CI0_cf_run(
+msd_CI2_run(
     string * strings, uint8_t * charcache, size_t n, size_t depth)
 {
     // cache characters
-    for (size_t i = 0; i < n; ++i)
-        charcache[i] = strings[i][depth];
+    uint8_t* cc = charcache;
+    for (string* s = strings; s != strings + n; ++s, ++cc)
+        *cc = (*s)[depth];
 
     // cache and count character occurrences
-    size_t* bkt_size = new size_t[256];
-    memset(bkt_size, 0, 256 * sizeof(size_t));
-    for (size_t i = 0; i < n; ++i)
-        ++bkt_size[charcache[i]];
+    size_t* bkt_size = new size_t[256]();
+    for (cc = charcache; cc != charcache + n; ++cc)
+        ++bkt_size[*cc];
 
     // inclusive prefix sum
     size_t bkt[256];
@@ -487,38 +482,38 @@ msd_CI0_cf_run(
 }
 
 void
-msd_CI0_cf(string* strings, uint8_t* charcache, size_t n, size_t depth)
+msd_CI2(string* strings, uint8_t* charcache, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, depth);
 
-    size_t* bkt_size = msd_CI0_cf_run(strings, charcache, n, depth);
+    size_t* bkt_size = msd_CI2_run(strings, charcache, n, depth);
 
     // recursion
-    size_t bsum = bkt_size[0];
+    string* bsum = strings + bkt_size[0];
     for (size_t i = 1; i < 256; ++i) {
         if (bkt_size[i] > 1)
-            msd_CI0_cf(strings + bsum, charcache, bkt_size[i], depth + 1);
+            msd_CI2(bsum, charcache, bkt_size[i], depth + 1);
         bsum += bkt_size[i];
     }
 
     delete[] bkt_size;
 }
 
-void bingmann_msd_CI0_cf(string* strings, size_t n)
+void bingmann_msd_CI2(string* strings, size_t n)
 {
     uint8_t* charcache = new uint8_t[n];
-    msd_CI0_cf(strings, charcache, n, 0);
+    msd_CI2(strings, charcache, n, 0);
     delete[] charcache;
 }
 
-PSS_CONTESTANT(bingmann_msd_CI0_cf, "bingmann/msd_CI0_cf",
-               "bingmann/msd_CI0_cf (CI0 with charcache, fissioned)")
+PSS_CONTESTANT(bingmann_msd_CI2, "bingmann/msd_CI2",
+               "bingmann/msd_CI2 (with charcache, fissioned loop)")
 
 void msd_CI(string* strings, size_t n, size_t depth)
 {
     uint8_t* charcache = new uint8_t[n];
-    msd_CI0_cf(strings, charcache, n, depth);
+    msd_CI2(strings, charcache, n, depth);
     delete[] charcache;
 }
 
@@ -526,7 +521,7 @@ void msd_CI(string* strings, size_t n, size_t depth)
 
 template <typename StringSet>
 static inline size_t*
-msd_CI0_cf_bktsize_generic(
+msd_CI2_bktsize_generic(
     const StringSet& ss, typename StringSet::Char* charcache, size_t depth)
 {
     typedef typename StringSet::Iterator Iterator;
@@ -534,15 +529,14 @@ msd_CI0_cf_bktsize_generic(
     typedef typename StringSet::Char Char;
 
     // cache characters
-    size_t j = 0;
-    for (Iterator i = ss.begin(); i != ss.end(); ++i)
-        charcache[j++] = *ss.get_chars(ss[i], depth);
+    Char* cc = charcache;
+    for (Iterator i = ss.begin(); i != ss.end(); ++i, ++cc)
+        *cc = *ss.get_chars(ss[i], depth);
 
     // count character occurances
-    size_t* bkt_size = new size_t[256];
-    memset(bkt_size, 0, 256 * sizeof(size_t));
-    for (size_t i = 0; i < ss.size(); ++i)
-        ++bkt_size[static_cast<size_t>(charcache[i])];
+    size_t* bkt_size = new size_t[256]();
+    for (cc = charcache; cc != charcache + ss.size(); ++cc)
+        ++bkt_size[static_cast<size_t>(*cc)];
 
     // inclusive prefix sum
     size_t bkt[256];
@@ -572,7 +566,7 @@ msd_CI0_cf_bktsize_generic(
 
 template <typename StringSet>
 static inline void
-msd_CI0_cf_generic(
+msd_CI2_generic(
     const StringSet& ss, typename StringSet::Char* charcache, size_t depth)
 {
     typedef typename StringSet::Iterator Iterator;
@@ -580,14 +574,14 @@ msd_CI0_cf_generic(
     if (ss.size() < g_inssort_threshold)
         return inssort::inssort_generic(ss, depth);
 
-    size_t* bkt_size = msd_CI0_cf_bktsize_generic(ss, charcache, depth);
+    size_t* bkt_size = msd_CI2_bktsize_generic(ss, charcache, depth);
 
     // recursion
     Iterator bsum = ss.begin() + bkt_size[0];
     for (size_t i = 1; i < 256; ++i) {
-        if (bkt_size[i] == 0) continue;
         Iterator bend = bsum + bkt_size[i];
-        msd_CI0_cf_generic(ss.sub(bsum, bend), charcache, depth + 1);
+        if (bkt_size[i] > 1)
+            msd_CI2_generic(ss.sub(bsum, bend), charcache, depth + 1);
         bsum = bend;
     }
 
@@ -596,40 +590,40 @@ msd_CI0_cf_generic(
 
 template <typename StringSet>
 static inline void
-msd_CI0_cf_generic(const StringSet& ss, size_t depth)
+msd_CI2_generic(const StringSet& ss, size_t depth)
 {
     typedef typename StringSet::Char Char;
     Char* charcache = new Char[ss.size()];
-    msd_CI0_cf_generic(ss, charcache, depth);
+    msd_CI2_generic(ss, charcache, depth);
     delete[] charcache;
 }
 
-void bingmann_msd_CI0_cf_generic(string* strings, size_t n)
+void bingmann_msd_CI2_generic(string* strings, size_t n)
 {
-    msd_CI0_cf_generic(
+    msd_CI2_generic(
         parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
 }
 
-PSS_CONTESTANT(bingmann_msd_CI0_cf_generic, "bingmann/msd_CI0_cf_gen",
-               "bingmann/msd_CI0_c generic (CI0 with charcache, fissioned)")
+PSS_CONTESTANT(bingmann_msd_CI2_generic, "bingmann/msd_CI2_gen",
+               "bingmann/msd_CI2 generic (with charcache, fissioned loop)")
 
 /******************************************************************************/
 
 static inline size_t *
-msd_CI0_cf_16bit_run(string * strings, uint16_t * charcache, size_t n, size_t depth)
+msd_CI3_run(string * strings, uint16_t * charcache, size_t n, size_t depth)
 {
     static const size_t RADIX = 0x10000;
     using namespace stringtools;
 
     // cache characters
-    for (size_t i = 0; i < n; ++i)
-        charcache[i] = get_char<uint16_t>(strings[i], depth);
+    uint16_t* cc = charcache;
+    for (string* s = strings; s != strings + n; ++s, ++cc)
+        *cc = get_char<uint16_t>(*s, depth);
 
     // count character occurances
-    size_t* bkt_size = new size_t[RADIX];
-    memset(bkt_size, 0, RADIX * sizeof(size_t));
-    for (size_t i = 0; i < n; ++i)
-        ++bkt_size[charcache[i]];
+    size_t* bkt_size = new size_t[RADIX]();
+    for (cc = charcache; cc != charcache + n; ++cc)
+        ++bkt_size[*cc];
 
     // inclusive prefix sum
     size_t bkt[RADIX];
@@ -658,35 +652,34 @@ msd_CI0_cf_16bit_run(string * strings, uint16_t * charcache, size_t n, size_t de
 }
 
 static void
-msd_CI0_cf_16bit(string* strings, uint16_t* charcache, size_t n, size_t depth)
+msd_CI3(string* strings, uint16_t* charcache, size_t n, size_t depth)
 {
     if (n < 0x10000)
-        return msd_CI0_cf(
+        return msd_CI2(
             strings, reinterpret_cast<uint8_t*>(charcache), n, depth);
 
-    size_t* bkt_size = msd_CI0_cf_16bit_run(strings, charcache, n, depth);
+    size_t* bkt_size = msd_CI3_run(strings, charcache, n, depth);
 
     // recursion
     size_t bsum = bkt_size[0];
     for (size_t i = 1; i < 0x10000; ++i) {
-        if (bkt_size[i] == 0) continue;
-        if (i & 0xFF) // not zero-terminated
-            msd_CI0_cf_16bit(strings + bsum, charcache, bkt_size[i], depth + 2);
+        if ((i & 0xFF) != 0 && bkt_size[i] > 1) // not zero-terminated
+            msd_CI3(strings + bsum, charcache, bkt_size[i], depth + 2);
         bsum += bkt_size[i];
     }
 
     delete[] bkt_size;
 }
 
-void bingmann_msd_CI0_cf_16bit(string* strings, size_t n)
+void bingmann_msd_CI3(string* strings, size_t n)
 {
     uint16_t* charcache = new uint16_t[n];
-    msd_CI0_cf_16bit(strings, charcache, n, 0);
+    msd_CI3(strings, charcache, n, 0);
     delete[] charcache;
 }
 
-PSS_CONTESTANT(bingmann_msd_CI0_cf_16bit, "bingmann/msd_CI0_cf_16bit",
-               "bingmann/msd_CI0_cf_16bit (CI0_cf with 16-bit radix)")
+PSS_CONTESTANT(bingmann_msd_CI3, "bingmann/msd_CI3",
+               "bingmann/msd_CI3 (with charcache, fissioned loop, 16-bit adaptive)")
 
 /******************************************************************************/
 // Stack-Based Variants
@@ -698,27 +691,25 @@ struct RadixStep_CE0_sb
     size_t bkt_size[256];
     size_t idx;
 
-    RadixStep_CE0_sb(string* strings, size_t n, size_t depth)
+    RadixStep_CE0_sb(string* strings, string* sorted, size_t n, size_t depth)
     {
         // count character occurances
         memset(bkt_size, 0, sizeof(bkt_size));
-        for (size_t i = 0; i < n; ++i)
-            ++bkt_size[strings[i][depth]];
+        for (string* s = strings; s != strings + n; ++s)
+            ++bkt_size[(*s)[depth]];
 
         // prefix sum
-        size_t bkt[256];
-        bkt[0] = 0;
+        string* bkt[256];
+        bkt[0] = sorted;
         for (size_t i = 1; i < 256; ++i)
             bkt[i] = bkt[i - 1] + bkt_size[i - 1];
 
         // distribute out-of-place
-        string* sorted = (string*)malloc(n * sizeof(string));
 
-        for (size_t i = 0; i < n; ++i)
-            sorted[bkt[strings[i][depth]]++] = strings[i];
+        for (string* s = strings; s != strings + n; ++s)
+            *(bkt[(*s)[depth]]++) = *s;
 
-        memcpy(strings, sorted, n * sizeof(string));
-        free(sorted);
+        std::copy(sorted, sorted + n, strings);
 
         str = strings + bkt_size[0];
         idx = 0; // will increment to 1 on first process
@@ -731,10 +722,12 @@ bingmann_msd_CE0_sb(string* strings, size_t n)
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, 0);
 
+    string* sorted = new string[n];
+
     typedef RadixStep_CE0_sb RadixStep;
 
     std::stack<RadixStep, std::vector<RadixStep> > radixstack;
-    radixstack.push(RadixStep(strings, n, 0));
+    radixstack.emplace(strings, sorted, n, 0);
 
     while (radixstack.size())
     {
@@ -753,14 +746,16 @@ bingmann_msd_CE0_sb(string* strings, size_t n)
             else
             {
                 rs.str += rs.bkt_size[rs.idx];
-                radixstack.push(
-                    RadixStep(rs.str - rs.bkt_size[rs.idx],
-                              rs.bkt_size[rs.idx], radixstack.size()));
+                radixstack.emplace(
+                    rs.str - rs.bkt_size[rs.idx], sorted,
+                    rs.bkt_size[rs.idx], radixstack.size());
                 // cannot add here, because rs may have invalidated
             }
         }
         radixstack.pop();
     }
+
+    delete[] sorted;
 }
 
 PSS_CONTESTANT(bingmann_msd_CE0_sb, "bingmann/msd_CE0_sb",
@@ -768,31 +763,37 @@ PSS_CONTESTANT(bingmann_msd_CE0_sb, "bingmann/msd_CE0_sb",
 
 /******************************************************************************/
 
-struct RadixStep_CE1_cf_sb
+struct RadixStep_CE2_sb
 {
     string * str;
     size_t bkt[256 + 1];
     size_t idx;
 
-    RadixStep_CE1_cf_sb(string* strings, size_t n, size_t depth,
-                        string* sorted, uint8_t* charcache)
+    RadixStep_CE2_sb(string* strings, size_t n, size_t depth,
+                     string* sorted, uint8_t* charcache)
     {
-        // cache characters
-        for (size_t i = 0; i < n; ++i)
-            charcache[i] = static_cast<uint8_t>(strings[i][depth]);
-
-        // count character occurances
+        // read characters and count character occurances
         memset(bkt, 0, sizeof(bkt));
-        for (size_t i = 0; i < n; ++i)
-            ++bkt[charcache[i]];
+        uint8_t* cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *cc = (*s)[depth];
+        for (cc = charcache; cc != charcache + n; ++cc)
+            ++bkt[*cc];
 
-        // prefix sum
+        // exclusive pointer prefix sum
+        string* bkt_ptr[256];
+        bkt_ptr[0] = sorted;
+        for (unsigned i = 1; i < 256; ++i)
+            bkt_ptr[i] = bkt_ptr[i - 1] + bkt[i - 1];
+
+        // exclusive prefix size sum for recursion
         for (unsigned i = 1; i <= 256; ++i)
             bkt[i] += bkt[i - 1];
 
         // distribute out-of-place
-        for (size_t i = 0; i < n; ++i)
-            sorted[--bkt[charcache[i]]] = strings[i];
+        cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *(bkt_ptr[*cc]++) = *s;
 
         std::copy(sorted, sorted + n, strings);
 
@@ -802,18 +803,18 @@ struct RadixStep_CE1_cf_sb
 };
 
 static inline void
-bingmann_msd_CE1_cf_sb(string* strings, size_t n)
+bingmann_msd_CE2_sb(string* strings, size_t n)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, 0);
 
-    typedef RadixStep_CE1_cf_sb RadixStep;
+    typedef RadixStep_CE2_sb RadixStep;
 
     string* sorted = new string[n];
     uint8_t* charcache = new uint8_t[n];
 
     std::stack<RadixStep, std::vector<RadixStep> > radixstack;
-    radixstack.push(RadixStep(strings, n, 0, sorted, charcache));
+    radixstack.emplace(strings, n, 0, sorted, charcache);
 
     while (radixstack.size())
     {
@@ -833,10 +834,10 @@ bingmann_msd_CE1_cf_sb(string* strings, size_t n)
             }
             else
             {
-                radixstack.push(
-                    RadixStep(rs.str + rs.bkt[rs.idx],
-                              rs.bkt[rs.idx + 1] - rs.bkt[rs.idx],
-                              radixstack.size(), sorted, charcache));
+                radixstack.emplace(
+                    rs.str + rs.bkt[rs.idx],
+                    rs.bkt[rs.idx + 1] - rs.bkt[rs.idx],
+                    radixstack.size(), sorted, charcache);
                 break;
             }
         }
@@ -850,27 +851,28 @@ bingmann_msd_CE1_cf_sb(string* strings, size_t n)
     delete[] sorted;
 }
 
-PSS_CONTESTANT(bingmann_msd_CE1_cf_sb, "bingmann/msd_CE1_cf_sb",
-               "bingmann/msd_CE1_cf_sb (CE1 stack-based, charcache, fissioned)")
+PSS_CONTESTANT(bingmann_msd_CE2_sb, "bingmann/msd_CE2_sb",
+               "bingmann/msd_CE2_sb (CE2 stack-based, charcache, fissioned loop)")
 
 /******************************************************************************/
 
-struct RadixStep_CI0_cf_sb
+struct RadixStep_CI2_sb
 {
     string * str;
     size_t idx;
     size_t bkt_size[256];
 
-    RadixStep_CI0_cf_sb(string* strings, size_t n, size_t depth, uint8_t* charcache)
+    RadixStep_CI2_sb(string* strings, size_t n, size_t depth, uint8_t* charcache)
     {
         // cache characters
-        for (size_t i = 0; i < n; ++i)
-            charcache[i] = strings[i][depth];
+        uint8_t* cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *cc = (*s)[depth];
 
         // count character occurances
         memset(bkt_size, 0, sizeof(bkt_size));
-        for (size_t i = 0; i < n; ++i)
-            ++bkt_size[charcache[i]];
+        for (cc = charcache; cc != charcache + n; ++cc)
+            ++bkt_size[*cc];
 
         // inclusive prefix sum
         size_t bkt[256];
@@ -901,17 +903,17 @@ struct RadixStep_CI0_cf_sb
 };
 
 static inline void
-bingmann_msd_CI0_cf_sb(string* strings, size_t n)
+bingmann_msd_CI2_sb(string* strings, size_t n)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, 0);
 
-    typedef RadixStep_CI0_cf_sb RadixStep;
+    typedef RadixStep_CI2_sb RadixStep;
 
     uint8_t* charcache = new uint8_t[n];
 
     std::stack<RadixStep, std::vector<RadixStep> > radixstack;
-    radixstack.push(RadixStep(strings, n, 0, charcache));
+    radixstack.emplace(strings, n, 0, charcache);
 
     while (TLX_LIKELY(radixstack.size()))
     {
@@ -930,8 +932,9 @@ bingmann_msd_CI0_cf_sb(string* strings, size_t n)
             else
             {
                 rs.str += rs.bkt_size[rs.idx];
-                radixstack.push(RadixStep(rs.str - rs.bkt_size[rs.idx], rs.bkt_size[rs.idx],
-                                          radixstack.size(), charcache));
+                radixstack.emplace(
+                    rs.str - rs.bkt_size[rs.idx], rs.bkt_size[rs.idx],
+                    radixstack.size(), charcache);
                 // cannot add here, because rs may have invalidated
             }
         }
@@ -941,8 +944,8 @@ bingmann_msd_CI0_cf_sb(string* strings, size_t n)
     delete[] charcache;
 }
 
-PSS_CONTESTANT(bingmann_msd_CI0_cf_sb, "bingmann/msd_CI0_cf_sb",
-               "bingmann/msd_CI0_cf_sb (CI stack-based, charcache, fissioned)")
+PSS_CONTESTANT(bingmann_msd_CI2_sb, "bingmann/msd_CI2_sb",
+               "bingmann/msd_CI2_sb (CI stack-based, charcache, fissioned)")
 
 /******************************************************************************/
 
