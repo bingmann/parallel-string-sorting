@@ -218,7 +218,7 @@ msd_CE2(string* strings, string* sorted, uint8_t* charcache,
         for (size_t i = 1; i < 256; ++i)
             bkt[i] = bkt[i - 1] + bkt_size[i - 1];
 
-        // distribute
+        // distribute out-of-place
         uint8_t* cc = charcache;
         for (string* s = strings; s != strings + n; ++s, ++cc)
             *(bkt[*cc]++) = *s;
@@ -766,38 +766,35 @@ PSS_CONTESTANT(bingmann_msd_CE0_sb, "bingmann/msd_CE0_sb",
 struct RadixStep_CE2_sb
 {
     string * str;
-    size_t bkt[256 + 1];
+    size_t bkt_size[256];
     size_t idx;
 
     RadixStep_CE2_sb(string* strings, size_t n, size_t depth,
                      string* sorted, uint8_t* charcache)
     {
         // read characters and count character occurances
-        memset(bkt, 0, sizeof(bkt));
+        memset(bkt_size, 0, sizeof(bkt_size));
         uint8_t* cc = charcache;
         for (string* s = strings; s != strings + n; ++s, ++cc)
             *cc = (*s)[depth];
         for (cc = charcache; cc != charcache + n; ++cc)
-            ++bkt[*cc];
+            ++bkt_size[*cc];
 
         // exclusive pointer prefix sum
-        string* bkt_ptr[256];
-        bkt_ptr[0] = sorted;
-        for (size_t i = 1; i < 256; ++i)
-            bkt_ptr[i] = bkt_ptr[i - 1] + bkt[i - 1];
-
-        // exclusive prefix size sum for recursion
-        for (size_t i = 1; i <= 256; ++i)
-            bkt[i] += bkt[i - 1];
+        string* bkt[256];
+        bkt[0] = sorted;
+        for (size_t i = 1; i < 256; ++i) {
+            bkt[i] = bkt[i - 1] + bkt_size[i - 1];
+        }
 
         // distribute out-of-place
         cc = charcache;
         for (string* s = strings; s != strings + n; ++s, ++cc)
-            *(bkt_ptr[*cc]++) = *s;
+            *(bkt[*cc]++) = *s;
 
         std::copy(sorted, sorted + n, strings);
 
-        str = strings;
+        str = strings + bkt_size[0];
         idx = 0;        // will increment to 1 on first process
     }
 };
@@ -813,7 +810,8 @@ bingmann_msd_CE2_sb(string* strings, size_t n)
     string* sorted = new string[n];
     uint8_t* charcache = new uint8_t[n];
 
-    std::stack<RadixStep, std::vector<RadixStep> > radixstack;
+    typedef std::stack<RadixStep, std::vector<RadixStep> > radixstack_type;
+    radixstack_type radixstack;
     radixstack.emplace(strings, n, 0, sorted, charcache);
 
     while (radixstack.size())
@@ -824,19 +822,20 @@ bingmann_msd_CE2_sb(string* strings, size_t n)
         {
             // process the bucket rs.idx
 
-            if (rs.bkt[rs.idx] == rs.bkt[rs.idx + 1])
+            if (rs.bkt_size[rs.idx] == 0)
                 ;
-            else if (rs.bkt[rs.idx + 1] < rs.bkt[rs.idx] + g_inssort_threshold)
+            else if (rs.bkt_size[rs.idx] < g_inssort_threshold)
             {
-                inssort::inssort(rs.str + rs.bkt[rs.idx],
-                                 rs.bkt[rs.idx + 1] - rs.bkt[rs.idx],
-                                 radixstack.size());
+                inssort::inssort(
+                    rs.str, rs.bkt_size[rs.idx], radixstack.size());
+                rs.str += rs.bkt_size[rs.idx];
             }
             else
             {
+                // have to increment first, as rs may be invalidated
+                rs.str += rs.bkt_size[rs.idx];
                 radixstack.emplace(
-                    rs.str + rs.bkt[rs.idx],
-                    rs.bkt[rs.idx + 1] - rs.bkt[rs.idx],
+                    rs.str - rs.bkt_size[rs.idx], rs.bkt_size[rs.idx],
                     radixstack.size(), sorted, charcache);
                 break;
             }
