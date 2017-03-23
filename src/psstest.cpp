@@ -399,6 +399,9 @@ void Contestant_UCArray::real_run(
 {
     if (!gopt_segment_threads)
     {
+        if (m_prepare_func)
+            m_prepare_func(stringptr.data(), stringptr.size());
+
         if (is_lcp_func())
             m_run_lcp_func(stringptr.data(), lcp.data(), stringptr.size());
         else if (is_lcp_cache_func())
@@ -420,6 +423,9 @@ void Contestant_UCArray::real_run(
                 [this, &stringptr, &lcp, &charcache, &ranges, i]() {
                 size_t begin, length;
                 std::tie(begin, length) = ranges[i];
+
+                if (m_prepare_func)
+                    m_prepare_func(stringptr.data(), stringptr.size());
 
                 if (is_lcp_func())
                     m_run_lcp_func(
@@ -570,9 +576,6 @@ void Contestant_UCArray::prepare_run()
     void* stack = stack_count_clear();
     malloc_count_reset_peak();
 #endif
-
-    if (m_prepare_func)
-        m_prepare_func(stringptr.data(), stringptr.size());
 
     std::vector<uintptr_t> lcp;
     if (is_lcp_func() || is_lcp_cache_func()) {

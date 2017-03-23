@@ -302,6 +302,9 @@ void burstsort_mkq_recursiveburst_2(unsigned char** strings, size_t N)
 void burstsort_mkq_recursiveburst_4(unsigned char** strings, size_t N)
 { burstsort_mkq_recursiveburst<uint32_t>(strings, N); }
 
+#if 0
+// do not work correctly
+
 PSS_CONTESTANT(burstsort_mkq_recursiveburst_1,
                     "rantala/burstsort_mkq_recursiveburst_1",
                     "burstsort_mkq 1byte alphabet with recursiveburst")
@@ -311,5 +314,6 @@ PSS_CONTESTANT(burstsort_mkq_recursiveburst_2,
 PSS_CONTESTANT(burstsort_mkq_recursiveburst_4,
                     "rantala/burstsort_mkq_recursiveburst_4",
                     "burstsort_mkq 4byte alphabet with recursiveburst")
+#endif
 
 } // namespace rantala_burstsort_mkq
