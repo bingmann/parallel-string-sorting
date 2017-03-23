@@ -38,95 +38,6 @@ typedef unsigned char* string;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int compare_strcmp(const void* _a, const void* _b)
-{
-    const char* a = *(char* const*)_a;
-    const char* b = *(char* const*)_b;
-
-    return strcmp(a, b);
-}
-
-void qsort_strcmp(string* strings, size_t n)
-{
-    qsort((void*)strings, n, sizeof(string), compare_strcmp);
-}
-
-PSS_CONTESTANT(qsort_strcmp,
-               "bingmann/qsort_strcmp",
-               "Run stdlib qsort with strcmp comparsion")
-
-////////////////////////////////////////////////////////////////////////////////
-
-static inline
-int qcompare_byte(const void* _a, const void* _b)
-{
-    const char* a = *(char* const*)_a;
-    const char* b = *(char* const*)_b;
-
-    for (size_t i = 0; ; i++)
-    {
-        if (a[i] != b[i]) {
-            return (a[i] > b[i]) ? +1 : -1;
-        }
-
-        // check byte for zero -> both strings end
-        if (a[i] == 0)
-            return 0;
-    }
-}
-
-template <typename key_type>
-static inline
-int qcompare_uint(const void* _a, const void* _b)
-{
-    const string a = *(string const*)_a;
-    const string b = *(string const*)_b;
-
-    for (size_t depth = 0; ; depth += sizeof(key_type))
-    {
-        key_type av = get_char<key_type>(a, depth);
-        key_type bv = get_char<key_type>(b, depth);
-
-        if (av != bv) {
-            return (av > bv) ? +1 : -1;
-        }
-
-        // check highest byte for zero -> both strings end
-        const key_type mask = key_type(0xFF) << 8 * (sizeof(key_type) - 1);
-        if ((av & mask) == 0)
-            return 0;
-    }
-}
-
-void qsort1(string* strings, size_t n)
-{
-    qsort((void*)strings, n, sizeof(string), qcompare_byte);
-}
-
-void qsort4(string* strings, size_t n)
-{
-    qsort((void*)strings, n, sizeof(string), qcompare_uint<uint32_t>);
-}
-
-void qsort8(string* strings, size_t n)
-{
-    qsort((void*)strings, n, sizeof(string), qcompare_uint<uint64_t>);
-}
-
-PSS_CONTESTANT(qsort1,
-               "bingmann/qsort1",
-               "Run stdlib qsort with string comparsions (bytewise)")
-
-PSS_CONTESTANT(qsort4,
-               "bingmann/qsort4",
-               "Run stdlib qsort with string comparsions (4 bytewise)")
-
-PSS_CONTESTANT(qsort8,
-               "bingmann/qsort8",
-               "Run stdlib qsort with string comparsions (8 bytewise)")
-
-////////////////////////////////////////////////////////////////////////////////
-
 static inline
 bool stdcompare_strcmp(const string& a, const string& b)
 {
@@ -138,16 +49,11 @@ bool stdcompare_byte(const string& _a, const string& _b)
 {
     string a = _a, b = _b;
 
-    while (*a != 0)
-    {
-        if (*a != *b)
-            return (*a < *b);
-
+    while (*a == *b && *a != 0)
         ++a, ++b;
-    }
 
     // check byte for zero -> both strings end, random tie break
-    return false;
+    return (*a < *b);
 }
 
 template <typename key_type>

@@ -12,7 +12,7 @@ include_directories("${NUMA_INCLUDE_DIR}")
 set(PSSLIB_SOURCES
   tools/globals.cpp
   sequential/bingmann-lcp_mergesort_kway.cpp
-  sequential/bingmann-qsort.cpp
+  sequential/bingmann-stdsort.cpp
   sequential/mbm-radix.cpp
   sequential/ng-cradix-rantala.cpp
   sequential/ng-cradix.cpp
