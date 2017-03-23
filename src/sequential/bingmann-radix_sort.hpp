@@ -73,7 +73,7 @@ msd_CE0(string* strings, string* sorted, size_t n, size_t depth)
     }
 }
 
-void bingmann_msd_CE0(string* strings, size_t n)
+static inline void bingmann_msd_CE0(string* strings, size_t n)
 {
     string* sorted = new string[n];
     msd_CE0(strings, sorted, n, 0);
@@ -132,7 +132,7 @@ msd_CE0_generic(const StringSet& ss, size_t depth)
     StringSet::deallocate(sorted);
 }
 
-void bingmann_msd_CE0_generic(string* strings, size_t n)
+static inline void bingmann_msd_CE0_generic(string* strings, size_t n)
 {
     msd_CE0_generic(
         parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
@@ -180,7 +180,7 @@ msd_CE1(string* strings, string* sorted, uint8_t* charcache,
     }
 }
 
-void bingmann_msd_CE1(string* strings, size_t n)
+static inline void bingmann_msd_CE1(string* strings, size_t n)
 {
     string* sorted = new string[n];
     uint8_t* charcache = new uint8_t[n];
@@ -235,7 +235,7 @@ msd_CE2(string* strings, string* sorted, uint8_t* charcache,
     }
 }
 
-void bingmann_msd_CE2(string* strings, size_t n)
+static inline void bingmann_msd_CE2(string* strings, size_t n)
 {
     string* sorted = new string[n];
     uint8_t* charcache = new uint8_t[n];
@@ -294,7 +294,7 @@ msd_CE3(string* strings, string* sorted, uint16_t* charcache,
     }
 }
 
-void bingmann_msd_CE3(string* strings, size_t n)
+static inline void bingmann_msd_CE3(string* strings, size_t n)
 {
     string* sorted = new string[n];
     uint16_t* charcache = new uint16_t[n];
@@ -335,7 +335,7 @@ msd_CI0(string* strings, size_t n, size_t depth)
         string* bkt[256];
         bkt[0] = strings + bkt_size[0];
         size_t last_bkt_size = bkt_size[0];
-        for (unsigned i = 1; i < 256; ++i) {
+        for (size_t i = 1; i < 256; ++i) {
             bkt[i] = bkt[i - 1] + bkt_size[i];
             if (bkt_size[i]) last_bkt_size = bkt_size[i];
         }
@@ -362,7 +362,7 @@ msd_CI0(string* strings, size_t n, size_t depth)
     }
 }
 
-void bingmann_msd_CI0(string* strings, size_t n)
+static inline void bingmann_msd_CI0(string* strings, size_t n)
 {
     msd_CI0(strings, n, 0);
 }
@@ -387,7 +387,7 @@ msd_CI1_make_bkt_size(
     size_t bkt[256];
     bkt[0] = bkt_size[0];
     size_t last_bkt_size = bkt_size[0];
-    for (unsigned i = 1; i < 256; ++i) {
+    for (size_t i = 1; i < 256; ++i) {
         bkt[i] = bkt[i - 1] + bkt_size[i];
         if (bkt_size[i]) last_bkt_size = bkt_size[i];
     }
@@ -409,8 +409,8 @@ msd_CI1_make_bkt_size(
     return bkt_size;
 }
 
-void
-msd_CI1(string* strings, uint8_t* charcache, size_t n, size_t depth)
+static inline
+void msd_CI1(string* strings, uint8_t* charcache, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, depth);
@@ -428,7 +428,7 @@ msd_CI1(string* strings, uint8_t* charcache, size_t n, size_t depth)
     delete[] bkt_size;
 }
 
-void bingmann_msd_CI1(string* strings, size_t n)
+static inline void bingmann_msd_CI1(string* strings, size_t n)
 {
     uint8_t* charcache = new uint8_t[n];
     msd_CI1(strings, charcache, n, 0);
@@ -442,8 +442,7 @@ PSS_CONTESTANT(bingmann_msd_CI1, "bingmann/msd_CI1",
 // msd_CI2
 
 static inline size_t *
-msd_CI2_run(
-    string * strings, uint8_t * charcache, size_t n, size_t depth)
+msd_CI2_run(string * strings, uint8_t * charcache, size_t n, size_t depth)
 {
     // cache characters
     uint8_t* cc = charcache;
@@ -459,7 +458,7 @@ msd_CI2_run(
     size_t bkt[256];
     bkt[0] = bkt_size[0];
     size_t last_bkt_size = bkt_size[0];
-    for (unsigned i = 1; i < 256; ++i) {
+    for (size_t i = 1; i < 256; ++i) {
         bkt[i] = bkt[i - 1] + bkt_size[i];
         if (bkt_size[i]) last_bkt_size = bkt_size[i];
     }
@@ -481,8 +480,8 @@ msd_CI2_run(
     return bkt_size;
 }
 
-void
-msd_CI2(string* strings, uint8_t* charcache, size_t n, size_t depth)
+static inline void msd_CI2(
+    string* strings, uint8_t* charcache, size_t n, size_t depth)
 {
     if (n < g_inssort_threshold)
         return inssort::inssort(strings, n, depth);
@@ -500,7 +499,7 @@ msd_CI2(string* strings, uint8_t* charcache, size_t n, size_t depth)
     delete[] bkt_size;
 }
 
-void bingmann_msd_CI2(string* strings, size_t n)
+static inline void bingmann_msd_CI2(string* strings, size_t n)
 {
     uint8_t* charcache = new uint8_t[n];
     msd_CI2(strings, charcache, n, 0);
@@ -510,7 +509,7 @@ void bingmann_msd_CI2(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_msd_CI2, "bingmann/msd_CI2",
                "bingmann/msd_CI2 (with charcache, fissioned loop)")
 
-void msd_CI(string* strings, size_t n, size_t depth)
+static inline void msd_CI(string* strings, size_t n, size_t depth)
 {
     uint8_t* charcache = new uint8_t[n];
     msd_CI2(strings, charcache, n, depth);
@@ -542,7 +541,7 @@ msd_CI2_bktsize_generic(
     size_t bkt[256];
     bkt[0] = bkt_size[0];
     size_t last_bkt_size = bkt_size[0];
-    for (unsigned i = 1; i < 256; ++i) {
+    for (size_t i = 1; i < 256; ++i) {
         bkt[i] = bkt[i - 1] + bkt_size[i];
         if (bkt_size[i]) last_bkt_size = bkt_size[i];
     }
@@ -598,7 +597,7 @@ msd_CI2_generic(const StringSet& ss, size_t depth)
     delete[] charcache;
 }
 
-void bingmann_msd_CI2_generic(string* strings, size_t n)
+static inline void bingmann_msd_CI2_generic(string* strings, size_t n)
 {
     msd_CI2_generic(
         parallel_string_sorting::UCharStringSet(strings, strings + n), 0);
@@ -609,8 +608,9 @@ PSS_CONTESTANT(bingmann_msd_CI2_generic, "bingmann/msd_CI2_gen",
 
 /******************************************************************************/
 
-static inline size_t *
-msd_CI3_run(string * strings, uint16_t * charcache, size_t n, size_t depth)
+static inline
+size_t * msd_CI3_run(
+    string * strings, uint16_t * charcache, size_t n, size_t depth)
 {
     static const size_t RADIX = 0x10000;
     using namespace stringtools;
@@ -629,7 +629,7 @@ msd_CI3_run(string * strings, uint16_t * charcache, size_t n, size_t depth)
     size_t bkt[RADIX];
     bkt[0] = bkt_size[0];
     size_t last_bkt_size = bkt_size[0];
-    for (unsigned i = 1; i < RADIX; ++i) {
+    for (size_t i = 1; i < RADIX; ++i) {
         bkt[i] = bkt[i - 1] + bkt_size[i];
         if (bkt_size[i]) last_bkt_size = bkt_size[i];
     }
@@ -651,8 +651,8 @@ msd_CI3_run(string * strings, uint16_t * charcache, size_t n, size_t depth)
     return bkt_size;
 }
 
-static void
-msd_CI3(string* strings, uint16_t* charcache, size_t n, size_t depth)
+static inline
+void msd_CI3(string* strings, uint16_t* charcache, size_t n, size_t depth)
 {
     if (n < 0x10000)
         return msd_CI2(
@@ -671,7 +671,7 @@ msd_CI3(string* strings, uint16_t* charcache, size_t n, size_t depth)
     delete[] bkt_size;
 }
 
-void bingmann_msd_CI3(string* strings, size_t n)
+static inline void bingmann_msd_CI3(string* strings, size_t n)
 {
     uint16_t* charcache = new uint16_t[n];
     msd_CI3(strings, charcache, n, 0);
@@ -783,11 +783,11 @@ struct RadixStep_CE2_sb
         // exclusive pointer prefix sum
         string* bkt_ptr[256];
         bkt_ptr[0] = sorted;
-        for (unsigned i = 1; i < 256; ++i)
+        for (size_t i = 1; i < 256; ++i)
             bkt_ptr[i] = bkt_ptr[i - 1] + bkt[i - 1];
 
         // exclusive prefix size sum for recursion
-        for (unsigned i = 1; i <= 256; ++i)
+        for (size_t i = 1; i <= 256; ++i)
             bkt[i] += bkt[i - 1];
 
         // distribute out-of-place
@@ -878,7 +878,7 @@ struct RadixStep_CI2_sb
         size_t bkt[256];
         bkt[0] = bkt_size[0];
         size_t last_bkt_size = bkt_size[0];
-        for (unsigned i = 1; i < 256; ++i) {
+        for (size_t i = 1; i < 256; ++i) {
             bkt[i] = bkt[i - 1] + bkt_size[i];
             if (bkt_size[i]) last_bkt_size = bkt_size[i];
         }
