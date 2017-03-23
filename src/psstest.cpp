@@ -803,6 +803,7 @@ void print_usage(const char* prog)
               << "  -A, --algoname <name>  Run only algorithms fully matching this string, can be used multile times. Try \"list\"." << std::endl
               << "      --all-threads      Run linear thread increase test from 1 to max_processors." << std::endl
               << "  -D, --datafork         Fork before running algorithm and load data within fork!" << std::endl
+              << "  -e, --exclude <name>   Skip algorithms containing name!" << std::endl
               << "  -F, --fork             Fork before running algorithm, but load data before fork!" << std::endl
               << "  -i, --input <path>     Write unsorted input strings to file, usually for checking." << std::endl
               << "  -M, --memory <type>    Load string data into <type> memory, see -M list for details." << std::endl
@@ -844,6 +845,7 @@ int main(int argc, char* argv[])
         { "help", no_argument, 0, 'h' },
         { "algo", required_argument, 0, 'a' },
         { "algoname", required_argument, 0, 'A' },
+        { "exclude", required_argument, 0, 'e' },
         { "fork", no_argument, 0, 'F' },
         { "datafork", no_argument, 0, 'D' },
         { "input", required_argument, 0, 'i' },
