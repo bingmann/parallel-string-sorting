@@ -613,12 +613,11 @@ size_t * msd_CI3_run(
     string * strings, uint16_t * charcache, size_t n, size_t depth)
 {
     static const size_t RADIX = 0x10000;
-    using namespace stringtools;
 
     // cache characters
     uint16_t* cc = charcache;
     for (string* s = strings; s != strings + n; ++s, ++cc)
-        *cc = get_char<uint16_t>(*s, depth);
+        *cc = stringtools::get_char<uint16_t>(*s, depth);
 
     // count character occurances
     size_t* bkt_size = new size_t[RADIX]();
@@ -688,8 +687,8 @@ PSS_CONTESTANT(bingmann_msd_CI3, "bingmann/msd_CI3",
 struct RadixStep_CE0_sb
 {
     string * str;
-    size_t bkt_size[256];
     size_t idx;
+    size_t bkt_size[256];
 
     RadixStep_CE0_sb(string* strings, string* sorted, size_t n, size_t depth)
     {
@@ -766,8 +765,8 @@ PSS_CONTESTANT(bingmann_msd_CE0_sb, "bingmann/msd_CE0_sb",
 struct RadixStep_CE2_sb
 {
     string * str;
-    size_t bkt_size[256];
     size_t idx;
+    size_t bkt_size[256];
 
     RadixStep_CE2_sb(string* strings, size_t n, size_t depth,
                      string* sorted, uint8_t* charcache)
@@ -800,34 +799,27 @@ struct RadixStep_CE2_sb
 };
 
 static inline void
-bingmann_msd_CE2_sb(string* strings, size_t n)
+bingmann_msd_CE2_sb(
+    string* strings, size_t n, string* sorted, uint8_t* charcache, size_t depth)
 {
-    if (n < g_inssort_threshold)
-        return inssort::inssort(strings, n, 0);
-
     typedef RadixStep_CE2_sb RadixStep;
 
-    string* sorted = new string[n];
-    uint8_t* charcache = new uint8_t[n];
+    std::stack<RadixStep, std::vector<RadixStep> > radixstack;
+    radixstack.emplace(strings, n, depth, sorted, charcache);
 
-    typedef std::stack<RadixStep, std::vector<RadixStep> > radixstack_type;
-    radixstack_type radixstack;
-    radixstack.emplace(strings, n, 0, sorted, charcache);
-
-    while (radixstack.size())
+    while (TLX_LIKELY(!radixstack.empty()))
     {
-        RadixStep& rs = radixstack.top();
-
-        while (++rs.idx < 256)
+        while (TLX_LIKELY(radixstack.top().idx < 255))
         {
-            // process the bucket rs.idx
+            RadixStep& rs = radixstack.top();
+            ++rs.idx; // process the bucket rs.idx
 
-            if (rs.bkt_size[rs.idx] == 0)
+            if (TLX_UNLIKELY(rs.bkt_size[rs.idx] == 0))
                 ;
-            else if (rs.bkt_size[rs.idx] < g_inssort_threshold)
+            else if (TLX_UNLIKELY(rs.bkt_size[rs.idx] < g_inssort_threshold))
             {
-                inssort::inssort(
-                    rs.str, rs.bkt_size[rs.idx], radixstack.size());
+                inssort::inssort(rs.str, rs.bkt_size[rs.idx],
+                                 depth + radixstack.size());
                 rs.str += rs.bkt_size[rs.idx];
             }
             else
@@ -836,15 +828,23 @@ bingmann_msd_CE2_sb(string* strings, size_t n)
                 rs.str += rs.bkt_size[rs.idx];
                 radixstack.emplace(
                     rs.str - rs.bkt_size[rs.idx], rs.bkt_size[rs.idx],
-                    radixstack.size(), sorted, charcache);
-                break;
+                    depth + radixstack.size(), sorted, charcache);
             }
         }
-
-        // rs maybe have been invalidated
-        if (radixstack.top().idx == 256)
-            radixstack.pop();
+        radixstack.pop();
     }
+}
+
+static inline void
+bingmann_msd_CE2_sb(string* strings, size_t n)
+{
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, /* depth */ 0);
+
+    string* sorted = new string[n];
+    uint8_t* charcache = new uint8_t[n];
+
+    bingmann_msd_CE2_sb(strings, n, sorted, charcache, /* depth */ 0);
 
     delete[] charcache;
     delete[] sorted;
@@ -852,6 +852,110 @@ bingmann_msd_CE2_sb(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_msd_CE2_sb, "bingmann/msd_CE2_sb",
                "bingmann/msd_CE2_sb (CE2 stack-based, charcache, fissioned loop)")
+
+/******************************************************************************/
+
+struct RadixStep_CE3_sb
+{
+    static const size_t RADIX = 0x10000;
+
+    string              * str;
+    size_t              idx;
+    size_t              bkt_size[RADIX];
+
+    RadixStep_CE3_sb(string* strings, size_t n, size_t depth,
+                     string* sorted, uint16_t* charcache)
+    {
+        // read characters and count character occurrences
+        memset(bkt_size, 0, sizeof(bkt_size));
+        uint16_t* cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *cc = stringtools::get_char<uint16_t>(*s, depth);
+        for (cc = charcache; cc != charcache + n; ++cc)
+            ++bkt_size[*cc];
+
+        // exclusive pointer prefix sum
+        string* bkt[RADIX];
+        bkt[0] = sorted;
+        for (size_t i = 1; i < RADIX; ++i) {
+            bkt[i] = bkt[i - 1] + bkt_size[i - 1];
+        }
+
+        // distribute out-of-place
+        cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *(bkt[*cc]++) = *s;
+
+        std::copy(sorted, sorted + n, strings);
+
+        str = strings + bkt_size[0];
+        idx = 0;        // will increment to 1 on first process
+    }
+};
+
+static inline void
+bingmann_msd_CE3_sb(string* strings, size_t n)
+{
+    static const size_t RADIX = 0x10000;
+
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, 0);
+
+    if (n < RADIX)
+        return bingmann_msd_CE2_sb(strings, n);
+
+    typedef RadixStep_CE3_sb RadixStep;
+
+    string* sorted = new string[n];
+    uint16_t* charcache = new uint16_t[n];
+
+    typedef std::stack<RadixStep, std::vector<RadixStep> > radixstack_type;
+    radixstack_type radixstack;
+    radixstack.emplace(strings, n, 0, sorted, charcache);
+
+    while (TLX_LIKELY(!radixstack.empty()))
+    {
+        while (TLX_LIKELY(radixstack.top().idx < RADIX))
+        {
+            RadixStep& rs = radixstack.top();
+            ++rs.idx;                                      // process the bucket rs.idx
+
+            if (TLX_UNLIKELY(rs.bkt_size[rs.idx] == 0))
+                ;
+            else if (TLX_UNLIKELY((rs.idx & 0xFF) == 0)) { // zero-termination
+                rs.str += rs.bkt_size[rs.idx];
+            }
+            else if (TLX_UNLIKELY(rs.bkt_size[rs.idx] < g_inssort_threshold))
+            {
+                inssort::inssort(
+                    rs.str, rs.bkt_size[rs.idx], 2* radixstack.size());
+                rs.str += rs.bkt_size[rs.idx];
+            }
+            else if (rs.bkt_size[rs.idx] < RADIX)
+            {
+                bingmann_msd_CE2_sb(rs.str, rs.bkt_size[rs.idx], sorted,
+                                    reinterpret_cast<uint8_t*>(charcache),
+                                    /* depth */ 2 * radixstack.size());
+                rs.str += rs.bkt_size[rs.idx];
+            }
+            else
+            {
+                // have to increment first, as rs may be invalidated
+                rs.str += rs.bkt_size[rs.idx];
+                radixstack.emplace(
+                    rs.str - rs.bkt_size[rs.idx], rs.bkt_size[rs.idx],
+                    2 * radixstack.size(), sorted, charcache);
+            }
+        }
+        radixstack.pop();
+    }
+
+    delete[] charcache;
+    delete[] sorted;
+}
+
+PSS_CONTESTANT(bingmann_msd_CE3_sb, "bingmann/msd_CE3_sb",
+               "bingmann/msd_CE3_sb (CE3 stack-based, charcache, fissioned loop, 16-bit adaptive)")
 
 /******************************************************************************/
 
@@ -902,19 +1006,14 @@ struct RadixStep_CI2_sb
 };
 
 static inline void
-bingmann_msd_CI2_sb(string* strings, size_t n)
+bingmann_msd_CI2_sb(string* strings, size_t n, size_t depth, uint8_t* charcache)
 {
-    if (n < g_inssort_threshold)
-        return inssort::inssort(strings, n, 0);
-
     typedef RadixStep_CI2_sb RadixStep;
 
-    uint8_t* charcache = new uint8_t[n];
-
     std::stack<RadixStep, std::vector<RadixStep> > radixstack;
-    radixstack.emplace(strings, n, 0, charcache);
+    radixstack.emplace(strings, n, depth, charcache);
 
-    while (TLX_LIKELY(radixstack.size()))
+    while (TLX_LIKELY(!radixstack.empty()))
     {
         while (TLX_LIKELY(radixstack.top().idx < 255))
         {
@@ -925,7 +1024,127 @@ bingmann_msd_CI2_sb(string* strings, size_t n)
                 ;
             else if (TLX_UNLIKELY(rs.bkt_size[rs.idx] < g_inssort_threshold))
             {
-                inssort::inssort(rs.str, rs.bkt_size[rs.idx], radixstack.size());
+                inssort::inssort(rs.str, rs.bkt_size[rs.idx],
+                                 depth + radixstack.size());
+                rs.str += rs.bkt_size[rs.idx];
+            }
+            else
+            {
+                // have to increment first, as rs may be invalidated
+                rs.str += rs.bkt_size[rs.idx];
+                radixstack.emplace(
+                    rs.str - rs.bkt_size[rs.idx], rs.bkt_size[rs.idx],
+                    depth + radixstack.size(), charcache);
+            }
+        }
+        radixstack.pop();
+    }
+}
+
+static inline void
+bingmann_msd_CI2_sb(string* strings, size_t n)
+{
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, 0);
+
+    uint8_t* charcache = new uint8_t[n];
+
+    bingmann_msd_CI2_sb(strings, n, /* depth */ 0, charcache);
+
+    delete[] charcache;
+}
+
+PSS_CONTESTANT(bingmann_msd_CI2_sb, "bingmann/msd_CI2_sb",
+               "bingmann/msd_CI2_sb (CI stack-based, charcache, fissioned)")
+
+/******************************************************************************/
+
+struct RadixStep_CI3_sb
+{
+    static const size_t RADIX = 0x10000;
+
+    string              * str;
+    size_t              idx;
+    size_t              bkt_size[RADIX];
+
+    RadixStep_CI3_sb(string* strings, size_t n, size_t depth, uint16_t* charcache)
+    {
+        // read characters and count character occurrences
+        memset(bkt_size, 0, sizeof(bkt_size));
+        uint16_t* cc = charcache;
+        for (string* s = strings; s != strings + n; ++s, ++cc)
+            *cc = stringtools::get_char<uint16_t>(*s, depth);
+        for (cc = charcache; cc != charcache + n; ++cc)
+            ++bkt_size[*cc];
+
+        // inclusive prefix sum
+        size_t bkt[RADIX];
+        bkt[0] = bkt_size[0];
+        size_t last_bkt_size = bkt_size[0];
+        for (size_t i = 1; i < RADIX; ++i) {
+            bkt[i] = bkt[i - 1] + bkt_size[i];
+            if (bkt_size[i]) last_bkt_size = bkt_size[i];
+        }
+
+        // premute in-place
+        for (size_t i = 0, j; i < n - last_bkt_size; )
+        {
+            string perm = strings[i];
+            uint16_t permch = charcache[i];
+            while ((j = --bkt[permch]) > i)
+            {
+                std::swap(perm, strings[j]);
+                std::swap(permch, charcache[j]);
+            }
+            strings[i] = perm;
+            i += bkt_size[permch];
+        }
+
+        str = strings + bkt_size[0];
+        idx = 0; // will increment to 1 on first process, bkt 0 is not sorted further
+    }
+};
+
+static inline void
+bingmann_msd_CI3_sb(string* strings, size_t n)
+{
+    static const size_t RADIX = 0x10000;
+
+    if (n < g_inssort_threshold)
+        return inssort::inssort(strings, n, 0);
+
+    if (n < RADIX)
+        return bingmann_msd_CI2_sb(strings, n);
+
+    typedef RadixStep_CI3_sb RadixStep;
+
+    uint16_t* charcache = new uint16_t[n];
+
+    std::stack<RadixStep, std::vector<RadixStep> > radixstack;
+    radixstack.emplace(strings, n, 0, charcache);
+
+    while (TLX_LIKELY(!radixstack.empty()))
+    {
+        while (TLX_LIKELY(radixstack.top().idx < RADIX))
+        {
+            RadixStep& rs = radixstack.top();
+            ++rs.idx;                                      // process the bucket rs.idx
+
+            if (TLX_UNLIKELY(rs.bkt_size[rs.idx] == 0))
+                ;
+            else if (TLX_UNLIKELY((rs.idx & 0xFF) == 0)) { // zero-termination
+                rs.str += rs.bkt_size[rs.idx];
+            }
+            else if (TLX_UNLIKELY(rs.bkt_size[rs.idx] < g_inssort_threshold))
+            {
+                inssort::inssort(rs.str, rs.bkt_size[rs.idx], 2 * radixstack.size());
+                rs.str += rs.bkt_size[rs.idx];
+            }
+            else if (rs.bkt_size[rs.idx] < RADIX)
+            {
+                bingmann_msd_CI2_sb(rs.str, rs.bkt_size[rs.idx],
+                                    /* depth */ 2 * radixstack.size(),
+                                    reinterpret_cast<uint8_t*>(charcache));
                 rs.str += rs.bkt_size[rs.idx];
             }
             else
@@ -933,7 +1152,7 @@ bingmann_msd_CI2_sb(string* strings, size_t n)
                 rs.str += rs.bkt_size[rs.idx];
                 radixstack.emplace(
                     rs.str - rs.bkt_size[rs.idx], rs.bkt_size[rs.idx],
-                    radixstack.size(), charcache);
+                    2 * radixstack.size(), charcache);
                 // cannot add here, because rs may have invalidated
             }
         }
@@ -943,8 +1162,8 @@ bingmann_msd_CI2_sb(string* strings, size_t n)
     delete[] charcache;
 }
 
-PSS_CONTESTANT(bingmann_msd_CI2_sb, "bingmann/msd_CI2_sb",
-               "bingmann/msd_CI2_sb (CI stack-based, charcache, fissioned)")
+PSS_CONTESTANT(bingmann_msd_CI3_sb, "bingmann/msd_CI3_sb",
+               "bingmann/msd_CI3_sb (CI stack-based, charcache, fissioned, 16-bit adaptive)")
 
 /******************************************************************************/
 
