@@ -23,6 +23,17 @@
 #ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_HEADER
 #define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_HEADER
 
+#include "../tools/stringtools.hpp"
+#include "../tools/timer_array.hpp"
+#include "../tools/stats_writer.hpp"
+#include "../tools/globals.hpp"
+#include "../tools/lcgrandom.hpp"
+
+#include <tlx/string/hexdump.hpp>
+#include <tlx/meta/log2.hpp>
+
+#include <algorithm>
+
 namespace bingmann_sample_sort {
 
 static const bool debug = false;

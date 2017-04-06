@@ -22,16 +22,47 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBSC_HEADER
-#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBSC_HEADER
-
-#include <tlx/string/hexdump.hpp>
+#include "bingmann-sample_sort.hpp"
+#include "bingmann-radix_sort.hpp"
 
 namespace bingmann_sample_sortBSC {
 
 using namespace bingmann_sample_sort;
 
 // ----------------------------------------------------------------------------
+
+/// binary search on splitter array for bucket number
+inline unsigned int
+find_bkt_binsearch(const key_type& key, const key_type* splitter, size_t leaves)
+{
+    unsigned int lo = 0, hi = leaves;
+
+    while (lo < hi)
+    {
+        unsigned int mid = (lo + hi) >> 1;
+        assert(mid < leaves);
+
+        if (key <= splitter[mid])
+            hi = mid;
+        else    // (key > splitter[mid])
+            lo = mid + 1;
+    }
+
+#if 0
+    // Verify result of binary search:
+    int pos = leaves - 1;
+    while (pos >= 0 && key <= splitter[pos]) --pos;
+    pos++;
+
+    //std::cout << "lo " << lo << " hi " << hi << " pos " << pos << "\n";
+    assert(lo == pos);
+#endif
+
+    size_t b = lo * 2;                               // < bucket
+    if (lo < leaves && splitter[lo] == key) b += 1;  // equal bucket
+
+    return b;
+}
 
 /// binary search on splitter array for bucket number
 inline unsigned int
@@ -288,7 +319,7 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 void bingmann_sample_sortBSC(string* strings, size_t n)
 {
     sample_sort_pre();
-    sample_sortBSC<bingmann_sample_sortBS::find_bkt_binsearch>(strings, n, 0);
+    sample_sortBSC<find_bkt_binsearch>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -387,7 +418,5 @@ PSS_CONTESTANT(bingmann_sample_sortBSCEA, "bingmann/sample_sortBSCEA",
 // ----------------------------------------------------------------------------
 
 } // namespace bingmann_sample_sortBSC
-
-#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBSC_HEADER
 
 /******************************************************************************/

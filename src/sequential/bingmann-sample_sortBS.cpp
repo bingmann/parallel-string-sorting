@@ -22,10 +22,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
-#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
-
-#include <tlx/string/hexdump.hpp>
+#include "bingmann-sample_sort.hpp"
+#include "bingmann-radix_sort.hpp"
 
 namespace bingmann_sample_sortBS {
 
@@ -247,7 +245,5 @@ PSS_CONTESTANT(bingmann_sample_sortBS, "bingmann/sample_sortBS",
 // ----------------------------------------------------------------------------
 
 } // namespace bingmann_sample_sortBS
-
-#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBS_HEADER
 
 /******************************************************************************/

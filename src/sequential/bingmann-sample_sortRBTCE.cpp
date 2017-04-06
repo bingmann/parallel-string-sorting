@@ -28,11 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTRBTCE_HEADER
-#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTRBTCE_HEADER
-
-#include <tlx/string/hexdump.hpp>
-#include <tlx/meta/log2.hpp>
+#include "bingmann-sample_sort.hpp"
+#include "bingmann-radix_sort.hpp"
 
 namespace bingmann_sample_sortRBTCE {
 
@@ -518,7 +515,5 @@ PSS_CONTESTANT(bingmann_sample_sortRBTCEA, "bingmann/sample_sortRBTCEA",
 // ----------------------------------------------------------------------------
 
 } // namespace bingmann_sample_sortRBTCE
-
-#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTRBTCE_HEADER
 
 /******************************************************************************/

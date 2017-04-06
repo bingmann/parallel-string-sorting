@@ -22,10 +22,10 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTC_HEADER
-#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTC_HEADER
+#include "bingmann-sample_sort.hpp"
+#include "bingmann-radix_sort.hpp"
 
-#include <tlx/meta/log2.hpp>
+#include <tlx/die.hpp>
 
 namespace bingmann_sample_sortBTC {
 
@@ -668,7 +668,5 @@ PSS_CONTESTANT(bingmann_sample_sortBTCE1A, "bingmann/sample_sortBTCE1A",
 // ----------------------------------------------------------------------------
 
 } // namespace bingmann_sample_sortBTC
-
-#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORTBTC_HEADER
 
 /******************************************************************************/
