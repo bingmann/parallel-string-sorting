@@ -363,8 +363,7 @@ struct TreeCalculations
 
     static const size_t numnodes = (1 << treebits) - 1;
 
-    static inline unsigned int
-                        level_to_inorder(unsigned int id)
+    static inline unsigned int level_to_preorder(unsigned int id)
     {
         assert(id > 0);
         DBG(debug, "index: " << id << " = " << toBinary(id));
@@ -380,8 +379,7 @@ struct TreeCalculations
         return bkt;
     }
 
-    static inline unsigned int
-                       in_to_levelorder(unsigned int id)
+    static inline unsigned int pre_to_levelorder(unsigned int id)
     {
         assert(id > 0);
         DBG(debug, "index: " << id << " = " << toBinary(id));
@@ -403,10 +401,10 @@ struct TreeCalculations
         {
             std::cout << toBinary(i, treebits) << " -> " << std::endl;
 
-            size_t id = level_to_inorder(i);
+            size_t id = level_to_preorder(i);
             std::cout << toBinary(id, treebits) << " -> " << std::endl;
 
-            id = in_to_levelorder(id);
+            id = pre_to_levelorder(id);
             std::cout << toBinary(id, treebits) << std::endl;
 
             std::cout << std::endl;

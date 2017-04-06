@@ -214,7 +214,7 @@ public:
     //! return a splitter
     key_type get_splitter(unsigned int i) const
     {
-        return splitter_tree[TreeCalculations < treebits > ::in_to_levelorder(i)];
+        return splitter_tree[TreeCalculations < treebits > ::pre_to_levelorder(i)];
     }
 
     /// build tree and splitter array from sample
@@ -255,7 +255,7 @@ public:
     //! return a splitter
     key_type get_splitter(unsigned int i) const
     {
-        return splitter_tree[TreeCalculations < treebits > ::in_to_levelorder(i)];
+        return splitter_tree[TreeCalculations < treebits > ::pre_to_levelorder(i)];
     }
 
     /// build tree and splitter array from sample

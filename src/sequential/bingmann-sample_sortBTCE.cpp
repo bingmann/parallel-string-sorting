@@ -71,7 +71,7 @@ struct ClassifySimple
         while (i <= numsplitters)
         {
             if (key == splitter_tree[i])
-                return 2 * TreeCalculations<treebits>::level_to_inorder(i) - 1;
+                return 2 * TreeCalculations<treebits>::level_to_preorder(i) - 1;
             else if (key < splitter_tree[i])
                 i = 2 * i + 0;
             else    // (key > splitter_tree[i])
