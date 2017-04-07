@@ -359,9 +359,9 @@ calculateRanges(
 template <size_t treebits>
 struct TreeCalculations
 {
-    static const bool   debug = false;
+    static const bool          debug = false;
 
-    static const size_t numnodes = (1 << treebits) - 1;
+    static const size_t        numnodes = (1 << treebits) - 1;
 
     static inline unsigned int level_to_preorder(unsigned int id)
     {
@@ -395,7 +395,7 @@ struct TreeCalculations
         return bkt;
     }
 
-    static inline void self_verify()
+    static inline void         self_verify()
     {
         for (size_t i = 1; i <= numnodes; ++i)
         {

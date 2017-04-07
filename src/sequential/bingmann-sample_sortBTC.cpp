@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-sample_sortBTC.hpp
+ * src/sequential/bingmann-sample_sortBTC.cpp
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *
@@ -31,30 +31,37 @@ namespace bingmann_sample_sortBTC {
 
 using namespace bingmann_sample_sort;
 
+template <size_t L2Cache>
+struct ClassifyBase {
 #if 0
-static const size_t numsplitters = 31;
+    static const size_t numsplitters = 31;
 #else
-//static const size_t l2cache = 256*1024;
+    //static const size_t l2cache = 256*1024;
 
-// bounding equations:
-// splitters            + bktsize
-// n * sizeof(key_type) + (2*n+1) * sizeof(size_t) <= l2cache
+    // bounding equations:
+    // splitters            + bktsize
+    // n * sizeof(key_type) + (2*n+1) * sizeof(size_t) <= l2cache
 
-//static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
-//static const size_t numsplitters2 = l2cache / sizeof(key_type);
-static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
+    //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / (sizeof(key_type) + 2 * sizeof(size_t));
+    //static const size_t numsplitters2 = l2cache / sizeof(key_type);
+    static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (4 * sizeof(size_t));
 
-//static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
+    //static const size_t numsplitters2 = ( l2cache - sizeof(size_t) ) / ( sizeof(key_type) );
 
-static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
-static const size_t numsplitters = (1 << treebits) - 1;
+    static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
+    static const size_t numsplitters = (1 << treebits) - 1;
 #endif
+};
 
 // ****************************************************************************
 // *** Classification Subroutines: rolled, assembler and unrolled variants
 
-struct ClassifySimple
+template <size_t L2Cache>
+struct ClassifySimple : public ClassifyBase<L2Cache>
 {
+    typedef ClassifyBase<L2Cache> Super;
+    using Super::numsplitters;
+
     /// search in splitter tree for bucket number
     static inline unsigned int
     find_bkt_tree(const key_type& key, const key_type* splitter, const key_type* splitter_tree0)
@@ -127,13 +134,17 @@ struct ClassifySimple
             key_type key = get_char<key_type>(*str++, depth);
 
             unsigned int b = find_bkt_tree(key, splitter, splitter_tree);
-            * bktout++ = b;
+            *bktout++ = b;
         }
     }
 };
 
-struct ClassifyAssembler
+template <size_t L2Cache>
+struct ClassifyAssembler : public ClassifyBase<L2Cache>
 {
+    typedef ClassifyBase<L2Cache> Super;
+    using Super::numsplitters;
+
     /// binary search on splitter array for bucket number
     static inline unsigned int
     find_bkt_tree(const key_type& key, const key_type* splitter, const key_type* splitter_tree0)
@@ -173,84 +184,230 @@ struct ClassifyAssembler
             key_type key = get_char<key_type>(*str++, depth);
 
             unsigned int b = find_bkt_tree(key, splitter, splitter_tree);
-            * bktout++ = b;
+            *bktout++ = b;
         }
     }
 };
 
-struct ClassifyUnroll
+template <size_t L2Cache, int Rollout>
+struct ClassifyUnroll : public ClassifyBase<L2Cache>
 {
-    /// search in splitter tree for bucket number, unrolled for U keys at once.
-    template <int U>
+    typedef ClassifyBase<L2Cache> Super;
+    using Super::numsplitters;
+    using Super::treebits;
+
     __attribute__ ((optimize("unroll-all-loops"))) static inline void
-    find_bkt_tree_unroll(const key_type key[U], const key_type* splitter, const key_type* splitter_tree0, uint16_t obkt[U])
+    find_bkt_tree_unroll_one(unsigned int i[Rollout], const key_type key[Rollout], const key_type* splitter_tree)
+    {
+        for (int u = 0; u < Rollout; ++u)
+        {
+#if 0
+            // in gcc-4.6.3 this produces a SETA, LEA sequence
+            i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
+#else
+            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is slightly faster
+            if (key[u] <= splitter_tree[i[u]])
+                i[u] = 2 * i[u] + 0;
+            else    // (key > splitter_tree[i[u]])
+                i[u] = 2 * i[u] + 1;
+#endif
+        }
+    }
+
+    /// search in splitter tree for bucket number, unrolled for Rollout keys at once.
+    __attribute__ ((optimize("unroll-all-loops"))) static inline void
+    find_bkt_tree_unroll(const key_type key[Rollout], const key_type* splitter,
+                         const key_type* splitter_tree0, uint16_t obkt[Rollout])
     {
         // binary tree traversal without left branch
 
         const key_type* splitter_tree = splitter_tree0 - 1;
-        unsigned int i[U];
-        std::fill(i + 0, i + U, 1);
+        unsigned int i[Rollout];
+        std::fill(i + 0, i + Rollout, 1);
 
-        for (size_t l = 0; l < treebits; ++l) // asdfasdf
+        switch (treebits)
         {
-            for (int u = 0; u < U; ++u)
-            {
-#if 0
-                // in gcc-4.6.3 this produces a SETA, LEA sequence
-                i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
-#else
-                // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is slightly faster
-                if (key[u] <= splitter_tree[i[u]])
-                    i[u] = 2 * i[u] + 0;
-                else    // (key > splitter_tree[i[u]])
-                    i[u] = 2 * i[u] + 1;
-#endif
-            }
+        default:
+            abort();
+        case 15:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 14:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 13:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 12:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 11:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 10:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
         }
 
-        for (int u = 0; u < U; ++u)
+        for (int u = 0; u < Rollout; ++u)
             i[u] -= numsplitters + 1;
 
-        for (int u = 0; u < U; ++u)
-            obkt[u] = i[u] * 2;                                                 // < bucket
+        for (int u = 0; u < Rollout; ++u) {
+            // < bucket
+            obkt[u] = i[u] * 2;
+        }
 
-        for (int u = 0; u < U; ++u)
-        {
-            if (i[u] < numsplitters && splitter[i[u]] == key[u]) obkt[u] += 1;  // equal bucket
+        for (int u = 0; u < Rollout; ++u) {
+            // equal bucket
+            if (i[u] < numsplitters && splitter[i[u]] == key[u])
+                obkt[u] += 1;
         }
     }
 
     /// classify all strings in area by walking tree and saving bucket id
-    static inline void
+    __attribute__ ((optimize("unroll-all-loops"))) static inline void
     classify(string* strB, string* strE, uint16_t* bktout,
              const key_type* splitter, const key_type* splitter_tree,
              size_t depth)
     {
         for (string* str = strB; str != strE; )
         {
-            static const int rollout = 6;
-
-            if (str + rollout < strE)
+            if (str + Rollout < strE)
             {
-                key_type key[rollout];
-                key[0] = get_char<key_type>(str[0], depth);
-                key[1] = get_char<key_type>(str[1], depth);
-                key[2] = get_char<key_type>(str[2], depth);
-                key[3] = get_char<key_type>(str[3], depth);
-                key[4] = get_char<key_type>(str[4], depth);
-                key[5] = get_char<key_type>(str[5], depth);
+                key_type key[Rollout];
+                for (int u = 0; u < Rollout; ++u)
+                    key[u] = get_char<key_type>(str[u], depth);
 
-                find_bkt_tree_unroll<rollout>(key, splitter, splitter_tree, bktout);
+                find_bkt_tree_unroll(key, splitter, splitter_tree, bktout);
 
-                str += rollout;
-                bktout += rollout;
+                str += Rollout;
+                bktout += Rollout;
             }
             else
             {
                 key_type key = get_char<key_type>(*str++, depth);
 
-                unsigned int b = ClassifySimple::find_bkt_tree(key, splitter, splitter_tree);
-                * bktout++ = b;
+                unsigned int b = ClassifySimple<L2Cache>::find_bkt_tree(
+                    key, splitter, splitter_tree);
+                *bktout++ = b;
+            }
+        }
+    }
+};
+
+template <size_t L2Cache, int Rollout>
+struct ClassifyUnrollTreeCalc : public ClassifyBase<L2Cache>
+{
+    typedef ClassifyBase<L2Cache> Super;
+    using Super::numsplitters;
+    using Super::treebits;
+
+    __attribute__ ((optimize("unroll-all-loops"))) static inline void
+    find_bkt_tree_unroll_one(
+        unsigned int i[Rollout], const key_type key[Rollout],
+        const key_type* splitter_tree)
+    {
+        for (int u = 0; u < Rollout; ++u)
+        {
+#if 0
+            // in gcc-4.6.3 this produces a SETA, LEA sequence
+            i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
+#else
+            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is slightly faster
+            if (key[u] <= splitter_tree[i[u]])
+                i[u] = 2 * i[u] + 0;
+            else    // (key > splitter_tree[i[u]])
+                i[u] = 2 * i[u] + 1;
+#endif
+        }
+    }
+
+    /// search in splitter tree for bucket number, unrolled for Rollout keys at once.
+    __attribute__ ((optimize("unroll-all-loops"))) static inline void
+    find_bkt_tree_unroll(const key_type key[Rollout], const key_type* /* splitter */,
+                         const key_type* splitter_tree0, uint16_t obkt[Rollout])
+    {
+        // binary tree traversal without left branch
+
+        const key_type* splitter_tree = splitter_tree0 - 1;
+        unsigned int i[Rollout];
+        std::fill(i + 0, i + Rollout, 1);
+
+        switch (treebits)
+        {
+        default:
+            abort();
+        case 15:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 14:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 13:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 12:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 11:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        case 10:
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+            find_bkt_tree_unroll_one(i, key, splitter_tree);
+        }
+
+        for (int u = 0; u < Rollout; ++u)
+            i[u] -= numsplitters + 1;
+
+        for (int u = 0; u < Rollout; ++u) {
+            // < bucket
+            obkt[u] = i[u] * 2;
+        }
+
+        for (int u = 0; u < Rollout; ++u) {
+            // equal bucket
+            if (i[u] < numsplitters &&
+                splitter_tree[TreeCalculations < treebits > ::
+                              pre_to_levelorder(i[u] + 1)] == key[u])
+                obkt[u] += 1;
+        }
+    }
+
+    /// classify all strings in area by walking tree and saving bucket id
+    __attribute__ ((optimize("unroll-all-loops"))) static inline void
+    classify(string* strB, string* strE, uint16_t* bktout,
+             const key_type* splitter, const key_type* splitter_tree,
+             size_t depth)
+    {
+        for (string* str = strB; str != strE; )
+        {
+            if (str + Rollout < strE)
+            {
+                key_type key[Rollout];
+                for (int u = 0; u < Rollout; ++u)
+                    key[u] = get_char<key_type>(str[u], depth);
+
+                find_bkt_tree_unroll(key, splitter, splitter_tree, bktout);
+
+                str += Rollout;
+                bktout += Rollout;
+            }
+            else
+            {
+                key_type key = get_char<key_type>(*str++, depth);
+
+                unsigned int b = ClassifySimple<L2Cache>::find_bkt_tree(
+                    key, splitter, splitter_tree);
+                *bktout++ = b;
             }
         }
     }
@@ -276,6 +433,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     // step 1: select splitters with oversampling
     g_timer.change(TM_MAKE_SAMPLE);
 
+    const size_t numsplitters = Classify::numsplitters;
     const size_t samplesize = oversample_factor * numsplitters;
 
     key_type samples[samplesize];
@@ -316,6 +474,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     // step 2.1: construct splitter tree to perform binary search
 
     key_type* splitter_tree = new key_type[numsplitters];
+    DBG(debug_splitter, "sizeof(splitter_tree) = " << numsplitters * sizeof(key_type));
 
     {
         size_t t = 0;
@@ -437,14 +596,19 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     // step 5: recursion
     g_timer.change(TM_GENERAL);
 
+    static const bool do_recurse = false;
+
     size_t i = 0, bsum = 0;
     while (i < bktnum - 1)
     {
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2]));
-            sample_sortBTC<Classify>(strings + bsum, bktsize[i], depth + splitter_lcp[i / 2]);
+            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt "
+                                            << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2]));
+            if (do_recurse)
+                sample_sortBTC<Classify>(strings + bsum, bktsize[i],
+                                         depth + splitter_lcp[i / 2]);
         }
         bsum += bktsize[i++];
 
@@ -452,19 +616,25 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
         if (bktsize[i] > 1)
         {
             if ((splitter[i / 2] & 0xFF) == 0) { // equal-bucket has NULL-terminated key, done.
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
+                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt "
+                                                << bsum << " size " << bktsize[i] << " is done!");
             }
             else {
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sortBTC<Classify>(strings + bsum, bktsize[i], depth + sizeof(key_type));
+                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt "
+                                                << bsum << " size " << bktsize[i] << " lcp keydepth!");
+                if (do_recurse)
+                    sample_sortBTC<Classify>(strings + bsum, bktsize[i],
+                                             depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i++];
     }
     if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
-        sample_sortBTC<Classify>(strings + bsum, bktsize[i], depth);
+        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt "
+                                        << bsum << " size " << bktsize[i] << " no lcp");
+        if (do_recurse)
+            sample_sortBTC<Classify>(strings + bsum, bktsize[i], depth);
     }
     bsum += bktsize[i++];
     assert(i == bktnum && bsum == n);
@@ -476,10 +646,11 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
 void bingmann_sample_sortBTC(string* strings, size_t n)
 {
+    using Classify = ClassifySimple<l2cache>;
     sample_sort_pre();
-    g_stats >> "numsplitters" << numsplitters
-        >> "splitter_treebits" << treebits;
-    sample_sortBTC<ClassifySimple>(strings, n, 0);
+    g_stats >> "numsplitters" << size_t(Classify::numsplitters)
+        >> "splitter_treebits" << size_t(Classify::treebits);
+    sample_sortBTC<Classify>(strings, n, 0);
     sample_sort_post();
 }
 
@@ -488,27 +659,66 @@ PSS_CONTESTANT(bingmann_sample_sortBTC, "bingmann/sample_sortBTC",
 
 void bingmann_sample_sortBTCA(string* strings, size_t n)
 {
+    using Classify = ClassifyAssembler<l2cache>;
     sample_sort_pre();
-    g_stats >> "numsplitters" << numsplitters
-        >> "splitter_treebits" << treebits;
-    sample_sortBTC<ClassifyAssembler>(strings, n, 0);
+    g_stats >> "numsplitters" << size_t(Classify::numsplitters)
+        >> "splitter_treebits" << size_t(Classify::treebits);
+    sample_sortBTC<Classify>(strings, n, 0);
     sample_sort_post();
 }
 
 PSS_CONTESTANT(bingmann_sample_sortBTCA, "bingmann/sample_sortBTCA",
                "bingmann/sample_sortBTCA (binary tree, asm CMOV, bkt cache)")
 
-void bingmann_sample_sortBTCU(string* strings, size_t n)
-{
-    sample_sort_pre();
-    g_stats >> "numsplitters" << numsplitters
-        >> "splitter_treebits" << treebits;
-    sample_sortBTC<ClassifyUnroll>(strings, n, 0);
-    sample_sort_post();
-}
+/*----------------------------------------------------------------------------*/
 
-PSS_CONTESTANT(bingmann_sample_sortBTCU, "bingmann/sample_sortBTCU",
-               "bingmann/sample_sortBTCU (binary tree, unrolled, bkt cache)")
+#define MAKE_BINGMANN_SAMPLE_SORT_BTCU(U)                           \
+    void bingmann_sample_sortBTCU ## U(string * strings, size_t n)  \
+    {                                                               \
+        using Classify = ClassifyUnroll<l2cache, U>;                \
+        sample_sort_pre();                                          \
+        g_stats >> "numsplitters" << size_t(Classify::numsplitters) \
+            >> "splitter_treebits" << size_t(Classify::treebits);   \
+        sample_sortBTC<Classify>(strings, n, 0);                    \
+        sample_sort_post();                                         \
+    }                                                               \
+                                                                    \
+    PSS_CONTESTANT(                                                 \
+        bingmann_sample_sortBTCU ## U,                              \
+        "bingmann/sample_sortBTCU" #U,                              \
+        "bingmann/sample_sortBTCU" #U " (binary tree, unrolled, bkt cache)")
+
+MAKE_BINGMANN_SAMPLE_SORT_BTCU(1)
+MAKE_BINGMANN_SAMPLE_SORT_BTCU(2)
+MAKE_BINGMANN_SAMPLE_SORT_BTCU(4)
+MAKE_BINGMANN_SAMPLE_SORT_BTCU(6)
+MAKE_BINGMANN_SAMPLE_SORT_BTCU(8)
+MAKE_BINGMANN_SAMPLE_SORT_BTCU(10)
+
+/*----------------------------------------------------------------------------*/
+
+#define MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(U)                              \
+    void bingmann_sample_sortBTCU ## U ## TC(string * strings, size_t n) \
+    {                                                                    \
+        using Classify = ClassifyUnrollTreeCalc<l2cache, U>;             \
+        sample_sort_pre();                                               \
+        g_stats >> "numsplitters" << size_t(Classify::numsplitters)      \
+            >> "splitter_treebits" << size_t(Classify::treebits);        \
+        sample_sortBTC<Classify>(strings, n, 0);                         \
+        sample_sort_post();                                              \
+    }                                                                    \
+                                                                         \
+    PSS_CONTESTANT(                                                      \
+        bingmann_sample_sortBTCU ## U ## TC,                             \
+        "bingmann/sample_sortBTCU" #U "TC",                              \
+        "bingmann/sample_sortBTCU" #U "TC (binary tree, unrolled, bkt cache)")
+
+MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(1)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(2)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(4)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(6)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(8)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(10)
 
 // ----------------------------------------------------------------------------
 

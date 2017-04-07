@@ -55,7 +55,7 @@ static const size_t oversample_factor = 2;
 static size_t g_ss_steps, g_rs_steps;
 
 enum { TM_GENERAL, TM_MAKE_SAMPLE, TM_MAKE_SPLITTER, TM_CLASSIFY, TM_PREFIXSUM, TM_PERMUTE, TM_SMALLSORT };
-static TimerArray g_timer(16);
+static TimerArrayDummy g_timer(16);
 
 static inline void sample_sort_pre()
 {

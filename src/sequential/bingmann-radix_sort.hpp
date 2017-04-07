@@ -1137,7 +1137,7 @@ bingmann_msd_CI3_sb(string* strings, size_t n)
             }
             else if (TLX_UNLIKELY(rs.bkt_size[rs.idx] < g_inssort_threshold))
             {
-                inssort::inssort(rs.str, rs.bkt_size[rs.idx], 2 * radixstack.size());
+                inssort::inssort(rs.str, rs.bkt_size[rs.idx], 2* radixstack.size());
                 rs.str += rs.bkt_size[rs.idx];
             }
             else if (rs.bkt_size[rs.idx] < RADIX)

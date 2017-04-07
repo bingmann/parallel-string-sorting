@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-sample_sortBT.hpp
+ * src/sequential/bingmann-sample_sortBT.cpp
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *
