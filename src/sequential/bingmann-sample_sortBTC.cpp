@@ -450,20 +450,23 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     key_type* splitter = new key_type[numsplitters];
     unsigned char* splitter_lcp = new unsigned char[numsplitters];
 
-    DBG(debug_splitter, "splitter:");
+    LOGC(debug_splitter) << "splitter:";
     splitter_lcp[0] = 0; // sentinel for first < everything bucket
     for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
     {
         splitter[i] = samples[j];
-        DBG(debug_splitter, "key " << tlx::hexdump_type(splitter[i]));
+        LOGC(debug_splitter) << "key " << tlx::hexdump_type(splitter[i]);
 
         if (i != 0) {
             key_type xorSplit = splitter[i - 1] ^ splitter[i];
 
-            DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
+            LOGC(debug_splitter)
+                << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ";
 
-            DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            LOGC(debug_splitter)
+                << count_high_zero_bits(xorSplit)
+                << " bits = " << count_high_zero_bits(xorSplit) / 8
+                << " chars lcp";
 
             splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
         }
@@ -474,7 +477,8 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     // step 2.1: construct splitter tree to perform binary search
 
     key_type* splitter_tree = new key_type[numsplitters];
-    DBG(debug_splitter, "sizeof(splitter_tree) = " << numsplitters * sizeof(key_type));
+    LOGC(debug_splitter)
+        << "sizeof(splitter_tree) = " << numsplitters * sizeof(key_type);
 
     {
         size_t t = 0;
@@ -482,14 +486,14 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
 
         while (highbit > 0)
         {
-            DBG(debug_splitter_tree, "highbit = " << highbit);
+            LOGC(debug_splitter_tree) << "highbit = " << highbit;
 
             size_t p = highbit - 1;
             size_t inc = highbit << 1;
 
             while (p <= numsplitters)
             {
-                DBG(debug_splitter_tree, "p = " << p);
+                LOGC(debug_splitter_tree) << "p = " << p;
 
                 splitter_tree[t++] = splitter[p];
 
@@ -604,8 +608,11 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt "
-                                            << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2]));
+            LOGC(debug_recursion)
+                << "Recurse[" << depth << "]: < bkt " << bsum
+                << " size " << bktsize[i]
+                << " lcp " << int(splitter_lcp[i / 2]);
+
             if (do_recurse)
                 sample_sortBTC<Classify>(strings + bsum, bktsize[i],
                                          depth + splitter_lcp[i / 2]);
@@ -616,12 +623,15 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
         if (bktsize[i] > 1)
         {
             if ((splitter[i / 2] & 0xFF) == 0) { // equal-bucket has NULL-terminated key, done.
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt "
-                                                << bsum << " size " << bktsize[i] << " is done!");
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: = bkt " << bsum
+                    << " size " << bktsize[i] << " is done!";
             }
             else {
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt "
-                                                << bsum << " size " << bktsize[i] << " lcp keydepth!");
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: = bkt " << bsum
+                    << " size " << bktsize[i] << " lcp keydepth!";
+
                 if (do_recurse)
                     sample_sortBTC<Classify>(strings + bsum, bktsize[i],
                                              depth + sizeof(key_type));
@@ -631,8 +641,10 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
     }
     if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt "
-                                        << bsum << " size " << bktsize[i] << " no lcp");
+        LOGC(debug_recursion)
+            << "Recurse[" << depth << "]: > bkt " << bsum
+            << " size " << bktsize[i] << " no lcp";
+
         if (do_recurse)
             sample_sortBTC<Classify>(strings + bsum, bktsize[i], depth);
     }

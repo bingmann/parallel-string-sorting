@@ -192,20 +192,24 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
     key_type splitter[leaves];
     unsigned char splitter_lcp[leaves];
 
-    DBG(debug_splitter, "splitter:");
+    LOGC(debug_splitter) << "splitter:";
     splitter_lcp[0] = 0; // sentinel for first < everything bucket
     for (size_t i = 0, j = oversample_factor / 2; i < leaves; ++i)
     {
         splitter[i] = samples[j];
-        DBG(debug_splitter, "key " << tlx::hexdump_type(splitter[i]));
+        LOGC(debug_splitter)
+            << "key " << tlx::hexdump_type(splitter[i]);
 
         if (i != 0) {
             key_type xorSplit = splitter[i - 1] ^ splitter[i];
 
-            DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
+            LOGC(debug_splitter)
+                << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ";
 
-            DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            LOGC(debug_splitter)
+                << count_high_zero_bits(xorSplit)
+                << " bits = " << count_high_zero_bits(xorSplit) / 8
+                << " chars lcp";
 
             splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
         }
@@ -287,7 +291,10 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2]));
+            LOGC(debug_recursion)
+                << "Recurse[" << depth << "]: < bkt " << bsum
+                << " size " << bktsize[i]
+                << " lcp " << int(splitter_lcp[i / 2]);
             sample_sortBSC<find_bkt>(strings + bsum, bktsize[i], depth + splitter_lcp[i / 2]);
         }
         bsum += bktsize[i++];
@@ -296,18 +303,25 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
         if (bktsize[i] > 1)
         {
             if ((splitter[i / 2] & 0xFF) == 0) { // equal-bucket has NULL-terminated key, done.
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: = bkt " << bsum
+                    << " size " << bktsize[i] << " is done!";
             }
             else {
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sortBSC<find_bkt>(strings + bsum, bktsize[i], depth + sizeof(key_type));
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: = bkt " << bsum
+                    << " size " << bktsize[i] << " lcp keydepth!";
+                sample_sortBSC<find_bkt>(strings + bsum, bktsize[i],
+                                         depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i++];
     }
     if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+        LOGC(debug_recursion)
+            << "Recurse[" << depth << "]: > bkt " << bsum
+            << " size " << bktsize[i] << " no lcp";
         sample_sortBSC<find_bkt>(strings + bsum, bktsize[i], depth);
     }
     bsum += bktsize[i++];

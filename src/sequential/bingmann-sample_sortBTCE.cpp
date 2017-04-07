@@ -344,27 +344,32 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
         key_type* splitter_tree1 = splitter_tree - 1;
         key_type prevsplitter = 0;
 
-        DBG(debug_splitter, "splitter:");
+        LOGC(debug_splitter) << "splitter:";
         splitter_lcp[0] = 0; // sentinel for first < everything bucket
         for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
         {
             const key_type& splitter = samples[j];
 
             int l = __builtin_ctz(i + 1);
-            DBG(debug_splitter, "splitter[" << i << "] on level " << l
-                                            << " = tree[" << treelvl[l] << "] = key " << tlx::hexdump_type(splitter));
+            LOGC(debug_splitter)
+                << "splitter[" << i << "] on level " << l
+                << " = tree[" << treelvl[l] << "] = key "
+                << tlx::hexdump_type(splitter);
             splitter_tree1[treelvl[l]++] = samples[j];
 
             if (i != 0) {
                 key_type xorSplit = prevsplitter ^ splitter;
 
-                DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
+                LOGC(debug_splitter)
+                    << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ";
 
-                DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                                                                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                LOGC(debug_splitter)
+                    << count_high_zero_bits(xorSplit)
+                    << " bits = " << count_high_zero_bits(xorSplit) / 8
+                    << " chars lcp";
 
-                splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8)
-                                  | ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
+                splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8) |
+                                  ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
             }
 
             prevsplitter = splitter;
@@ -460,7 +465,11 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2] & 0x7F));
+            LOGC(debug_recursion)
+                << "Recurse[" << depth << "]: < bkt " << bsum
+                << " size " << bktsize[i]
+                << " lcp " << int(splitter_lcp[i / 2] & 0x7F);
+
             sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth + (splitter_lcp[i / 2] & 0x7F));
         }
         bsum += bktsize[i++];
@@ -469,10 +478,15 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
         if (bktsize[i] > 1)
         {
             if (splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: = bkt " << bsum
+                    << " size " << bktsize[i] << " is done!";
             }
             else {
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: = bkt " << bsum
+                    << " size " << bktsize[i] << " lcp keydepth!";
+
                 sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth + sizeof(key_type));
             }
         }
@@ -480,7 +494,10 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     }
     if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+        LOGC(debug_recursion)
+            << "Recurse[" << depth << "]: > bkt " << bsum
+            << " size " << bktsize[i] << " no lcp";
+
         sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth);
     }
     bsum += bktsize[i++];
@@ -542,13 +559,15 @@ public:
         key_type      rec_buildtree(key_type* samples, size_t lo, size_t hi, unsigned int treeidx,
                                     key_type& rec_prevkey, size_t& iter)
         {
-            DBG(debug_splitter, "rec_buildtree(" << lo << "," << hi << ", treeidx=" << treeidx << ")");
+            LOGC(debug_splitter)
+                << "rec_buildtree(" << lo << "," << hi << ", treeidx=" << treeidx << ")";
 
             // pick middle element as splitter
             size_t mid = (lo + hi) >> 1;
 
-            DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << mid << "] = "
-                                        << tlx::hexdump_type(samples[mid]));
+            LOGC(debug_splitter)
+                << "tree[" << treeidx << "] = samples[" << mid << "] = "
+                << tlx::hexdump_type(samples[mid]);
 
             key_type mykey = splitter_tree[treeidx] = samples[mid];
 #if 1
@@ -559,7 +578,7 @@ public:
             while (midhi < hi && samples[midhi] == mykey) midhi++;
 
             if (midhi - midlo > 1)
-                DBG(0, "key range = [" << midlo << "," << midhi << ")");
+                LOG0 << "key range = [" << midlo << "," << midhi << ")";
 #else
             const size_t midlo = mid, midhi = mid + 1;
 #endif
@@ -569,12 +588,14 @@ public:
 
                 key_type xorSplit = prevkey ^ mykey;
 
-                DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                                                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                LOGC(debug_splitter)
+                    << "    lcp: "
+                    << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                    << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
 
-                splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8)
-                                       | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+                splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8) |
+                                       ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
                 return rec_buildtree(samples, midhi, hi, 2 * treeidx + 1, mykey, iter);
             }
@@ -582,12 +603,14 @@ public:
             {
                 key_type xorSplit = rec_prevkey ^ mykey;
 
-                DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                                                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                LOGC(debug_splitter)
+                    << "    lcp: "
+                    << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                    << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
 
-                splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8)
-                                       | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+                splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8) |
+                                       ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
                 return mykey;
             }
@@ -620,14 +643,16 @@ public:
         key_type     recurse(key_type* lo, key_type* hi, unsigned int treeidx,
                              key_type& rec_prevkey)
         {
-            DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
-                                                 << ", treeidx=" << treeidx << ")");
+            LOGC(debug_splitter)
+                << "rec_buildtree(" << snum(lo) << "," << snum(hi)
+                << ", treeidx=" << treeidx << ")";
 
             // pick middle element as splitter
             key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
 
-            DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                                        << tlx::hexdump_type(*mid));
+            LOGC(debug_splitter)
+                << "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
+                << tlx::hexdump_type(*mid);
 
             key_type mykey = m_tree[treeidx] = *mid;
 #if 1
@@ -638,7 +663,7 @@ public:
             while (midhi + 1 < hi && *midhi == mykey) midhi++;
 
             if (midhi - midlo > 1)
-                DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
+                LOG0 << "key range = [" << snum(midlo) << "," << snum(midhi) << ")";
 #else
             key_type* midlo = mid, * midhi = mid + 1;
 #endif
@@ -648,12 +673,14 @@ public:
 
                 key_type xorSplit = prevkey ^ mykey;
 
-                DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                                                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                LOGC(debug_splitter)
+                    << "    lcp: "
+                    << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                    << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
 
-                * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                                 | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+                * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8) |
+                                 ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
                 return recurse(midhi, hi, 2 * treeidx + 1, mykey);
             }
@@ -661,12 +688,14 @@ public:
             {
                 key_type xorSplit = rec_prevkey ^ mykey;
 
-                DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                                                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                LOGC(debug_splitter)
+                    << "    lcp: "
+                    << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                    << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
 
-                * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                                 | ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+                * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8) |
+                                 ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
                 return mykey;
             }
@@ -737,27 +766,30 @@ public:
 
             key_type prevsplitter;
 
-            DBG(debug_splitter, "splitter:");
+            LOGC(debug_splitter) << "splitter:";
             splitter_lcp[0] = 0; // sentinel for first < everything bucket
             for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
             {
                 const key_type& splitter = samples[j];
 
                 int l = __builtin_ctz(i + 1);
-                DBG(debug_splitter, "splitter[" << i << "] on level " << l
-                                                << " = tree[" << treelvl[l] << "] = key " << tlx::hexdump_type(splitter));
+                LOGC(debug_splitter)
+                    << "splitter[" << i << "] on level " << l
+                    << " = tree[" << treelvl[l] << "] = key " << tlx::hexdump_type(splitter);
                 splitter_tree[treelvl[l]++] = splitter;
 
                 if (i != 0) {
                     key_type xorSplit = prevsplitter ^ splitter;
 
-                    DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
+                    LOGC(debug_splitter)
+                        << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ";
 
-                    DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                                                                        << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+                    LOGC(debug_splitter)
+                        << count_high_zero_bits(xorSplit) << " bits = "
+                        << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-                    splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8)
-                                      | ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
+                    splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8) |
+                                      ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
                 }
 
                 prevsplitter = splitter;
@@ -767,10 +799,10 @@ public:
 
         for (size_t i = 0; i < numsplitters; ++i)
         {
-            DBG(1, "splitter_tree[" << i + 1 << "] = " << tree.splitter_tree[i + 1] << " -? " << splitter_tree[i + 1]);
+            LOG1 << "splitter_tree[" << i + 1 << "] = " << tree.splitter_tree[i + 1] << " -? " << splitter_tree[i + 1];
             assert(tree.splitter_tree[i + 1] == splitter_tree[i + 1]);
 
-            DBG(1, "splitter_lcp[" << i << "] = " << int(tree.splitter_lcp[i]) << " -? " << int(splitter_lcp[i]));
+            LOG1 << "splitter_lcp[" << i << "] = " << int(tree.splitter_lcp[i]) << " -? " << int(splitter_lcp[i]);
             assert(tree.splitter_lcp[i] == splitter_lcp[i]);
         }
 #endif
@@ -851,7 +883,10 @@ public:
             // i is even -> bkt[i] is less-than bucket
             if (bktsize[i] > 1)
             {
-                DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(tree.splitter_lcp[i / 2] & 0x7F));
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: < bkt " << bsum
+                    << " size " << bktsize[i]
+                    << " lcp " << int(tree.splitter_lcp[i / 2] & 0x7F);
                 sort<Classify>(strings + bsum, bktsize[i], depth + (tree.splitter_lcp[i / 2] & 0x7F));
             }
             bsum += bktsize[i++];
@@ -860,10 +895,15 @@ public:
             if (bktsize[i] > 1)
             {
                 if (tree.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
-                    DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
+                    LOGC(debug_recursion)
+                        << "Recurse[" << depth << "]: = bkt " << bsum
+                        << " size " << bktsize[i] << " is done!";
                 }
                 else {
-                    DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
+                    LOGC(debug_recursion)
+                        << "Recurse[" << depth << "]: = bkt " << bsum
+                        << " size " << bktsize[i] << " lcp keydepth!";
+
                     sort<Classify>(strings + bsum, bktsize[i], depth + sizeof(key_type));
                 }
             }
@@ -871,7 +911,10 @@ public:
         }
         if (bktsize[i] > 0)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+            LOGC(debug_recursion)
+                << "Recurse[" << depth << "]: > bkt " << bsum
+                << " size " << bktsize[i] << " no lcp";
+
             sort<Classify>(strings + bsum, bktsize[i], depth);
         }
         bsum += bktsize[i++];

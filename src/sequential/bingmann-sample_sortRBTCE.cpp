@@ -85,7 +85,8 @@ struct SplitterTree
               m_depth(depth)
         {
             size_t treenum = treelist.size() - 1;
-            DBG(debug_splitter, "Builder for subtree[" << treenum << "] at depth " << depth);
+            LOGC(debug_splitter)
+                << "Builder for subtree[" << treenum << "] at depth " << depth;
 
             std::fill(st.splitter_subtree, st.splitter_subtree + numsplitters, 0);
 
@@ -97,7 +98,8 @@ struct SplitterTree
 
             st.splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
 
-            DBG(debug_splitter, "done building subtree[" << treenum << "] at depth " << depth);
+            LOGC(debug_splitter)
+                << "done building subtree[" << treenum << "] at depth " << depth;
         }
 
         inline ptrdiff_t snum(samplepair_type* s) const
@@ -110,23 +112,26 @@ struct SplitterTree
         {
             key_type xorSplit = prevkey ^ mykey;
 
-            DBG(debug_splitter,
-                "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = " <<
-                tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = " <<
-                count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            LOGC(debug_splitter)
+                << "    lcp: "
+                << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
+                << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
+                << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
 
             * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8) |
                              ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
 
-            DBG(debug_splitter, "key range = [" << snum(midlo) << "," << snum(midhi) << ") - " << midhi - midlo);
+            LOGC(debug_splitter)
+                << "key range = [" << snum(midlo) << "," << snum(midhi) << ") - " << midhi - midlo;
 
             // decide whether to build a subtree:
             if (midhi - midlo >= (ptrdiff_t)(numsplitters / 2) // enough samples
                 && (mykey & 0xFF) != 0                         // key is not NULL-terminated
                 && m_treelist.size() < 255)                    // not too many subtrees
             {
-                DBG(debug_subtree, "creating subtree for equal range of key "
-                    << tlx::hexdump_type(mykey) << " with " << (midhi - midlo) << " samples");
+                LOGC(debug_subtree)
+                    << "creating subtree for equal range of key "
+                    << tlx::hexdump_type(mykey) << " with " << (midhi - midlo) << " samples";
 
                 for (samplepair_type* s = midlo; s < midhi; ++s)
                 {
@@ -142,7 +147,8 @@ struct SplitterTree
                 SplitterTree::Builder(*m_treelist.back(), midlo, midhi,
                                       m_treelist, m_strings, m_depth + sizeof(key_type));
 
-                DBG(debug_splitter_subtree, "done creating subtree " << int(*m_subtree_iter));
+                LOGC(debug_splitter_subtree)
+                    << "done creating subtree " << int(*m_subtree_iter);
             }
             ++m_subtree_iter;
         }
@@ -150,14 +156,16 @@ struct SplitterTree
         key_type recurse(samplepair_type* lo, samplepair_type* hi, unsigned int treeidx,
                          key_type& rec_prevkey)
         {
-            DBG(debug_splitter, "buildtree(" << snum(lo) << "," << snum(hi)
-                                             << ", treeidx=" << treeidx << ")");
+            LOGC(debug_splitter)
+                << "buildtree(" << snum(lo) << "," << snum(hi)
+                << ", treeidx=" << treeidx << ")";
 
             // pick middle element as splitter
             samplepair_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
 
-            DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                                        << tlx::hexdump_type(mid->first));
+            LOGC(debug_splitter)
+                << "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
+                << tlx::hexdump_type(mid->first);
 
             key_type mykey = m_tree[treeidx] = mid->first;
 
@@ -167,7 +175,8 @@ struct SplitterTree
             samplepair_type* midhi = mid;
             while (midhi + 1 < hi && midhi->first == mykey) midhi++;
 
-            DBG(debug_splitter, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
+            LOGC(debug_splitter)
+                << "key range = [" << snum(midlo) << "," << snum(midhi) << ")";
 
             if (2 * treeidx < numsplitters)
             {
@@ -302,7 +311,8 @@ struct SplitterTree
 
     inline void           recursive_permute(string* strings, size_t n, uint16_t* bktcache, string* sorted, std::vector<SplitterTree*>& treelist)
     {
-        DBG(debug_recursion, "permuting " << n << " strings @ " << strings);
+        LOGC(debug_recursion)
+            << "permuting " << n << " strings @ " << strings;
         // step 4: premute out-of-place
 
         for (size_t i = 0; i < n; ++i)
@@ -326,7 +336,8 @@ struct SplitterTree
             // i is odd -> bkt[i] is equal bucket
             if (splitter_subtree[i / 2])
             {
-                DBG(debug_subtree, "recursively permuting subtree " << int(splitter_subtree[i / 2]) << " @ bkt " << i);
+                LOGC(debug_subtree)
+                    << "recursively permuting subtree " << int(splitter_subtree[i / 2]) << " @ bkt " << i;
 
                 assert(splitter_subtree[i / 2] < treelist.size());
                 SplitterTree& t = *treelist[splitter_subtree[i / 2]];
@@ -343,7 +354,8 @@ struct SplitterTree
     template <unsigned int(SplitterTree::* find_bkt) (const key_type&)>
     inline void recursive_sort(string* strings, size_t n, std::vector<SplitterTree*>& treelist, size_t depth)
     {
-        DBG(debug_recursion, "sorting " << n << " strings @ " << strings << " in depth " << depth);
+        LOGC(debug_recursion)
+            << "sorting " << n << " strings @ " << strings << " in depth " << depth;
 
         size_t i = 0, bsum = 0;
         while (i < bktnum - 1)
@@ -351,7 +363,11 @@ struct SplitterTree
             // i is even -> bkt[i] is less-than bucket
             if (bktsize[i] > 1)
             {
-                DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2] & 0x7F));
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: < bkt " << bsum
+                    << " size " << bktsize[i]
+                    << " lcp " << int(splitter_lcp[i / 2] & 0x7F);
+
                 sort<find_bkt>(strings + bsum, bktsize[i], depth + (splitter_lcp[i / 2] & 0x7F));
             }
             bsum += bktsize[i++];
@@ -360,19 +376,26 @@ struct SplitterTree
             if (bktsize[i] > 1)
             {
                 if (splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
-                    DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
+                    LOGC(debug_recursion)
+                        << "Recurse[" << depth << "]: = bkt " << bsum
+                        << " size " << bktsize[i] << " is done!";
                 }
                 else if (splitter_subtree[i / 2])
                 {
                     assert(splitter_subtree[i / 2] < treelist.size());
                     SplitterTree& t = *treelist[splitter_subtree[i / 2]];
 
-                    DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth, into subtree " << int(splitter_subtree[i / 2]) << "!");
+                    LOGC(debug_recursion)
+                        << "Recurse[" << depth << "]: = bkt " << bsum
+                        << " size " << bktsize[i] << " lcp keydepth,"
+                        << " into subtree " << int(splitter_subtree[i / 2]);
 
                     t.recursive_sort<find_bkt>(strings + bsum, bktsize[i], treelist, depth + sizeof(key_type));
                 }
                 else {
-                    DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
+                    LOGC(debug_recursion)
+                        << "Recurse[" << depth << "]: = bkt " << bsum
+                        << " size " << bktsize[i] << " lcp keydepth!";
                     sort<find_bkt>(strings + bsum, bktsize[i], depth + sizeof(key_type));
                 }
             }
@@ -380,7 +403,9 @@ struct SplitterTree
         }
         if (bktsize[i] > 0)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
+            LOGC(debug_recursion)
+                << "Recurse[" << depth << "]: > bkt " << bsum
+                << " size " << bktsize[i] << " no lcp";
             sort<find_bkt>(strings + bsum, bktsize[i], depth);
         }
         bsum += bktsize[i++];

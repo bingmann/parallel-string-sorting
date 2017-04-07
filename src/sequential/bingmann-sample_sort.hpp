@@ -31,6 +31,7 @@
 
 #include <tlx/string/hexdump.hpp>
 #include <tlx/meta/log2.hpp>
+#include <tlx/logger.hpp>
 
 #include <algorithm>
 
