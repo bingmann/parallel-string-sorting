@@ -28,6 +28,7 @@
 #include "../tools/stats_writer.hpp"
 #include "../tools/globals.hpp"
 #include "../tools/lcgrandom.hpp"
+#include "bingmann-radix_sort.hpp"
 
 #include <tlx/string/hexdump.hpp>
 #include <tlx/meta/log2.hpp>
@@ -81,6 +82,13 @@ static inline void sample_sort_post()
         >> "tm_prefixsum" << g_timer.get(TM_PREFIXSUM)
         >> "tm_permute" << g_timer.get(TM_PERMUTE)
         >> "tm_smallsort" << g_timer.get(TM_SMALLSORT);
+}
+
+//! method called for recursively sorting "small" sets
+static inline
+void sample_sort_small_sort(string* strings, size_t n, size_t depth)
+{
+    bingmann::msd_CI(strings, n, depth);
 }
 
 } // namespace bingmann_sample_sort

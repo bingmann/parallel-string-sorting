@@ -23,7 +23,6 @@
  ******************************************************************************/
 
 #include "bingmann-sample_sort.hpp"
-#include "bingmann-radix_sort.hpp"
 
 #include <tlx/die.hpp>
 
@@ -425,7 +424,7 @@ void sample_sortBTC(string* strings, size_t n, size_t depth)
         g_rs_steps++;
         //return inssort::inssort(strings, n, depth);
         g_timer.change(TM_SMALLSORT);
-        bingmann::msd_CI(strings, n, depth);
+        sample_sort_small_sort(strings, n, depth);
         g_timer.change(TM_GENERAL);
         return;
     }

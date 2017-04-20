@@ -23,7 +23,6 @@
  ******************************************************************************/
 
 #include "bingmann-sample_sort.hpp"
-#include "bingmann-radix_sort.hpp"
 
 namespace bingmann_sample_sortBSC {
 
@@ -168,7 +167,7 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
     if (n < g_samplesort_smallsort)
     {
         g_rs_steps++;
-        return bingmann::msd_CI(strings, n, depth);
+        return sample_sort_small_sort(strings, n, depth);
     }
     g_ss_steps++;
 
@@ -204,9 +203,7 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
             key_type xorSplit = splitter[i - 1] ^ splitter[i];
 
             LOGC(debug_splitter)
-                << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ";
-
-            LOGC(debug_splitter)
+                << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - "
                 << count_high_zero_bits(xorSplit)
                 << " bits = " << count_high_zero_bits(xorSplit) / 8
                 << " chars lcp";

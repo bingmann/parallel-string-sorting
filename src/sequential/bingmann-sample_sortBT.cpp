@@ -23,7 +23,6 @@
  ******************************************************************************/
 
 #include "bingmann-sample_sort.hpp"
-#include "bingmann-radix_sort.hpp"
 
 namespace bingmann_sample_sortBT {
 
@@ -93,7 +92,8 @@ find_bkt_tree(const key_type& key, const key_type* splitter,
     return b;
 }
 
-/// Variant 3 of string sample-sort: use super-scalar binary search on splitters, without index caching.
+//! Variant 3 of string sample-sort: use super-scalar binary search on
+//! splitters, without index caching.
 void sample_sortBT(string* strings, size_t n, size_t depth)
 {
 #if 0
@@ -114,7 +114,7 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
     if (n < g_samplesort_smallsort)
     {
         g_rs_steps++;
-        return bingmann::msd_CI(strings, n, depth);
+        return sample_sort_small_sort(strings, n, depth);
     }
     g_ss_steps++;
 
@@ -138,20 +138,22 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
     key_type splitter[numsplitters];
     unsigned char splitter_lcp[numsplitters];
 
-    DBG(debug_splitter, "splitter:");
+    LOGC(debug_splitter) << "splitter:";
     splitter_lcp[0] = 0; // sentinel for first < everything bucket
     for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
     {
         splitter[i] = samples[j];
-        DBG(debug_splitter, "key " << tlx::hexdump_type(splitter[i]));
+        LOGC(debug_splitter)
+            << "key " << tlx::hexdump_type(splitter[i]);
 
         if (i != 0) {
             key_type xorSplit = splitter[i - 1] ^ splitter[i];
 
-            DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
-
-            DBG3(debug_splitter, count_high_zero_bits(xorSplit) << " bits = "
-                                                                << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
+            LOGC(debug_splitter)
+                << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - "
+                << count_high_zero_bits(xorSplit)
+                << " bits = " << count_high_zero_bits(xorSplit) / 8
+                << " chars lcp";
 
             splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
         }

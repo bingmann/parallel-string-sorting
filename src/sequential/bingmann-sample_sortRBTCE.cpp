@@ -29,7 +29,6 @@
  ******************************************************************************/
 
 #include "bingmann-sample_sort.hpp"
-#include "bingmann-radix_sort.hpp"
 
 namespace bingmann_sample_sortRBTCE {
 
@@ -443,7 +442,7 @@ public:
             //return inssort::inssort(strings, n, depth);
             //return bs_mkqs::ssort2(strings, n, depth);
             g_timer.change(TM_SMALLSORT);
-            bingmann::msd_CI(strings, n, depth);
+            sample_sort_small_sort(strings, n, depth);
             g_timer.change(TM_GENERAL);
             return;
         }

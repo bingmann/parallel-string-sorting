@@ -23,7 +23,6 @@
  ******************************************************************************/
 
 #include "bingmann-sample_sort.hpp"
-#include "bingmann-radix_sort.hpp"
 
 namespace bingmann_sample_sortBTCE {
 
@@ -56,11 +55,12 @@ static const size_t numsplitters = (1 << treebits) - 1;
 // with equality check and index caching.
 
 template <size_t treebits>
-struct ClassifySimple
+class ClassifySimple
 {
+public:
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    // search in splitter tree for bucket number
+    //! search in splitter tree for bucket number
     static inline unsigned int
     find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
@@ -86,13 +86,14 @@ struct ClassifySimple
 };
 
 template <size_t treebits>
-struct ClassifyAssembler
+class ClassifyAssembler
 {
+public:
     static const size_t numsplitters = (1 << treebits) - 1;
 
     // binary search on splitter array for bucket number
-    static inline unsigned int
-    find_bkt(const key_type& key, const key_type* splitter_tree0)
+    static inline
+    unsigned int find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
         const key_type* splitter_tree = splitter_tree0 - 1;
         unsigned int i;
@@ -306,7 +307,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
         //return inssort::inssort(strings, n, depth);
         //return bs_mkqs::ssort2(strings, n, depth);
         g_timer.change(TM_SMALLSORT);
-        bingmann::msd_CI(strings, n, depth);
+        sample_sort_small_sort(strings, n, depth);
         g_timer.change(TM_GENERAL);
         return;
     }
@@ -363,9 +364,7 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
                 key_type xorSplit = prevsplitter ^ splitter;
 
                 LOGC(debug_splitter)
-                    << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ";
-
-                LOGC(debug_splitter)
+                    << "    XOR -> " << tlx::hexdump_type(xorSplit) << " - "
                     << count_high_zero_bits(xorSplit)
                     << " bits = " << count_high_zero_bits(xorSplit) / 8
                     << " chars lcp";
@@ -723,7 +722,7 @@ public:
             //return inssort::inssort(strings, n, depth);
             //return bs_mkqs::ssort2(strings, n, depth);
             g_timer.change(TM_SMALLSORT);
-            bingmann::msd_CI(strings, n, depth);
+            sample_sort_small_sort(strings, n, depth);
             g_timer.change(TM_GENERAL);
             return;
         }
