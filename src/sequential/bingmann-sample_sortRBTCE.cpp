@@ -40,8 +40,9 @@ static const bool debug_splitter_subtree = false;
 
 // ----------------------------------------------------------------------------
 
-struct SplitterTree
+class SplitterTree
 {
+public:
 #if 0
     static const size_t numsplitters2 = 16;
 #else
@@ -59,23 +60,26 @@ struct SplitterTree
 
     typedef std::pair<key_type, size_t> samplepair_type;
 
-    key_type            splitter_tree[numsplitters + 1];
-    unsigned char       splitter_lcp[numsplitters];
-    unsigned char       splitter_subtree[numsplitters];
+    key_type splitter_tree[numsplitters + 1];
+    unsigned char splitter_lcp[numsplitters];
+    unsigned char splitter_subtree[numsplitters];
 
-    struct Builder
+    class Builder
     {
-        key_type                    * m_tree;
-        unsigned char               * m_lcp_iter;
-        unsigned char               * m_subtree_iter;
-        samplepair_type             * m_samples;
+    public:
+        key_type* m_tree;
+        unsigned char* m_lcp_iter;
+        unsigned char* m_subtree_iter;
+        samplepair_type* m_samples;
 
         std::vector<SplitterTree*>& m_treelist;
-        string                      * m_strings;
-        size_t                      m_depth;
+        string* m_strings;
+        size_t m_depth;
 
-        inline Builder(SplitterTree& st, samplepair_type* samples, samplepair_type* samples_end,
-                       std::vector<SplitterTree*>& treelist, string* strings, size_t depth)
+        Builder(SplitterTree& st,
+                samplepair_type* samples, samplepair_type* samples_end,
+                std::vector<SplitterTree*>& treelist,
+                string* strings, size_t depth)
             : m_tree(st.splitter_tree),
               m_lcp_iter(st.splitter_lcp),
               m_subtree_iter(st.splitter_subtree),
@@ -96,19 +100,20 @@ struct SplitterTree
             assert(m_lcp_iter == st.splitter_lcp + numsplitters);
             assert(m_subtree_iter == st.splitter_subtree + numsplitters);
 
-            st.splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
+            // overwrite sentinel lcp for first < everything bucket
+            st.splitter_lcp[0] &= 0x80;
 
             LOGC(debug_splitter)
                 << "done building subtree[" << treenum << "] at depth " << depth;
         }
 
-        inline ptrdiff_t snum(samplepair_type* s) const
+        ptrdiff_t snum(samplepair_type* s) const
         {
             return (ptrdiff_t)(s - m_samples);
         }
 
-        inline void      keynode(key_type& prevkey, key_type& mykey,
-                                 samplepair_type* midlo, samplepair_type* midhi)
+        void keynode(key_type& prevkey, key_type& mykey,
+                     samplepair_type* midlo, samplepair_type* midhi)
         {
             key_type xorSplit = prevkey ^ mykey;
 
@@ -118,8 +123,8 @@ struct SplitterTree
                 << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
                 << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
 
-            * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8) |
-                             ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
+            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8) |
+                            ((mykey & 0xFF) ? 0 : 0x80);  // marker for done splitters
 
             LOGC(debug_splitter)
                 << "key range = [" << snum(midlo) << "," << snum(midhi) << ") - " << midhi - midlo;
@@ -141,7 +146,7 @@ struct SplitterTree
 
                 std::sort(midlo, midhi);
 
-                * m_subtree_iter = m_treelist.size();
+                *m_subtree_iter = m_treelist.size();
                 m_treelist.push_back(new SplitterTree());
 
                 SplitterTree::Builder(*m_treelist.back(), midlo, midhi,
@@ -195,7 +200,7 @@ struct SplitterTree
         }
     };
 
-    static inline std::string binary(uint16_t v)
+    static std::string binary(uint16_t v)
     {
         char binstr[17];
         binstr[16] = 0;
@@ -206,8 +211,8 @@ struct SplitterTree
         return binstr;
     }
 
-    static inline unsigned int
-                              treeid_to_bkt(unsigned int id, size_t treebits, size_t numsplitters)
+    static unsigned int treeid_to_bkt(
+        unsigned int id, size_t treebits, size_t numsplitters)
     {
         assert(id > 0);
         //std::cout << "index: " << id << " = " << binary(id) << "\n";
@@ -227,8 +232,7 @@ struct SplitterTree
     }
 
     /// search in splitter tree for bucket number
-    inline unsigned int
-    find_bkt_tree_equal(const key_type& key)
+    unsigned int find_bkt_tree_equal(const key_type& key)
     {
         // binary tree traversal without left branch
 
@@ -250,8 +254,7 @@ struct SplitterTree
     }
 
     /// binary search on splitter array for bucket number
-    inline unsigned int
-    find_bkt_tree_asmequal(const key_type& key)
+    unsigned int find_bkt_tree_asmequal(const key_type& key)
     {
         unsigned int i;
 
@@ -293,9 +296,9 @@ struct SplitterTree
 
     std::vector<uint16_t> bktcache;     // bktcache for all trees != 0
 
-    size_t                bktsize[bktnum], bktindex[bktnum];
+    size_t bktsize[bktnum], bktindex[bktnum];
 
-    inline void           calc_bktsize_prefixsum(uint16_t* bktcache, size_t n)
+    void calc_bktsize_prefixsum(uint16_t* bktcache, size_t n)
     {
         memset(bktsize, 0, bktnum * sizeof(size_t));
 
@@ -309,7 +312,8 @@ struct SplitterTree
         assert(bktindex[bktnum - 1] + bktsize[bktnum - 1] == n);
     }
 
-    inline void           recursive_permute(string* strings, size_t n, uint16_t* bktcache, string* sorted, std::vector<SplitterTree*>& treelist)
+    void recursive_permute(string* strings, size_t n, uint16_t* bktcache,
+                           string* sorted, std::vector<SplitterTree*>& treelist)
     {
         LOGC(debug_recursion)
             << "permuting " << n << " strings @ " << strings;
@@ -337,13 +341,15 @@ struct SplitterTree
             if (splitter_subtree[i / 2])
             {
                 LOGC(debug_subtree)
-                    << "recursively permuting subtree " << int(splitter_subtree[i / 2]) << " @ bkt " << i;
+                    << "recursively permuting subtree "
+                    << int(splitter_subtree[i / 2]) << " @ bkt " << i;
 
                 assert(splitter_subtree[i / 2] < treelist.size());
                 SplitterTree& t = *treelist[splitter_subtree[i / 2]];
 
                 assert(bktsize[i] == t.bktcache.size());
-                t.recursive_permute(strings + bsum, bktsize[i], t.bktcache.data(), sorted, treelist);
+                t.recursive_permute(strings + bsum, bktsize[i],
+                                    t.bktcache.data(), sorted, treelist);
             }
             bsum += bktsize[i++];
         }
@@ -352,7 +358,9 @@ struct SplitterTree
     }
 
     template <unsigned int(SplitterTree::* find_bkt) (const key_type&)>
-    inline void recursive_sort(string* strings, size_t n, std::vector<SplitterTree*>& treelist, size_t depth)
+    void recursive_sort(
+        string* strings, size_t n,
+        std::vector<SplitterTree*>& treelist, size_t depth)
     {
         LOGC(debug_recursion)
             << "sorting " << n << " strings @ " << strings << " in depth " << depth;
@@ -368,14 +376,17 @@ struct SplitterTree
                     << " size " << bktsize[i]
                     << " lcp " << int(splitter_lcp[i / 2] & 0x7F);
 
-                sort<find_bkt>(strings + bsum, bktsize[i], depth + (splitter_lcp[i / 2] & 0x7F));
+                if (!g_toplevel_only)
+                    sort<find_bkt>(strings + bsum, bktsize[i],
+                                   depth + (splitter_lcp[i / 2] & 0x7F));
             }
             bsum += bktsize[i++];
 
             // i is odd -> bkt[i] is equal bucket
             if (bktsize[i] > 1)
             {
-                if (splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
+                if (splitter_lcp[i / 2] & 0x80) {
+                    // equal-bucket has NULL-terminated key, done.
                     LOGC(debug_recursion)
                         << "Recurse[" << depth << "]: = bkt " << bsum
                         << " size " << bktsize[i] << " is done!";
@@ -390,13 +401,18 @@ struct SplitterTree
                         << " size " << bktsize[i] << " lcp keydepth,"
                         << " into subtree " << int(splitter_subtree[i / 2]);
 
-                    t.recursive_sort<find_bkt>(strings + bsum, bktsize[i], treelist, depth + sizeof(key_type));
+                    t.recursive_sort<find_bkt>(
+                        strings + bsum, bktsize[i], treelist,
+                        depth + sizeof(key_type));
                 }
                 else {
                     LOGC(debug_recursion)
                         << "Recurse[" << depth << "]: = bkt " << bsum
                         << " size " << bktsize[i] << " lcp keydepth!";
-                    sort<find_bkt>(strings + bsum, bktsize[i], depth + sizeof(key_type));
+
+                    if (!g_toplevel_only)
+                        sort<find_bkt>(strings + bsum, bktsize[i],
+                                       depth + sizeof(key_type));
                 }
             }
             bsum += bktsize[i++];
@@ -406,15 +422,18 @@ struct SplitterTree
             LOGC(debug_recursion)
                 << "Recurse[" << depth << "]: > bkt " << bsum
                 << " size " << bktsize[i] << " no lcp";
-            sort<find_bkt>(strings + bsum, bktsize[i], depth);
+
+            if (!g_toplevel_only)
+                sort<find_bkt>(strings + bsum, bktsize[i], depth);
         }
         bsum += bktsize[i++];
         assert(i == bktnum && bsum == n);
 
-        //delete [] bktsize;
+        // delete [] bktsize;
     }
 
-    /// Variant of string sample-sort: use super-scalar binary search on splitters, with index caching.
+    /// Variant of string sample-sort: use super-scalar binary search on
+    /// splitters, with index caching.
     template <unsigned int(SplitterTree::* find_bkt) (const key_type&)>
     static void sort(string* strings, size_t n, size_t depth)
     {

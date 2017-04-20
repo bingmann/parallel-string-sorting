@@ -52,7 +52,8 @@ static const size_t numsplitters = (1 << treebits) - 1;
 
 // ----------------------------------------------------------------------------
 
-/// Variant of string sample-sort: use super-scalar binary search on splitters with equality check and index caching.
+// Variant of string sample-sort: use super-scalar binary search on splitters
+// with equality check and index caching.
 
 template <size_t treebits>
 struct ClassifySimple
@@ -61,7 +62,7 @@ struct ClassifySimple
 
     // search in splitter tree for bucket number
     static inline unsigned int
-                        find_bkt(const key_type& key, const key_type* splitter_tree0)
+    find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
         // binary tree traversal without left branch
 
@@ -91,7 +92,7 @@ struct ClassifyAssembler
 
     // binary search on splitter array for bucket number
     static inline unsigned int
-                        find_bkt(const key_type& key, const key_type* splitter_tree0)
+    find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
         const key_type* splitter_tree = splitter_tree0 - 1;
         unsigned int i;
@@ -169,7 +170,7 @@ struct ClassifyUnroll<11>
     static const size_t treebits = 11;
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    /// binary search on splitter array for bucket number
+    //! binary search on splitter array for bucket number
     static inline unsigned int
     find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
@@ -211,7 +212,7 @@ struct ClassifyUnroll<12>
     static const size_t treebits = 12;
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    /// binary search on splitter array for bucket number
+    //! binary search on splitter array for bucket number
     static inline unsigned int
     find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
@@ -254,7 +255,7 @@ struct ClassifyUnroll<13>
     static const size_t treebits = 13;
     static const size_t numsplitters = (1 << treebits) - 1;
 
-    /// binary search on splitter array for bucket number
+    //! binary search on splitter array for bucket number
     static inline unsigned int
     find_bkt(const key_type& key, const key_type* splitter_tree0)
     {
@@ -292,8 +293,9 @@ struct ClassifyUnroll<13>
     }
 };
 
-// ***********************************************************************************************
-// Variant of string sample-sort: use super-scalar binary search on splitters, with index caching.
+// *****************************************************************************
+// Variant of string sample-sort: use super-scalar binary search on splitters,
+// with index caching.
 
 template <template <size_t> class Classify>
 void sample_sortBTCE2(string* strings, size_t n, size_t depth)
@@ -369,7 +371,8 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
                     << " chars lcp";
 
                 splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8) |
-                                  ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
+                                  // marker for done splitters
+                                  ((splitter & 0xFF) ? 0 : 0x80);
             }
 
             prevsplitter = splitter;
@@ -470,14 +473,18 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
                 << " size " << bktsize[i]
                 << " lcp " << int(splitter_lcp[i / 2] & 0x7F);
 
-            sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth + (splitter_lcp[i / 2] & 0x7F));
+            if (!g_toplevel_only)
+                sample_sortBTCE2<Classify>(
+                    strings + bsum, bktsize[i],
+                    depth + (splitter_lcp[i / 2] & 0x7F));
         }
         bsum += bktsize[i++];
 
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if (splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
+            if (splitter_lcp[i / 2] & 0x80) {
+                // equal-bucket has NULL-terminated key, done.
                 LOGC(debug_recursion)
                     << "Recurse[" << depth << "]: = bkt " << bsum
                     << " size " << bktsize[i] << " is done!";
@@ -487,7 +494,9 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
                     << "Recurse[" << depth << "]: = bkt " << bsum
                     << " size " << bktsize[i] << " lcp keydepth!";
 
-                sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth + sizeof(key_type));
+                if (!g_toplevel_only)
+                    sample_sortBTCE2<Classify>(strings + bsum, bktsize[i],
+                                               depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i++];
@@ -498,7 +507,8 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
             << "Recurse[" << depth << "]: > bkt " << bsum
             << " size " << bktsize[i] << " no lcp";
 
-        sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth);
+        if (!g_toplevel_only)
+            sample_sortBTCE2<Classify>(strings + bsum, bktsize[i], depth);
     }
     bsum += bktsize[i++];
     assert(i == bktnum && bsum == n);
@@ -702,7 +712,8 @@ public:
         }
     };
 
-    /// Variant of string sample-sort: use super-scalar binary search on splitters, with index caching.
+    //! Variant of string sample-sort: use super-scalar binary search on
+    //! splitters, with index caching.
     template <template <size_t> class Classify>
     static void sort(string* strings, size_t n, size_t depth)
     {
@@ -887,7 +898,9 @@ public:
                     << "Recurse[" << depth << "]: < bkt " << bsum
                     << " size " << bktsize[i]
                     << " lcp " << int(tree.splitter_lcp[i / 2] & 0x7F);
-                sort<Classify>(strings + bsum, bktsize[i], depth + (tree.splitter_lcp[i / 2] & 0x7F));
+
+                sort<Classify>(strings + bsum, bktsize[i],
+                               depth + (tree.splitter_lcp[i / 2] & 0x7F));
             }
             bsum += bktsize[i++];
 
@@ -904,7 +917,8 @@ public:
                         << "Recurse[" << depth << "]: = bkt " << bsum
                         << " size " << bktsize[i] << " lcp keydepth!";
 
-                    sort<Classify>(strings + bsum, bktsize[i], depth + sizeof(key_type));
+                    sort<Classify>(strings + bsum, bktsize[i],
+                                   depth + sizeof(key_type));
                 }
             }
             bsum += bktsize[i++];

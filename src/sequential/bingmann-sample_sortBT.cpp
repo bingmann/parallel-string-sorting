@@ -33,7 +33,8 @@ using namespace bingmann_sample_sort;
 
 /// search in splitter tree for bucket number
 inline unsigned int
-find_bkt_tree(const key_type& key, const key_type* splitter, const key_type* splitter_tree0, size_t numsplitters)
+find_bkt_tree(const key_type& key, const key_type* splitter,
+              const key_type* splitter_tree0, size_t numsplitters)
 {
 #if 1
     // binary tree traversal without left branch
@@ -271,28 +272,46 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
         // i is even -> bkt[i] is less-than bucket
         if (bktsize[i] > 1)
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bsum << " size " << bktsize[i] << " lcp " << int(splitter_lcp[i / 2]));
-            sample_sortBT(strings + bsum, bktsize[i], depth + splitter_lcp[i / 2]);
+            LOGC(debug_recursion)
+                << "Recurse[" << depth << "]: < bkt " << bsum
+                << " size " << bktsize[i]
+                << " lcp " << int(splitter_lcp[i / 2]);
+
+            if (!g_toplevel_only)
+                sample_sortBT(strings + bsum, bktsize[i],
+                              depth + splitter_lcp[i / 2]);
         }
         bsum += bktsize[i++];
 
         // i is odd -> bkt[i] is equal bucket
         if (bktsize[i] > 1)
         {
-            if ((splitter[i / 2] & 0xFF) == 0) { // equal-bucket has NULL-terminated key, done.
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " is done!");
+            if ((splitter[i / 2] & 0xFF) == 0) {
+                // equal-bucket has NULL-terminated key, done.
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: = bkt " << bsum
+                    << " size " << bktsize[i] << " is done!";
             }
             else {
-                DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bsum << " size " << bktsize[i] << " lcp keydepth!");
-                sample_sortBT(strings + bsum, bktsize[i], depth + sizeof(key_type));
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: = bkt " << bsum
+                    << " size " << bktsize[i] << " lcp keydepth!";
+
+                if (!g_toplevel_only)
+                    sample_sortBT(strings + bsum, bktsize[i],
+                                  depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i++];
     }
     if (bktsize[i] > 0)
     {
-        DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bsum << " size " << bktsize[i] << " no lcp");
-        sample_sortBT(strings + bsum, bktsize[i], depth);
+        LOGC(debug_recursion)
+            << "Recurse[" << depth << "]: > bkt " << bsum
+            << " size " << bktsize[i] << " no lcp";
+
+        if (!g_toplevel_only)
+            sample_sortBT(strings + bsum, bktsize[i], depth);
     }
     bsum += bktsize[i++];
     assert(i == bktnum && bsum == n);

@@ -53,6 +53,8 @@ static const size_t g_samplesort_smallsort = 32 * 1024;
 
 static const size_t oversample_factor = 2;
 
+static const bool g_toplevel_only = false;
+
 static size_t g_ss_steps, g_rs_steps;
 
 enum { TM_GENERAL, TM_MAKE_SAMPLE, TM_MAKE_SPLITTER, TM_CLASSIFY, TM_PREFIXSUM, TM_PERMUTE, TM_SMALLSORT };
@@ -66,7 +68,9 @@ static inline void sample_sort_pre()
 
 static inline void sample_sort_post()
 {
-    g_stats >> "l2cache" << l2cache
+    g_stats
+    >> "toplevel_only" << g_toplevel_only
+        >> "l2cache" << l2cache
         >> "steps_sample_sort" << g_ss_steps
         >> "steps_base_sort" << g_rs_steps;
 

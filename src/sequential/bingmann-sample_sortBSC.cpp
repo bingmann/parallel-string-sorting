@@ -295,7 +295,10 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
                 << "Recurse[" << depth << "]: < bkt " << bsum
                 << " size " << bktsize[i]
                 << " lcp " << int(splitter_lcp[i / 2]);
-            sample_sortBSC<find_bkt>(strings + bsum, bktsize[i], depth + splitter_lcp[i / 2]);
+
+            if (!g_toplevel_only)
+                sample_sortBSC<find_bkt>(strings + bsum, bktsize[i],
+                                         depth + splitter_lcp[i / 2]);
         }
         bsum += bktsize[i++];
 
@@ -311,8 +314,10 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
                 LOGC(debug_recursion)
                     << "Recurse[" << depth << "]: = bkt " << bsum
                     << " size " << bktsize[i] << " lcp keydepth!";
-                sample_sortBSC<find_bkt>(strings + bsum, bktsize[i],
-                                         depth + sizeof(key_type));
+
+                if (!g_toplevel_only)
+                    sample_sortBSC<find_bkt>(strings + bsum, bktsize[i],
+                                             depth + sizeof(key_type));
             }
         }
         bsum += bktsize[i++];
@@ -322,7 +327,9 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
         LOGC(debug_recursion)
             << "Recurse[" << depth << "]: > bkt " << bsum
             << " size " << bktsize[i] << " no lcp";
-        sample_sortBSC<find_bkt>(strings + bsum, bktsize[i], depth);
+
+        if (!g_toplevel_only)
+            sample_sortBSC<find_bkt>(strings + bsum, bktsize[i], depth);
     }
     bsum += bktsize[i++];
     assert(i == bktnum && bsum == n);
