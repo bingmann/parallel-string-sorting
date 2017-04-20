@@ -26,91 +26,6 @@
 #ifndef PSS_SRC_PARALLEL_BINGMANN_PARALLEL_SAMPLE_SORT_TREECALC_HEADER
 #define PSS_SRC_PARALLEL_BINGMANN_PARALLEL_SAMPLE_SORT_TREECALC_HEADER
 
-//! Recursive TreeBuilder for full-descent and unrolled variants, constructs
-//! only a binary tree
-template <size_t numsplitters>
-class TreeBuilderFullDescentTreeCalc
-{
-public:
-    key_type* m_tree;
-    unsigned char* m_lcp_iter;
-    key_type* m_samples;
-
-    TreeBuilderFullDescentTreeCalc(key_type* splitter_tree, unsigned char* splitter_lcp,
-                                   key_type* samples, size_t samplesize)
-        : m_tree(splitter_tree),
-          m_lcp_iter(splitter_lcp),
-          m_samples(samples)
-    {
-        key_type sentinel = 0;
-        recurse(samples, samples + samplesize, 1, sentinel);
-
-        assert(m_lcp_iter == splitter_lcp + numsplitters);
-        splitter_lcp[0] &= 0x80;        // overwrite sentinel lcp for first < everything bucket
-        splitter_lcp[numsplitters] = 0; // sentinel for > everything bucket
-    }
-
-    ptrdiff_t snum(key_type* s) const
-    {
-        return (ptrdiff_t)(s - m_samples);
-    }
-
-    key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                     key_type& rec_prevkey)
-    {
-        DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
-                                             << ", treeidx=" << treeidx << ")");
-
-        // pick middle element as splitter
-        key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
-
-        DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                                    << tlx::hexdump_type(*mid));
-
-        key_type mykey = m_tree[treeidx] = *mid;
-#if 1
-        key_type* midlo = mid;
-        while (lo < midlo && *(midlo - 1) == mykey) midlo--;
-
-        key_type* midhi = mid;
-        while (midhi + 1 < hi && *midhi == mykey) midhi++;
-
-        if (midhi - midlo > 1)
-            DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
-#else
-        key_type* midlo = mid, * midhi = mid + 1;
-#endif
-        if (2 * treeidx < numsplitters)
-        {
-            key_type prevkey = recurse(lo, midlo, 2 * treeidx + 0, rec_prevkey);
-
-            key_type xorSplit = prevkey ^ mykey;
-
-            DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                                            << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                            << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
-
-            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                            | ((mykey & 0xFF) ? 0 : 0x80);  // marker for done splitters
-
-            return recurse(midhi, hi, 2 * treeidx + 1, mykey);
-        }
-        else
-        {
-            key_type xorSplit = rec_prevkey ^ mykey;
-
-            DBG(debug_splitter, "    lcp: " << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                                            << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                                            << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
-
-            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                            | ((mykey & 0xFF) ? 0 : 0x80);  // marker for done splitters
-
-            return mykey;
-        }
-    }
-};
-
 template <size_t treebits>
 class ClassifySimpleTreeCalc
 {
@@ -171,8 +86,8 @@ public:
     /// build tree and splitter array from sample
     void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
-        TreeBuilderFullDescentTreeCalc<numsplitters>
-            (splitter_tree, splitter_lcp, samples, samplesize);
+        bingmann_sample_sort::TreeBuilderFullDescentTreeCalc<numsplitters>(
+            splitter_tree, splitter_lcp, samples, samplesize);
     }
 };
 
@@ -237,8 +152,8 @@ public:
     /// build tree and splitter array from sample
     void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
-        TreeBuilderFullDescentTreeCalc<numsplitters>
-            (splitter_tree, splitter_lcp, samples, samplesize);
+        bingmann_sample_sort::TreeBuilderFullDescentTreeCalc<numsplitters>(
+            splitter_tree, splitter_lcp, samples, samplesize);
     }
 };
 

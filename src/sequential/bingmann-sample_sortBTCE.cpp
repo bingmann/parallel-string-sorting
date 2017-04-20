@@ -23,6 +23,7 @@
  ******************************************************************************/
 
 #include "bingmann-sample_sort.hpp"
+#include "bingmann-sample_sort_common.hpp"
 
 namespace bingmann_sample_sortBTCE {
 
@@ -304,8 +305,6 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
     if (n < g_samplesort_smallsort)
     {
         g_rs_steps++;
-        //return inssort::inssort(strings, n, depth);
-        //return bs_mkqs::ssort2(strings, n, depth);
         g_timer.change(TM_SMALLSORT);
         sample_sort_small_sort(strings, n, depth);
         g_timer.change(TM_GENERAL);
@@ -369,9 +368,10 @@ void sample_sortBTCE2(string* strings, size_t n, size_t depth)
                     << " bits = " << count_high_zero_bits(xorSplit) / 8
                     << " chars lcp";
 
-                splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8) |
-                                  // marker for done splitters
-                                  ((splitter & 0xFF) ? 0 : 0x80);
+                splitter_lcp[i] =
+                    (count_high_zero_bits(xorSplit) / 8) |
+                    // marker for done splitters
+                    ((splitter & 0xFF) ? 0 : 0x80);
             }
 
             prevsplitter = splitter;
@@ -560,157 +560,6 @@ PSS_CONTESTANT(bingmann_sample_sortBTCE2U, "bingmann/sample_sortBTCE2U",
 class SampleSortBTCE3
 {
 public:
-    struct SplitterTree
-    {
-        key_type      splitter_tree[numsplitters + 1];
-        unsigned char splitter_lcp[numsplitters];
-
-        key_type      rec_buildtree(key_type* samples, size_t lo, size_t hi, unsigned int treeidx,
-                                    key_type& rec_prevkey, size_t& iter)
-        {
-            LOGC(debug_splitter)
-                << "rec_buildtree(" << lo << "," << hi << ", treeidx=" << treeidx << ")";
-
-            // pick middle element as splitter
-            size_t mid = (lo + hi) >> 1;
-
-            LOGC(debug_splitter)
-                << "tree[" << treeidx << "] = samples[" << mid << "] = "
-                << tlx::hexdump_type(samples[mid]);
-
-            key_type mykey = splitter_tree[treeidx] = samples[mid];
-#if 1
-            size_t midlo = mid;
-            while (lo < midlo && samples[midlo - 1] == mykey) midlo--;
-
-            size_t midhi = mid + 1;
-            while (midhi < hi && samples[midhi] == mykey) midhi++;
-
-            if (midhi - midlo > 1)
-                LOG0 << "key range = [" << midlo << "," << midhi << ")";
-#else
-            const size_t midlo = mid, midhi = mid + 1;
-#endif
-            if (2 * treeidx < numsplitters)
-            {
-                key_type prevkey = rec_buildtree(samples, lo, midlo, 2 * treeidx + 0, rec_prevkey, iter);
-
-                key_type xorSplit = prevkey ^ mykey;
-
-                LOGC(debug_splitter)
-                    << "    lcp: "
-                    << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                    << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
-
-                splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8) |
-                                       ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
-
-                return rec_buildtree(samples, midhi, hi, 2 * treeidx + 1, mykey, iter);
-            }
-            else
-            {
-                key_type xorSplit = rec_prevkey ^ mykey;
-
-                LOGC(debug_splitter)
-                    << "    lcp: "
-                    << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                    << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
-
-                splitter_lcp[iter++] = (count_high_zero_bits(xorSplit) / 8) |
-                                       ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
-
-                return mykey;
-            }
-        }
-    };
-
-    struct TreeBuilder
-    {
-        key_type     * m_tree;
-        unsigned char* m_lcp_iter;
-        key_type     * m_samples;
-
-        TreeBuilder(SplitterTree& st, key_type* samples, size_t samplesize)
-            : m_tree(st.splitter_tree),
-              m_lcp_iter(st.splitter_lcp),
-              m_samples(samples)
-        {
-            key_type sentinel = 0;
-            recurse(samples, samples + samplesize, 1, sentinel);
-
-            assert(m_lcp_iter == st.splitter_lcp + numsplitters);
-            st.splitter_lcp[0] &= 0x80; // overwrite sentinel lcp for first < everything bucket
-        }
-
-        ptrdiff_t    snum(key_type* s) const
-        {
-            return (ptrdiff_t)(s - m_samples);
-        }
-
-        key_type     recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                             key_type& rec_prevkey)
-        {
-            LOGC(debug_splitter)
-                << "rec_buildtree(" << snum(lo) << "," << snum(hi)
-                << ", treeidx=" << treeidx << ")";
-
-            // pick middle element as splitter
-            key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
-
-            LOGC(debug_splitter)
-                << "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-                << tlx::hexdump_type(*mid);
-
-            key_type mykey = m_tree[treeidx] = *mid;
-#if 1
-            key_type* midlo = mid;
-            while (lo < midlo && *(midlo - 1) == mykey) midlo--;
-
-            key_type* midhi = mid;
-            while (midhi + 1 < hi && *midhi == mykey) midhi++;
-
-            if (midhi - midlo > 1)
-                LOG0 << "key range = [" << snum(midlo) << "," << snum(midhi) << ")";
-#else
-            key_type* midlo = mid, * midhi = mid + 1;
-#endif
-            if (2 * treeidx < numsplitters)
-            {
-                key_type prevkey = recurse(lo, midlo, 2 * treeidx + 0, rec_prevkey);
-
-                key_type xorSplit = prevkey ^ mykey;
-
-                LOGC(debug_splitter)
-                    << "    lcp: "
-                    << tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                    << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
-
-                * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8) |
-                                 ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
-
-                return recurse(midhi, hi, 2 * treeidx + 1, mykey);
-            }
-            else
-            {
-                key_type xorSplit = rec_prevkey ^ mykey;
-
-                LOGC(debug_splitter)
-                    << "    lcp: "
-                    << tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = "
-                    << tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) << " bits = "
-                    << count_high_zero_bits(xorSplit) / 8 << " chars lcp";
-
-                * m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8) |
-                                 ((mykey & 0xFF) ? 0 : 0x80); // marker for done splitters
-
-                return mykey;
-            }
-        }
-    };
-
     //! Variant of string sample-sort: use super-scalar binary search on
     //! splitters, with index caching.
     template <template <size_t> class Classify>
@@ -719,8 +568,6 @@ public:
         if (n < g_samplesort_smallsort)
         {
             g_rs_steps++;
-            //return inssort::inssort(strings, n, depth);
-            //return bs_mkqs::ssort2(strings, n, depth);
             g_timer.change(TM_SMALLSORT);
             sample_sort_small_sort(strings, n, depth);
             g_timer.change(TM_GENERAL);
@@ -746,23 +593,15 @@ public:
 
         g_timer.change(TM_MAKE_SPLITTER);
 
-#if 0
-        SplitterTree tree;
-        {
-            key_type sentinel = 0;
-            size_t iter = 0;
-            tree.rec_buildtree(samples, 0, samplesize, 1, sentinel, iter);
-            tree.splitter_lcp[0] = 0; // overwrite sentinel for first < everything bucket
-            assert(iter == numsplitters);
-        }
-#else
-        SplitterTree tree;
-        TreeBuilder(tree, samples, samplesize);
-#endif
+        key_type splitter_tree[numsplitters + 1];
+        unsigned char splitter_lcp[numsplitters + 1];
+
+        TreeBuilderFullDescentTreeCalc<numsplitters>(
+            splitter_tree, splitter_lcp, samples, samplesize);
 
 #if 0
-        key_type splitter_tree[numsplitters + 1];
-        unsigned char splitter_lcp[numsplitters];
+        key_type cmp_splitter_tree[numsplitters + 1];
+        unsigned char cmp_splitter_lcp[numsplitters];
 
         {
             unsigned int treelvl[treebits]; // treebits == treelevels
@@ -777,7 +616,7 @@ public:
             key_type prevsplitter;
 
             LOGC(debug_splitter) << "splitter:";
-            splitter_lcp[0] = 0; // sentinel for first < everything bucket
+            cmp_splitter_lcp[0] = 0; // sentinel for first < everything bucket
             for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
             {
                 const key_type& splitter = samples[j];
@@ -785,8 +624,9 @@ public:
                 int l = __builtin_ctz(i + 1);
                 LOGC(debug_splitter)
                     << "splitter[" << i << "] on level " << l
-                    << " = tree[" << treelvl[l] << "] = key " << tlx::hexdump_type(splitter);
-                splitter_tree[treelvl[l]++] = splitter;
+                    << " = tree[" << treelvl[l] << "] = key "
+                    << tlx::hexdump_type(splitter);
+                cmp_splitter_tree[treelvl[l]++] = splitter;
 
                 if (i != 0) {
                     key_type xorSplit = prevsplitter ^ splitter;
@@ -798,8 +638,10 @@ public:
                         << count_high_zero_bits(xorSplit) << " bits = "
                         << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
 
-                    splitter_lcp[i] = (count_high_zero_bits(xorSplit) / 8) |
-                                      ((splitter & 0xFF) ? 0 : 0x80); // marker for done splitters
+                    cmp_splitter_lcp[i] =
+                        (count_high_zero_bits(xorSplit) / 8) |
+                        // marker for done splitters
+                        ((splitter & 0xFF) ? 0 : 0x80);
                 }
 
                 prevsplitter = splitter;
@@ -809,11 +651,15 @@ public:
 
         for (size_t i = 0; i < numsplitters; ++i)
         {
-            LOG1 << "splitter_tree[" << i + 1 << "] = " << tree.splitter_tree[i + 1] << " -? " << splitter_tree[i + 1];
-            assert(tree.splitter_tree[i + 1] == splitter_tree[i + 1]);
+            LOG1 << "splitter_tree[" << i + 1 << "] = "
+                 << tree.splitter_tree[i + 1] << " -? "
+                 << cmp_splitter_tree[i + 1];
+            assert(tree.splitter_tree[i + 1] == cmp_splitter_tree[i + 1]);
 
-            LOG1 << "splitter_lcp[" << i << "] = " << int(tree.splitter_lcp[i]) << " -? " << int(splitter_lcp[i]);
-            assert(tree.splitter_lcp[i] == splitter_lcp[i]);
+            LOG1 << "splitter_lcp[" << i << "] = "
+                 << int(tree.splitter_lcp[i])
+                 << " -? " << int(cmp_splitter_lcp[i]);
+            assert(tree.splitter_lcp[i] == cmp_splitter_lcp[i]);
         }
 #endif
 
@@ -829,7 +675,7 @@ public:
             // binary search in splitter with equal check
             key_type key = get_char<key_type>(strings[si], depth);
 
-            unsigned int b = Classify<treebits>::find_bkt(key, tree.splitter_tree + 1);
+            unsigned int b = Classify<treebits>::find_bkt(key, splitter_tree + 1);
 
             assert(b < bktnum);
 
@@ -896,17 +742,17 @@ public:
                 LOGC(debug_recursion)
                     << "Recurse[" << depth << "]: < bkt " << bsum
                     << " size " << bktsize[i]
-                    << " lcp " << int(tree.splitter_lcp[i / 2] & 0x7F);
+                    << " lcp " << int(splitter_lcp[i / 2] & 0x7F);
 
                 sort<Classify>(strings + bsum, bktsize[i],
-                               depth + (tree.splitter_lcp[i / 2] & 0x7F));
+                               depth + (splitter_lcp[i / 2] & 0x7F));
             }
             bsum += bktsize[i++];
 
             // i is odd -> bkt[i] is equal bucket
             if (bktsize[i] > 1)
             {
-                if (tree.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
+                if (splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
                     LOGC(debug_recursion)
                         << "Recurse[" << depth << "]: = bkt " << bsum
                         << " size " << bktsize[i] << " is done!";

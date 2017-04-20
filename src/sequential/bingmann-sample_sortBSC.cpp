@@ -31,7 +31,7 @@ using namespace bingmann_sample_sort;
 // ----------------------------------------------------------------------------
 
 /// binary search on splitter array for bucket number
-inline unsigned int
+static inline unsigned int
 find_bkt_binsearch(const key_type& key, const key_type* splitter, size_t leaves)
 {
     unsigned int lo = 0, hi = leaves;

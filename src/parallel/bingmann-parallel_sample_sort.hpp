@@ -44,9 +44,11 @@
 
 #include "../sequential/inssort.hpp"
 #include "../sequential/bingmann-lcp_inssort.hpp"
+#include "../sequential/bingmann-sample_sort_common.hpp"
 
 #include <tlx/string/hexdump.hpp>
 #include <tlx/meta/log2.hpp>
+#include <tlx/logger.hpp>
 
 #ifndef CALC_LCP
 #define CALC_LCP 0
@@ -273,106 +275,6 @@ getCharAtDepth(const key_type& a, unsigned char d)
     return static_cast<unsigned char>(a >> (8 * (sizeof(key_type) - 1 - d)));
 }
 
-//! Recursive TreeBuilder for full-descent and unrolled variants, constructs a
-//! binary tree and the plain splitter array.
-template <size_t numsplitters>
-class TreeBuilderFullDescent
-{
-public:
-    key_type* m_splitter;
-    key_type* m_tree;
-    unsigned char* m_lcp_iter;
-    key_type* m_samples;
-
-    TreeBuilderFullDescent(
-        key_type* splitter, key_type* splitter_tree,
-        unsigned char* splitter_lcp,
-        key_type* samples, size_t samplesize)
-        : m_splitter(splitter),
-          m_tree(splitter_tree),
-          m_lcp_iter(splitter_lcp),
-          m_samples(samples)
-    {
-        key_type sentinel = 0;
-        recurse(samples, samples + samplesize, 1, sentinel);
-
-        assert(m_splitter == splitter + numsplitters);
-        assert(m_lcp_iter == splitter_lcp + numsplitters);
-        // overwrite sentinel lcp for first < everything bucket
-        splitter_lcp[0] &= 0x80;
-        // sentinel for > everything bucket
-        splitter_lcp[numsplitters] = 0;
-    }
-
-    ptrdiff_t snum(key_type* s) const
-    {
-        return (ptrdiff_t)(s - m_samples);
-    }
-
-    key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                     key_type& rec_prevkey)
-    {
-        DBG(debug_splitter, "rec_buildtree(" << snum(lo) << "," << snum(hi)
-                                             << ", treeidx=" << treeidx << ")");
-
-        // pick middle element as splitter
-        key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
-
-        DBG(debug_splitter, "tree[" << treeidx << "] = samples[" << snum(mid) <<
-            "] = " << tlx::hexdump_type(*mid));
-
-        key_type mykey = m_tree[treeidx] = *mid;
-#if 1
-        key_type* midlo = mid;
-        while (lo < midlo && *(midlo - 1) == mykey) midlo--;
-
-        key_type* midhi = mid;
-        while (midhi + 1 < hi && *midhi == mykey) midhi++;
-
-        if (midhi - midlo > 1)
-            DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
-#else
-        key_type* midlo = mid, * midhi = mid + 1;
-#endif
-        if (2 * treeidx < numsplitters)
-        {
-            key_type prevkey = recurse(lo, midlo, 2 * treeidx + 0, rec_prevkey);
-
-            key_type xorSplit = prevkey ^ mykey;
-
-            DBG(debug_splitter, "    lcp: " <<
-                tlx::hexdump_type(prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = " <<
-                tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
-                " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
-
-            *m_splitter++ = mykey;
-
-            // marker for done splitters
-            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                            | ((mykey & 0xFF) ? 0 : 0x80);
-
-            return recurse(midhi, hi, 2 * treeidx + 1, mykey);
-        }
-        else
-        {
-            key_type xorSplit = rec_prevkey ^ mykey;
-
-            DBG(debug_splitter, "    lcp: " <<
-                tlx::hexdump_type(rec_prevkey) << " XOR " << tlx::hexdump_type(mykey) << " = " <<
-                tlx::hexdump_type(xorSplit) << " - " << count_high_zero_bits(xorSplit) <<
-                " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
-
-            *m_splitter++ = mykey;
-
-            // marker for done splitters
-            *m_lcp_iter++ = (count_high_zero_bits(xorSplit) / 8)
-                            | ((mykey & 0xFF) ? 0 : 0x80);
-
-            return mykey;
-        }
-    }
-};
-
 // ****************************************************************************
 // * Classification Subroutines for TreeBuilderFullDescent: rolled, and two
 // * unrolled variants
@@ -438,7 +340,7 @@ public:
     void build(key_type* samples, size_t samplesize,
                unsigned char* splitter_lcp)
     {
-        TreeBuilderFullDescent<numsplitters>(
+        bingmann_sample_sort::TreeBuilderFullDescent<numsplitters>(
             splitter, splitter_tree, splitter_lcp,
             samples, samplesize);
     }
@@ -507,7 +409,7 @@ public:
     void
     build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
-        TreeBuilderFullDescent<numsplitters>(
+        bingmann_sample_sort::TreeBuilderFullDescent<numsplitters>(
             splitter, splitter_tree, splitter_lcp,
             samples, samplesize);
     }
