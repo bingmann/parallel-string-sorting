@@ -60,7 +60,7 @@ public:
     typedef std::pair<key_type, size_t> samplepair_type;
 
     key_type splitter_tree[numsplitters + 1];
-    unsigned char splitter_lcp[numsplitters];
+    unsigned char splitter_lcp[numsplitters + 1];
     unsigned char splitter_subtree[numsplitters];
 
     class Builder

@@ -44,7 +44,11 @@
 
 #include "../sequential/inssort.hpp"
 #include "../sequential/bingmann-lcp_inssort.hpp"
-#include "../sequential/bingmann-sample_sort_common.hpp"
+#include "../sequential/bingmann-sample_sort_tree_builder.hpp"
+#include "../sequential/bingmann-sample_sortBSC.hpp"
+#include "../sequential/bingmann-sample_sortBTC.hpp"
+#include "../sequential/bingmann-sample_sortBTCE.hpp"
+#include "../sequential/bingmann-sample_sortBTCT.hpp"
 
 #include <tlx/string/hexdump.hpp>
 #include <tlx/meta/log2.hpp>
@@ -276,232 +280,6 @@ getCharAtDepth(const key_type& a, unsigned char d)
 }
 
 // ****************************************************************************
-// * Classification Subroutines for TreeBuilderFullDescent: rolled, and two
-// * unrolled variants
-
-template <size_t treebits>
-class ClassifySimple
-{
-public:
-    static const size_t numsplitters = (1 << treebits) - 1;
-
-    key_type splitter[numsplitters];
-    key_type splitter_tree[numsplitters + 1];
-
-    /// binary search on splitter array for bucket number
-    unsigned int find_bkt_tree(const key_type& key) const
-    {
-        // binary tree traversal without left branch
-
-        unsigned int i = 1;
-
-        while (i <= numsplitters)
-        {
-#if 0
-            // in gcc-4.6.3 this produces a SETA, LEA sequence
-            i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
-#else
-            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is
-            // slightly faster
-            if (key <= splitter_tree[i])
-                i = 2 * i + 0;
-            else    // (key > splitter_tree[i])
-                i = 2 * i + 1;
-#endif
-        }
-
-        i -= numsplitters + 1;
-
-        size_t b = i * 2;                                    // < bucket
-        if (i < numsplitters && splitter[i] == key) b += 1;  // equal bucket
-
-        return b;
-    }
-
-    /// classify all strings in area by walking tree and saving bucket id
-    template <typename StringSet>
-    void classify(
-        const StringSet& strset,
-        typename StringSet::Iterator begin, typename StringSet::Iterator end,
-        uint16_t* bktout, size_t depth) const
-    {
-        while (begin != end)
-        {
-            key_type key = strset.get_uint64(*begin++, depth);
-            *bktout++ = find_bkt_tree(key);
-        }
-    }
-
-    //! return a splitter
-    key_type get_splitter(unsigned int i) const
-    { return splitter[i]; }
-
-    /// build tree and splitter array from sample
-    void build(key_type* samples, size_t samplesize,
-               unsigned char* splitter_lcp)
-    {
-        bingmann_sample_sort::TreeBuilderFullDescent<numsplitters>(
-            splitter, splitter_tree, splitter_lcp,
-            samples, samplesize);
-    }
-};
-
-template <size_t treebits>
-class ClassifyUnrollTree
-{
-public:
-    static const size_t numsplitters = (1 << treebits) - 1;
-
-    key_type splitter[numsplitters];
-    key_type splitter_tree[numsplitters + 1];
-
-    /// binary search on splitter array for bucket number
-    __attribute__ ((optimize("unroll-all-loops")))
-    unsigned int
-    find_bkt_tree(const key_type& key) const
-    {
-        // binary tree traversal without left branch
-
-        unsigned int i = 1;
-
-        for (size_t l = 0; l < treebits; ++l)
-        {
-#if 0
-            // in gcc-4.6.3 this produces a SETA, LEA sequence
-            i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
-#else
-            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is
-            // slightly faster
-            if (key <= splitter_tree[i])
-                i = 2 * i + 0;
-            else    // (key > splitter_tree[i])
-                i = 2 * i + 1;
-#endif
-        }
-
-        i -= numsplitters + 1;
-
-        size_t b = i * 2;                                    // < bucket
-        if (i < numsplitters && splitter[i] == key) b += 1;  // equal bucket
-
-        return b;
-    }
-
-    /// classify all strings in area by walking tree and saving bucket id
-    template <typename StringSet>
-    void classify(
-        const StringSet& strset,
-        typename StringSet::Iterator begin, typename StringSet::Iterator end,
-        uint16_t* bktout, size_t depth) const
-    {
-        while (begin != end)
-        {
-            key_type key = strset.get_uint64(*begin++, depth);
-            *bktout++ = find_bkt_tree(key);
-        }
-    }
-
-    //! return a splitter
-    key_type get_splitter(unsigned int i) const
-    { return splitter[i]; }
-
-    /// build tree and splitter array from sample
-    void
-    build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
-    {
-        bingmann_sample_sort::TreeBuilderFullDescent<numsplitters>(
-            splitter, splitter_tree, splitter_lcp,
-            samples, samplesize);
-    }
-};
-
-template <size_t treebits>
-class ClassifyUnrollBoth : public ClassifyUnrollTree<treebits>
-{
-public:
-    /// search in splitter tree for bucket number, unrolled for U keys at once.
-    template <int U>
-    __attribute__ ((optimize("unroll-all-loops")))
-    void
-    find_bkt_tree_unroll(const key_type key[U], uint16_t obkt[U]) const
-    {
-        // binary tree traversal without left branch
-
-        static const size_t numsplitters = this->numsplitters;
-        const key_type* splitter = this->splitter;
-        const key_type* splitter_tree = this->splitter_tree;
-
-        unsigned int i[U];
-        std::fill(i + 0, i + U, 1);
-
-        for (size_t l = 0; l < treebits; ++l)
-        {
-            for (int u = 0; u < U; ++u)
-            {
-#if 0
-                // in gcc-4.6.3 this produces a SETA, LEA sequence
-                i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
-#else
-                // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which
-                // is slightly faster
-                if (key[u] <= splitter_tree[i[u]])
-                    i[u] = 2 * i[u] + 0;
-                else    // (key > splitter_tree[i[u]])
-                    i[u] = 2 * i[u] + 1;
-#endif
-            }
-        }
-
-        for (int u = 0; u < U; ++u)
-            i[u] -= numsplitters + 1;
-
-        for (int u = 0; u < U; ++u) {
-            // < bucket
-            obkt[u] = i[u] * 2;
-        }
-
-        for (int u = 0; u < U; ++u)
-        {
-            // equal bucket
-            if (i[u] < numsplitters && splitter[i[u]] == key[u]) obkt[u] += 1;
-        }
-    }
-
-    /// classify all strings in area by walking tree and saving bucket id,
-    /// unrolled loops
-    template <typename StringSet>
-    void classify(
-        const StringSet& strset,
-        typename StringSet::Iterator begin, typename StringSet::Iterator end,
-        uint16_t* bktout, size_t depth) const
-    {
-        while (begin != end)
-        {
-            static const int rollout = 4;
-            if (begin + rollout < end)
-            {
-                key_type key[rollout];
-                key[0] = strset.get_uint64(begin[0], depth);
-                key[1] = strset.get_uint64(begin[1], depth);
-                key[2] = strset.get_uint64(begin[2], depth);
-                key[3] = strset.get_uint64(begin[3], depth);
-
-                find_bkt_tree_unroll<rollout>(key, bktout);
-
-                begin += rollout;
-                bktout += rollout;
-            }
-            else
-            {
-                // binary search in splitter with equal check
-                key_type key = strset.get_uint64(*begin++, depth);
-                *bktout++ = this->find_bkt_tree(key);
-            }
-        }
-    }
-};
-
-// ****************************************************************************
 // *** Insertion Sort Type-Switch
 
 template <typename StringSet>
@@ -731,10 +509,8 @@ public:
 
             LCGRandom rng(&samples);
 
-            for (unsigned int i = 0; i < samplesize; ++i)
-            {
+            for (size_t i = 0; i < samplesize; ++i)
                 samples[i] = strset.get_uint64(strset[begin + rng() % n], depth);
-            }
 
             std::sort(samples, samples + samplesize);
 
@@ -1618,7 +1394,7 @@ public:
 
         LCGRandom rng(&samples);
 
-        for (unsigned int i = 0; i < samplesize; ++i)
+        for (size_t i = 0; i < samplesize; ++i)
         {
             samples[i] = strset.get_uint64(strset[begin + rng() % n], depth);
         }
@@ -1838,7 +1614,8 @@ void Enqueue(Context& ctx, SortStep* pstep,
     }
 }
 
-template <template <size_t> class Classify = ClassifyUnrollBoth,
+template <template <size_t> class Classify =
+              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
           typename StringPtr>
 void parallel_sample_sort(const StringPtr& strptr, size_t depth)
 {
@@ -1879,7 +1656,8 @@ void parallel_sample_sort(const StringPtr& strptr, size_t depth)
     }
 }
 
-template <template <size_t> class Classify = ClassifyUnrollBoth,
+template <template <size_t> class Classify =
+              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
           typename StringSet>
 void parallel_sample_sort_base(const StringSet& strset, size_t depth)
 {
@@ -1891,7 +1669,7 @@ void parallel_sample_sort_base(const StringSet& strset, size_t depth)
 
     StringPtr strptr(strset, StringSet(shadow));
 
-    parallel_sample_sort<Classify, StringPtr>(strptr, depth);
+    parallel_sample_sort<Classify>(strptr, depth);
 
     StringSet::deallocate(shadow);
 }
@@ -1903,7 +1681,8 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
         UCharStringSet(strings, strings + n), depth);
 }
 
-template <template <size_t> class Classify = ClassifyUnrollBoth,
+template <template <size_t> class Classify =
+              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
           typename StringSet>
 void parallel_sample_sort_out_base(
     const StringSet& strset, const StringSet& output, size_t depth)
@@ -1916,7 +1695,7 @@ void parallel_sample_sort_out_base(
 
     StringOutPtr strptr(strset, StringSet(shadow), output);
 
-    parallel_sample_sort<Classify, StringOutPtr>(strptr, depth);
+    parallel_sample_sort<Classify>(strptr, depth);
 
     StringSet::deallocate(shadow);
 }
@@ -1931,13 +1710,14 @@ void parallel_sample_sort_out_base(
         depth);
 }
 
-template <template <size_t> class Classify = ClassifyUnrollBoth,
+template <template <size_t> class Classify =
+              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
           typename StringSet>
 void parallel_sample_sort_out_test(const StringSet& strset, size_t depth)
 {
     typename StringSet::Container out = strset.allocate(strset.size());
     StringSet output(out);
-    parallel_sample_sort_out_base(strset, output, depth);
+    parallel_sample_sort_out_base<Classify>(strset, output, depth);
 
     // move strings back to strset
     std::move(output.begin(), output.end(), strset.begin());
@@ -1949,8 +1729,7 @@ void parallel_sample_sort_out_test(const StringSet& strset, size_t depth)
 
 #if CALC_LCP
 
-template <template <size_t> class Classify = ClassifyUnrollBoth,
-          typename StringSet>
+template <typename Classify, typename StringSet>
 void parallel_sample_sort_lcp_base(
     const StringSet& strset, uintptr_t* lcp, size_t depth)
 {
@@ -1962,12 +1741,13 @@ void parallel_sample_sort_lcp_base(
 
     StringPtr strptr(strset, StringSet(shadow), lcp);
 
-    parallel_sample_sort<Classify, StringPtr>(strptr, depth);
+    parallel_sample_sort<Classify>(strptr, depth);
 
     StringSet::deallocate(shadow);
 }
 
-template <template <size_t> class Classify = ClassifyUnrollBoth,
+template <template <size_t> class Classify =
+              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
           typename StringSet>
 void parallel_sample_sort_lcp_verify(const StringSet& strset, size_t depth)
 {
@@ -2002,7 +1782,7 @@ void parallel_sample_sort_numa(string* strings, size_t n,
     StringShadowLcpCacheOutPtr<StringSet>
     strptr(strset, shadow, outputss, output.lcps, output.cachedChars);
 
-    Enqueue<ClassifyUnrollBoth>(ctx, NULL, strptr, 0);
+    Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleave>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads);
 
     // fixup first entry of LCP and charcache
@@ -2041,7 +1821,8 @@ void parallel_sample_sort_numa2(const UCharStringShadowLcpCacheOutPtr* strptr,
         if (ctx[i]->threadnum == 0)
             ctx[i]->threadnum = 1;
 
-        Enqueue<ClassifyUnrollBoth>(*ctx[i], NULL, strptr[i], 0);
+        Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleave>(
+            *ctx[i], NULL, strptr[i], 0);
 
         group.add_jobqueue(&ctx[i]->jobqueue);
     }
@@ -2073,7 +1854,8 @@ void parallel_sample_sort_numa2(const UCharStringShadowLcpCacheOutPtr* strptr,
 static inline void
 parallel_sample_sortBTC(string* strings, size_t n)
 {
-    parallel_sample_sort_base<ClassifySimple>(strings, n, 0);
+    parallel_sample_sort_base<bingmann_sample_sort::ClassifyTreeSimple>(
+        strings, n, 0);
 }
 
 PSS_CONTESTANT_PARALLEL_LCP(
@@ -2084,7 +1866,8 @@ PSS_CONTESTANT_PARALLEL_LCP(
 static inline void
 parallel_sample_sortBTCU1(string* strings, size_t n)
 {
-    parallel_sample_sort_base<ClassifyUnrollTree>(strings, n, 0);
+    parallel_sample_sort_base<bingmann_sample_sort::ClassifyTreeUnroll>(
+        strings, n, 0);
 }
 
 PSS_CONTESTANT_PARALLEL_LCP(
@@ -2095,7 +1878,8 @@ PSS_CONTESTANT_PARALLEL_LCP(
 static inline void
 parallel_sample_sortBTCU2(string* strings, size_t n)
 {
-    parallel_sample_sort_base<ClassifyUnrollBoth>(strings, n, 0);
+    parallel_sample_sort_base<bingmann_sample_sort::ClassifyTreeUnrollInterleave>(
+        strings, n, 0);
 }
 
 PSS_CONTESTANT_PARALLEL_LCP(
@@ -2108,7 +1892,8 @@ parallel_sample_sortBTCU2_out(string* strings, size_t n)
 {
     string* output = new string[n];
 
-    parallel_sample_sort_out_base<ClassifyUnrollBoth>(strings, output, n, 0);
+    parallel_sample_sort_out_base<bingmann_sample_sort::ClassifyTreeUnrollInterleave>(
+        strings, output, n, 0);
 
     // copy back for verification
     memcpy(strings, output, n * sizeof(string));
@@ -2122,93 +1907,11 @@ PSS_CONTESTANT_PARALLEL_LCP(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// ****************************************************************************
-// *** Classification with Binary Search in Splitter Array (old BSC variant)
-
-template <size_t treebits>
-class ClassifyBinarySearch
-{
-public:
-    // NOTE: for binary search numsplitters need not be 2^k-1, any size will
-    // do, but the tree implementations are always faster, so we keep this only
-    // for historical reasons.
-    static const size_t numsplitters = (1 << treebits) - 1;
-
-    key_type splitter[numsplitters];
-
-    /// binary search on splitter array for bucket number
-    unsigned int find_bkt_tree(const key_type& key) const
-    {
-        unsigned int lo = 0, hi = numsplitters;
-
-        while (lo < hi)
-        {
-            unsigned int mid = (lo + hi) >> 1;
-            assert(mid < numsplitters);
-
-            if (key <= splitter[mid])
-                hi = mid;
-            else                                               // (key > splitter[mid])
-                lo = mid + 1;
-        }
-
-        size_t b = lo * 2;                                     // < bucket
-        if (lo < numsplitters && splitter[lo] == key) b += 1;  // equal bucket
-
-        return b;
-    }
-
-    /// classify all strings in area by walking tree and saving bucket id
-    template <typename StringSet>
-    void classify(
-        const StringSet& strset,
-        typename StringSet::Iterator begin, typename StringSet::Iterator end,
-        uint16_t* bktout, size_t depth) const
-    {
-        while (begin != end)
-        {
-            key_type key = strset.get_uint64(*begin++, depth);
-            *bktout++ = find_bkt_tree(key);
-        }
-    }
-
-    //! return a splitter
-    key_type get_splitter(unsigned int i) const
-    { return splitter[i]; }
-
-    /// build tree and splitter array from sample
-    void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
-    {
-        const size_t oversample_factor = samplesize / numsplitters;
-        DBG(debug_splitter, "oversample_factor: " << oversample_factor);
-
-        DBG(debug_splitter, "splitter:");
-        splitter_lcp[0] = 0; // sentinel for first < everything bucket
-        for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
-        {
-            splitter[i] = samples[j];
-            DBG(debug_splitter, "key " << tlx::hexdump_type(splitter[i]));
-
-            if (i != 0) {
-                key_type xorSplit = splitter[i - 1] ^ splitter[i];
-
-                DBG1(debug_splitter, "    XOR -> " << tlx::hexdump_type(xorSplit) << " - ");
-
-                DBG3(debug_splitter, count_high_zero_bits(xorSplit) <<
-                     " bits = " << count_high_zero_bits(xorSplit) / 8 << " chars lcp");
-
-                splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
-            }
-
-            j += oversample_factor;
-        }
-    }
-};
-
 static inline void
 parallel_sample_sortBSC(string* strings, size_t n)
 {
-    parallel_sample_sort_base<ClassifyBinarySearch>(strings, n, 0);
+    parallel_sample_sort_base<
+        bingmann_sample_sort::ClassifyBinarySearch>(strings, n, 0);
 }
 
 PSS_CONTESTANT_PARALLEL_LCP(
@@ -2218,9 +1921,69 @@ PSS_CONTESTANT_PARALLEL_LCP(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Different Classifier variants are moved to other files
-#include "bingmann-parallel_sample_sort_equal.hpp"
-#include "bingmann-parallel_sample_sort_treecalc.hpp"
+static inline void
+parallel_sample_sortBTCE(string* strings, size_t n)
+{
+    parallel_sample_sort_base<
+        bingmann_sample_sort::ClassifyEqual>(strings, n, 0);
+}
+
+PSS_CONTESTANT_PARALLEL_LCP(
+    parallel_sample_sortBTCE,
+    "bingmann/parallel_sample_sortBTCE",
+    "pS5: binary tree, equality, bktcache")
+
+static inline void
+parallel_sample_sortBTCEU1(string* strings, size_t n)
+{
+    parallel_sample_sort_base<
+        bingmann_sample_sort::ClassifyEqualUnrollTree>(strings, n, 0);
+}
+
+PSS_CONTESTANT_PARALLEL_LCP(
+    parallel_sample_sortBTCEU1,
+    "bingmann/parallel_sample_sortBTCEU1",
+    "pS5: binary tree, equality, bktcache, unroll tree")
+
+/*----------------------------------------------------------------------------*/
+
+static inline void
+parallel_sample_sortBTCT(string* strings, size_t n)
+{
+    parallel_sample_sort_base<
+        bingmann_sample_sort::ClassifyTreeCalcSimple>(strings, n, 0);
+}
+
+PSS_CONTESTANT_PARALLEL_LCP(
+    parallel_sample_sortBTCT,
+    "bingmann/parallel_sample_sortBTCT",
+    "pS5: binary tree, bktcache, tree calc")
+
+static inline void
+parallel_sample_sortBTCTU1(string* strings, size_t n)
+{
+    parallel_sample_sort_base<
+        bingmann_sample_sort::ClassifyTreeCalcUnroll>(strings, n, 0);
+}
+
+PSS_CONTESTANT_PARALLEL_LCP(
+    parallel_sample_sortBTCTU1,
+    "bingmann/parallel_sample_sortBTCTU1",
+    "pS5: binary tree, bktcache, unroll tree, tree calc")
+
+static inline void
+parallel_sample_sortBTCTU2(string* strings, size_t n)
+{
+    parallel_sample_sort_base<
+        bingmann_sample_sort::ClassifyTreeCalcUnroll>(strings, n, 0);
+}
+
+PSS_CONTESTANT_PARALLEL_LCP(
+    parallel_sample_sortBTCTU2,
+    "bingmann/parallel_sample_sortBTCTU2",
+    "pS5: binary tree, bktcache, unroll tree and strings, tree calc")
+
+/*----------------------------------------------------------------------------*/
 
 } // namespace bingmann_parallel_sample_sort(_lcp)
 

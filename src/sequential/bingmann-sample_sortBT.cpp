@@ -136,7 +136,7 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
     std::sort(samples, samples + samplesize);
 
     key_type splitter[numsplitters];
-    unsigned char splitter_lcp[numsplitters];
+    unsigned char splitter_lcp[numsplitters + 1];
 
     LOGC(debug_splitter) << "splitter:";
     splitter_lcp[0] = 0; // sentinel for first < everything bucket

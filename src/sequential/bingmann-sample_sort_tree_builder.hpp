@@ -1,5 +1,5 @@
 /*******************************************************************************
- * src/sequential/bingmann-sample_sort_common.hpp
+ * src/sequential/bingmann-sample_sort_tree_builder.hpp
  *
  * Experiments with sequential Super Scalar String Sample-Sort (S^5).
  *
@@ -20,8 +20,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
-#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_COMMON_HEADER
-#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_COMMON_HEADER
+#ifndef PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_TREE_BUILDER_HEADER
+#define PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_TREE_BUILDER_HEADER
 
 #include "bingmann-sample_sort.hpp"
 
@@ -29,10 +29,49 @@
 
 namespace bingmann_sample_sort {
 
-//! Recursive TreeBuilder for full-descent and unrolled variants, constructs a
-//! binary tree and the plain splitter array.
+//! Iterative TreeBuilder, constructs only a pre-order array of splitters and
+//! the corresponding LCPs - used only in the slow binary-search variants.
 template <size_t numsplitters>
-class TreeBuilderFullDescent
+class TreeBuilderPreorder
+{
+public:
+    TreeBuilderPreorder(
+        key_type splitter[numsplitters],
+        unsigned char splitter_lcp[numsplitters + 1],
+        const key_type* samples, size_t samplesize)
+    {
+        const size_t oversample_factor = samplesize / numsplitters;
+        LOGC(debug_splitter) << "oversample_factor: " << oversample_factor;
+
+        LOGC(debug_splitter) << "splitter:";
+        splitter_lcp[0] = 0; // sentinel for first < everything bucket
+        for (size_t i = 0, j = oversample_factor / 2; i < numsplitters; ++i)
+        {
+            splitter[i] = samples[j];
+            LOGC(debug_splitter) << "key " << tlx::hexdump_type(splitter[i]);
+
+            if (i != 0) {
+                key_type xorSplit = splitter[i - 1] ^ splitter[i];
+
+                LOGC(debug_splitter)
+                    << "    XOR -> " << tlx::hexdump_type(xorSplit)
+                    << " - " << count_high_zero_bits(xorSplit)
+                    << " bits = " << count_high_zero_bits(xorSplit) / 8
+                    << " chars lcp";
+
+                splitter_lcp[i] = count_high_zero_bits(xorSplit) / 8;
+            }
+
+            j += oversample_factor;
+        }
+    }
+};
+
+//! Recursive TreeBuilder for full-descent and unrolled variants, constructs a
+//! both a pre-order and level-order array of splitters and the corresponding
+//! LCPs.
+template <size_t numsplitters>
+class TreeBuilderPreAndLevelOrder
 {
 public:
     key_type* m_splitter;
@@ -42,9 +81,10 @@ public:
 
     // build tree: splitter[numsplitters], splitter_tree[numsplitters + 1], and
     // splitter_lcp[numsplitters + 1].
-    TreeBuilderFullDescent(
-        key_type* splitter, key_type* splitter_tree,
-        unsigned char* splitter_lcp,
+    TreeBuilderPreAndLevelOrder(
+        key_type splitter[numsplitters],
+        key_type splitter_tree[numsplitters + 1],
+        unsigned char splitter_lcp[numsplitters + 1],
         const key_type* samples, size_t samplesize)
         : m_splitter(splitter),
           m_tree(splitter_tree),
@@ -110,7 +150,6 @@ public:
 
             *m_splitter++ = mykey;
 
-            // marker for done splitters
             *m_lcp_iter++ =
                 (count_high_zero_bits(xorSplit) / 8) |
                 // marker for done splitters
@@ -132,7 +171,6 @@ public:
 
             *m_splitter++ = mykey;
 
-            // marker for done splitters
             *m_lcp_iter++ =
                 (count_high_zero_bits(xorSplit) / 8) |
                 // marker for done splitters
@@ -144,9 +182,9 @@ public:
 };
 
 //! Recursive TreeBuilder for full-descent and unrolled variants, constructs
-//! only a binary tree
+//! only a level-order binary tree of splitters
 template <size_t numsplitters>
-class TreeBuilderFullDescentTreeCalc
+class TreeBuilderLevelOrder
 {
 public:
     key_type* m_tree;
@@ -154,8 +192,9 @@ public:
     const key_type* m_samples;
 
     //! build tree, sizes: splitter_tree[numsplitters + 1] and
-    TreeBuilderFullDescentTreeCalc(
-        key_type* splitter_tree, unsigned char* splitter_lcp,
+    TreeBuilderLevelOrder(
+        key_type splitter_tree[numsplitters],
+        unsigned char splitter_lcp[numsplitters + 1],
         const key_type* samples, size_t samplesize)
         : m_tree(splitter_tree),
           m_lcp_iter(splitter_lcp),
@@ -248,6 +287,6 @@ public:
 
 } // namespace bingmann_sample_sort
 
-#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_COMMON_HEADER
+#endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_TREE_BUILDER_HEADER
 
 /******************************************************************************/

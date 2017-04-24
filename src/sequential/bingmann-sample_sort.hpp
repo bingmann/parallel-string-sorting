@@ -94,6 +94,23 @@ void sample_sort_small_sort(string* strings, size_t n, size_t depth)
     bingmann::msd_CI(strings, n, depth);
 }
 
+// ---[ Implementations ]-------------------------------------------------------
+
+void bingmann_sample_sortBSC(string* strings, size_t n);
+
+void bingmann_sample_sortBTC(string* strings, size_t n);
+void bingmann_sample_sortBTCA(string* strings, size_t n);
+void bingmann_sample_sortBTCU(string* strings, size_t n);
+void bingmann_sample_sortBTCU1(string* strings, size_t n);
+void bingmann_sample_sortBTCU2(string* strings, size_t n);
+void bingmann_sample_sortBTCU4(string* strings, size_t n);
+
+void bingmann_sample_sortBTCE(string* strings, size_t n);
+void bingmann_sample_sortBTCEA(string* strings, size_t n);
+
+void bingmann_sample_sortBTCT(string* strings, size_t n);
+void bingmann_sample_sortBTCTU(string* strings, size_t n);
+
 } // namespace bingmann_sample_sort
 
 #endif // !PSS_SRC_SEQUENTIAL_BINGMANN_SAMPLE_SORT_HEADER

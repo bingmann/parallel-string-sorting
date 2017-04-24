@@ -13,11 +13,10 @@ set(PSSLIB_SOURCES
   tools/globals.cpp
   sequential/bingmann-lcp_mergesort_kway.cpp
   sequential/bingmann-stdsort.cpp
+  sequential/bingmann-sample_sort.cpp
   sequential/bingmann-sample_sortBS.cpp
   sequential/bingmann-sample_sortBSC.cpp
   sequential/bingmann-sample_sortBT.cpp
-  sequential/bingmann-sample_sortBTC.cpp
-  sequential/bingmann-sample_sortBTCE.cpp
   sequential/bingmann-sample_sortRBTCE.cpp
   sequential/mbm-radix.cpp
   sequential/ng-cradix-rantala.cpp
