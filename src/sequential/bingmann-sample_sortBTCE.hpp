@@ -30,112 +30,11 @@
 
 namespace bingmann_sample_sort {
 
-//! Recursive TreeBuilder for full-descent and unrolled variants, constructs
-//! only a binary tree
-template <size_t numsplitters>
-class TreeBuilderEqual
-{
-public:
-    key_type* m_tree;
-    unsigned char* m_lcp_iter;
-    key_type* m_samples;
-
-    TreeBuilderEqual(key_type* splitter_tree, unsigned char* splitter_lcp,
-                     key_type* samples, size_t samplesize)
-        : m_tree(splitter_tree),
-          m_lcp_iter(splitter_lcp),
-          m_samples(samples)
-    {
-        key_type sentinel = 0;
-        recurse(samples, samples + samplesize, 1, sentinel);
-
-        assert(m_lcp_iter == splitter_lcp + numsplitters);
-        // overwrite sentinel lcp for first < everything bucket
-        splitter_lcp[0] &= 0x80;
-        // sentinel for > everything bucket
-        splitter_lcp[numsplitters] = 0;
-    }
-
-    ptrdiff_t snum(key_type* s) const
-    {
-        return (ptrdiff_t)(s - m_samples);
-    }
-
-    key_type recurse(key_type* lo, key_type* hi, unsigned int treeidx,
-                     key_type& rec_prevkey)
-    {
-        LOGC(debug_splitter)
-            << "rec_buildtree(" << snum(lo) << "," << snum(hi)
-            << ", treeidx=" << treeidx << ")";
-
-        // pick middle element as splitter
-        key_type* mid = lo + (ptrdiff_t)(hi - lo) / 2;
-
-        LOGC(debug_splitter)
-            << "tree[" << treeidx << "] = samples[" << snum(mid) << "] = "
-            << tlx::hexdump_type(*mid);
-
-        key_type mykey = m_tree[treeidx] = *mid;
-#if 1
-        key_type* midlo = mid;
-        while (lo < midlo && *(midlo - 1) == mykey) midlo--;
-
-        key_type* midhi = mid;
-        while (midhi + 1 < hi && *midhi == mykey) midhi++;
-
-        if (midhi - midlo > 1)
-            DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
-#else
-        key_type* midlo = mid, * midhi = mid + 1;
-#endif
-        if (2 * treeidx < numsplitters)
-        {
-            key_type prevkey = recurse(lo, midlo, 2 * treeidx + 0, rec_prevkey);
-
-            key_type xorSplit = prevkey ^ mykey;
-
-            LOGC(debug_splitter)
-                << "    lcp: " << tlx::hexdump_type(prevkey)
-                << " XOR " << tlx::hexdump_type(mykey)
-                << " = " << tlx::hexdump_type(xorSplit)
-                << " - " << count_high_zero_bits(xorSplit)
-                << " bits = " << count_high_zero_bits(xorSplit) / 8
-                << " chars lcp";
-
-            *m_lcp_iter++ =
-                (count_high_zero_bits(xorSplit) / 8) |
-                // marker for done splitters
-                ((mykey & 0xFF) ? 0 : 0x80);
-
-            return recurse(midhi, hi, 2 * treeidx + 1, mykey);
-        }
-        else
-        {
-            key_type xorSplit = rec_prevkey ^ mykey;
-
-            LOGC(debug_splitter)
-                << "    lcp: " << tlx::hexdump_type(rec_prevkey)
-                << " XOR " << tlx::hexdump_type(mykey)
-                << " = " << tlx::hexdump_type(xorSplit)
-                << " - " << count_high_zero_bits(xorSplit)
-                << " bits = " << count_high_zero_bits(xorSplit) / 8
-                << " chars lcp";
-
-            *m_lcp_iter++ =
-                (count_high_zero_bits(xorSplit) / 8) |
-                // marker for done splitters
-                ((mykey & 0xFF) ? 0 : 0x80);
-
-            return mykey;
-        }
-    }
-};
-
-template <size_t treebits_>
+template <size_t TreeBits>
 class ClassifyEqual
 {
 public:
-    static const size_t treebits = treebits_;
+    static const size_t treebits = TreeBits;
     static const size_t numsplitters = (1 << treebits) - 1;
 
     key_type splitter_tree[numsplitters + 1];
@@ -197,16 +96,16 @@ public:
     /// build tree and splitter array from sample
     void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
-        TreeBuilderEqual<numsplitters>(splitter_tree, splitter_lcp,
-                                       samples, samplesize);
+        TreeBuilderLevelOrder<numsplitters>(
+            splitter_tree, splitter_lcp, samples, samplesize);
     }
 };
 
-template <size_t treebits_>
+template <size_t TreeBits>
 class ClassifyEqualAssembler
 {
 public:
-    static const size_t treebits = treebits_;
+    static const size_t treebits = TreeBits;
     static const size_t numsplitters = (1 << treebits) - 1;
 
     key_type splitter_tree[numsplitters + 1];
@@ -321,8 +220,8 @@ public:
     /// build tree and splitter array from sample
     void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
-        TreeBuilderEqual<numsplitters>(splitter_tree, splitter_lcp,
-                                       samples, samplesize);
+        TreeBuilderLevelOrder<numsplitters>(
+            splitter_tree, splitter_lcp, samples, samplesize);
     }
 };
 
@@ -374,8 +273,8 @@ public:
     void
     build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
     {
-        TreeBuilderEqual<numsplitters>(splitter_tree, splitter_lcp,
-                                       samples, samplesize);
+        TreeBuilderLevelOrder<numsplitters>(
+            splitter_tree, splitter_lcp, samples, samplesize);
     }
 
 #define SPLITTER_TREE_STEP                         \
