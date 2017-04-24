@@ -271,41 +271,6 @@ MAKE_BINGMANN_SAMPLE_SORT_BTCU(10)
 
 /*----------------------------------------------------------------------------*/
 
-#define MAKE_BINGMANN_SAMPLE_SORT_BTCUX(X)                          \
-    void bingmann_sample_sortBTCUX ## X(string * strings, size_t n) \
-    {                                                               \
-        using Classify = ClassifyTreeUnrollInterleaveNew<X, 4>;     \
-        sample_sort_pre();                                          \
-        g_stats >> "numsplitters" << size_t(Classify::numsplitters) \
-            >> "splitter_treebits" << size_t(Classify::treebits);   \
-        sample_sort_generic<Classify>(strings, n, 0);               \
-        sample_sort_post();                                         \
-    }                                                               \
-                                                                    \
-    PSS_CONTESTANT(                                                 \
-        bingmann_sample_sortBTCUX ## X,                             \
-        "bingmann/sample_sortBTCUX" #X,                             \
-        "bingmann/sample_sortBTCUX" #X " (binary tree, unrolled, bkt cache)")
-
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(5)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(6)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(7)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(8)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(9)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(10)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(11)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(12)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(13)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(14)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(15)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(16)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(17)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(18)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(19)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUX(20)
-
-/*----------------------------------------------------------------------------*/
-
 void bingmann_sample_sortBTCT(string* strings, size_t n)
 {
     using Classify = ClassifyTreeCalcSimple<13>;
@@ -336,7 +301,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCTU, "bingmann/sample_sortBTCTU",
 
 /*----------------------------------------------------------------------------*/
 
-#define MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(U)                              \
+#define MAKE_BINGMANN_SAMPLE_SORT_BTCUT(U)                               \
     void bingmann_sample_sortBTCU ## U ## TC(string * strings, size_t n) \
     {                                                                    \
         using Classify = ClassifyUnrollTreeCalc<l2cache, U>;             \
@@ -348,16 +313,16 @@ PSS_CONTESTANT(bingmann_sample_sortBTCTU, "bingmann/sample_sortBTCTU",
     }                                                                    \
                                                                          \
     PSS_CONTESTANT(                                                      \
-        bingmann_sample_sortBTCU ## U ## TC,                             \
-        "bingmann/sample_sortBTCU" #U "TC",                              \
-        "bingmann/sample_sortBTCU" #U "TC (binary tree, unrolled, bkt cache)")
+        bingmann_sample_sortBTCU ## U ## T,                              \
+        "bingmann/sample_sortBTCU" #U "T",                               \
+        "bingmann/sample_sortBTCU" #U "T (binary tree, unrolled, bkt cache)")
 
-MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(1)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(2)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(4)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(6)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(8)
-MAKE_BINGMANN_SAMPLE_SORT_BTCUTC(10)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUT(1)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUT(2)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUT(4)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUT(6)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUT(8)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUT(10)
 #endif
 
 /*----------------------------------------------------------------------------*/
@@ -413,6 +378,106 @@ void bingmann_sample_sortBTCEV(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_sample_sortBTCEV, "bingmann/sample_sortBTCEV",
                "bingmann/sample_sortBTCEV (binary tree equal unroll, asm CMOV, bkt cache)")
+
+/******************************************************************************/
+// sample_sort Instances to Measure Classifier Size
+
+#define MAKE_BINGMANN_SAMPLE_SORT_BTCUX(X)                          \
+    void bingmann_sample_sortBTCUX ## X(string * strings, size_t n) \
+    {                                                               \
+        using Classify = ClassifyTreeUnroll<X>;                     \
+        sample_sort_pre();                                          \
+        g_stats >> "numsplitters" << size_t(Classify::numsplitters) \
+            >> "splitter_treebits" << size_t(Classify::treebits);   \
+        sample_sort_generic<Classify>(strings, n, 0);               \
+        sample_sort_post();                                         \
+    }                                                               \
+                                                                    \
+    PSS_CONTESTANT(                                                 \
+        bingmann_sample_sortBTCUX ## X,                             \
+        "bingmann/sample_sortBTCUX" #X,                             \
+        "bingmann/sample_sortBTCUX" #X " (binary tree, unrolled, bkt cache)")
+
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(5)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(6)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(7)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(8)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(9)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(10)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(11)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(12)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(13)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(14)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(15)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(16)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(17)
+MAKE_BINGMANN_SAMPLE_SORT_BTCUX(18)
+
+/*----------------------------------------------------------------------------*/
+
+#define MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(X)                          \
+    void bingmann_sample_sortBTCEUX ## X(string * strings, size_t n) \
+    {                                                                \
+        using Classify = ClassifyEqualUnroll<X>;                     \
+        sample_sort_pre();                                           \
+        g_stats >> "numsplitters" << size_t(Classify::numsplitters)  \
+            >> "splitter_treebits" << size_t(Classify::treebits);    \
+        sample_sort_generic<Classify>(strings, n, 0);                \
+        sample_sort_post();                                          \
+    }                                                                \
+                                                                     \
+    PSS_CONTESTANT(                                                  \
+        bingmann_sample_sortBTCEUX ## X,                             \
+        "bingmann/sample_sortBTCEUX" #X,                             \
+        "bingmann/sample_sortBTCEUX" #X " (binary tree equal, unrolled, bkt cache)")
+
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(5)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(6)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(7)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(8)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(9)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(10)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(11)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(12)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(13)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(14)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(15)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(16)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(17)
+MAKE_BINGMANN_SAMPLE_SORT_BTCEUX(18)
+
+/*----------------------------------------------------------------------------*/
+
+#define MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(X)                          \
+    void bingmann_sample_sortBTCTUX ## X(string * strings, size_t n) \
+    {                                                                \
+        using Classify = ClassifyTreeCalcUnroll<X>;                  \
+        sample_sort_pre();                                           \
+        g_stats >> "numsplitters" << size_t(Classify::numsplitters)  \
+            >> "splitter_treebits" << size_t(Classify::treebits);    \
+        sample_sort_generic<Classify>(strings, n, 0);                \
+        sample_sort_post();                                          \
+    }                                                                \
+                                                                     \
+    PSS_CONTESTANT(                                                  \
+        bingmann_sample_sortBTCTUX ## X,                             \
+        "bingmann/sample_sortBTCTUX" #X,                             \
+        "bingmann/sample_sortBTCTUX" #X " (binary tree calc, unrolled, bkt cache)")
+
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(5)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(6)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(7)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(8)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(9)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(10)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(11)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(12)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(13)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(14)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(15)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(16)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(17)
+MAKE_BINGMANN_SAMPLE_SORT_BTCTUX(18)
 
 /*----------------------------------------------------------------------------*/
 

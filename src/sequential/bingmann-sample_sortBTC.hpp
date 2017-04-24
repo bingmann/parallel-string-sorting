@@ -433,9 +433,13 @@ public:
 
         case 5:
             find_bkt_unroll_one(i, key);
+        case 4:
             find_bkt_unroll_one(i, key);
+        case 3:
             find_bkt_unroll_one(i, key);
+        case 2:
             find_bkt_unroll_one(i, key);
+        case 1:
             find_bkt_unroll_one(i, key);
         }
 

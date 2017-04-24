@@ -118,6 +118,22 @@ public:
 
     key_type splitter_tree[numsplitters + 1];
 
+    __attribute__ ((optimize("unroll-all-loops")))
+    void find_bkt_unroll_one(unsigned int& i, const key_type& key) const
+    {
+#if 0
+        // in gcc-4.6.3 this produces a SETA, LEA sequence
+        i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
+#else
+        // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is
+        // slightly faster
+        if (key <= splitter_tree[i])
+            i = 2 * i + 0;
+        else        // (key > splitter_tree[i])
+            i = 2 * i + 1;
+#endif
+    }
+
     //! binary search on splitter array for bucket number
     __attribute__ ((optimize("unroll-all-loops")))
     unsigned int find_bkt(const key_type& key) const
@@ -126,19 +142,53 @@ public:
 
         unsigned int i = 1;
 
-        for (size_t l = 0; l < treebits; ++l)
+        switch (treebits)
         {
-#if 0
-            // in gcc-4.6.3 this produces a SETA, LEA sequence
-            i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
-#else
-            // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which is
-            // slightly faster
-            if (key <= splitter_tree[i])
-                i = 2 * i + 0;
-            else    // (key > splitter_tree[i])
-                i = 2 * i + 1;
-#endif
+        default:
+            abort();
+        case 20:
+            find_bkt_unroll_one(i, key);
+        case 19:
+            find_bkt_unroll_one(i, key);
+        case 18:
+            find_bkt_unroll_one(i, key);
+        case 17:
+            find_bkt_unroll_one(i, key);
+        case 16:
+            find_bkt_unroll_one(i, key);
+
+        case 15:
+            find_bkt_unroll_one(i, key);
+        case 14:
+            find_bkt_unroll_one(i, key);
+        case 13:
+            find_bkt_unroll_one(i, key);
+        case 12:
+            find_bkt_unroll_one(i, key);
+        case 11:
+            find_bkt_unroll_one(i, key);
+
+        case 10:
+            find_bkt_unroll_one(i, key);
+        case 9:
+            find_bkt_unroll_one(i, key);
+        case 8:
+            find_bkt_unroll_one(i, key);
+        case 7:
+            find_bkt_unroll_one(i, key);
+        case 6:
+            find_bkt_unroll_one(i, key);
+
+        case 5:
+            find_bkt_unroll_one(i, key);
+        case 4:
+            find_bkt_unroll_one(i, key);
+        case 3:
+            find_bkt_unroll_one(i, key);
+        case 2:
+            find_bkt_unroll_one(i, key);
+        case 1:
+            find_bkt_unroll_one(i, key);
         }
 
         i -= numsplitters + 1;
@@ -233,8 +283,17 @@ public:
         {
         default:
             abort();
+        case 20:
+            find_bkt_unroll_one(i, key);
+        case 19:
+            find_bkt_unroll_one(i, key);
+        case 18:
+            find_bkt_unroll_one(i, key);
+        case 17:
+            find_bkt_unroll_one(i, key);
         case 16:
             find_bkt_unroll_one(i, key);
+
         case 15:
             find_bkt_unroll_one(i, key);
         case 14:
@@ -245,17 +304,27 @@ public:
             find_bkt_unroll_one(i, key);
         case 11:
             find_bkt_unroll_one(i, key);
+
         case 10:
             find_bkt_unroll_one(i, key);
+        case 9:
             find_bkt_unroll_one(i, key);
+        case 8:
             find_bkt_unroll_one(i, key);
+        case 7:
             find_bkt_unroll_one(i, key);
+        case 6:
             find_bkt_unroll_one(i, key);
 
+        case 5:
             find_bkt_unroll_one(i, key);
+        case 4:
             find_bkt_unroll_one(i, key);
+        case 3:
             find_bkt_unroll_one(i, key);
+        case 2:
             find_bkt_unroll_one(i, key);
+        case 1:
             find_bkt_unroll_one(i, key);
         }
 
