@@ -401,6 +401,19 @@ void bingmann_sample_sortBTCEU(string* strings, size_t n)
 PSS_CONTESTANT(bingmann_sample_sortBTCEU, "bingmann/sample_sortBTCEU",
                "bingmann/sample_sortBTCEU (binary tree equal unroll, asm CMOV, bkt cache)")
 
+void bingmann_sample_sortBTCEV(string* strings, size_t n)
+{
+    using Classify = ClassifyEqualUnroll<13>;
+    sample_sort_pre();
+    g_stats >> "numsplitters" << size_t(Classify::numsplitters)
+        >> "splitter_treebits" << size_t(Classify::treebits);
+    sample_sort_generic<Classify>(strings, n, 0);
+    sample_sort_post();
+}
+
+PSS_CONTESTANT(bingmann_sample_sortBTCEV, "bingmann/sample_sortBTCEV",
+               "bingmann/sample_sortBTCEV (binary tree equal unroll, asm CMOV, bkt cache)")
+
 /*----------------------------------------------------------------------------*/
 
 } // namespace bingmann_sample_sort

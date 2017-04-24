@@ -226,6 +226,116 @@ public:
 };
 
 template <size_t TreeBits>
+class ClassifyEqualUnroll
+{
+public:
+    static const size_t treebits = TreeBits;
+    static const size_t numsplitters = (1 << treebits) - 1;
+
+    key_type splitter_tree[numsplitters + 1];
+
+#define TREE_STEP                                                        \
+    if (TLX_UNLIKELY(key == splitter_tree[i])) {                         \
+        return 2 * TreeCalculations<treebits>::level_to_preorder(i) - 1; \
+    }                                                                    \
+    i = 2 * i + (key < splitter_tree[i] ? 0 : 1);
+
+    /// binary search on splitter array for bucket number
+    unsigned int find_bkt(const key_type& key) const
+    {
+        // binary tree traversal without left branch
+
+        unsigned int i = 1;
+
+        switch (treebits)
+        {
+        default:
+            abort();
+        case 20:
+            TREE_STEP;
+        case 19:
+            TREE_STEP;
+        case 18:
+            TREE_STEP;
+        case 17:
+            TREE_STEP;
+        case 16:
+            TREE_STEP;
+        case 15:
+            TREE_STEP;
+        case 14:
+            TREE_STEP;
+        case 13:
+            TREE_STEP;
+        case 12:
+            TREE_STEP;
+        case 11:
+            TREE_STEP;
+        case 10:
+            TREE_STEP;
+        case 9:
+            TREE_STEP;
+        case 8:
+            TREE_STEP;
+        case 7:
+            TREE_STEP;
+        case 6:
+            TREE_STEP;
+        case 5:
+            TREE_STEP;
+            TREE_STEP;
+            TREE_STEP;
+            TREE_STEP;
+            TREE_STEP;
+        }
+
+        i -= numsplitters + 1;
+        return 2 * i; // < or > bucket
+    }
+
+#undef TREE_STEP
+
+    //! classify all strings in area by walking tree and saving bucket id
+    void classify(string* strB, string* strE, uint16_t* bktout,
+                  size_t depth)
+    {
+        for (string* str = strB; str != strE; )
+        {
+            key_type key = get_char<key_type>(*str++, depth);
+            *bktout++ = find_bkt(key);
+        }
+    }
+
+    /// classify all strings in area by walking tree and saving bucket id
+    template <typename StringSet>
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
+    {
+        while (begin != end)
+        {
+            key_type key = strset.get_uint64(*begin++, depth);
+            *bktout++ = find_bkt(key);
+        }
+    }
+
+    //! return a splitter
+    key_type get_splitter(unsigned int i) const
+    {
+        return splitter_tree[
+            TreeCalculations < treebits > ::pre_to_levelorder(i)];
+    }
+
+    /// build tree and splitter array from sample
+    void build(key_type* samples, size_t samplesize, unsigned char* splitter_lcp)
+    {
+        TreeBuilderLevelOrder<numsplitters>(
+            splitter_tree, splitter_lcp, samples, samplesize);
+    }
+};
+
+template <size_t TreeBits>
 class ClassifyEqualUnrollTree
 {
 public:
