@@ -401,9 +401,10 @@ even_first:
             strptr.set_lcp(bkt[b], depth + rlcp);
             strptr.set_cache(bkt[b], getCharAtDepth(thiskey, rlcp));
 
-            DBG(debug_lcp, "LCP at odd-bucket " << b <<
-                " [" << bkt[b] << "," << bkt[b + 1] << ")" <<
-                " is " << strptr.lcp(bkt[b]));
+            LOGC(debug_lcp)
+                << "LCP at odd-bucket " << b
+                << " [" << bkt[b] << "," << bkt[b + 1] << ")"
+                << " is " << strptr.lcp(bkt[b]);
 
             prevkey = thiskey;
             assert(prevkey == strset.get_uint64(strset.at(bkt[b + 1] - 1), depth));
@@ -419,9 +420,10 @@ even_bucket:
             strptr.set_lcp(bkt[b], depth + rlcp);
             strptr.set_cache(bkt[b], getCharAtDepth(thiskey, rlcp));
 
-            DBG(debug_lcp, "LCP at even-bucket " << b <<
-                " [" << bkt[b] << "," << bkt[b + 1] << ")" <<
-                " is " << strptr.lcp(bkt[b]));
+            LOGC(debug_lcp)
+                << "LCP at even-bucket " << b
+                << " [" << bkt[b] << "," << bkt[b + 1] << ")"
+                << " is " << strptr.lcp(bkt[b]);
 
             prevkey = strset.get_uint64(strset.at(bkt[b + 1] - 1), depth);
         }
@@ -456,8 +458,9 @@ public:
                  const StringPtr& strptr, size_t depth)
         : pstep(_pstep), in_strptr(strptr), in_depth(depth)
     {
-        DBG(debug_steps, "enqueue depth=" << in_depth <<
-            " size=" << in_strptr.size() << " flip=" << in_strptr.flipped());
+        LOGC(debug_steps)
+            << "enqueue depth=" << in_depth
+            << " size=" << in_strptr.size() << " flip=" << in_strptr.flipped();
 
         ctx.jobqueue.enqueue(this);
     }
@@ -562,7 +565,7 @@ public:
         void calculate_lcp()
         {
 #if CALC_LCP
-            //DBG(debug_lcp, "Calculate LCP after sample sort step " << strptr);
+            //LOGC(debug_lcp) << "Calculate LCP after sample sort step " << strptr;
             sample_sort_lcp<bktnum>(classifier, strptr.original(), depth, bkt);
 #endif
         }
@@ -582,7 +585,7 @@ public:
 
         size_t n = in_strptr.size();
 
-        DBG(debug_jobs, "Process SmallsortJob " << this << " of size " << n);
+        LOGC(debug_jobs) << "Process SmallsortJob " << this << " of size " << n;
 
         thrid = PS5_ENABLE_RESTSIZE ? omp_get_thread_num() : 0;
 
@@ -645,18 +648,28 @@ public:
                     {
                         assert(i / 2 <= Step::numsplitters);
                         if (i == Step::bktnum - 1)
-                            DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << bktsize << " no lcp");
+                            LOGC(debug_recursion)
+                                << "Recurse[" << s.depth << "]: > bkt "
+                                << i << " size " << bktsize << " no lcp";
                         else
-                            DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i / 2] & 0x7F));
+                            LOGC(debug_recursion)
+                                << "Recurse[" << s.depth << "]: < bkt "
+                                << i << " size " << bktsize << " lcp "
+                                << int(s.splitter_lcp[i / 2] & 0x7F);
 
                         sort_mkqs_cache(ctx, sp, s.depth + (s.splitter_lcp[i / 2] & 0x7F));
                     }
                     else
                     {
                         if (i == Step::bktnum - 1)
-                            DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << bktsize << " no lcp");
+                            LOGC(debug_recursion)
+                                << "Recurse[" << s.depth << "]: > bkt "
+                                << i << " size " << bktsize << " no lcp";
                         else
-                            DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i / 2] & 0x7F));
+                            LOGC(debug_recursion)
+                                << "Recurse[" << s.depth << "]: < bkt "
+                                << i << " size " << bktsize << " lcp "
+                                << int(s.splitter_lcp[i / 2] & 0x7F);
 
                         ss_stack.push_back(Step(ctx, sp, s.depth + (s.splitter_lcp[i / 2] & 0x7F), bktcache));
                     }
@@ -667,7 +680,9 @@ public:
                     if (bktsize == 0)
                         ;
                     else if (s.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " is done!");
+                        LOGC(debug_recursion)
+                            << "Recurse[" << s.depth << "]: = bkt "
+                            << i << " size " << bktsize << " is done!";
                         StringPtr spb = sp.copy_back();
 #if CALC_LCP
                         spb.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
@@ -678,13 +693,17 @@ public:
                     }
                     else if (bktsize < g_smallsort_threshold)
                     {
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
+                        LOGC(debug_recursion)
+                            << "Recurse[" << s.depth << "]: = bkt "
+                            << i << " size " << bktsize << " lcp keydepth!";
 
                         sort_mkqs_cache(ctx, sp, s.depth + sizeof(key_type));
                     }
                     else
                     {
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
+                        LOGC(debug_recursion)
+                            << "Recurse[" << s.depth << "]: = bkt "
+                            << i << " size " << bktsize << " lcp keydepth!";
 
                         ss_stack.push_back(Step(ctx, sp, s.depth + sizeof(key_type), bktcache));
                     }
@@ -717,7 +736,8 @@ public:
         }
 
         // convert top level of stack into independent jobs
-        DBG(debug_jobs, "Freeing top level of SmallsortJob's sample_sort stack");
+        LOGC(debug_jobs)
+            << "Freeing top level of SmallsortJob's sample_sort stack";
 
         typedef SeqSampleSortStep Step;
         Step& s = ss_stack[ss_pop_front];
@@ -738,9 +758,14 @@ public:
                 else
                 {
                     if (i == Step::bktnum - 1)
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: > bkt " << i << " size " << bktsize << " no lcp");
+                        LOGC(debug_recursion)
+                            << "Recurse[" << s.depth << "]: > bkt "
+                            << i << " size " << bktsize << " no lcp";
                     else
-                        DBG(debug_recursion, "Recurse[" << s.depth << "]: < bkt " << i << " size " << bktsize << " lcp " << int(s.splitter_lcp[i / 2] & 0x7F));
+                        LOGC(debug_recursion)
+                            << "Recurse[" << s.depth << "]: < bkt "
+                            << i << " size " << bktsize << " lcp "
+                            << int(s.splitter_lcp[i / 2] & 0x7F);
 
                     substep_add();
                     Enqueue<Classify>(ctx, this, sp, s.depth + (s.splitter_lcp[i / 2] & 0x7F));
@@ -752,7 +777,9 @@ public:
                 if (bktsize == 0)
                     ;
                 else if (s.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
-                    DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " is done!");
+                    LOGC(debug_recursion)
+                        << "Recurse[" << s.depth << "]: = bkt "
+                        << i << " size " << bktsize << " is done!";
                     StringPtr spb = sp.copy_back();
 #if CALC_LCP
                     spb.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
@@ -763,7 +790,9 @@ public:
                 }
                 else
                 {
-                    DBG(debug_recursion, "Recurse[" << s.depth << "]: = bkt " << i << " size " << bktsize << " lcp keydepth!");
+                    LOGC(debug_recursion)
+                        << "Recurse[" << s.depth << "]: = bkt "
+                        << i << " size " << bktsize << " lcp keydepth!";
 
                     substep_add();
                     Enqueue<Classify>(ctx, this, sp, s.depth + sizeof(key_type));
@@ -1003,7 +1032,7 @@ public:
 
                 lcp_lt = lcpKeyType(max_lt, pivot);
                 dchar_eq = getCharAtDepth(pivot, lcp_lt);
-                DBG(debug_lcp, "LCP lt with pivot: " << depth + lcp_lt);
+                LOGC(debug_lcp) << "LCP lt with pivot: " << depth + lcp_lt;
             }
 
             // calculate equal area lcp: +1 for the equal zero termination byte
@@ -1015,7 +1044,7 @@ public:
 
                 lcp_gt = lcpKeyType(pivot, min_gt);
                 dchar_gt = getCharAtDepth(min_gt, lcp_gt);
-                DBG(debug_lcp, "LCP pivot with gt: " << depth + lcp_gt);
+                LOGC(debug_lcp) << "LCP pivot with gt: " << depth + lcp_gt;
             }
 #endif
             ++ctx.bs_steps;
@@ -1042,7 +1071,7 @@ public:
                     strptr.original().out(num_lt - 1), depth);
 
                 unsigned int rlcp = lcpKeyType(max_lt, pivot);
-                DBG(debug_lcp, "LCP lt with pivot: " << depth + rlcp);
+                LOGC(debug_lcp) << "LCP lt with pivot: " << depth + rlcp;
 
                 strptr.original().set_lcp(num_lt, depth + rlcp);
                 strptr.original().set_cache(num_lt, getCharAtDepth(pivot, rlcp));
@@ -1053,7 +1082,7 @@ public:
                     strptr.original().out(num_lt + num_eq), depth);
 
                 unsigned int rlcp = lcpKeyType(pivot, min_gt);
-                DBG(debug_lcp, "LCP pivot with gt: " << depth + rlcp);
+                LOGC(debug_lcp) << "LCP pivot with gt: " << depth + rlcp;
 
                 strptr.original().set_lcp(num_lt + num_eq, depth + rlcp);
                 strptr.original().set_cache(num_lt + num_eq, getCharAtDepth(min_gt, rlcp));
@@ -1191,7 +1220,9 @@ public:
                 return;
             }
 
-            DBG(debug_jobs, "Freeing top level of SmallsortJob's mkqs stack - size " << ms_stack.size());
+            LOGC(debug_jobs)
+                << "Freeing top level of SmallsortJob's mkqs stack - size "
+                << ms_stack.size();
 
             // convert top level of stack into independent jobs
 
@@ -1240,15 +1271,19 @@ public:
     virtual void substep_all_done()
     {
 #if CALC_LCP
-        DBG(debug_recursion, "SmallSort[" << in_depth << "] all substeps done -> LCP calculation");
+        LOGC(debug_recursion)
+            << "SmallSort[" << in_depth << "] "
+            << "all substeps done -> LCP calculation";
 
         while (ms_pop_front > 0) {
-            DBG(debug_lcp, "SmallSort[" << in_depth << "] ms_pop_front: " << ms_pop_front);
+            LOGC(debug_lcp)
+                << "SmallSort[" << in_depth << "] ms_pop_front: " << ms_pop_front;
             ms_stack[--ms_pop_front].calculate_lcp();
         }
 
         while (ss_pop_front > 0) {
-            DBG(debug_lcp, "SmallSort[" << in_depth << "] ss_pop_front: " << ss_pop_front);
+            LOGC(debug_lcp)
+                << "SmallSort[" << in_depth << "] ss_pop_front: " << ss_pop_front;
             ss_stack[--ss_pop_front].calculate_lcp();
         }
 
@@ -1371,7 +1406,12 @@ public:
 
         psize = (strptr.size() + parts - 1) / parts;
 
-        DBG(debug_steps, "enqueue depth=" << depth << " size=" << strptr.size() << " parts=" << parts << " psize=" << psize << " flip=" << strptr.flipped());
+        LOGC(debug_steps)
+            << "enqueue depth=" << depth
+            << " size=" << strptr.size()
+            << " parts=" << parts
+            << " psize=" << psize
+            << " flip=" << strptr.flipped();
 
         ctx.jobqueue.enqueue(new SampleJob(this));
         ++ctx.para_ss_steps;
@@ -1381,7 +1421,7 @@ public:
 
     void sample(Context& ctx)
     {
-        DBG(debug_jobs, "Process SampleJob @ " << this);
+        LOGC(debug_jobs) << "Process SampleJob @ " << this;
 
         const size_t oversample_factor = 2;
         size_t samplesize = oversample_factor * numsplitters;
@@ -1413,7 +1453,7 @@ public:
 
     void count(unsigned int p, Context& ctx)
     {
-        DBG(debug_jobs, "Process CountJob " << p << " @ " << this);
+        LOGC(debug_jobs) << "Process CountJob " << p << " @ " << this;
 
         const StringSet& strset = strptr.active();
 
@@ -1436,7 +1476,7 @@ public:
 
     void count_finished(Context& ctx)
     {
-        DBG(debug_jobs, "Finishing CountJob " << this << " with prefixsum");
+        LOGC(debug_jobs) << "Finishing CountJob " << this << " with prefixsum";
 
         // abort sorting if we're measuring only the top level
         if (use_only_first_sortstep)
@@ -1463,7 +1503,7 @@ public:
 
     void distribute(unsigned int p, Context& ctx)
     {
-        DBG(debug_jobs, "Process DistributeJob " << p << " @ " << this);
+        LOGC(debug_jobs) << "Process DistributeJob " << p << " @ " << this;
 
         const StringSet& strset = strptr.active();
 
@@ -1491,7 +1531,8 @@ public:
 
     void distribute_finished(Context& ctx)
     {
-        DBG(debug_jobs, "Finishing DistributeJob " << this << " with enqueuing subjobs");
+        LOGC(debug_jobs)
+            << "Finishing DistributeJob " << this << " with enqueuing subjobs";
 
         size_t thrid = PS5_ENABLE_RESTSIZE ? omp_get_thread_num() : 0;
 
@@ -1518,9 +1559,13 @@ public:
             }
             else
             {
-                DBG(debug_recursion, "Recurse[" << depth << "]: < bkt " << bkt[i] << " size " << bktsize << " lcp " << int(splitter_lcp[i / 2] & 0x7F));
+                LOGC(debug_recursion)
+                    << "Recurse[" << depth << "]: < bkt " << bkt[i]
+                    << " size " << bktsize << " lcp "
+                    << int(splitter_lcp[i / 2] & 0x7F);
                 substep_add();
-                Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize), depth + (splitter_lcp[i / 2] & 0x7F));
+                Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize),
+                                  depth + (splitter_lcp[i / 2] & 0x7F));
             }
             ++i;
             // i is odd -> bkt[i] is equal bucket
@@ -1533,16 +1578,22 @@ public:
             }
             else
             {
-                if (splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
-                    DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " is done!");
+                if (splitter_lcp[i / 2] & 0x80) {
+                    // equal-bucket has NULL-terminated key, done.
+                    LOGC(debug_recursion)
+                        << "Recurse[" << depth << "]: = bkt " << bkt[i]
+                        << " size " << bktsize << " is done!";
                     StringPtr sp = strptr.flip(bkt[i], bktsize).copy_back();
                     sp.fill_lcp(depth + lcpKeyDepth(classifier.get_splitter(i / 2)));
                     ctx.donesize(bktsize, thrid);
                 }
                 else {
-                    DBG(debug_recursion, "Recurse[" << depth << "]: = bkt " << bkt[i] << " size " << bktsize << " lcp keydepth!");
+                    LOGC(debug_recursion)
+                        << "Recurse[" << depth << "]: = bkt " << bkt[i]
+                        << " size " << bktsize << " lcp keydepth!";
                     substep_add();
-                    Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize), depth + sizeof(key_type));
+                    Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize),
+                                      depth + sizeof(key_type));
                 }
             }
             ++i;
@@ -1558,7 +1609,9 @@ public:
         }
         else
         {
-            DBG(debug_recursion, "Recurse[" << depth << "]: > bkt " << bkt[i] << " size " << bktsize << " no lcp");
+            LOGC(debug_recursion)
+                << "Recurse[" << depth << "]: > bkt " << bkt[i]
+                << " size " << bktsize << " no lcp";
             substep_add();
             Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize), depth);
         }
@@ -1576,7 +1629,7 @@ public:
 #if CALC_LCP
     virtual void substep_all_done()
     {
-        DBG(debug_steps, "pSampleSortStep[" << depth << "]: all substeps done.");
+        LOGC(debug_steps) << "pSampleSortStep[" << depth << "]: all substeps done.";
 
         sample_sort_lcp<bktnum>(classifier, strptr.original(), depth, bkt[0]);
         delete[] bkt[0];
@@ -1729,7 +1782,7 @@ void parallel_sample_sort_out_test(const StringSet& strset, size_t depth)
 
 #if CALC_LCP
 
-template <typename Classify, typename StringSet>
+template <template <size_t> class Classify, typename StringSet>
 void parallel_sample_sort_lcp_base(
     const StringSet& strset, uintptr_t* lcp, size_t depth)
 {
