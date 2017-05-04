@@ -139,8 +139,6 @@ std::vector<size_t> g_numa_string_count;      // pointer to strings on NUMA node
 #include "sequential/bingmann-lcp_mergesort_binary.hpp"
 #include "sequential/bingmann-lcp_mergesort_kway.hpp"
 
-#include "parallel/bingmann-parallel_sample_sort.hpp"
-#include "parallel/bingmann-parallel_sample_sort_lcp.hpp"
 #include "parallel/eberle-ps5-parallel-toplevel-merge.hpp"
 #include "parallel/eberle-parallel-lcp-mergesort.hpp"
 

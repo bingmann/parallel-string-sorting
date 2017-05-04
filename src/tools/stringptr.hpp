@@ -440,10 +440,7 @@ public:
     }
 
     //! if we want to save the LCPs
-    static bool with_lcp()
-    {
-        return false;
-    }
+    static const bool with_lcp = false;
 
     //! return reference to the i-th lcp
     uintptr_t & lcp(size_t /* i */) const
@@ -508,8 +505,6 @@ protected:
 
     //! output string array
     StringSet output_;
-
-    static const bool WithLcp = false;
 
 public:
     //! constructor specifying all attributes
@@ -587,7 +582,7 @@ public:
     string & str(size_t i) const { return sp.str(i); }
 
     //! if we want to save the LCPs
-    static bool with_lcp() { return Super::with_lcp(); }
+    static const bool with_lcp = false;
 
     //! return reference to the i-th lcp
     uintptr_t & lcp(size_t i) const { return sp.lcp(i); }
@@ -693,10 +688,7 @@ public:
     }
 
     //! if we want to save the LCPs
-    static bool with_lcp()
-    {
-        return true;
-    }
+    static const bool with_lcp = true;
 
     //! return reference to the i-th lcp
     uintptr_t & lcp(size_t i) const
@@ -807,10 +799,7 @@ public:
     }
 
     //! if we want to save the LCPs
-    static bool with_lcp()
-    {
-        return true;
-    }
+    static const bool with_lcp = true;
 
     //! return reference to the i-th lcp
     uintptr_t & lcp(size_t i) const
@@ -944,7 +933,7 @@ public:
     //! LCP[0] position
     void fill_lcp(uintptr_t v)
     {
-        if (!with_lcp()) return;
+        if (!with_lcp) return;
 
         for (size_t i = 1; i < size(); ++i)
         {

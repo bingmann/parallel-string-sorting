@@ -5,7 +5,7 @@
  * Classifier templates.
  *
  *******************************************************************************
- * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2013-2017 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -53,35 +53,19 @@
 #include <tlx/string/hexdump.hpp>
 #include <tlx/meta/log2.hpp>
 #include <tlx/logger.hpp>
-
-#ifndef CALC_LCP
-#define CALC_LCP 0
-#endif
+#include <tlx/die.hpp>
 
 // first MKQS lcp variant: keep min/max during ternary split
-#if CALC_LCP
 #define CALC_LCP_MKQS 1
-#endif
 
 #ifdef PSS_CONTESTANT_PARALLEL_LCP
 #undef PSS_CONTESTANT_PARALLEL_LCP
 #endif
 
-#if !CALC_LCP
 namespace bingmann_parallel_sample_sort {
 
-#define PSS_CONTESTANT_PARALLEL_LCP(func, name, desc) \
-    PSS_CONTESTANT_PARALLEL(func, name, desc)
-
-//#define PSS_CONTESTANT_PARALLEL_LCP CONTESTANT_REGISTER_PARALLEL
-
-#else
-namespace bingmann_parallel_sample_sort_lcp {
-
-#define PSS_CONTESTANT_PARALLEL_LCP(func, name, desc) \
-    PSS_CONTESTANT_PARALLEL(func, name "_lcp", desc "_lcp")
-
-#endif
+// #define PSS_CONTESTANT_PARALLEL_LCP(func, name, desc)
+//     PSS_CONTESTANT_PARALLEL(func, name "_lcp", desc "_lcp")
 
 using namespace stringtools;
 using namespace parallel_string_sorting;
@@ -138,7 +122,8 @@ typedef ::ScopedTimerKeeperDummy ScopedTimerKeeperMT;
 // ****************************************************************************
 // *** Global Parallel Super Scalar String Sample Sort Context
 
-template <template <typename> class JobQueueGroupType = DefaultJobQueueGroup>
+template <bool CalcLcp_,
+          template <typename> class JobQueueGroupType = DefaultJobQueueGroup>
 class Context
 {
 public:
@@ -149,6 +134,8 @@ public:
     //! number of remaining strings to sort
     lockfree::lazy_counter<MAXPROCS> restsize;
 #endif
+
+    static const bool CalcLcp = CalcLcp_;
 
     //! number of threads overall
     size_t threadnum;
@@ -204,8 +191,11 @@ public:
 // ****************************************************************************
 // *** SortStep to Keep Track of Substeps
 
-#if CALC_LCP
-class SortStep
+template <bool CalcLcp>
+class SortStep;
+
+template <>
+class SortStep</* CalcLcp */ true>
 {
 private:
     //! Number of substeps still running
@@ -239,8 +229,9 @@ public:
             substep_all_done();
     }
 };
-#else
-class SortStep
+
+template <>
+class SortStep</* CalcLcp */ false>
 {
 protected:
     SortStep()
@@ -253,7 +244,6 @@ public:
     void substep_notify_done()
     { }
 };
-#endif
 
 // ****************************************************************************
 // *** Classification Variants
@@ -435,15 +425,16 @@ even_bucket:
 // *** SampleSort non-recursive in-place sequential sample sort for small sorts
 
 template <template <size_t> class Classify, typename Context, typename StringPtr>
-void Enqueue(Context& ctx, SortStep* sstep, const StringPtr& strptr, size_t depth);
+void Enqueue(Context& ctx, SortStep<Context::CalcLcp>* sstep,
+             const StringPtr& strptr, size_t depth);
 
 template <typename Context, template <size_t> class Classify,
           typename StringPtr, typename BktSizeType>
-class SmallsortJob : public Context::job_type, public SortStep
+class SmallsortJob : public Context::job_type, public SortStep<Context::CalcLcp>
 {
 public:
     //! parent sort step
-    SortStep* pstep;
+    SortStep<Context::CalcLcp>* pstep;
 
     size_t thrid;
 
@@ -454,7 +445,7 @@ public:
 
     typedef BktSizeType bktsize_type;
 
-    SmallsortJob(Context& ctx, SortStep* _pstep,
+    SmallsortJob(Context& ctx, SortStep<Context::CalcLcp>* _pstep,
                  const StringPtr& strptr, size_t depth)
         : pstep(_pstep), in_strptr(strptr), in_depth(depth)
     {
@@ -489,9 +480,7 @@ public:
 
         bktsize_type bkt[bktnum + 1];
 
-#if CALC_LCP
         Classify<treebits> classifier;
-#endif
         unsigned char splitter_lcp[numsplitters + 1];
 
         SeqSampleSortStep(Context& ctx, const StringPtr& _strptr, size_t _depth,
@@ -517,9 +506,6 @@ public:
 
             std::sort(samples, samples + samplesize);
 
-#if !CALC_LCP
-            Classify<treebits> classifier;
-#endif
             classifier.build(samples, samplesize, splitter_lcp);
 
             // step 2: classify all strings
@@ -564,10 +550,9 @@ public:
 
         void calculate_lcp()
         {
-#if CALC_LCP
             //LOGC(debug_lcp) << "Calculate LCP after sample sort step " << strptr;
-            sample_sort_lcp<bktnum>(classifier, strptr.original(), depth, bkt);
-#endif
+            if (Context::CalcLcp)
+                sample_sort_lcp<bktnum>(classifier, strptr.original(), depth, bkt);
         }
     };
 
@@ -590,7 +575,7 @@ public:
         thrid = PS5_ENABLE_RESTSIZE ? omp_get_thread_num() : 0;
 
         // create anonymous wrapper job
-        substep_add();
+        this->substep_add();
 
         bktcache = NULL;
         bktcache_size = 0;
@@ -611,7 +596,7 @@ public:
         delete[] bktcache;
 
         // finish wrapper job, handler delete's this
-        substep_notify_done();
+        this->substep_notify_done();
 
         return false;
     }
@@ -679,16 +664,15 @@ public:
                 {
                     if (bktsize == 0)
                         ;
-                    else if (s.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
+                    else if (s.splitter_lcp[i / 2] & 0x80) {
+                        // equal-bucket has NULL-terminated key, done.
                         LOGC(debug_recursion)
                             << "Recurse[" << s.depth << "]: = bkt "
                             << i << " size " << bktsize << " is done!";
                         StringPtr spb = sp.copy_back();
-#if CALC_LCP
-                        spb.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
-#else
-                        UNUSED(spb);
-#endif
+
+                        if (Context::CalcLcp)
+                            spb.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
                         ctx.donesize(bktsize, thrid);
                     }
                     else if (bktsize < g_smallsort_threshold)
@@ -767,8 +751,9 @@ public:
                             << i << " size " << bktsize << " lcp "
                             << int(s.splitter_lcp[i / 2] & 0x7F);
 
-                    substep_add();
-                    Enqueue<Classify>(ctx, this, sp, s.depth + (s.splitter_lcp[i / 2] & 0x7F));
+                    this->substep_add();
+                    Enqueue<Classify>(ctx, this, sp,
+                                      s.depth + (s.splitter_lcp[i / 2] & 0x7F));
                 }
             }
             // i is odd -> bkt[i] is equal bucket
@@ -776,16 +761,15 @@ public:
             {
                 if (bktsize == 0)
                     ;
-                else if (s.splitter_lcp[i / 2] & 0x80) { // equal-bucket has NULL-terminated key, done.
+                else if (s.splitter_lcp[i / 2] & 0x80) {
+                    // equal-bucket has NULL-terminated key, done.
                     LOGC(debug_recursion)
                         << "Recurse[" << s.depth << "]: = bkt "
                         << i << " size " << bktsize << " is done!";
                     StringPtr spb = sp.copy_back();
-#if CALC_LCP
-                    spb.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
-#else
-                    UNUSED(spb);
-#endif
+
+                    if (Context::CalcLcp)
+                        spb.fill_lcp(s.depth + lcpKeyDepth(s.classifier.get_splitter(i / 2)));
                     ctx.donesize(bktsize, thrid);
                 }
                 else
@@ -794,8 +778,9 @@ public:
                         << "Recurse[" << s.depth << "]: = bkt "
                         << i << " size " << bktsize << " lcp keydepth!";
 
-                    substep_add();
-                    Enqueue<Classify>(ctx, this, sp, s.depth + sizeof(key_type));
+                    this->substep_add();
+                    Enqueue<Classify>(
+                        ctx, this, sp, s.depth + sizeof(key_type));
                 }
             }
         }
@@ -1230,7 +1215,7 @@ public:
 
             if (ms.idx == 0 && ms.num_lt != 0)
             {
-                substep_add();
+                this->substep_add();
                 Enqueue<Classify>(ctx, this, ms.strptr.sub(0, ms.num_lt), ms.depth);
             }
             if (ms.idx <= 1) // st.num_eq > 0 always
@@ -1240,7 +1225,7 @@ public:
                 StringPtr sp = ms.strptr.sub(ms.num_lt, ms.num_eq);
 
                 if (ms.eq_recurse) {
-                    substep_add();
+                    this->substep_add();
                     Enqueue<Classify>(ctx, this, sp,
                                       ms.depth + sizeof(key_type));
                 }
@@ -1258,7 +1243,7 @@ public:
             }
             if (ms.idx <= 2 && ms.num_gt != 0)
             {
-                substep_add();
+                this->substep_add();
                 Enqueue<Classify>(ctx, this,
                                   ms.strptr.sub(ms.num_lt + ms.num_eq, ms.num_gt), ms.depth);
             }
@@ -1270,7 +1255,6 @@ public:
 
     virtual void substep_all_done()
     {
-#if CALC_LCP
         LOGC(debug_recursion)
             << "SmallSort[" << in_depth << "] "
             << "all substeps done -> LCP calculation";
@@ -1290,7 +1274,6 @@ public:
         if (pstep) pstep->substep_notify_done();
 
         delete this;
-#endif
     }
 };
 
@@ -1298,7 +1281,7 @@ public:
 // *** SampleSortStep out-of-place parallel sample sort with separate Jobs
 
 template <typename Context, template <size_t> class Classify, typename StringPtr>
-class SampleSortStep : public SortStep
+class SampleSortStep : public SortStep<Context::CalcLcp>
 {
 public:
 #if 0
@@ -1319,7 +1302,7 @@ public:
     typedef typename Context::job_type job_type;
 
     //! parent sort step notification
-    SortStep* pstep;
+    SortStep<Context::CalcLcp>* pstep;
 
     //! string pointers, size, and current sorting depth
     StringPtr strptr;
@@ -1396,7 +1379,7 @@ public:
 
     // *** Constructor
 
-    SampleSortStep(Context& ctx, SortStep* _pstep,
+    SampleSortStep(Context& ctx, SortStep<Context::CalcLcp>* _pstep,
                    const StringPtr& _strptr, size_t _depth)
         : pstep(_pstep), strptr(_strptr), depth(_depth)
     {
@@ -1416,6 +1399,8 @@ public:
         ctx.jobqueue.enqueue(new SampleJob(this));
         ++ctx.para_ss_steps;
     }
+
+    virtual ~SampleSortStep() { }
 
     // *** Sample Step
 
@@ -1544,7 +1529,7 @@ public:
         bkt[bktnum] = strptr.size();
 
         // keep anonymous subjob handle while creating subjobs
-        substep_add();
+        this->substep_add();
 
         size_t i = 0;
         while (i < bktnum - 1)
@@ -1563,7 +1548,7 @@ public:
                     << "Recurse[" << depth << "]: < bkt " << bkt[i]
                     << " size " << bktsize << " lcp "
                     << int(splitter_lcp[i / 2] & 0x7F);
-                substep_add();
+                this->substep_add();
                 Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize),
                                   depth + (splitter_lcp[i / 2] & 0x7F));
             }
@@ -1591,7 +1576,7 @@ public:
                     LOGC(debug_recursion)
                         << "Recurse[" << depth << "]: = bkt " << bkt[i]
                         << " size " << bktsize << " lcp keydepth!";
-                    substep_add();
+                    this->substep_add();
                     Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize),
                                       depth + sizeof(key_type));
                 }
@@ -1612,32 +1597,33 @@ public:
             LOGC(debug_recursion)
                 << "Recurse[" << depth << "]: > bkt " << bkt[i]
                 << " size " << bktsize << " no lcp";
-            substep_add();
+            this->substep_add();
             Enqueue<Classify>(ctx, this, strptr.flip(bkt[i], bktsize), depth);
         }
 
-        substep_notify_done(); // release anonymous subjob handle
+        this->substep_notify_done(); // release anonymous subjob handle
 
-#if !CALC_LCP
-        delete[] bkt;
-        delete this;
-#endif
+        if (!Context::CalcLcp) {
+            delete[] bkt;
+            delete this;
+        }
     }
 
     // *** After Recursive Sorting
 
-#if CALC_LCP
     virtual void substep_all_done()
     {
-        LOGC(debug_steps) << "pSampleSortStep[" << depth << "]: all substeps done.";
+        if (Context::CalcLcp) {
+            LOGC(debug_steps)
+                << "pSampleSortStep[" << depth << "]: all substeps done.";
 
-        sample_sort_lcp<bktnum>(classifier, strptr.original(), depth, bkt[0]);
-        delete[] bkt[0];
+            sample_sort_lcp<bktnum>(classifier, strptr.original(), depth, bkt[0]);
+            delete[] bkt[0];
 
-        if (pstep) pstep->substep_notify_done();
-        delete this;
+            if (pstep) pstep->substep_notify_done();
+            delete this;
+        }
     }
-#endif
 
     static inline void put_stats()
     {
@@ -1651,7 +1637,7 @@ public:
 };
 
 template <template <size_t> class Classify, typename Context, typename StringPtr>
-void Enqueue(Context& ctx, SortStep* pstep,
+void Enqueue(Context& ctx, SortStep<Context::CalcLcp>* pstep,
              const StringPtr& strptr, size_t depth)
 {
     if (strptr.size() > ctx.sequential_threshold() || use_only_first_sortstep) {
@@ -1659,27 +1645,32 @@ void Enqueue(Context& ctx, SortStep* pstep,
     }
     else {
         if (strptr.size() < ((uint64_t)1 << 32))
-            new SmallsortJob<Context, Classify, StringPtr, uint32_t>
-                (ctx, pstep, strptr, depth);
+            new SmallsortJob<Context, Classify, StringPtr, uint32_t>(
+                ctx, pstep, strptr, depth);
         else
-            new SmallsortJob<Context, Classify, StringPtr, uint64_t>
-                (ctx, pstep, strptr, depth);
+            new SmallsortJob<Context, Classify, StringPtr, uint64_t>(
+                ctx, pstep, strptr, depth);
     }
 }
 
+/******************************************************************************/
+// Externally Callable Sorting Methods
+
+//! Main Parallel Sample Sort Function. See below for more convenient wrappers.
 template <template <size_t> class Classify =
               bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
           typename StringPtr>
 void parallel_sample_sort(const StringPtr& strptr, size_t depth)
 {
-    Context<> ctx;
+    using SContext = Context<StringPtr::with_lcp>;
+    SContext ctx;
     ctx.totalsize = strptr.size();
 #if PS5_ENABLE_RESTSIZE
     ctx.restsize = strptr.size();
 #endif
     ctx.threadnum = omp_get_max_threads();
 
-    SampleSortStep<Context<>, Classify, StringPtr>::put_stats();
+    SampleSortStep<SContext, Classify, StringPtr>::put_stats();
 
     ctx.timers.start(ctx.threadnum);
 
@@ -1727,7 +1718,8 @@ void parallel_sample_sort_base(const StringSet& strset, size_t depth)
     StringSet::deallocate(shadow);
 }
 
-template <template <size_t> class Classify>
+template <template <size_t> class Classify =
+              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>
 void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 {
     return parallel_sample_sort_base<Classify>(
@@ -1780,8 +1772,6 @@ void parallel_sample_sort_out_test(const StringSet& strset, size_t depth)
 
 /******************************************************************************/
 
-#if CALC_LCP
-
 template <template <size_t> class Classify, typename StringSet>
 void parallel_sample_sort_lcp_base(
     const StringSet& strset, uintptr_t* lcp, size_t depth)
@@ -1802,16 +1792,26 @@ void parallel_sample_sort_lcp_base(
 template <template <size_t> class Classify =
               bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
           typename StringSet>
+void parallel_sample_sort_lcp_base(const StringSet& strset, size_t depth)
+{
+    std::vector<uintptr_t> tmp_lcp(strset.size());
+    parallel_sample_sort_lcp_base<Classify>(strset, tmp_lcp.data(), depth);
+}
+
+template <template <size_t> class Classify =
+              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
+          typename StringSet>
 void parallel_sample_sort_lcp_verify(const StringSet& strset, size_t depth)
 {
     std::vector<uintptr_t> tmp_lcp(strset.size());
     tmp_lcp[0] = 42;                 // must keep lcp[0] unchanged
     std::fill(tmp_lcp.begin() + 1, tmp_lcp.end(), -1);
     parallel_sample_sort_lcp_base<Classify>(strset, tmp_lcp.data(), depth);
-    assert(stringtools::verify_lcp(strset, tmp_lcp.data(), 42));
+    die_unless(stringtools::verify_lcp(strset, tmp_lcp.data(), 42));
 }
 
 //! Call for NUMA aware parallel sorting
+static inline
 void parallel_sample_sort_numa(string* strings, size_t n,
                                int numaNode, int numberOfThreads,
                                const LcpCacheStringPtr& output)
@@ -1820,7 +1820,7 @@ void parallel_sample_sort_numa(string* strings, size_t n,
     numa_run_on_node(numaNode);
     numa_set_preferred(numaNode);
 
-    Context<> ctx;
+    Context</* CalcLcp */ true> ctx;
     ctx.totalsize = n;
 #if PS5_ENABLE_RESTSIZE
     ctx.restsize = n;
@@ -1852,10 +1852,11 @@ void parallel_sample_sort_numa(string* strings, size_t n,
 }
 
 //! Call for NUMA aware parallel sorting
+static inline
 void parallel_sample_sort_numa2(const UCharStringShadowLcpCacheOutPtr* strptr,
                                 unsigned numInputs)
 {
-    typedef Context<NumaJobQueueGroup> context_type;
+    typedef Context</* CalcLcp */ true, NumaJobQueueGroup> context_type;
 
     context_type::jobqueuegroup_type group;
 
@@ -1900,145 +1901,7 @@ void parallel_sample_sort_numa2(const UCharStringShadowLcpCacheOutPtr* strptr,
     }
 }
 
-#endif // CALC_LCP
-
-/******************************************************************************/
-
-static inline void
-parallel_sample_sortBTC(string* strings, size_t n)
-{
-    parallel_sample_sort_base<bingmann_sample_sort::ClassifyTreeSimple>(
-        strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTC,
-    "bingmann/parallel_sample_sortBTC",
-    "pS5: binary tree, bktcache")
-
-static inline void
-parallel_sample_sortBTCU1(string* strings, size_t n)
-{
-    parallel_sample_sort_base<bingmann_sample_sort::ClassifyTreeUnroll>(
-        strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTCU1,
-    "bingmann/parallel_sample_sortBTCU1",
-    "pS5: binary tree, bktcache, unroll tree")
-
-static inline void
-parallel_sample_sortBTCU2(string* strings, size_t n)
-{
-    parallel_sample_sort_base<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
-        strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTCU2,
-    "bingmann/parallel_sample_sortBTCU2",
-    "pS5: binary tree, bktcache, unroll tree and strings")
-
-static inline void
-parallel_sample_sortBTCU2_out(string* strings, size_t n)
-{
-    string* output = new string[n];
-
-    parallel_sample_sort_out_base<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
-        strings, output, n, 0);
-
-    // copy back for verification
-    memcpy(strings, output, n * sizeof(string));
-    delete[] output;
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTCU2_out,
-    "bingmann/parallel_sample_sortBTCU2_out",
-    "pS5: binary tree, bktcache, unroll tree and strings, separate output")
-
-////////////////////////////////////////////////////////////////////////////////
-
-static inline void
-parallel_sample_sortBSC(string* strings, size_t n)
-{
-    parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyBinarySearch>(strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBSC,
-    "bingmann/parallel_sample_sortBSC",
-    "pS5: binary search, bktcache")
-
-////////////////////////////////////////////////////////////////////////////////
-
-static inline void
-parallel_sample_sortBTCE(string* strings, size_t n)
-{
-    parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyEqual>(strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTCE,
-    "bingmann/parallel_sample_sortBTCE",
-    "pS5: binary tree, equality, bktcache")
-
-static inline void
-parallel_sample_sortBTCEU1(string* strings, size_t n)
-{
-    parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyEqualUnrollAssembler>(strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTCEU1,
-    "bingmann/parallel_sample_sortBTCEU1",
-    "pS5: binary tree, equality, bktcache, unroll tree")
-
-/*----------------------------------------------------------------------------*/
-
-static inline void
-parallel_sample_sortBTCT(string* strings, size_t n)
-{
-    parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyTreeCalcSimple>(strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTCT,
-    "bingmann/parallel_sample_sortBTCT",
-    "pS5: binary tree, bktcache, tree calc")
-
-static inline void
-parallel_sample_sortBTCTU1(string* strings, size_t n)
-{
-    parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyTreeCalcUnroll>(strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTCTU1,
-    "bingmann/parallel_sample_sortBTCTU1",
-    "pS5: binary tree, bktcache, unroll tree, tree calc")
-
-static inline void
-parallel_sample_sortBTCTU2(string* strings, size_t n)
-{
-    parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyTreeCalcUnroll>(strings, n, 0);
-}
-
-PSS_CONTESTANT_PARALLEL_LCP(
-    parallel_sample_sortBTCTU2,
-    "bingmann/parallel_sample_sortBTCTU2",
-    "pS5: binary tree, bktcache, unroll tree and strings, tree calc")
-
-/*----------------------------------------------------------------------------*/
-
-} // namespace bingmann_parallel_sample_sort(_lcp)
+} // namespace bingmann_parallel_sample_sort
 
 #endif // !PSS_SRC_PARALLEL_BINGMANN_PARALLEL_SAMPLE_SORT_HEADER
 

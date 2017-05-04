@@ -46,7 +46,7 @@ using std::numeric_limits;
 using namespace jobqueue;
 using namespace stringtools;
 
-using namespace bingmann_parallel_sample_sort_lcp;
+using namespace bingmann_parallel_sample_sort;
 
 //due to ambigous symbol
 using stringtools::string;

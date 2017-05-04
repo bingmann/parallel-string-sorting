@@ -27,7 +27,6 @@
 #include <sequential/bingmann-sample_sort.hpp>
 #include <parallel/bingmann-parallel_mkqs.hpp>
 #include <parallel/bingmann-parallel_sample_sort.hpp>
-#include <parallel/bingmann-parallel_sample_sort_lcp.hpp>
 #include <tools/stringset.hpp>
 #include <tools/lcgrandom.hpp>
 
@@ -246,7 +245,7 @@ void test_all(const size_t nstrings)
     run_tests(bingmann_parallel_mkqs::bingmann_parallel_mkqs);
     run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_base);
     run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_out_test);
-    run_tests(bingmann_parallel_sample_sort_lcp::parallel_sample_sort_lcp_verify);
+    run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_lcp_verify);
 }
 
 int main()
