@@ -64,6 +64,8 @@ public:
 
             j += oversample_factor;
         }
+        // sentinel for > everything bucket
+        splitter_lcp[numsplitters] = 0;
     }
 };
 

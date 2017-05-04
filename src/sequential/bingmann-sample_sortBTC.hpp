@@ -50,7 +50,7 @@ public:
 
         while (i <= numsplitters)
         {
-#if 0
+#if SSSS_TERNARY_OP
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
 #else
@@ -203,7 +203,7 @@ public:
 
         for (size_t l = 0; l < treebits; ++l)
         {
-#if 0
+#if SSSS_TERNARY_OP
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
 #else
@@ -283,7 +283,7 @@ public:
         {
             for (int u = 0; u < U; ++u)
             {
-#if 0
+#if SSSS_TERNARY_OP
                 // in gcc-4.6.3 this produces a SETA, LEA sequence
                 i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
 #else
@@ -370,7 +370,7 @@ public:
     {
         for (size_t u = 0; u < Rollout; ++u)
         {
-#if 0
+#if SSSS_TERNARY_OP
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
 #else
@@ -398,17 +398,6 @@ public:
         {
         default:
             abort();
-        case 20:
-            find_bkt_unroll_one(i, key);
-        case 19:
-            find_bkt_unroll_one(i, key);
-        case 18:
-            find_bkt_unroll_one(i, key);
-        case 17:
-            find_bkt_unroll_one(i, key);
-        case 16:
-            find_bkt_unroll_one(i, key);
-
         case 15:
             find_bkt_unroll_one(i, key);
         case 14:

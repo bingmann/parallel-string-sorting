@@ -56,6 +56,8 @@ static const size_t oversample_factor = 2;
 
 static const bool g_toplevel_only = false;
 
+#define SSSS_TERNARY_OP 1
+
 static size_t g_ss_steps, g_rs_steps;
 
 enum {

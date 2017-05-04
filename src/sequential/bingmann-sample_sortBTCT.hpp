@@ -49,7 +49,7 @@ public:
 
         while (i <= numsplitters)
         {
-#if 0
+#if SSSS_TERNARY_OP
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
 #else
@@ -121,7 +121,7 @@ public:
     __attribute__ ((optimize("unroll-all-loops")))
     void find_bkt_unroll_one(unsigned int& i, const key_type& key) const
     {
-#if 0
+#if SSSS_TERNARY_OP
         // in gcc-4.6.3 this produces a SETA, LEA sequence
         i = 2 * i + (key <= splitter_tree[i] ? 0 : 1);
 #else
@@ -146,16 +146,6 @@ public:
         {
         default:
             abort();
-        case 20:
-            find_bkt_unroll_one(i, key);
-        case 19:
-            find_bkt_unroll_one(i, key);
-        case 18:
-            find_bkt_unroll_one(i, key);
-        case 17:
-            find_bkt_unroll_one(i, key);
-        case 16:
-            find_bkt_unroll_one(i, key);
 
         case 15:
             find_bkt_unroll_one(i, key);
@@ -248,6 +238,7 @@ public:
 
     using Super = ClassifyTreeCalcSimple<TreeBits>;
     using Super::splitter_tree;
+    using Super::get_splitter;
 
     __attribute__ ((optimize("unroll-all-loops")))
     void find_bkt_unroll_one(
@@ -255,7 +246,7 @@ public:
     {
         for (unsigned u = 0; u < Rollout; ++u)
         {
-#if 0
+#if SSSS_TERNARY_OP
             // in gcc-4.6.3 this produces a SETA, LEA sequence
             i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
 #else
@@ -283,16 +274,6 @@ public:
         {
         default:
             abort();
-        case 20:
-            find_bkt_unroll_one(i, key);
-        case 19:
-            find_bkt_unroll_one(i, key);
-        case 18:
-            find_bkt_unroll_one(i, key);
-        case 17:
-            find_bkt_unroll_one(i, key);
-        case 16:
-            find_bkt_unroll_one(i, key);
 
         case 15:
             find_bkt_unroll_one(i, key);

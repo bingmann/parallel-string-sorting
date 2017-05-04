@@ -1937,7 +1937,7 @@ static inline void
 parallel_sample_sortBTCEU1(string* strings, size_t n)
 {
     parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyEqualUnrollTree>(strings, n, 0);
+        bingmann_sample_sort::ClassifyEqualUnrollAssembler>(strings, n, 0);
 }
 
 PSS_CONTESTANT_PARALLEL_LCP(
