@@ -41,7 +41,7 @@
 #include <vector>
 #include <memory>
 
-#include "debug.hpp"
+#include <tlx/logger.hpp>
 
 namespace parallel_string_sorting {
 
@@ -277,8 +277,8 @@ public:
         size_t i = 0;
         for (typename Traits::Iterator pi = ss.begin(); pi != ss.end(); ++pi)
         {
-            std::cout << "[" << i++ << "] = " << ss[pi]
-                      << " = " << ss.get_string(ss[pi], 0) << std::endl;
+            LOG1 << "[" << i++ << "] = " << ss[pi]
+                 << " = " << ss.get_string(ss[pi], 0);
 
             // for printing std::unique_ptr<std::string>
             // std::cout << "[" << i++ << "] = " << ss[pi].get();

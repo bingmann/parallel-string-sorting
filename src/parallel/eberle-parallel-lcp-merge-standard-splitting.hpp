@@ -26,7 +26,6 @@
 #include "eberle-parallel-lcp-merge.hpp"
 
 #include "../sequential/bs-mkqs.hpp"
-#include "../tools/debug.hpp"
 
 namespace eberle_parallel_lcp_merge {
 

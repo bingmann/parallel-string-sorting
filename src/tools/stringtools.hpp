@@ -25,7 +25,6 @@
 #define PSS_SRC_TOOLS_STRINGTOOLS_HEADER
 
 #include <cassert>
-#include "debug.hpp"
 #include <tlx/logger.hpp>
 
 namespace stringtools {
@@ -400,15 +399,15 @@ struct TreeCalculations
     {
         for (size_t i = 1; i <= numnodes; ++i)
         {
-            std::cout << toBinary(i, treebits) << " -> " << std::endl;
+            LOG1 << toBinary(i, treebits) << " -> ";
 
             size_t id = level_to_preorder(i);
-            std::cout << toBinary(id, treebits) << " -> " << std::endl;
+            LOG1 << toBinary(id, treebits) << " -> ";
 
             id = pre_to_levelorder(id);
-            std::cout << toBinary(id, treebits) << std::endl;
+            LOG1 << toBinary(id, treebits);
 
-            std::cout << std::endl;
+            LOG1 << "";
             assert(id == i);
         }
     }

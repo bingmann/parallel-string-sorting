@@ -24,7 +24,6 @@
 #include <cstdlib>
 #include <algorithm>
 
-#include "../tools/debug.hpp"
 #include "../tools/contest.hpp"
 #include "../tools/stringtools.hpp"
 

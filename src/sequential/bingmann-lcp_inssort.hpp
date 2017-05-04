@@ -295,7 +295,7 @@ void lcp_insertion_sort_pseudocode(
             lcp[i + 1] = h;
     }
 
-    std::cout << "lcp_inssort comparisons = " << cmp << "\n";
+    LOG1 << "lcp_inssort comparisons = " << cmp;
 }
 
 //! LCP insertion sort, but immediately discard the lcp

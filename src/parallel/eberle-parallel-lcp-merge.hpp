@@ -33,8 +33,6 @@
 #include "../tools/jobqueue.hpp"
 #include "../tools/stringtools.hpp"
 
-#include "../tools/debug.hpp"
-
 #include <tlx/logger.hpp>
 
 namespace eberle_parallel_lcp_merge {

@@ -28,7 +28,6 @@
 #include <iostream>
 #include <vector>
 
-#include "../tools/debug.hpp"
 #include "../tools/contest.hpp"
 #include "../tools/stringtools.hpp"
 #include "../tools/jobqueue.hpp"

@@ -122,7 +122,6 @@ std::vector<size_t> g_numa_string_count;      // pointer to strings on NUMA node
 
 // *** Tools and Algorithms
 
-#include "tools/debug.hpp"
 #include "tools/membuffer.hpp"
 #include "tools/lcgrandom.hpp"
 #include "tools/contest.hpp"

@@ -32,8 +32,6 @@
 #include <vector>
 #include <algorithm>
 
-#include "../tools/debug.hpp"
-
 #include "../tools/lcgrandom.hpp"
 #include "../tools/contest.hpp"
 #include "../tools/stringtools.hpp"
