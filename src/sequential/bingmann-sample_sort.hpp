@@ -56,6 +56,13 @@ static const size_t oversample_factor = 2;
 
 static const bool g_toplevel_only = false;
 
+//! whether to instantiate tests for all tree classifier sizes
+#define SAMPLE_SORT_EXPAND_CLASSIFIER_SIZE      0
+
+//! whether to instantiate tests for all interleave batches in unrolled tree
+//! classifiers
+#define SAMPLE_SORT_EXPAND_INTERLEAVES          1
+
 #define SSSS_TERNARY_OP 1
 
 static size_t g_ss_steps, g_rs_steps;
