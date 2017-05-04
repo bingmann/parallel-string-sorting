@@ -261,100 +261,8 @@ public:
     }
 };
 
-template <size_t treebits>
-class ClassifyTreeUnrollInterleave : public ClassifyTreeUnroll<treebits>
-{
-public:
-    //! search in splitter tree for bucket number, unrolled for U keys at once.
-    template <int U>
-    __attribute__ ((optimize("unroll-all-loops")))
-    void find_bkt_unroll(const key_type key[U], uint16_t obkt[U]) const
-    {
-        // binary tree traversal without left branch
-
-        static const size_t numsplitters = this->numsplitters;
-        const key_type* splitter = this->splitter;
-        const key_type* splitter_tree = this->splitter_tree;
-
-        unsigned int i[U];
-        std::fill(i + 0, i + U, 1);
-
-        for (size_t l = 0; l < treebits; ++l)
-        {
-            for (int u = 0; u < U; ++u)
-            {
-#if SSSS_TERNARY_OP
-                // in gcc-4.6.3 this produces a SETA, LEA sequence
-                i[u] = 2 * i[u] + (key[u] <= splitter_tree[i[u]] ? 0 : 1);
-#else
-                // in gcc-4.6.3 this produces two LEA and a CMOV sequence, which
-                // is slightly faster
-                if (key[u] <= splitter_tree[i[u]])
-                    i[u] = 2 * i[u] + 0;
-                else    // (key > splitter_tree[i[u]])
-                    i[u] = 2 * i[u] + 1;
-#endif
-            }
-        }
-
-        for (int u = 0; u < U; ++u)
-            i[u] -= numsplitters + 1;
-
-        for (int u = 0; u < U; ++u) {
-            // < bucket
-            obkt[u] = i[u] * 2;
-        }
-
-        for (int u = 0; u < U; ++u) {
-            // equal bucket
-            if (i[u] < numsplitters && splitter[i[u]] == key[u]) obkt[u] += 1;
-        }
-    }
-
-    //! classify all strings in area by walking tree and saving bucket id,
-    //! unrolled loops
-    template <typename StringSet>
-    void classify(
-        const StringSet& strset,
-        typename StringSet::Iterator begin, typename StringSet::Iterator end,
-        uint16_t* bktout, size_t depth) const
-    {
-        while (begin != end)
-        {
-            static const int rollout = 4;
-            if (begin + rollout < end)
-            {
-                key_type key[rollout];
-                key[0] = strset.get_uint64(begin[0], depth);
-                key[1] = strset.get_uint64(begin[1], depth);
-                key[2] = strset.get_uint64(begin[2], depth);
-                key[3] = strset.get_uint64(begin[3], depth);
-
-                find_bkt_unroll<rollout>(key, bktout);
-
-                begin += rollout;
-                bktout += rollout;
-            }
-            else
-            {
-                // binary search in splitter with equal check
-                key_type key = strset.get_uint64(*begin++, depth);
-                *bktout++ = this->find_bkt(key);
-            }
-        }
-    }
-
-    //! classify all strings in area by walking tree and saving bucket id
-    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth)
-    {
-        return classify(
-            parallel_string_sorting::UCharStringSet(strB, strE),
-            strB, strE, bktout, depth);
-    }
-};
-
 template <size_t TreeBits, size_t Rollout>
-class ClassifyTreeUnrollInterleaveNew : public ClassifyTreeSimple<TreeBits>
+class ClassifyTreeUnrollInterleave : public ClassifyTreeSimple<TreeBits>
 {
 public:
     static const size_t treebits = TreeBits;
@@ -366,7 +274,7 @@ public:
 
     __attribute__ ((optimize("unroll-all-loops")))
     void find_bkt_unroll_one(
-        unsigned int i[Rollout], const key_type key[Rollout])
+        unsigned int i[Rollout], const key_type key[Rollout]) const
     {
         for (size_t u = 0; u < Rollout; ++u)
         {
@@ -387,7 +295,7 @@ public:
     //! search in splitter tree for bucket number, unrolled for Rollout keys at
     //! once.
     __attribute__ ((optimize("unroll-all-loops")))
-    void find_bkt_unroll(const key_type key[Rollout], uint16_t obkt[Rollout])
+    void find_bkt_unroll(const key_type key[Rollout], uint16_t obkt[Rollout]) const
     {
         // binary tree traversal without left branch
 
@@ -448,30 +356,46 @@ public:
     }
 
     //! classify all strings in area by walking tree and saving bucket id
+    template <typename StringSet>
     __attribute__ ((optimize("unroll-all-loops")))
-    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth)
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            if (str + Rollout < strE)
+            if (begin + Rollout < end)
             {
                 key_type key[Rollout];
                 for (size_t u = 0; u < Rollout; ++u)
-                    key[u] = get_char<key_type>(str[u], depth);
+                    key[u] = strset.get_uint64(begin[u], depth);
 
                 find_bkt_unroll(key, bktout);
 
-                str += Rollout;
+                begin += Rollout;
                 bktout += Rollout;
             }
             else
             {
-                key_type key = get_char<key_type>(*str++, depth);
-                *bktout++ = ClassifyTreeSimple<TreeBits>::find_bkt(key);
+                key_type key = strset.get_uint64(*begin++, depth);
+                *bktout++ = this->find_bkt(key);
             }
         }
     }
+
+    //! classify all strings in area by walking tree and saving bucket id
+    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth)
+    {
+        return classify(
+            parallel_string_sorting::UCharStringSet(strB, strE),
+            strB, strE, bktout, depth);
+    }
 };
+
+template <size_t TreeBits>
+using ClassifyTreeUnrollInterleaveX =
+          ClassifyTreeUnrollInterleave<TreeBits, 4>;
 
 } // namespace bingmann_sample_sort
 

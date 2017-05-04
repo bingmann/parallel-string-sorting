@@ -1615,7 +1615,7 @@ void Enqueue(Context& ctx, SortStep* pstep,
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
+              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
           typename StringPtr>
 void parallel_sample_sort(const StringPtr& strptr, size_t depth)
 {
@@ -1657,7 +1657,7 @@ void parallel_sample_sort(const StringPtr& strptr, size_t depth)
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
+              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_base(const StringSet& strset, size_t depth)
 {
@@ -1682,7 +1682,7 @@ void parallel_sample_sort_base(string* strings, size_t n, size_t depth)
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
+              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_out_base(
     const StringSet& strset, const StringSet& output, size_t depth)
@@ -1711,7 +1711,7 @@ void parallel_sample_sort_out_base(
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
+              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_out_test(const StringSet& strset, size_t depth)
 {
@@ -1747,7 +1747,7 @@ void parallel_sample_sort_lcp_base(
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleave,
+              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_lcp_verify(const StringSet& strset, size_t depth)
 {
@@ -1782,7 +1782,7 @@ void parallel_sample_sort_numa(string* strings, size_t n,
     StringShadowLcpCacheOutPtr<StringSet>
     strptr(strset, shadow, outputss, output.lcps, output.cachedChars);
 
-    Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleave>(ctx, NULL, strptr, 0);
+    Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads);
 
     // fixup first entry of LCP and charcache
@@ -1821,7 +1821,7 @@ void parallel_sample_sort_numa2(const UCharStringShadowLcpCacheOutPtr* strptr,
         if (ctx[i]->threadnum == 0)
             ctx[i]->threadnum = 1;
 
-        Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleave>(
+        Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
             *ctx[i], NULL, strptr[i], 0);
 
         group.add_jobqueue(&ctx[i]->jobqueue);
@@ -1878,7 +1878,7 @@ PSS_CONTESTANT_PARALLEL_LCP(
 static inline void
 parallel_sample_sortBTCU2(string* strings, size_t n)
 {
-    parallel_sample_sort_base<bingmann_sample_sort::ClassifyTreeUnrollInterleave>(
+    parallel_sample_sort_base<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
         strings, n, 0);
 }
 
@@ -1892,7 +1892,7 @@ parallel_sample_sortBTCU2_out(string* strings, size_t n)
 {
     string* output = new string[n];
 
-    parallel_sample_sort_out_base<bingmann_sample_sort::ClassifyTreeUnrollInterleave>(
+    parallel_sample_sort_out_base<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
         strings, output, n, 0);
 
     // copy back for verification

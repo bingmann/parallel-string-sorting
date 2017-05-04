@@ -233,19 +233,19 @@ static const char* letters_alnum
 
 void test_all(const size_t nstrings)
 {
-    // if (nstrings <= 1024) {
-    //     run_tests(inssort::inssort_generic);
-    //     run_tests(bingmann::lcp_insertion_sort_verify);
-    //     run_tests(bingmann::lcp_insertion_sort_pseudocode_verify);
-    //     run_tests(bingmann::lcp_insertion_sort_cache_verify);
-    // }
-    // run_tests(bingmann::mkqs_generic);
-    // run_tests(bingmann::msd_CE0_generic);
-    // run_tests(bingmann::msd_CI2_generic);
-    // run_tests(bingmann_parallel_mkqs::bingmann_sequential_mkqs_cache8);
-    // run_tests(bingmann_parallel_mkqs::bingmann_parallel_mkqs);
+    if (nstrings <= 1024) {
+        run_tests(inssort::inssort_generic);
+        run_tests(bingmann::lcp_insertion_sort_verify);
+        run_tests(bingmann::lcp_insertion_sort_pseudocode_verify);
+        run_tests(bingmann::lcp_insertion_sort_cache_verify);
+    }
+    run_tests(bingmann::mkqs_generic);
+    run_tests(bingmann::msd_CE0_generic);
+    run_tests(bingmann::msd_CI2_generic);
+    run_tests(bingmann_parallel_mkqs::bingmann_sequential_mkqs_cache8);
+    run_tests(bingmann_parallel_mkqs::bingmann_parallel_mkqs);
     run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_base);
-    // run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_out_test);
+    run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_out_test);
     // run_tests(bingmann_parallel_sample_sort_lcp::parallel_sample_sort_lcp_verify);
 }
 
