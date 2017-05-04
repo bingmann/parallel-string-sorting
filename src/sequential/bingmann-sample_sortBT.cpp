@@ -173,14 +173,14 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
         while (highbit > 0)
         {
-            DBG(debug_splitter_tree, "highbit = " << highbit);
+            LOGC(debug_splitter_tree) << "highbit = " << highbit;
 
             size_t p = highbit - 1;
             size_t inc = highbit << 1;
 
             while (p <= numsplitters)
             {
-                DBG(debug_splitter_tree, "p = " << p);
+                LOGC(debug_splitter_tree) << "p = " << p;
 
                 splitter_tree[t++] = splitter[p];
 
@@ -193,12 +193,9 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     if (debug_splitter_tree)
     {
-        DBG1(1, "splitter_tree: ");
+        LOG1 << "splitter_tree: ";
         for (size_t i = 0; i < numsplitters; ++i)
-        {
-            DBG2(1, splitter_tree[i] << " ");
-        }
-        DBG3(1, "");
+            LOG1 << splitter_tree[i];
     }
 
     // step 2.2: classify all strings and count bucket sizes
@@ -222,12 +219,9 @@ void sample_sortBT(string* strings, size_t n, size_t depth)
 
     if (debug_bucketsize)
     {
-        DBG1(1, "bktsize: ");
+        LOG1 << "bktsize: ";
         for (size_t i = 0; i < bktnum; ++i)
-        {
-            DBG2(1, bktsize[i] << " ");
-        }
-        DBG3(1, "");
+            LOG1 << bktsize[i];
     }
 
     // step 3: prefix sum

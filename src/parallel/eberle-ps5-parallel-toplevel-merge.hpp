@@ -35,10 +35,6 @@
 #include "../tools/jobqueue.hpp"
 #include "../tools/stringtools.hpp"
 
-#include "../tools/debug.hpp"
-#undef DBGX
-#define DBGX DBGX_OMP
-
 namespace eberle_ps5_parallel_toplevel_merge {
 
 using std::numeric_limits;
@@ -63,9 +59,9 @@ eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMe
     if (realNumaNodes < 1) realNumaNodes = 1;
 
     if (realNumaNodes == 1) {
-        DBG(1, "No or just one NUMA nodes detected on the system.");
-        DBG(1, "pS5-LCP-Mergesort is designed for NUMA systems.");
-        DBG(1, "Continuing anyway, at your own peril!");
+        LOG1 << "No or just one NUMA nodes detected on the system.";
+        LOG1 << "pS5-LCP-Mergesort is designed for NUMA systems.";
+        LOG1 << "Continuing anyway, at your own peril!";
     }
 
     g_stats >> "num_numa_nodes" << realNumaNodes;
@@ -76,8 +72,8 @@ eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMe
 
     if (numNumaNodes != realNumaNodes || g_numa_nodes == 0)
     {
-        DBG(1, "!!! WARNING !!! emulating " << numNumaNodes << " NUMA nodes! "
-                                            << "Remove --numa-nodes for REAL EXPERIMENTS.");
+        LOG1 << "!!! WARNING !!! emulating " << numNumaNodes << " NUMA nodes! "
+             << "Remove --numa-nodes for REAL EXPERIMENTS.";
     }
 
     // create outputs
@@ -91,9 +87,9 @@ eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMe
 
     if (numThreadsPerNode == 0)
     {
-        DBG(1, "Fewer threads than NUMA nodes detected.");
-        DBG(1, "Strange things will happen now.");
-        DBG(1, "Continuing anyway, at your own peril!");
+        LOG1 << "Fewer threads than NUMA nodes detected.";
+        LOG1 << "Strange things will happen now.";
+        LOG1 << "Continuing anyway, at your own peril!";
 
         // set num threads = 1 for nodes, and limit number of active nodes via
         // normal num_threads() in next loop
@@ -115,7 +111,8 @@ eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMe
                                       numaNode, nodeThreads,
                                       outputs[k]);
 
-            DBG(debug_toplevel_merge_duration, "node[" << k << "] took : " << timer.elapsed() << " s");
+            LOGC(debug_toplevel_merge_duration)
+                << "node[" << k << "] took : " << timer.elapsed() << " s";
         }
     }
     else
@@ -130,7 +127,7 @@ eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMe
             int numaNode = k % realNumaNodes;
             if (k < remainThreads) nodeThreads++; // distribute extra threads
 
-            DBG(1, "node[" << numaNode << "] gets " << nodeThreads << " threads");
+            LOG1 << "node[" << numaNode << "] gets " << nodeThreads << " threads";
 
             ClockTimer timer;
 
@@ -140,11 +137,13 @@ eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMe
                                       numaNode, nodeThreads,
                                       outputs[k]);
 
-            DBG(debug_toplevel_merge_duration, "node[" << k << "] took : " << timer.elapsed() << " s");
+            LOGC(debug_toplevel_merge_duration)
+                << "node[" << k << "] took : " << timer.elapsed() << " s";
         }
     }
 
-    DBG(debug_toplevel_merge_duration, "all nodes took : " << timer.elapsed() << " s");
+    LOGC(debug_toplevel_merge_duration)
+        << "all nodes took : " << timer.elapsed() << " s";
 
     if (debug_verify_ps5_lcp_cache)
     {
@@ -164,7 +163,8 @@ eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMe
     //eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
     parallelMerge(outputs, numNumaNodes, strings, n);
 
-    DBG(debug_toplevel_merge_duration, "top level merge needed: " << timer.elapsed() << " s");
+    LOGC(debug_toplevel_merge_duration)
+        << "top level merge needed: " << timer.elapsed() << " s";
 
     for (int k = 0; k < numNumaNodes; k++)
     {
@@ -206,9 +206,9 @@ eberle_ps5_parallel_toplevel_merge_assisting(string* strings, size_t n, void (* 
     if (realNumaNodes < 1) realNumaNodes = 1;
 
     if (realNumaNodes == 1) {
-        DBG(1, "No or just one NUMA nodes detected on the system.");
-        DBG(1, "pS5-LCP-Mergesort is designed for NUMA systems.");
-        DBG(1, "Continuing anyway, at your own peril!");
+        LOG1 << "No or just one NUMA nodes detected on the system.";
+        LOG1 << "pS5-LCP-Mergesort is designed for NUMA systems.";
+        LOG1 << "Continuing anyway, at your own peril!";
     }
 
     g_stats >> "num_numa_nodes" << realNumaNodes;
@@ -219,8 +219,8 @@ eberle_ps5_parallel_toplevel_merge_assisting(string* strings, size_t n, void (* 
 
     if (numNumaNodes != realNumaNodes || g_numa_nodes == 0)
     {
-        DBG(1, "!!! WARNING !!! emulating " << numNumaNodes << " NUMA nodes! "
-                                            << "Remove --numa-nodes for REAL EXPERIMENTS.");
+        LOG1 << "!!! WARNING !!! emulating " << numNumaNodes << " NUMA nodes! "
+             << "Remove --numa-nodes for REAL EXPERIMENTS.";
     }
 
     ClockTimer timer;
@@ -246,7 +246,8 @@ eberle_ps5_parallel_toplevel_merge_assisting(string* strings, size_t n, void (* 
             outputs[k].lcps, outputs[k].cachedChars);
     }
 
-    DBG(debug_toplevel_merge_duration, "allocation needed: " << timer.elapsed() << " s");
+    LOGC(debug_toplevel_merge_duration)
+        << "allocation needed: " << timer.elapsed() << " s";
 
     parallel_sample_sort_numa2(inputs.data(), numNumaNodes);
 
@@ -268,7 +269,8 @@ eberle_ps5_parallel_toplevel_merge_assisting(string* strings, size_t n, void (* 
     //eberle_parallel_lcp_merge::sequentialLcpMerge(outputs, numNumaNodes, strings, n);
     parallelMerge(outputs, numNumaNodes, strings, n);
 
-    DBG(debug_toplevel_merge_duration, "top level merge needed: " << timer.elapsed() << " s");
+    LOGC(debug_toplevel_merge_duration)
+        << "top level merge needed: " << timer.elapsed() << " s";
 
     for (int k = 0; k < numNumaNodes; k++)
     {

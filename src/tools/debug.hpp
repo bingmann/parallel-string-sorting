@@ -26,15 +26,6 @@
 #include <sstream>
 #include <iostream>
 
-#define DBGX(dbg, X)   do { if (dbg) { std::cout << X; } \
-} while (0)
-
-#define DBG(dbg, X)    DBGX(dbg, __FUNCTION__ << "() " << X << std::endl)
-
-#define DBG1(dbg, X)   DBGX(dbg, __FUNCTION__ << "() " << X)
-#define DBG2(dbg, X)   DBGX(dbg, X)
-#define DBG3(dbg, X)   DBGX(dbg, X << std::endl)
-
 #define STRINGIFY_X(s) #s
 #define STRINGIFY(s)  STRINGIFY_X(s)
 
@@ -42,23 +33,6 @@
 #define CONCAT_EXPANDED(a, b) CONCAT(a, b)
 
 #define UNUSED(x) do { (void)x; } while (0)
-
-// *** Support for multi-threaded programs, to activate:
-// #undef DBGX
-// #define DBGX DBGX_OMP
-
-#define DBGX_OMP(dbg, X) do {                  \
-        if (dbg) {                             \
-            std::ostringstream os;             \
-            os << X; g_debug_output(os.str()); \
-        }                                      \
-} while (0)
-
-static inline void g_debug_output(const std::string& s)
-{
-#pragma omp critical
-    std::cout << s;
-}
 
 // *** an always-on ASSERT
 

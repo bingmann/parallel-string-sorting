@@ -34,8 +34,8 @@
 #include "../tools/stringtools.hpp"
 
 #include "../tools/debug.hpp"
-#undef DBGX
-#define DBGX DBGX_OMP
+
+#include <tlx/logger.hpp>
 
 namespace eberle_parallel_lcp_merge {
 
@@ -75,8 +75,9 @@ struct CopyDataJob : public Job
         : input(input), output(output)
     {
         g_mergeJobsCreated++;
-        DBG(debug_jobtype_on_creation,
-            "CopyDataJob (output: " << (output - g_outputBase) << ", length: " << input.size << ")");
+        LOGC(debug_jobtype_on_creation)
+            << "CopyDataJob (output: " << (output - g_outputBase)
+            << ", length: " << input.size << ")";
     }
 
     virtual bool
@@ -97,12 +98,16 @@ struct BinaryMergeJob : public Job
     lcp_t             firstLcp;
     string            * output;
 
-    BinaryMergeJob(const LcpCacheStringPtr& input1, const LcpCacheStringPtr& input2, lcp_t firstLcp, string* output)
+    BinaryMergeJob(const LcpCacheStringPtr& input1,
+                   const LcpCacheStringPtr& input2,
+                   lcp_t firstLcp, string* output)
         : input1(input1), input2(input2), firstLcp(firstLcp), output(output)
     {
         g_mergeJobsCreated++;
-        DBG(debug_jobtype_on_creation,
-            "BinaryMergeJob (length1: " << input1.size << ", length2: " << input2.size << ", output: " << (output - g_outputBase) << ")");
+        LOGC(debug_jobtype_on_creation)
+            << "BinaryMergeJob (length1: " << input1.size
+            << ", length2: " << input2.size
+            << ", output: " << (output - g_outputBase) << ")";
     }
 
     virtual bool

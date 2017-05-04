@@ -26,10 +26,6 @@
 
 #include "eberle-parallel-lcp-merge.hpp"
 
-#include "../tools/debug.hpp"
-#undef DBGX
-#define DBGX DBGX_OMP
-
 namespace eberle_parallel_lcp_merge {
 
 // debugging constants
@@ -63,7 +59,12 @@ struct MergeJobLcpSplitting : public Job
         : output(output), length(length), baseLcp(baseLcp), nextBaseLcp(nextBaseLcp)
     {
         g_mergeJobsCreated++;
-        DBG(debug_jobtype_on_creation, "MergeJobLcpSplitting<" << K << "> (output: " << (output - g_outputBase) << ", baseLcp: " << baseLcp << ", nextBaseLcp: " << nextBaseLcp << ", length: " << length << ")");
+        LOGC(debug_jobtype_on_creation)
+            << "MergeJobLcpSplitting<" << K
+            << "> (output: " << (output - g_outputBase)
+            << ", baseLcp: " << baseLcp
+            << ", nextBaseLcp: " << nextBaseLcp
+            << ", length: " << length << ")";
     }
 
     /*
@@ -205,7 +206,9 @@ static inline void
 createJobsLcpSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs,
                        string* output, size_t numberOfElements, lcp_t baseLcp)
 {
-    DBG(debug_job_creation, "CREATING JOBS at baseLcp: " << baseLcp << ", numberOfElements: " << numberOfElements);
+    LOGC(debug_job_creation)
+        << "CREATING JOBS at baseLcp: " << baseLcp
+        << ", numberOfElements: " << numberOfElements;
     g_splittingsExecuted++;
     ClockTimer splittingTimer;
     splittingTimer.start();
@@ -226,7 +229,8 @@ createJobsLcpSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams
     const unsigned overProvFactor = 100;
     const size_t expectedJobLength = std::max(MERGE_BULK_SIZE, numberOfElements / (overProvFactor * omp_get_max_threads()));
 
-    DBG(debug_job_creation, "Expected job length: " << expectedJobLength);
+    LOGC(debug_job_creation)
+        << "Expected job length: " << expectedJobLength;
 
     unsigned keyWidth = 8;
     unsigned createdJobsCtr = 0;
@@ -246,7 +250,7 @@ createJobsLcpSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams
         CHAR_TYPE currBucket = numeric_limits<CHAR_TYPE>::max();
         unsigned numberOfFoundBuckets = 0;
 
-        DBG(debug_splitter_key_mask, std::hex << keyMask);
+        LOGC(debug_splitter_key_mask) << std::hex << keyMask;
 
         for (unsigned k = 0; k < numInputs; ++k)
         {
@@ -333,7 +337,7 @@ createJobsLcpSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams
                                             baseLcp, maxAllowedLcp, splitterCharacter, keyMask);
             }
             else {
-                DBG(1, "Found " << numberOfFoundBuckets << ", which is more input streams than expected, ADD MORE CASES IN SWITCH.");
+                LOG1 << "Found " << numberOfFoundBuckets << ", which is more input streams than expected, ADD MORE CASES IN SWITCH.";
                 abort();
             }
         }
@@ -353,17 +357,19 @@ createJobsLcpSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams
         {
             keyWidth = std::max(unsigned(1), keyWidth - 1);
 
-            DBG(debug_job_creation, "decreased key to " << keyWidth << "  diff: " << diffExpectedReal);
+            LOGC(debug_job_creation)
+                << "decreased key to " << keyWidth << "  diff: " << diffExpectedReal;
         }
         else if (diffExpectedReal >= tolerance)
         {
             keyWidth = std::min(unsigned(8), keyWidth + 1);
 
-            DBG(debug_job_creation, "increased key to " << keyWidth << "  diff: " << diffExpectedReal);
+            LOGC(debug_job_creation)
+                << "increased key to " << keyWidth << "  diff: " << diffExpectedReal;
         }
     }
 
-    DBG(debug_created_jobs_count, "Created " << createdJobsCtr << " jobs!");
+    LOGC(debug_created_jobs_count) << "Created " << createdJobsCtr << " jobs!";
     g_splittingTime += splittingTimer.elapsed();
 }
 
@@ -371,7 +377,8 @@ static inline
 void
 sequentialLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
 {
-    DBG(debug_merge_start_message, "doing sequential lcp merge for " << numInputs << " input streams");
+    LOGC(debug_merge_start_message)
+        << "doing sequential lcp merge for " << numInputs << " input streams";
 
     JobQueue jobQueue;
 
@@ -451,7 +458,9 @@ parallelLcpMerge(const LcpCacheStringPtr* input, unsigned numInputs, string* out
     timer.start();
 
     JobQueue jobQueue;
-    DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads");
+    LOGC(debug_merge_start_message)
+        << "doing parallel lcp merge for " << numInputs
+        << " input streams using " << omp_get_max_threads() << " threads";
     jobQueue.enqueue(new InitialJobLcpSplitting(input, numInputs, output, length));
     jobQueue.numaLoop(-1, omp_get_max_threads());
 

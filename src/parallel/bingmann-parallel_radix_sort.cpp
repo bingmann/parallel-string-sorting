@@ -48,9 +48,6 @@
 #include "../tools/stringtools.hpp"
 #include "../tools/jobqueue.hpp"
 
-#undef DBGX
-#define DBGX DBGX_OMP
-
 #include "../sequential/inssort.hpp"
 
 namespace bingmann_parallel_radix_sort {
@@ -160,7 +157,8 @@ struct SmallsortJob8 : public Job
     {
         size_t n = strptr.size();
 
-        DBG(debug_jobs, "Process SmallsortJob8 " << this << " of size " << n);
+        LOGC(debug_jobs)
+            << "Process SmallsortJob8 " << this << " of size " << n;
 
         strptr = strptr.copy_back();
 
@@ -174,7 +172,7 @@ struct SmallsortJob8 : public Job
         // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
         size_t pop_front = 0;
         std::vector<RadixStep8_CI> radixstack;
-        radixstack.push_back(RadixStep8_CI(strptr, depth, charcache));
+        radixstack.emplace_back(strptr, depth, charcache);
 
         while (radixstack.size() > pop_front)
         {
@@ -194,15 +192,16 @@ struct SmallsortJob8 : public Job
                 }
                 else
                 {
-                    radixstack.push_back(RadixStep8_CI(rs.strptr.sub(rs.bkt[b], bktsize),
-                                                       depth + radixstack.size(),
-                                                       charcache));
+                    radixstack.emplace_back(rs.strptr.sub(rs.bkt[b], bktsize),
+                                            depth + radixstack.size(),
+                                            charcache);
                 }
 
                 if (use_work_sharing && jobqueue.has_idle())
                 {
                     // convert top level of stack into independent jobs
-                    DBG(debug_jobs, "Freeing top level of SmallsortJob8's radixsort stack");
+                    LOGC(debug_jobs)
+                        << "Freeing top level of SmallsortJob8's radixsort stack";
 
                     RadixStep8_CI& rt = radixstack[pop_front];
 
@@ -319,7 +318,8 @@ struct SmallsortJob16 : public Job
     {
         size_t n = strptr.size();
 
-        DBG(debug_jobs, "Process SmallsortJob16 " << this << " of size " << n);
+        LOGC(debug_jobs)
+            << "Process SmallsortJob16 " << this << " of size " << n;
 
         strptr = strptr.copy_back();
 
@@ -337,7 +337,7 @@ struct SmallsortJob16 : public Job
         // std::deque is much slower than std::vector, so we use an artifical pop_front variable.
         size_t pop_front = 0;
         std::vector<RadixStep16_CI> radixstack;
-        radixstack.push_back(RadixStep16_CI(strptr, depth, charcache));
+        radixstack.emplace_back(strptr, depth, charcache);
 
         while (radixstack.size() > pop_front)
         {
@@ -361,15 +361,17 @@ struct SmallsortJob16 : public Job
                 }
                 else
                 {
-                    radixstack.push_back(RadixStep16_CI(rs.strptr.sub(rs.bkt[b], bktsize),
-                                                        depth + 2 * radixstack.size(),
-                                                        charcache));
+                    radixstack.emplace_back(
+                        rs.strptr.sub(rs.bkt[b], bktsize),
+                        depth + 2 * radixstack.size(),
+                        charcache);
                 }
 
                 if (use_work_sharing && jobqueue.has_idle())
                 {
                     // convert top level of stack into independent jobs
-                    DBG(debug_jobs, "Freeing top level of SmallsortJob16's radixsort stack");
+                    LOGC(debug_jobs)
+                        << "Freeing top level of SmallsortJob16's radixsort stack";
 
                     RadixStep16_CI& rt = radixstack[pop_front];
 
@@ -477,7 +479,8 @@ RadixStepCE<key_type>::RadixStepCE(JobQueue& jobqueue, const StringPtr& _strptr,
 
     psize = (n + parts - 1) / parts;
 
-    DBG(debug_jobs, "Area split into " << parts << " parts of size " << psize);
+    LOGC(debug_jobs)
+        << "Area split into " << parts << " parts of size " << psize;
 
     bkt = new size_t[numbkts * parts + 1];
     charcache = new key_type[n];
@@ -491,7 +494,8 @@ RadixStepCE<key_type>::RadixStepCE(JobQueue& jobqueue, const StringPtr& _strptr,
 template <typename key_type>
 void RadixStepCE<key_type>::count(unsigned int p, JobQueue& jobqueue)
 {
-    DBG(debug_jobs, "Process CountJob " << p << " @ " << this);
+    LOGC(debug_jobs)
+        << "Process CountJob " << p << " @ " << this;
 
     string* strB = strptr.active() + p * psize;
     string* strE = strptr.active() + std::min((p + 1) * psize, strptr.size());
@@ -528,7 +532,8 @@ void RadixStepCE<key_type>::count(unsigned int p, JobQueue& jobqueue)
 template <typename key_type>
 void RadixStepCE<key_type>::count_finished(JobQueue& jobqueue)
 {
-    DBG(debug_jobs, "Finishing CountJob " << this << " with prefixsum");
+    LOGC(debug_jobs)
+        << "Finishing CountJob " << this << " with prefixsum";
 
     // inclusive prefix sum over bkt
     size_t sum = 0;
@@ -550,7 +555,8 @@ void RadixStepCE<key_type>::count_finished(JobQueue& jobqueue)
 template <typename key_type>
 void RadixStepCE<key_type>::distribute(unsigned int p, JobQueue& jobqueue)
 {
-    DBG(debug_jobs, "Process DistributeJob " << p << " @ " << this);
+    LOGC(debug_jobs)
+        << "Process DistributeJob " << p << " @ " << this;
 
     string* strB = strptr.active() + p * psize;
     string* strE = strptr.active() + std::min((p + 1) * psize, strptr.size());
@@ -585,7 +591,8 @@ void RadixStepCE<key_type>::distribute(unsigned int p, JobQueue& jobqueue)
 template <>
 void RadixStepCE<uint8_t>::distribute_finished(JobQueue& jobqueue)
 {
-    DBG(debug_jobs, "Finishing DistributeJob " << this << " with enqueuing subjobs");
+    LOGC(debug_jobs)
+        << "Finishing DistributeJob " << this << " with enqueuing subjobs";
 
     delete[] charcache;
 
@@ -614,7 +621,8 @@ void RadixStepCE<uint8_t>::distribute_finished(JobQueue& jobqueue)
 template <>
 void RadixStepCE<uint16_t>::distribute_finished(JobQueue& jobqueue)
 {
-    DBG(debug_jobs, "Finishing DistributeJob " << this << " with enqueuing subjobs");
+    LOGC(debug_jobs)
+        << "Finishing DistributeJob " << this << " with enqueuing subjobs";
 
     delete[] charcache;
 

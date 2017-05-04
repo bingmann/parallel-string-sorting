@@ -39,10 +39,6 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include "../tools/debug.hpp"
-#undef DBGX
-#define DBGX DBGX_OMP
-
 #include "../tools/agglogger.hpp"
 #include "../tools/timer.hpp"
 #include "../tools/timer_array.hpp"
@@ -188,7 +184,7 @@ public:
                     delete job;
             }
 
-            DBG(debug_queue, "Queue" << m_id << " is empty");
+            LOGC(debug_queue) << "Queue" << m_id << " is empty";
 
             // no more jobs -> switch to idle
             m_timers.change(TM_IDLE);
@@ -199,7 +195,7 @@ public:
 
             while (!m_queue.try_pop(job))
             {
-                DBG(debug_queue, "Idle thread - m_idle_count: " << m_idle_count);
+                LOGC(debug_queue) << "Idle thread - m_idle_count: " << m_idle_count;
 
                 if ( //!m_group->assist(m_id) &&
                     m_idle_count == m_numthrs)
@@ -316,7 +312,7 @@ public:
         int nodeThreads = numThreadsPerNode;
         if (k < remainThreads) nodeThreads++; // distribute extra threads
 
-        DBG(1, "JobQueue[" << k << "] prospective " << nodeThreads << " threads");
+        LOG1 << "JobQueue[" << k << "] prospective " << nodeThreads << " threads";
 
         return nodeThreads;
     }
@@ -329,16 +325,16 @@ public:
         if (realNumaNodes < 1) realNumaNodes = 1;
 
         if (realNumaNodes == 1) {
-            DBG(1, "No or just one NUMA nodes detected on the system.");
-            DBG(1, "Continuing anyway, at your own peril!");
+            LOG1 << "No or just one NUMA nodes detected on the system.";
+            LOG1 << "Continuing anyway, at your own peril!";
         }
 
         g_stats >> "num_real_numa_nodes" << realNumaNodes;
 
         if ((int)m_queues.size() != realNumaNodes || g_numa_nodes == 0)
         {
-            DBG(1, "!!! WARNING !!! emulating NUMA nodes! "
-                << "Remove --numa-nodes for REAL EXPERIMENTS.");
+            LOG1 << "!!! WARNING !!! emulating NUMA nodes! "
+                 << "Remove --numa-nodes for REAL EXPERIMENTS.";
         }
 
         g_stats >> "num_jobqueues" << m_queues.size();
@@ -350,8 +346,8 @@ public:
 
         if (numThreadsPerNode == 0)
         {
-            DBG(1, "Fewer threads than NUMA nodes detected.");
-            DBG(1, "Strange things may happen, continuing anyway, at your own peril!");
+            LOG1 << "Fewer threads than NUMA nodes detected.";
+            LOG1 << "Strange things may happen, continuing anyway, at your own peril!";
 
             // We will start fewer threads than JobQueues, and wait for the
             // first to finish, which will then assist the JobQueues without
@@ -373,7 +369,7 @@ public:
             int numaNode = k % realNumaNodes;
             if (k < remainThreads) nodeThreads++; // distribute extra threads
 
-            DBG(1, "JobQueue[" << k << "] gets " << nodeThreads << " threads");
+            LOG1 << "JobQueue[" << k << "] gets " << nodeThreads << " threads";
 
             if (nodeThreads == 0) nodeThreads = 1;
 
@@ -381,7 +377,7 @@ public:
 
             m_queues[k]->numaLoop(numaNode, nodeThreads);
 
-            DBG(1, "JobQueue[" << k << "] took : " << timer.elapsed() << " s");
+            LOG1 << "JobQueue[" << k << "] took : " << timer.elapsed() << " s";
         }
     }
 
@@ -397,7 +393,7 @@ public:
 
             if (m_queues[id]->try_run())
             {
-                DBG(debug_queue, "JobQueue[" << qid << "] assisted " << id);
+                LOGC(debug_queue) << "JobQueue[" << qid << "] assisted " << id;
                 return true;
             }
         }

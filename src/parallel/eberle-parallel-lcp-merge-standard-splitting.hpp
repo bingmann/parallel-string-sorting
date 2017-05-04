@@ -27,8 +27,6 @@
 
 #include "../sequential/bs-mkqs.hpp"
 #include "../tools/debug.hpp"
-#undef DBGX
-#define DBGX DBGX_OMP
 
 namespace eberle_parallel_lcp_merge {
 
@@ -37,7 +35,10 @@ static const bool debug_standard_splitting = false;
 
 // method definitions
 static inline void
-createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements);
+createJobsStandardSplitting(
+    JobQueue& jobQueue,
+    const LcpCacheStringPtr* inputStreams, unsigned numInputs,
+    string* output, size_t numberOfElements);
 
 //structs defining the jobs
 template <unsigned K>
@@ -48,11 +49,16 @@ struct MergeJobStandardSplitting : public Job
     string                     * output;
     size_t                     length;
 
-    MergeJobStandardSplitting(const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t length)
+    MergeJobStandardSplitting(
+        const LcpCacheStringPtr* inputs, unsigned numInputs,
+        string* output, size_t length)
         : loserTree(inputs, numInputs), output(output), length(length)
     {
         g_mergeJobsCreated++;
-        DBG(debug_jobtype_on_creation, "MergeJobStandardSplitting<" << K << "> (output: " << (output - g_outputBase) << ", length: " << length << ")");
+        LOGC(debug_jobtype_on_creation)
+            << "MergeJobStandardSplitting<" << K
+            << "> (output: " << (output - g_outputBase)
+            << ", length: " << length << ")";
     }
 
     /*
@@ -95,7 +101,8 @@ struct MergeJobStandardSplitting : public Job
         {
             // share work by splitting remaining streams
 
-            createJobsStandardSplitting(jobQueue, loserTree.getRemaining(), K, output, length);
+            createJobsStandardSplitting(
+                jobQueue, loserTree.getRemaining(), K, output, length);
 
             if (g_lengthOfLongestJob == length)
                 g_lengthOfLongestJob = 0;
@@ -112,7 +119,9 @@ struct InitialJobStandardSplitting : public Job
     string                 * output;
     size_t                 length;
 
-    InitialJobStandardSplitting(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
+    InitialJobStandardSplitting(
+        const LcpCacheStringPtr* input, unsigned numInputs,
+        string* output, size_t length)
         : input(input), numInputs(numInputs), output(output), length(length)
     {
         g_lengthOfLongestJob = length; // prevents that the first MergeJob immediately starts splitting itself
@@ -130,7 +139,9 @@ struct InitialJobStandardSplitting : public Job
 };
 
 static inline void
-enqueueStandardSplittingJob(JobQueue& jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs, string* output, size_t jobLength)
+enqueueStandardSplittingJob(
+    JobQueue& jobQueue, const LcpCacheStringPtr* inputs, unsigned numInputs,
+    string* output, size_t jobLength)
 {
     if (numInputs == 1)
         jobQueue.enqueue(new CopyDataJob(inputs[0], output));
@@ -139,31 +150,38 @@ enqueueStandardSplittingJob(JobQueue& jobQueue, const LcpCacheStringPtr* inputs,
         jobQueue.enqueue(new BinaryMergeJob(inputs[0], inputs[1], 0, output));
 
     else if (numInputs <= 4)
-        jobQueue.enqueue(new MergeJobStandardSplitting<4>(inputs, numInputs, output, jobLength));
+        jobQueue.enqueue(
+            new MergeJobStandardSplitting<4>(inputs, numInputs, output, jobLength));
 
     else if (numInputs <= 8)
-        jobQueue.enqueue(new MergeJobStandardSplitting<8>(inputs, numInputs, output, jobLength));
+        jobQueue.enqueue(
+            new MergeJobStandardSplitting<8>(inputs, numInputs, output, jobLength));
 
     else if (numInputs <= 16)
-        jobQueue.enqueue(new MergeJobStandardSplitting<16>(inputs, numInputs, output, jobLength));
+        jobQueue.enqueue(
+            new MergeJobStandardSplitting<16>(inputs, numInputs, output, jobLength));
 
     else if (numInputs <= 32)
-        jobQueue.enqueue(new MergeJobStandardSplitting<32>(inputs, numInputs, output, jobLength));
+        jobQueue.enqueue(
+            new MergeJobStandardSplitting<32>(inputs, numInputs, output, jobLength));
 
     else if (numInputs <= 64)
-        jobQueue.enqueue(new MergeJobStandardSplitting<64>(inputs, numInputs, output, jobLength));
+        jobQueue.enqueue(
+            new MergeJobStandardSplitting<64>(inputs, numInputs, output, jobLength));
 
     else
     {
-        DBG(1, "Can't create job with that many streams. Add more cases.");
+        LOG1 << "Can't create job with that many streams. Add more cases.";
         abort();
     }
 }
 
 static inline void
-createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams, unsigned numInputs, string* output, size_t numberOfElements)
+createJobsStandardSplitting(
+    JobQueue& jobQueue, const LcpCacheStringPtr* inputStreams,
+    unsigned numInputs, string* output, size_t numberOfElements)
 {
-    DBG(1, "CREATING JOBS for numberOfElements: " << numberOfElements);
+    LOG1 << "CREATING JOBS for numberOfElements: " << numberOfElements;
     g_splittingsExecuted++;
     ClockTimer splittingTimer;
     splittingTimer.start();
@@ -207,7 +225,8 @@ createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputSt
         if (splitterString[0] == '\0') // skip empty strings used as default value
             continue;
 
-        DBG(debug_standard_splitting, "Job: " << job << ", splitterString: " << splitterString);
+        LOGC(debug_standard_splitting)
+            << "Job: " << job << ", splitterString: " << splitterString;
 
         LcpCacheStringPtr jobStreams[numInputs];
         unsigned nonEmptyCtr = 0;
@@ -227,7 +246,8 @@ createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputSt
 
                 streams[i] = stream.sub(idx, stream.size - idx);
 
-                DBG(debug_standard_splitting, "Found at [" << idx << "]: ");
+                LOGC(debug_standard_splitting)
+                    << "Found at [" << idx << "]: ";
             }
         }
 
@@ -255,7 +275,9 @@ createJobsStandardSplitting(JobQueue& jobQueue, const LcpCacheStringPtr* inputSt
 }
 
 static inline void
-parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numInputs, string* output, size_t length)
+parallelLcpMergeStandardSplitting(
+    const LcpCacheStringPtr* input, unsigned numInputs,
+    string* output, size_t length)
 {
     g_outputBase = output;
     g_splittingsExecuted = 0;
@@ -268,7 +290,9 @@ parallelLcpMergeStandardSplitting(const LcpCacheStringPtr* input, unsigned numIn
     g_outputBase = output;
 
     JobQueue jobQueue;
-    DBG(debug_merge_start_message, "doing parallel lcp merge for " << numInputs << " input streams using " << omp_get_max_threads() << " threads with standard splitting");
+    LOGC(debug_merge_start_message)
+        << "doing parallel lcp merge for " << numInputs << " input streams"
+        << " using " << omp_get_max_threads() << " threads with standard splitting";
     jobQueue.enqueue(new InitialJobStandardSplitting(input, numInputs, output, length));
     jobQueue.numaLoop(-1, omp_get_max_threads());
 

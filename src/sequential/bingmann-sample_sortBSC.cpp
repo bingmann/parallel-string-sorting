@@ -224,12 +224,9 @@ void sample_sortBSC(string* strings, size_t n, size_t depth)
 
     if (debug_bucketsize)
     {
-        DBG1(1, "bktsize: ");
+        LOG1 << "bktsize: ";
         for (size_t i = 0; i < bktnum; ++i)
-        {
-            DBG2(1, bktsize[i] << " ");
-        }
-        DBG3(1, "");
+            LOG1 << bktsize[i];
     }
 
     // step 3: prefix sum

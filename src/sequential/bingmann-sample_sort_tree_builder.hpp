@@ -132,7 +132,7 @@ public:
         while (midhi + 1 < hi && *midhi == mykey) midhi++;
 
         if (midhi - midlo > 1)
-            DBG(0, "key range = [" << snum(midlo) << "," << snum(midhi) << ")");
+            LOG0 << "key range = [" << snum(midlo) << "," << snum(midhi) << ")";
 #else
         const key_type* midlo = mid, * midhi = mid + 1;
 #endif

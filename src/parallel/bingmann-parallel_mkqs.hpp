@@ -34,12 +34,10 @@
 #include "../tools/jobqueue.hpp"
 #include "../tools/stringset.hpp"
 
-#undef DBGX
-#define DBGX DBGX_OMP
-
 #include <tr1/memory>
 #include <tbb/concurrent_queue.h>
 #include <tlx/string/hexdump.hpp>
+#include <tlx/logger.hpp>
 
 namespace bingmann_parallel_mkqs {
 
@@ -270,9 +268,10 @@ public:
         MKQSStep(const StringSet& ss, StrCache* cache,
                  size_t n, size_t depth, bool CacheDirty)
         {
-            DBG(debug_seqjobs, "SequentialJob::MKQSStep"
-                " for " << ss.size() << " strings @ size " << n <<
-                " depth " << depth << " CacheDirty " << CacheDirty);
+            LOGC(debug_seqjobs)
+                << "SequentialJob::MKQSStep"
+                << " for " << ss.size() << " strings @ size " << n
+                << " depth " << depth << " CacheDirty " << CacheDirty;
 
             if (CacheDirty)
             {
@@ -342,13 +341,14 @@ public:
             this->idx = 0;
             this->eq_recurse = (pivot & 0xFF);
 
-            DBG(debug_seqjobs, "Result of MKQSStep:"
+            LOGC(debug_seqjobs)
+                << "Result of MKQSStep:"
                 << " depth " << depth
                 << " size " << n
                 << " num_lt " << num_lt
                 << " num_eq " << num_eq
                 << " num_gt " << num_gt
-                << " eq_recurse " << eq_recurse);
+                << " eq_recurse " << eq_recurse;
         }
     };
 
@@ -410,15 +410,17 @@ public:
 
         virtual bool run(JobQueue& jobqueue)
         {
-            DBG(debug_seqjobs, "SequentialJob "
-                "for " << strset.size() << " strings @ " << this);
+            LOGC(debug_seqjobs)
+                << "SequentialJob for "
+                << strset.size() << " strings @ " << this;
 
             if (!cache)
             {
                 if (strset.size() == 1) // nothing to sort
                 {
-                    DBG(debug_seqjobs, "copy result to output string ptrs "
-                        << ctx.srange(strset));
+                    LOGC(debug_seqjobs)
+                        << "copy result to output string ptrs "
+                        << ctx.srange(strset);
 
                     StrCacheBlockPtr scb;
                     while (block_queue->try_pop(scb))
@@ -475,15 +477,17 @@ public:
 
         void sequential_mkqs(JobQueue& jobqueue)
         {
-            DBG(debug_seqjobs, "SequentialJob on area "
-                << ctx.srange(strset) << " @ job " << this);
+            LOGC(debug_seqjobs)
+                << "SequentialJob on area "
+                << ctx.srange(strset) << " @ job " << this;
 
             if (strset.size() < g_inssort_threshold)
             {
                 insertion_sort<true>(strset, cache, strset.size(), depth);
 
-                DBG(debug_seqjobs, "copy result to output string ptrs "
-                    << ctx.srange(strset) << " @ job " << this);
+                LOGC(debug_seqjobs)
+                    << "copy result to output string ptrs "
+                    << ctx.srange(strset) << " @ job " << this;
 
                 Iterator begin = strset.begin();
                 for (size_t i = 0; i < strset.size(); ++i)
@@ -496,7 +500,7 @@ public:
             // artifical pop_front variable.
             size_t pop_front = 0;
             std::vector<MKQSStep> stack;
-            stack.push_back(MKQSStep(strset, cache, strset.size(), depth, CacheDirty));
+            stack.emplace_back(strset, cache, strset.size(), depth, CacheDirty);
 
             // for output, save pointer to finished entry
             StrCache* cache_finished = cache + strset.size();
@@ -513,7 +517,8 @@ jumpout:
                         MKQSStep& st = stack[pop_front];
                         Iterator st_strings = strset.begin() + (st.cache - cache);
 
-                        DBG(debug_seqjobs, "Queueing front of SequentialJob's stack level "
+                        LOGC(debug_seqjobs)
+                            << "Queueing front of SequentialJob's stack level "
                             << pop_front << ", idx " << st.idx
                             << ", areas lt "
                             << ctx.srange(strset.subr(st_strings, st.num_lt))
@@ -521,13 +526,14 @@ jumpout:
                             << ctx.srange(strset.subr(st_strings + st.num_lt, st.num_eq))
                             << " gt "
                             << ctx.srange(strset.subr(st_strings + st.num_lt + st.num_eq, st.num_gt))
-                            << " @ job " << this);
+                            << " @ job " << this;
 
                         if (st.idx == 0 && st.num_lt != 0)
                         {
-                            DBG(debug_seqjobs, "Queueing job for lt-area "
+                            LOGC(debug_seqjobs)
+                                << "Queueing job for lt-area "
                                 << ctx.srange(strset.subr(st_strings, st.num_lt))
-                                << " @ job " << this);
+                                << " @ job " << this;
 
                             new SequentialJob<false>(
                                 ctx, jobqueue,
@@ -536,9 +542,10 @@ jumpout:
                         }
                         if (st.idx <= 1 && st.num_eq != 0)
                         {
-                            DBG(debug_seqjobs, "Queueing job for eq-area "
+                            LOGC(debug_seqjobs)
+                                << "Queueing job for eq-area "
                                 << ctx.srange(strset.subr(st_strings + st.num_lt, st.num_eq))
-                                << " @ job " << this);
+                                << " @ job " << this;
 
                             if (st.eq_recurse) {
                                 new SequentialJob<true>(
@@ -549,9 +556,10 @@ jumpout:
                             }
                             else
                             {
-                                DBG(debug_seqjobs, "copy result to output string ptrs "
+                                LOGC(debug_seqjobs)
+                                    << "copy result to output string ptrs "
                                     << ctx.srange(strset.subr(st_strings + st.num_lt, st.num_eq))
-                                    << " - no recurse equal @ job " << this);
+                                    << " - no recurse equal @ job " << this;
 
                                 // seems overkill to create an extra thread job for this:
                                 for (size_t i = st.num_lt; i < st.num_lt + st.num_eq; ++i)
@@ -560,9 +568,10 @@ jumpout:
                         }
                         if (st.idx <= 2 && st.num_gt != 0)
                         {
-                            DBG(debug_seqjobs, "Queueing job for gt-area "
+                            LOGC(debug_seqjobs)
+                                << "Queueing job for gt-area "
                                 << ctx.srange(strset.subr(st_strings + st.num_lt + st.num_eq, st.num_gt))
-                                << " @ job " << this);
+                                << " @ job " << this;
 
                             new SequentialJob<false>(
                                 ctx, jobqueue,
@@ -599,9 +608,9 @@ jumpout:
                             insertion_sort<false>(
                                 strset, ms.cache, ms.num_lt, ms.depth);
                         else
-                            stack.push_back(
-                                MKQSStep(strset, ms.cache,
-                                         ms.num_lt, ms.depth, false));
+                            stack.emplace_back(
+                                strset, ms.cache,
+                                ms.num_lt, ms.depth, false);
                     }
                     // process the eq-subsequence
                     else if (ms.idx == 2)
@@ -613,9 +622,9 @@ jumpout:
                                 strset, ms.cache + ms.num_lt, ms.num_eq,
                                 ms.depth + sizeof(key_type));
                         else
-                            stack.push_back(
-                                MKQSStep(strset, ms.cache + ms.num_lt, ms.num_eq,
-                                         ms.depth + sizeof(key_type), true));
+                            stack.emplace_back(
+                                strset, ms.cache + ms.num_lt, ms.num_eq,
+                                ms.depth + sizeof(key_type), true);
                     }
                     // process the gt-subsequence
                     else
@@ -628,9 +637,9 @@ jumpout:
                                 strset, ms.cache + ms.num_lt + ms.num_eq, ms.num_gt,
                                 ms.depth);
                         else
-                            stack.push_back(
-                                MKQSStep(strset, ms.cache + ms.num_lt + ms.num_eq,
-                                         ms.num_gt, ms.depth, false));
+                            stack.emplace_back(
+                                strset, ms.cache + ms.num_lt + ms.num_eq,
+                                ms.num_gt, ms.depth, false);
                     }
                 }
 
@@ -641,8 +650,9 @@ jumpout:
             {
                 size_t n_finished = cache_finished - cache;
 
-                DBG(debug_seqjobs, "copy result to output string ptrs "
-                    << ctx.srange(strset.subi(0, n_finished)) << " @ job " << this);
+                LOGC(debug_seqjobs)
+                    << "copy result to output string ptrs "
+                    << ctx.srange(strset.subi(0, n_finished)) << " @ job " << this;
 
                 Iterator begin = strset.begin();
                 for (size_t i = 0; i < n_finished; ++i)
@@ -701,7 +711,7 @@ jumpout:
 
             do {
                 blk = block_current;
-                DBG(debug_blocks, "current input block: " << blk);
+                LOGC(debug_blocks) << "current input block: " << blk;
 
                 // if block_current == block_count -> no block left.
                 if (blk == block_count) return NULL;
@@ -711,8 +721,9 @@ jumpout:
 
             fill = std::min<size_t>(block_size, strset.size() - blk * block_size);
 
-            DBG(debug_blocks, "reserved input block " << blk <<
-                " @ " << (blk * block_size) << " fill " << fill);
+            LOGC(debug_blocks)
+                << "reserved input block " << blk
+                << " @ " << (blk * block_size) << " fill " << fill;
 
             StrCacheBlockPtr scb(new StrCacheBlock);
 
@@ -781,7 +792,7 @@ jumpout:
             StrCacheBlockPtr blk;
             if (!block_queue->try_pop(blk)) return NULL;
 
-            DBG(debug_blocks, "pop()ed input block  fill " << blk->fill);
+            LOGC(debug_blocks) << "pop()ed input block  fill " << blk->fill;
             fill = blk->fill;
 
             return std::move(blk);
@@ -840,8 +851,8 @@ jumpout:
             StrCacheBlockPtr blk;
             if (!block_queue->try_pop(blk)) return NULL;
 
-            DBG(debug_blocks, "pop()ed input block " <<
-                blk.get() << " fill " << blk->fill);
+            LOGC(debug_blocks) << "pop()ed input block " <<
+                blk.get() << " fill " << blk->fill;
             fill = blk->fill;
 
             // refill key cache
@@ -966,9 +977,10 @@ jumpout:
             procs = blks.strset.size() / ctx.g_sequential_threshold;
             if (procs == 0) procs = 1;
 
-            DBG(debug_parajobs, "ParallelJob on area "
+            LOGC(debug_parajobs)
+                << "ParallelJob on area "
                 << ctx.srange(blks.strset)
-                << " with " << procs << " threads @ job " << this);
+                << " with " << procs << " threads @ job " << this;
 
             // create partition jobs
             pwork = procs;
@@ -1008,8 +1020,9 @@ jumpout:
         //! partition() separating a BlockSource into three Queues lt, eq and gt.
         void partition(size_t p, JobQueue& jobqueue)
         {
-            DBG(debug_parajobs, "process PartitionJob " << p << " @ " <<
-                this << " with pivot " << tlx::hexdump_type(pivot));
+            LOGC(debug_parajobs)
+                << "process PartitionJob " << p << " @ "
+                << this << " with pivot " << tlx::hexdump_type(pivot);
 
             // phase 1: partition blocks in-place
 
@@ -1022,19 +1035,25 @@ jumpout:
                 {
                     int res = cmp(lt.front_key(), pivot);
                     if (res < 0) {       // < than pivot
-                        DBG(debug_cmp1, "blk_lt[" << lt.pos << "] = " <<
-                            lt.front_key() << " < pivot " << tlx::hexdump_type(pivot) << ", continue.");
+                        LOGC(debug_cmp1)
+                            << "blk_lt[" << lt.pos << "] = "
+                            << lt.front_key() << " < pivot "
+                            << tlx::hexdump_type(pivot) << ", continue.";
                         lt.pos++;
                     }
                     else if (res == 0) { // = pivot
-                        DBG(debug_cmp1, "blk_lt[" << lt.pos << "] = " <<
-                            lt.front_key() << " = pivot " << tlx::hexdump_type(pivot) << ", swap to blk_eq");
+                        LOGC(debug_cmp1)
+                            << "blk_lt[" << lt.pos << "] = "
+                            << lt.front_key() << " = pivot "
+                            << tlx::hexdump_type(pivot) << ", swap to blk_eq";
                         std::swap(lt.front_cache(), eq.front_cache());
                         eq.pos++;
                     }
                     else {  // > than pivot
-                        DBG(debug_cmp1, "blk_lt[" << lt.pos << "] = " <<
-                            lt.front_key() << " > pivot " << tlx::hexdump_type(pivot) << ", break.");
+                        LOGC(debug_cmp1)
+                            << "blk_lt[" << lt.pos << "] = "
+                            << lt.front_key() << " > pivot "
+                            << tlx::hexdump_type(pivot) << ", break.";
                         goto jump1;
                     }
                 }
@@ -1046,35 +1065,42 @@ jump1:
                 {
                     int res = cmp(gt.front_key(), pivot);
                     if (res < 0) {       // < than pivot
-                        DBG(debug_cmp1, "blk_gt[" << gt.pos << "] = " <<
-                            gt.front_key() << " < pivot " << tlx::hexdump_type(pivot) << ", break.");
+                        LOGC(debug_cmp1)
+                            << "blk_gt[" << gt.pos << "] = "
+                            << gt.front_key() << " < pivot "
+                            << tlx::hexdump_type(pivot) << ", break.";
                         goto jump2;
                     }
                     else if (res == 0) { // = pivot
-                        DBG(debug_cmp1, "blk_gt[" << gt.pos << "] = " <<
-                            gt.front_key() << " = pivot " << tlx::hexdump_type(pivot) << ", swap to blk_eq");
+                        LOGC(debug_cmp1)
+                            << "blk_gt[" << gt.pos << "] = "
+                            << gt.front_key() << " = pivot "
+                            << tlx::hexdump_type(pivot) << ", swap to blk_eq";
                         std::swap(gt.front_cache(), eq.front_cache());
                         eq.pos++;
                     }
                     else {  // > than pivot
-                        DBG(debug_cmp1, "blk_gt[" << gt.pos << "] = " <<
-                            gt.front_key() << " > pivot " << tlx::hexdump_type(pivot) << ", continue.");
+                        LOGC(debug_cmp1)
+                            << "blk_gt[" << gt.pos << "] = "
+                            << gt.front_key() << " > pivot "
+                            << tlx::hexdump_type(pivot) << ", continue.";
                         gt.pos++;
                     }
                 }
                 break;
 
 jump2:
-                DBG(debug_cmp1, "swap blk_lt[" << lt.pos << "] = " <<
-                    lt.front_key() << " and blk_gt[" << gt.pos << "] = " << gt.front_key());
+                LOGC(debug_cmp1)
+                    << "swap blk_lt[" << lt.pos << "] = "
+                    << lt.front_key() << " and blk_gt[" << gt.pos << "] = " << gt.front_key();
 
                 assert(lt.front_key() > pivot && gt.front_key() < pivot);
                 std::swap(lt.front_cache(), gt.front_cache());
                 lt.pos++, gt.pos++;
             }
 
-            DBG(debug, "finished full blocks, creating partials @ " << this);
-            //DBG(debug, "lt " << *lt.blk << " eq " << *eq.blk << " gt " << *gt.blk);
+            LOGC(debug) << "finished full blocks, creating partials @ " << this;
+            //LOGC(debug) << "lt " << *lt.blk << " eq " << *eq.blk << " gt " << *gt.blk;
 
             lt.partial = (lt.blk == NULL);
             eq.partial = (eq.blk == NULL);
@@ -1099,11 +1125,12 @@ jump2:
 
         void partition_finished(JobQueue& jobqueue)
         {
-            DBG(debug_parajobs, "finished PartitionJobs @ " << this);
-            DBG(debug_parajobs, "finished partitioning - "
+            LOGC(debug_parajobs) << "finished PartitionJobs @ " << this;
+            LOGC(debug_parajobs)
+                << "finished partitioning - "
                 << count_lt << " lt " << count_eq
                 << " eq " << blks.strset.size() - count_lt - count_eq
-                << " gt - total " << blks.strset.size());
+                << " gt - total " << blks.strset.size();
 
             if (debug_selfcheck)
             {
@@ -1281,12 +1308,14 @@ jump2:
         {
             if (!partial && pos < block_size) {
                 if (pos < fill) {
-                    DBG(debug_cmp2, "swap with unpartitioned blk[" << pos <<
-                        "] = " << front_key() << ".");
+                    LOGC(debug_cmp2)
+                        << "swap with unpartitioned blk[" << pos
+                        << "] = " << front_key() << ".";
                     std::swap(from.front_cache(), front_cache()), pos++;
                 }
                 else {
-                    DBG(debug_cmp2, "move to free-area at blk[" << pos << "].");
+                    LOGC(debug_cmp2)
+                        << "move to free-area at blk[" << pos << "].";
                     assert(fill < block_size);
                     fill++;
                     front_cache() = std::move(from.front_cache());
@@ -1297,7 +1326,8 @@ jump2:
                 }
             }
             else {
-                DBG(debug_cmp2, "move to partial blk[" << pos << "].");
+                LOGC(debug_cmp2)
+                    << "move to partial blk[" << pos << "].";
                 check_partial_block<type>(mkqs);
                 fill++, front_cache() = std::move(from.front_cache()), pos++;
                 // move back element in from
@@ -1318,8 +1348,10 @@ jump2:
             {
                 int res = cmp(front_key(), pivot);
                 if (res < 0) {        // < than pivot
-                    DBG(debug_cmp2, "blk[" << pos << "] = " <<
-                        front_key() << " < pivot " << tlx::hexdump_type(pivot) << ".");
+                    LOGC(debug_cmp2)
+                        << "blk[" << pos << "] = "
+                        << front_key() << " < pivot "
+                        << tlx::hexdump_type(pivot) << ".";
 
                     if (type == LT) { // good.
                         pos++;
@@ -1329,8 +1361,10 @@ jump2:
                     }
                 }
                 else if (res == 0) {  // = pivot
-                    DBG(debug_cmp2, "blk[" << pos << "] = " <<
-                        front_key() << " = pivot " << tlx::hexdump_type(pivot) << ".");
+                    LOGC(debug_cmp2)
+                        << "blk[" << pos << "] = "
+                        << front_key() << " = pivot "
+                        << tlx::hexdump_type(pivot) << ".";
 
                     if (type == EQ) { // good.
                         pos++;
@@ -1340,8 +1374,10 @@ jump2:
                     }
                 }
                 else {                // > than pivot
-                    DBG(debug_cmp2, "blk[" << pos << "] = " <<
-                        front_key() << " > pivot " << tlx::hexdump_type(pivot) << ".");
+                    LOGC(debug_cmp2)
+                        << "blk[" << pos << "] = "
+                        << front_key() << " > pivot "
+                        << tlx::hexdump_type(pivot) << ".";
 
                     if (type == GT) { // good.
                         pos++;

@@ -26,6 +26,7 @@
 
 #include <cassert>
 #include "debug.hpp"
+#include <tlx/logger.hpp>
 
 namespace stringtools {
 
@@ -366,32 +367,32 @@ struct TreeCalculations
     static inline unsigned int level_to_preorder(unsigned int id)
     {
         assert(id > 0);
-        DBG(debug, "index: " << id << " = " << toBinary(id));
+        LOG << "index: " << id << " = " << toBinary(id);
 
         static const int bitmask = numnodes;
 
         int hi = treebits - 32 + count_high_zero_bits<uint32_t>(id);
-        DBG(debug, "high zero: " << hi);
+        LOG << "high zero: " << hi;
 
         unsigned int bkt = ((id << (hi + 1)) & bitmask) | (1 << hi);
 
-        DBG(debug, "bkt: " << bkt << " = " << toBinary(bkt));
+        LOG << "bkt: " << bkt << " = " << toBinary(bkt);
         return bkt;
     }
 
     static inline unsigned int pre_to_levelorder(unsigned int id)
     {
         assert(id > 0);
-        DBG(debug, "index: " << id << " = " << toBinary(id));
+        LOG << "index: " << id << " = " << toBinary(id);
 
         static const int bitmask = numnodes;
 
         int lo = count_low_zero_bits<uint32_t>(id) + 1;
-        DBG(debug, "low zero: " << lo);
+        LOG << "low zero: " << lo;
 
         unsigned int bkt = ((id >> lo) & bitmask) | (1 << (treebits - lo));
 
-        DBG(debug, "bkt: " << bkt << " = " << toBinary(bkt));
+        LOG << "bkt: " << bkt << " = " << toBinary(bkt);
         return bkt;
     }
 

@@ -34,10 +34,6 @@
 #include "../tools/jobqueue.hpp"
 #include "../tools/stringtools.hpp"
 
-#include "../tools/debug.hpp"
-#undef DBGX
-#define DBGX DBGX_OMP
-
 namespace eberle_parallel_lcp_mergesort {
 
 using std::numeric_limits;

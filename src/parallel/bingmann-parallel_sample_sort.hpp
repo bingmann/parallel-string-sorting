@@ -33,8 +33,6 @@
 #include <algorithm>
 
 #include "../tools/debug.hpp"
-#undef DBGX
-#define DBGX DBGX_OMP
 
 #include "../tools/lcgrandom.hpp"
 #include "../tools/contest.hpp"
@@ -55,17 +53,7 @@
 #include <tlx/logger.hpp>
 #include <tlx/die.hpp>
 
-// first MKQS lcp variant: keep min/max during ternary split
-#define CALC_LCP_MKQS 1
-
-#ifdef PSS_CONTESTANT_PARALLEL_LCP
-#undef PSS_CONTESTANT_PARALLEL_LCP
-#endif
-
 namespace bingmann_parallel_sample_sort {
-
-// #define PSS_CONTESTANT_PARALLEL_LCP(func, name, desc)
-//     PSS_CONTESTANT_PARALLEL(func, name "_lcp", desc "_lcp")
 
 using namespace stringtools;
 using namespace parallel_string_sorting;
@@ -82,6 +70,9 @@ static const bool debug_lcp = false;
 
 //! enable work freeing
 static const bool use_work_sharing = true;
+
+//! first MKQS lcp variant: keep min/max during ternary split
+#define PS5_CALC_LCP_MKQS 1
 
 //! whether the base sequential_threshold() on the remaining unsorted string
 //! set or on the whole string set.
@@ -609,7 +600,7 @@ public:
         assert(ss_stack.size() == 0);
 
         // sort first level
-        ss_stack.push_back(Step(ctx, strptr, depth, bktcache));
+        ss_stack.emplace_back(ctx, strptr, depth, bktcache);
 
         // step 5: "recursion"
 
@@ -656,7 +647,8 @@ public:
                                 << i << " size " << bktsize << " lcp "
                                 << int(s.splitter_lcp[i / 2] & 0x7F);
 
-                        ss_stack.push_back(Step(ctx, sp, s.depth + (s.splitter_lcp[i / 2] & 0x7F), bktcache));
+                        ss_stack.emplace_back(
+                            ctx, sp, s.depth + (s.splitter_lcp[i / 2] & 0x7F), bktcache);
                     }
                 }
                 // i is odd -> bkt[i] is equal bucket
@@ -689,7 +681,8 @@ public:
                             << "Recurse[" << s.depth << "]: = bkt "
                             << i << " size " << bktsize << " lcp keydepth!";
 
-                        ss_stack.push_back(Step(ctx, sp, s.depth + sizeof(key_type), bktcache));
+                        ss_stack.emplace_back(
+                            ctx, sp, s.depth + sizeof(key_type), bktcache);
                     }
                 }
             }
@@ -894,10 +887,10 @@ public:
         size_t num_lt, num_eq, num_gt, depth;
         size_t idx;
         unsigned char eq_recurse;
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
         char_type dchar_eq, dchar_gt;
         unsigned char lcp_lt, lcp_eq, lcp_gt;
-#elif CALC_LCP_MKQS == 2
+#elif PS5_CALC_LCP_MKQS == 2
         key_type pivot;
 #endif
 
@@ -916,20 +909,20 @@ public:
                 }
             }
             // select median of 9
-            size_t p = med3(cache,
-                            med3(cache, 0, n / 8, n / 4),
-                            med3(cache, n / 2 - n / 8, n / 2, n / 2 + n / 8),
-                            med3(cache, n - 1 - n / 4, n - 1 - n / 8, n - 3)
-                            );
+            size_t p = med3(
+                cache,
+                med3(cache, 0, n / 8, n / 4),
+                med3(cache, n / 2 - n / 8, n / 2, n / 2 + n / 8),
+                med3(cache, n - 1 - n / 4, n - 1 - n / 8, n - 3));
             // swap pivot to first position
             std::swap(strset.at(0), strset.at(p));
             std::swap(cache[0], cache[p]);
             // save the pivot value
             key_type pivot = cache[0];
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
             // for immediate LCP calculation
             key_type max_lt = 0, min_gt = std::numeric_limits<key_type>::max();
-#elif CALC_LCP_MKQS == 2
+#elif PS5_CALC_LCP_MKQS == 2
             this->pivot = pivot;
 #endif
             // indexes into array: 0 [pivot] 1 [===] leq [<<<] llt [???] rgt [>>>] req [===] n-1
@@ -940,7 +933,7 @@ public:
                 {
                     int r = cmp(cache[llt], pivot);
                     if (r > 0) {
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
                         min_gt = std::min(min_gt, cache[llt]);
 #endif
                         break;
@@ -951,7 +944,7 @@ public:
                         leq++;
                     }
                     else {
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
                         max_lt = std::max(max_lt, cache[llt]);
 #endif
                     }
@@ -961,7 +954,7 @@ public:
                 {
                     int r = cmp(cache[rgt], pivot);
                     if (r < 0) {
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
                         max_lt = std::max(max_lt, cache[rgt]);
 #endif
                         break;
@@ -972,7 +965,7 @@ public:
                         req--;
                     }
                     else {
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
                         min_gt = std::min(min_gt, cache[rgt]);
 #endif
                     }
@@ -1009,7 +1002,7 @@ public:
             // No recursive sorting if pivot has a zero byte
             this->eq_recurse = (pivot & 0xFF);
 
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
             // save LCP values for writing into LCP array after sorting further
             if (num_lt > 0)
             {
@@ -1037,7 +1030,7 @@ public:
 
         void calculate_lcp()
         {
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
             if (num_lt > 0)
             {
                 strptr.original().set_lcp(num_lt, depth + lcp_lt);
@@ -1049,7 +1042,7 @@ public:
                 strptr.original().set_lcp(num_lt + num_eq, depth + lcp_gt);
                 strptr.original().set_cache(num_lt + num_eq, dchar_gt);
             }
-#elif CALC_LCP_MKQS == 2
+#elif PS5_CALC_LCP_MKQS == 2
             if (num_lt > 0)
             {
                 key_type max_lt = strptr.original().output().get_uint64(
@@ -1103,7 +1096,7 @@ public:
 
         // std::deque is much slower than std::vector, so we use an artificial
         // pop_front variable.
-        ms_stack.push_back(MKQSStep(ctx, strptr, cache, depth, true));
+        ms_stack.emplace_back(ctx, strptr, cache, depth, true);
 
         while (ms_stack.size() > ms_pop_front)
         {
@@ -1122,10 +1115,10 @@ public:
                     ctx.donesize(ms.num_lt, thrid);
                 }
                 else {
-                    ms_stack.push_back(
-                        MKQSStep(ctx,
-                                 ms.strptr.sub(0, ms.num_lt),
-                                 ms.cache, ms.depth, false));
+                    ms_stack.emplace_back(
+                        ctx,
+                        ms.strptr.sub(0, ms.num_lt),
+                        ms.cache, ms.depth, false);
                 }
             }
             // process the eq-subsequence
@@ -1137,9 +1130,9 @@ public:
 
                 if (!ms.eq_recurse) {
                     StringPtr spb = sp.copy_back();
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
                     spb.fill_lcp(ms.depth + ms.lcp_eq);
-#elif CALC_LCP_MKQS == 2
+#elif PS5_CALC_LCP_MKQS == 2
                     spb.fill_lcp(ms.depth + lcpKeyDepth(ms.pivot));
 #endif
                     ctx.donesize(spb.size(), thrid);
@@ -1151,10 +1144,10 @@ public:
                     ctx.donesize(ms.num_eq, thrid);
                 }
                 else {
-                    ms_stack.push_back(
-                        MKQSStep(ctx, sp,
-                                 ms.cache + ms.num_lt,
-                                 ms.depth + sizeof(key_type), true));
+                    ms_stack.emplace_back(
+                        ctx, sp,
+                        ms.cache + ms.num_lt,
+                        ms.depth + sizeof(key_type), true);
                 }
             }
             // process the gt-subsequence
@@ -1171,10 +1164,10 @@ public:
                     ctx.donesize(ms.num_gt, thrid);
                 }
                 else {
-                    ms_stack.push_back(
-                        MKQSStep(ctx, sp,
-                                 ms.cache + ms.num_lt + ms.num_eq,
-                                 ms.depth, false));
+                    ms_stack.emplace_back(
+                        ctx, sp,
+                        ms.cache + ms.num_lt + ms.num_eq,
+                        ms.depth, false);
                 }
             }
             // calculate lcps
@@ -1231,9 +1224,9 @@ public:
                 }
                 else {
                     StringPtr spb = sp.copy_back();
-#if CALC_LCP_MKQS == 1
+#if PS5_CALC_LCP_MKQS == 1
                     spb.fill_lcp(ms.depth + ms.lcp_eq);
-#elif CALC_LCP_MKQS == 2
+#elif PS5_CALC_LCP_MKQS == 2
                     spb.fill_lcp(ms.depth + lcpKeyDepth(ms.pivot));
 #else
                     UNUSED(spb);
