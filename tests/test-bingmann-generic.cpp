@@ -109,7 +109,7 @@ void TestVectorString(const char* name,
     // run sorting algorithm
     VectorStringSet ss(strings.begin(), strings.end());
     algo(ss, 0);
-    //if (0) ss.print();
+    if (0) ss.print();
 
     // check result
     if (!ss.check_order()) {
@@ -147,7 +147,7 @@ void TestVectorPtrString(
     // run sorting algorithm
     VectorPtrStringSet ss(strings.begin(), strings.end());
     algo(ss, 0);
-    //ss.print();
+    if (0) ss.print();
 
     // check result
     if (!ss.check_order()) {

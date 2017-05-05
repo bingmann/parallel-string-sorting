@@ -270,24 +270,6 @@ public:
         return ss.sub(ss.begin() + begin, ss.begin() + end);
     }
 
-    void print() const
-    {
-        const StringSet& ss = *static_cast<const StringSet*>(this);
-
-        size_t i = 0;
-        for (typename Traits::Iterator pi = ss.begin(); pi != ss.end(); ++pi)
-        {
-            LOG1 << "[" << i++ << "] = " << ss[pi]
-                 << " = " << ss.get_string(ss[pi], 0);
-
-            // for printing std::unique_ptr<std::string>
-            // std::cout << "[" << i++ << "] = " << ss[pi].get();
-            // if (ss[pi])
-            //     std::cout << " = " << ss.get_string(ss[pi], 0);
-            // std::cout << std::endl;
-        }
-    }
-
     bool check_order(const typename Traits::String& s1,
                      const typename Traits::String& s2) const
     {
@@ -447,6 +429,16 @@ public:
 
     //! \}
 
+    void print() const
+    {
+        size_t i = 0;
+        for (Iterator pi = begin(); pi != end(); ++pi)
+        {
+            LOG1 << "[" << i++ << "] = " << *pi
+                 << " = " << get_string(*pi, 0);
+        }
+    }
+
 protected:
     //! array of string pointers
     Iterator begin_, end_;
@@ -514,7 +506,7 @@ public:
     { return (i >= s.end()); }
 
     //! Return complete string (for debugging purposes)
-    std::string get_string(const String&& s, size_t depth = 0) const
+    std::string get_string(const String& s, size_t depth = 0) const
     { return s.substr(depth); }
 
     //! Subset this string set using iterator range.
@@ -533,6 +525,16 @@ public:
     explicit VectorStringSet(Container& c)
         : begin_(c.begin()), end_(c.end())
     { }
+
+    void print() const
+    {
+        size_t i = 0;
+        for (Iterator pi = begin(); pi != end(); ++pi)
+        {
+            LOG1 << "[" << i++ << "] = " << *pi
+                 << " = " << get_string(*pi, 0);
+        }
+    }
 
 protected:
     //! vector of std::string objects
@@ -618,6 +620,16 @@ public:
         : begin_(c.begin()), end_(c.end())
     { }
 
+    void print() const
+    {
+        size_t i = 0;
+        for (Iterator pi = begin(); pi != end(); ++pi)
+        {
+            LOG1 << "[" << i++ << "] = " << pi->get()
+                 << " = " << get_string(*pi, 0);
+        }
+    }
+
 protected:
     //! vector of std::string objects
     Iterator begin_, end_;
@@ -689,7 +701,10 @@ public:
 
     //! Return complete string (for debugging purposes)
     std::string get_string(const String& s, size_t depth = 0) const
-    { return std::string(reinterpret_cast<const char*>(text_ + s + depth)); }
+    {
+        return std::string(reinterpret_cast<const char*>(text_ + s + depth),
+                           reinterpret_cast<const char*>(text_end_));
+    }
 
     //! Subset this string set using iterator range.
     UCharSuffixSet sub(Iterator begin, Iterator end) const
@@ -708,6 +723,16 @@ public:
         : text_(std::get<0>(c)), text_end_(std::get<1>(c)),
           begin_(std::get<2>(c)), end_(std::get<2>(c) + std::get<3>(c))
     { }
+
+    void print() const
+    {
+        size_t i = 0;
+        for (Iterator pi = begin(); pi != end(); ++pi)
+        {
+            LOG1 << "[" << i++ << "] = " << *pi
+                 << " = " << get_string(*pi, 0);
+        }
+    }
 
 protected:
     //! reference to base text
@@ -812,6 +837,16 @@ public:
         : text_(&std::get<0>(c)),
           begin_(std::get<1>(c).begin()), end_(std::get<1>(c).end())
     { }
+
+    void print() const
+    {
+        size_t i = 0;
+        for (Iterator pi = begin(); pi != end(); ++pi)
+        {
+            LOG1 << "[" << i++ << "] = " << *pi
+                 << " = " << get_string(*pi, 0);
+        }
+    }
 
 protected:
     //! reference to base text
