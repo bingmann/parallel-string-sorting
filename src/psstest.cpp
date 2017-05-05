@@ -553,7 +553,7 @@ void Contestant_UCArray::prepare_run()
     if (g_num_threads)
     {
         // dummy parallel region to start up threads
-        unsigned int thrsum = 0;
+        std::atomic<unsigned int> thrsum;
 #pragma omp parallel
         {
             thrsum += omp_get_thread_num();

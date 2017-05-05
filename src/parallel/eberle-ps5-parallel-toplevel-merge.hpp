@@ -53,7 +53,9 @@ static const bool debug_verify_ps5_lcp_cache = false;
 
 //method definitions
 void
-eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
+eberle_ps5_parallel_toplevel_merge(
+    string* strings, size_t n,
+    void (* parallelMerge)(const LcpCacheStringPtr*, unsigned, string*, size_t))
 {
     int realNumaNodes = numa_num_configured_nodes();
     if (realNumaNodes < 1) realNumaNodes = 1;
@@ -174,17 +176,20 @@ eberle_ps5_parallel_toplevel_merge(string* strings, size_t n, void (* parallelMe
 
 void eberle_ps5_parallel_toplevel_merge_lcp_splitting(string* strings, size_t n)
 {
-    eberle_ps5_parallel_toplevel_merge(strings, n, eberle_parallel_lcp_merge::parallelLcpMerge);
+    eberle_ps5_parallel_toplevel_merge(
+        strings, n, eberle_parallel_lcp_merge::parallelLcpMerge);
 }
 
 void eberle_ps5_parallel_toplevel_merge_standard_splitting(string* strings, size_t n)
 {
-    eberle_ps5_parallel_toplevel_merge(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeStandardSplitting);
+    eberle_ps5_parallel_toplevel_merge(
+        strings, n, eberle_parallel_lcp_merge::parallelLcpMergeStandardSplitting);
 }
 
 void eberle_ps5_parallel_toplevel_merge_binary_splitting(string* strings, size_t n)
 {
-    eberle_ps5_parallel_toplevel_merge(strings, n, eberle_parallel_lcp_merge::parallelLcpMergeBinarySplitting);
+    eberle_ps5_parallel_toplevel_merge(
+        strings, n, eberle_parallel_lcp_merge::parallelLcpMergeBinarySplitting);
 }
 
 PSS_CONTESTANT_PARALLEL(eberle_ps5_parallel_toplevel_merge_lcp_splitting,

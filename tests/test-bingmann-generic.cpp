@@ -246,6 +246,7 @@ void test_all(const size_t nstrings)
     run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_base);
     run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_out_test);
     run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_lcp_verify);
+    run_tests(bingmann_parallel_sample_sort::parallel_sample_sort_out_lcp_verify);
 }
 
 int main()

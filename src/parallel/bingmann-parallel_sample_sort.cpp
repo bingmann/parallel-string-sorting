@@ -33,7 +33,7 @@ parallel_sample_sortBTCU2(string* strings, size_t n)
 {
     parallel_sample_sort_base<
         bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
-        strings, n, 0);
+        UCharStringSet(strings, strings + n), 0);
 }
 
 PSS_CONTESTANT_PARALLEL(
@@ -48,7 +48,8 @@ parallel_sample_sortBTCU2_out(string* strings, size_t n)
 
     parallel_sample_sort_out_base<
         bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
-        strings, output, n, 0);
+        UCharStringSet(strings, strings + n),
+        UCharStringSet(output, output + n), 0);
 
     // copy back for verification
     memcpy(strings, output, n * sizeof(string));
@@ -66,7 +67,8 @@ static inline void
 parallel_sample_sortBTCEU1(string* strings, size_t n)
 {
     parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyEqualUnrollAssembler>(strings, n, 0);
+        bingmann_sample_sort::ClassifyEqualUnrollAssembler>(
+        UCharStringSet(strings, strings + n), 0);
 }
 
 PSS_CONTESTANT_PARALLEL(
@@ -80,7 +82,8 @@ static inline void
 parallel_sample_sortBTCTU1(string* strings, size_t n)
 {
     parallel_sample_sort_base<
-        bingmann_sample_sort::ClassifyTreeCalcUnroll>(strings, n, 0);
+        bingmann_sample_sort::ClassifyTreeCalcUnroll>(
+        UCharStringSet(strings, strings + n), 0);
 }
 
 PSS_CONTESTANT_PARALLEL(
