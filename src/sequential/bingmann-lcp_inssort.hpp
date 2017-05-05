@@ -186,13 +186,21 @@ void lcp_insertion_sort(
     }
 }
 
+//! LCP insertion sort, without distinguishing character cache output
+template <typename StringSet>
+static inline
+void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
+{
+    return lcp_insertion_sort</* SaveCache */ false>(str, lcp, nullptr, depth);
+}
+
 //! LCP insertion sort, plain arguments version.
 static inline
 void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
 {
     return lcp_insertion_sort</* SaveCache */ false>(
         parallel_string_sorting::UCharStringSet(str, str + n),
-        lcp, (uint8_t*)(nullptr), depth);
+        lcp, nullptr, depth);
 }
 
 //! LCP insertion sort, plain arguments version.
