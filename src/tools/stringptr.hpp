@@ -405,10 +405,17 @@ public:
                                active_.subi(offset, offset + _size), !flipped_);
     }
 
+    //! construct a StringShadowPtr object specifying a sub-array with flipping
+    //! to other array.
+    StringShadowPtr flip() const
+    {
+        return StringShadowPtr(shadow_, active_, !flipped_);
+    }
+
     //! Return the original for this StringShadowPtr for LCP calculation
     StringShadowPtr original() const
     {
-        return flipped_ ? flip(0, size()) : *this;
+        return flipped_ ? flip() : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
@@ -420,7 +427,7 @@ public:
         }
         else {
             std::move(active_.begin(), active_.end(), shadow_.begin());
-            return flip(0, size());
+            return flip();
         }
     }
 
@@ -527,7 +534,8 @@ public:
     size_t size() const { return sp.size(); }
 
     //! ostream-able
-    friend std::ostream& operator << (std::ostream& os, const StringShadowOutPtr& sp)
+    friend std::ostream& operator << (
+        std::ostream& os, const StringShadowOutPtr& sp)
     {
         return os << '(' << sp.active() << '/' << sp.shadow() << '/' << sp.output()
                   << '|' << sp.flipped() << ':' << sp.size() << ')';
@@ -544,8 +552,8 @@ public:
             flipped());
     }
 
-    //! construct a StringShadowOutPtr object specifying a sub-array with flipping to
-    //! other array.
+    //! construct a StringShadowOutPtr object specifying a sub-array with
+    //! flipping to other array.
     StringShadowOutPtr flip(size_t offset, size_t _size) const
     {
         assert(offset + _size <= sp.size());
@@ -556,17 +564,26 @@ public:
             !flipped());
     }
 
+    //! construct a StringShadowOutPtr object specifying a sub-array with
+    //! flipping to other array.
+    StringShadowOutPtr flip() const
+    {
+        return StringShadowOutPtr(
+            sp.shadow(), sp.active(), output_, !flipped());
+    }
+
     //! Return the original for this StringShadowOutPtr for LCP calculation
     StringShadowOutPtr original() const
     {
-        return flipped() ? flip(0, size()) : *this;
+        return flipped() ? flip() : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
     //! shadow before returning.
     StringShadowOutPtr copy_back() const
     {
-        std::move(sp.active().begin(), sp.active().end(), output_.begin());
+        if (sp.active().begin() != output_.begin())
+            std::move(sp.active().begin(), sp.active().end(), output_.begin());
         return original();
     }
 
@@ -587,13 +604,11 @@ public:
     uintptr_t & lcp(size_t i) const { return sp.lcp(i); }
 
     //! set the i-th lcp to v and check its value
-    void set_lcp(size_t /* i */, const uintptr_t& /* v */) const
-    { }
+    void set_lcp(size_t /* i */, const uintptr_t& /* v */) const { }
 
     //! Fill whole LCP array with n times the value v, ! excluding the first
     //! LCP[0] position
-    void fill_lcp(uintptr_t /* v */)
-    { }
+    void fill_lcp(uintptr_t /* v */) { }
 
     //! set the i-th distinguishing cache charater to c
     void set_cache(size_t, const char_type&) const
@@ -667,10 +682,17 @@ public:
                                   lcps_ + offset, !flipped());
     }
 
+    //! construct a StringShadowLcpPtr object specifying a sub-array with
+    //! flipping to other array.
+    StringShadowLcpPtr flip() const
+    {
+        return StringShadowLcpPtr(shadow(), active(), lcps_, !flipped());
+    }
+
     //! Return the original for this StringShadowPtr for LCP calculation
     StringShadowLcpPtr original() const
     {
-        return flipped() ? flip(0, size()) : *this;
+        return flipped() ? flip() : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
@@ -682,7 +704,7 @@ public:
         }
         else {
             Super::copy_back();
-            return flip(0, size());
+            return flip();
         }
     }
 
@@ -751,7 +773,8 @@ public:
 
     //! constructor specifying all attributes
     StringShadowLcpOutPtr(
-        const StringSet& original, const StringSet& shadow, const StringSet& output,
+        const StringSet& original, const StringSet& shadow,
+        const StringSet& output,
         lcp_t* lcps, bool flipped = false)
         : Super(original, shadow, output, flipped),
           lcps_(lcps)
@@ -778,23 +801,26 @@ public:
                                      lcps_ + offset, !flipped());
     }
 
+    //! construct a StringShadowLcpOutPtr object specifying a sub-array with
+    //! flipping to other array.
+    StringShadowLcpOutPtr flip() const
+    {
+        return StringShadowLcpOutPtr(
+            shadow(), active(), output(), lcps_, !flipped());
+    }
+
     //! Return the original for this StringShadowPtr for LCP calculation
     StringShadowLcpOutPtr original() const
     {
-        return flipped() ? flip(0, size()) : *this;
+        return flipped() ? flip() : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
     //! shadow before returning.
     StringShadowLcpOutPtr copy_back() const
     {
-        if (!flipped()) {
-            return *this;
-        }
-        else {
-            Super::copy_back();
-            return flip(0, size());
-        }
+        Super::copy_back();
+        return original();
     }
 
     //! if we want to save the LCPs
@@ -877,7 +903,8 @@ public:
 
     //! constructor specifying all attributes
     StringShadowLcpCacheOutPtr(
-        const StringSet& original, const StringSet& shadow, const StringSet& output,
+        const StringSet& original, const StringSet& shadow,
+        const StringSet& output,
         lcp_t* lcps, Char* cache = NULL, bool flipped = false)
         : Super(original, shadow, output, lcps, flipped),
           cache_(cache)
@@ -907,10 +934,17 @@ public:
                     lcps_, cache_ + offset, !flipped());
     }
 
+    //! construct a StringShadowOutPtr object specifying a sub-array with
+    //! flipping to other array.
+    Self flip() const
+    {
+        return Self(shadow(), active(), output(), lcps_, cache_, !flipped());
+    }
+
     //! Return the original of this StringPtr for LCP calculation
     Self original() const
     {
-        return flipped() ? flip(0, size()) : *this;
+        return flipped() ? flip() : *this;
     }
 
     //! return subarray pointer to n strings in original array, might copy from
