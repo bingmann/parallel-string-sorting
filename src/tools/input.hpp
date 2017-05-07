@@ -142,7 +142,9 @@ char * allocate_stringdata(size_t size, const std::string& path)
         gopt_memory_type == "mmap_node0" ||
         gopt_memory_type == "mmap_segment")
     {
-        stringdata = (char*)mmap(NULL, g_string_buffsize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
+        stringdata = (char*)mmap(
+            NULL, g_string_buffsize,
+            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
         if (stringdata == MAP_FAILED) {
             std::cout << "Error allocating memory: " << strerror(errno) << std::endl;
             return NULL;
@@ -188,7 +190,8 @@ void protect_stringdata()
     {
         // protect inherited mmap() area from writes by the algorithms.
         if (mprotect(g_string_databuff, g_string_buffsize, PROT_READ)) {
-            std::cout << "Error protecting string data memory: " << strerror(errno) << std::endl;
+            std::cout << "Error protecting string data memory: "
+                      << strerror(errno) << std::endl;
         }
     }
 }
@@ -262,7 +265,8 @@ bool load_plain(const std::string& path)
         ssize_t rb = fread(stringdata + rpos, sizeof(char), batch, file);
 
         if (rb < 0) {
-            std::cout << "Cannot read from " << path << ": " << strerror(errno) << std::endl;
+            std::cout << "Cannot read from " << path << ": "
+                      << strerror(errno) << std::endl;
             fclose(file);
             return false;
         }

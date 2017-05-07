@@ -129,7 +129,8 @@ void eberle_ps5_parallel_toplevel_merge(
             int numaNode = k % realNumaNodes;
             if (k < remainThreads) nodeThreads++; // distribute extra threads
 
-            LOG1 << "node[" << numaNode << "] gets " << nodeThreads << " threads";
+            LOG1 << "node[" << numaNode << "] gets " << nodeThreads << " threads"
+                 << " start " << start << " length " << length;
 
             ClockTimer timer;
 
