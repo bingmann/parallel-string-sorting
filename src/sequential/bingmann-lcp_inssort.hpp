@@ -200,7 +200,7 @@ void lcp_insertion_sort(string* str, uintptr_t* lcp, size_t n, size_t depth)
 {
     return lcp_insertion_sort</* SaveCache */ false>(
         parallel_string_sorting::UCharStringSet(str, str + n),
-        lcp, nullptr, depth);
+        lcp, reinterpret_cast<unsigned char*>(NULL), depth);
 }
 
 //! LCP insertion sort, plain arguments version.
@@ -220,7 +220,7 @@ void lcp_insertion_sort_nolcp(const StringSet& ss, size_t depth)
 {
     uintptr_t tmp_lcp[ss.size()];
     return lcp_insertion_sort</* SaveCache */ false, StringSet>(
-        ss, tmp_lcp, nullptr, depth);
+        ss, tmp_lcp, reinterpret_cast<typename StringSet::Char*>(NULL), depth);
 }
 
 //! LCP insertion sort, but immediately discard the lcp
@@ -232,7 +232,8 @@ void lcp_insertion_sort_verify(const StringSet& ss, size_t depth)
     tmp_lcp[0] = 42;                 // must keep lcp[0] unchanged
     std::fill(tmp_lcp.begin() + 1, tmp_lcp.end(), -1);
     lcp_insertion_sort</* SaveCache */ false, StringSet>(
-        ss, tmp_lcp.data(), nullptr, depth);
+        ss, tmp_lcp.data(),
+        reinterpret_cast<typename StringSet::Char*>(NULL), depth);
     die_unless(stringtools::verify_lcp(ss, tmp_lcp.data(), 42));
 }
 
