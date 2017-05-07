@@ -195,7 +195,8 @@ public:
 
             while (!m_queue.try_pop(job))
             {
-                LOGC(debug_queue) << "Idle thread - m_idle_count: " << m_idle_count;
+                LOGC(debug_queue)
+                    << "Idle thread - m_idle_count: " << m_idle_count;
 
                 if ( //!m_group->assist(m_id) &&
                     m_idle_count == m_numthrs)

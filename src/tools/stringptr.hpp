@@ -455,19 +455,14 @@ public:
     }
 
     //! set the i-th lcp to v and check its value
-    void set_lcp(size_t /* i */, const uintptr_t& /* v */) const
-    { }
+    void set_lcp(size_t /* i */, const uintptr_t& /* v */) const { }
 
     //! Fill whole LCP array with n times the value v, ! excluding the first
     //! LCP[0] position
-    void fill_lcp(uintptr_t /* v */)
-    { }
+    void fill_lcp(uintptr_t /* v */) { }
 
     //! set the i-th distinguishing cache charater to c
-    void set_cache(size_t, const char_type&) const
-    {
-        // no-op
-    }
+    void set_cache(size_t, const char_type&) const { /* no-op */ }
 
     //! Return pointer to LCP array
     uintptr_t * lcparray() const
@@ -611,10 +606,7 @@ public:
     void fill_lcp(uintptr_t /* v */) { }
 
     //! set the i-th distinguishing cache charater to c
-    void set_cache(size_t, const char_type&) const
-    {
-        // no-op
-    }
+    void set_cache(size_t, const char_type&) const { /* no-op */ }
 
     //! Return pointer to LCP array
     uintptr_t * lcparray() const { return sp.lcparray(); }
@@ -920,7 +912,7 @@ public:
         return Self(active().subi(offset, offset + _size),
                     shadow().subi(offset, offset + _size),
                     output().subi(offset, offset + _size),
-                    lcps_, cache_ + offset, flipped());
+                    lcps_ + offset, cache_ + offset, flipped());
     }
 
     //! construct a StringShadowOutPtr object specifying a sub-array with
@@ -931,7 +923,7 @@ public:
         return Self(shadow().subi(offset, offset + _size),
                     active().subi(offset, offset + _size),
                     output().subi(offset, offset + _size),
-                    lcps_, cache_ + offset, !flipped());
+                    lcps_ + offset, cache_ + offset, !flipped());
     }
 
     //! construct a StringShadowOutPtr object specifying a sub-array with

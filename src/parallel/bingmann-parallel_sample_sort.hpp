@@ -74,7 +74,8 @@ static const bool enable_parallel_sample_sort = true;
 static const bool enable_sequential_sample_sort = true;
 static const bool enable_sequential_mkqs = true;
 
-//! first MKQS lcp variant: keep min/max during ternary split
+//! first MKQS lcp variant: keep min/max during ternary split, second: keep
+//! pivot and calculate later
 #define PS5_CALC_LCP_MKQS 1
 
 //! whether the base sequential_threshold() on the remaining unsorted string
@@ -1701,12 +1702,12 @@ template <template <size_t> class Classify =
           typename StringSet>
 void parallel_sample_sort_base(const StringSet& strset, size_t depth)
 {
-    typedef stringtools::StringShadowPtr<StringSet> StringPtr;
+    typedef stringtools::StringShadowPtr<StringSet> StringShadowPtr;
     typedef typename StringSet::Container Container;
 
     // allocate shadow pointer array
     Container shadow = strset.allocate(strset.size());
-    StringPtr strptr(strset, StringSet(shadow));
+    StringShadowPtr strptr(strset, StringSet(shadow));
 
     parallel_sample_sort<Classify>(strptr, depth);
 
@@ -1748,13 +1749,13 @@ template <template <size_t> class Classify, typename StringSet>
 void parallel_sample_sort_lcp_base(
     const StringSet& strset, uintptr_t* lcp, size_t depth)
 {
-    typedef stringtools::StringShadowLcpPtr<StringSet> StringPtr;
+    typedef stringtools::StringShadowLcpPtr<StringSet> StringShadowLcpPtr;
     typedef typename StringSet::Container Container;
 
     // allocate shadow pointer array
     Container shadow = strset.allocate(strset.size());
 
-    StringPtr strptr(strset, StringSet(shadow), lcp);
+    StringShadowLcpPtr strptr(strset, StringSet(shadow), lcp);
 
     parallel_sample_sort<Classify>(strptr, depth);
 
@@ -1827,11 +1828,10 @@ void parallel_sample_sort_numa(string* strings, size_t n,
 
     typedef UCharStringSet StringSet;
     StringSet strset(strings, strings + n);
-    StringSet shadow((string*)output.lcps, (string*)output.lcps + n);
     StringSet outputss(output.strings, output.strings + n);
 
     StringShadowLcpCacheOutPtr<StringSet> strptr(
-        strset, shadow, outputss, output.lcps, output.cachedChars);
+        strset, outputss, outputss, output.lcps, output.cachedChars);
 
     Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
         ctx, NULL, strptr, 0);
