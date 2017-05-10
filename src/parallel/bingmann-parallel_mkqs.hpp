@@ -407,7 +407,7 @@ public:
 
         // *** Sequential Work
 
-        virtual bool run(JobQueue& jobqueue)
+        bool run(JobQueue& jobqueue) final
         {
             LOGC(debug_seqjobs)
                 << "SequentialJob for "
@@ -893,7 +893,7 @@ jumpout:
             PartitionJob(ParallelJob* _step, size_t _p)
                 : step(_step), p(_p) { }
 
-            virtual bool run(JobQueue& jobqueue)
+            bool run(JobQueue& jobqueue) final
             {
                 step->partition(p, jobqueue);
                 return true;

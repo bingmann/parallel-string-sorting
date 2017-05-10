@@ -191,7 +191,8 @@ template <typename StringSet>
 static inline
 void lcp_insertion_sort(const StringSet& str, uintptr_t* lcp, size_t depth)
 {
-    return lcp_insertion_sort</* SaveCache */ false>(str, lcp, nullptr, depth);
+    return lcp_insertion_sort</* SaveCache */ false>(
+        str, lcp, reinterpret_cast<typename StringSet::Char*>(NULL), depth);
 }
 
 //! LCP insertion sort, plain arguments version.

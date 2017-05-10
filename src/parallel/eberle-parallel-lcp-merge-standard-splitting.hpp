@@ -89,8 +89,7 @@ struct MergeJobStandardSplitting : public Job
         return true;
     }
 
-    virtual bool
-    run(JobQueue& jobQueue)
+    bool run(JobQueue& jobQueue) final
     {
         loserTree.initTree(0);
 
@@ -123,12 +122,12 @@ struct InitialJobStandardSplitting : public Job
         string* output, size_t length)
         : input(input), numInputs(numInputs), output(output), length(length)
     {
-        g_lengthOfLongestJob = length; // prevents that the first MergeJob immediately starts splitting itself
+        // prevents that the first MergeJob immediately starts splitting itself
+        g_lengthOfLongestJob = length;
         g_outputBase = output;
     }
 
-    virtual bool
-    run(JobQueue& jobQueue)
+    bool run(JobQueue& jobQueue) final
     {
         createJobsStandardSplitting(jobQueue, input, numInputs, output, length);
 

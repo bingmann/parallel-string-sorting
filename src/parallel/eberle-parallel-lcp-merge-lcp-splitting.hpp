@@ -96,8 +96,7 @@ struct MergeJobLcpSplitting : public Job
         return true;
     }
 
-    virtual bool
-    run(JobQueue& jobQueue)
+    bool run(JobQueue& jobQueue) final
     {
         loserTree.initTree(baseLcp);
 
@@ -133,8 +132,7 @@ struct InitialJobLcpSplitting : public Job
         g_outputBase = output;
     }
 
-    virtual bool
-    run(JobQueue& jobQueue)
+    bool run(JobQueue& jobQueue) final
     {
         createJobsLcpSplitting(jobQueue, input, numInputs, output, length, lcp_t(0));
         g_lengthOfLongestJob = 0;

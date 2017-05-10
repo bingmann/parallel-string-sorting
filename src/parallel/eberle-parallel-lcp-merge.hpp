@@ -34,6 +34,7 @@
 #include "../tools/stringtools.hpp"
 
 #include <tlx/logger.hpp>
+#include <tlx/unused.hpp>
 
 namespace eberle_parallel_lcp_merge {
 
@@ -78,10 +79,9 @@ struct CopyDataJob : public Job
             << ", length: " << input.size << ")";
     }
 
-    virtual bool
-    run(JobQueue& jobQueue)
+    bool run(JobQueue& jobQueue) final
     {
-        (void)jobQueue;
+        tlx::unused(jobQueue);
 
         input.copyStringsTo(output, input.size);
 
@@ -108,10 +108,9 @@ struct BinaryMergeJob : public Job
             << ", output: " << (output - g_outputBase) << ")";
     }
 
-    virtual bool
-    run(JobQueue& jobQueue)
+    bool run(JobQueue& jobQueue) final
     {
-        (void)jobQueue;
+        tlx::unused(jobQueue);
         assert(!input1.empty() && !input2.empty());
 
         input1.firstLcp() = firstLcp;
