@@ -33,7 +33,7 @@ namespace bingmann_sample_sort {
 // ****************************************************************************
 // *** Classification with Binary Search in Splitter Array (old BSC variant)
 
-template <size_t treebits>
+template <size_t treebits = DefaultTreebits>
 class ClassifyBinarySearch
 {
 public:

@@ -30,7 +30,7 @@
 
 namespace bingmann_sample_sort {
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyEqual
 {
 public:
@@ -101,7 +101,7 @@ public:
     }
 };
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyEqualAssembler
 {
 public:
@@ -225,7 +225,7 @@ public:
     }
 };
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyEqualUnroll
 {
 public:
@@ -331,7 +331,7 @@ public:
     }
 };
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyEqualUnrollAssembler
 {
 public:

@@ -50,6 +50,8 @@ typedef uint64_t key_type;
 
 static const size_t l2cache = 256 * 1024;
 
+static const unsigned DefaultTreebits = 10;
+
 static const size_t g_samplesort_smallsort = 32 * 1024;
 
 static const size_t oversample_factor = 2;
@@ -57,7 +59,7 @@ static const size_t oversample_factor = 2;
 static const bool g_toplevel_only = false;
 
 //! whether to instantiate tests for all tree classifier sizes
-#define SAMPLE_SORT_EXPAND_VARIANTS      1
+#define SAMPLE_SORT_EXPAND_VARIANTS      0
 
 //! use ?: operator or if in tree descent
 #define SSSS_TERNARY_OP 1

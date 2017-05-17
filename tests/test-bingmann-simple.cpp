@@ -88,9 +88,6 @@ void test_all(const size_t nstrings)
     run_tests(bingmann_sample_sort::bingmann_sample_sortBTC);
     run_tests(bingmann_sample_sort::bingmann_sample_sortBTCA);
     run_tests(bingmann_sample_sort::bingmann_sample_sortBTCU);
-    run_tests(bingmann_sample_sort::bingmann_sample_sortBTCU1);
-    run_tests(bingmann_sample_sort::bingmann_sample_sortBTCU2);
-    run_tests(bingmann_sample_sort::bingmann_sample_sortBTCU4);
 
     run_tests(bingmann_sample_sort::bingmann_sample_sortBTCT);
     run_tests(bingmann_sample_sort::bingmann_sample_sortBTCTU);

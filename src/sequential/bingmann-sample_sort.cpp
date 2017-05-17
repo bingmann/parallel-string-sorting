@@ -191,7 +191,7 @@ void sample_sort_generic(string* strings, size_t n, size_t depth)
 
 void bingmann_sample_sortBSC(string* strings, size_t n)
 {
-    using Classify = ClassifyBinarySearch<13>;
+    using Classify = ClassifyBinarySearch<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters);
     sample_sort_generic<Classify>(strings, n, 0);
@@ -205,7 +205,7 @@ PSS_CONTESTANT(bingmann_sample_sortBSC, "bingmann/sample_sortBSC",
 
 void bingmann_sample_sortBTC(string* strings, size_t n)
 {
-    using Classify = ClassifyTreeSimple<13>;
+    using Classify = ClassifyTreeSimple<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -218,7 +218,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTC, "bingmann/sample_sortBTC",
 
 void bingmann_sample_sortBTCA(string* strings, size_t n)
 {
-    using Classify = ClassifyTreeAssembler<13>;
+    using Classify = ClassifyTreeAssembler<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -231,7 +231,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCA, "bingmann/sample_sortBTCA",
 
 void bingmann_sample_sortBTCU(string* strings, size_t n)
 {
-    using Classify = ClassifyTreeUnrollInterleaveX<13>;
+    using Classify = ClassifyTreeUnrollInterleave<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -246,7 +246,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCU, "bingmann/sample_sortBTCU",
 
 void bingmann_sample_sortBTCT(string* strings, size_t n)
 {
-    using Classify = ClassifyTreeCalcSimple<13>;
+    using Classify = ClassifyTreeCalcSimple<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -259,7 +259,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCT, "bingmann/sample_sortBTCT",
 
 void bingmann_sample_sortBTCTU(string* strings, size_t n)
 {
-    using Classify = ClassifyTreeCalcUnroll<13>;
+    using Classify = ClassifyTreeCalcUnroll<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -274,7 +274,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCTU, "bingmann/sample_sortBTCTU",
 
 void bingmann_sample_sortBTCE(string* strings, size_t n)
 {
-    using Classify = ClassifyEqual<13>;
+    using Classify = ClassifyEqual<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -287,7 +287,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCE, "bingmann/sample_sortBTCE",
 
 void bingmann_sample_sortBTCEA(string* strings, size_t n)
 {
-    using Classify = ClassifyEqualAssembler<13>;
+    using Classify = ClassifyEqualAssembler<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -300,7 +300,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCEA, "bingmann/sample_sortBTCEA",
 
 void bingmann_sample_sortBTCEU(string* strings, size_t n)
 {
-    using Classify = ClassifyEqualUnrollAssembler<13>;
+    using Classify = ClassifyEqualUnrollAssembler<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -313,7 +313,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCEU, "bingmann/sample_sortBTCEU",
 
 void bingmann_sample_sortBTCEV(string* strings, size_t n)
 {
-    using Classify = ClassifyEqualUnroll<13>;
+    using Classify = ClassifyEqualUnroll<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);

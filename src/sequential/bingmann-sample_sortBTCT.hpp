@@ -31,7 +31,7 @@
 
 namespace bingmann_sample_sort {
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyTreeCalcSimple
 {
 public:
@@ -109,7 +109,7 @@ public:
     }
 };
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyTreeCalcUnroll
 {
 public:
@@ -229,7 +229,7 @@ public:
     }
 };
 
-template <size_t TreeBits, unsigned Rollout>
+template <size_t TreeBits = DefaultTreebits, unsigned Rollout = 4>
 class ClassifyTreeCalcUnrollInterleave : public ClassifyTreeCalcSimple<TreeBits>
 {
 public:
@@ -242,7 +242,7 @@ public:
 
     __attribute__ ((optimize("unroll-all-loops")))
     void find_bkt_unroll_one(
-        unsigned int i[Rollout], const key_type key[Rollout])
+        unsigned int i[Rollout], const key_type key[Rollout]) const
     {
         for (unsigned u = 0; u < Rollout; ++u)
         {
@@ -263,7 +263,7 @@ public:
     //! search in splitter tree for bucket number, unrolled for Rollout keys at
     //! once.
     __attribute__ ((optimize("unroll-all-loops")))
-    void find_bkt_unroll(const key_type key[Rollout], uint16_t obkt[Rollout])
+    void find_bkt_unroll(const key_type key[Rollout], uint16_t obkt[Rollout]) const
     {
         // binary tree traversal without left branch
 
@@ -325,30 +325,46 @@ public:
     }
 
     //! classify all strings in area by walking tree and saving bucket id
+    template <typename StringSet>
     __attribute__ ((optimize("unroll-all-loops")))
-    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth)
+    void classify(
+        const StringSet& strset,
+        typename StringSet::Iterator begin, typename StringSet::Iterator end,
+        uint16_t* bktout, size_t depth) const
     {
-        for (string* str = strB; str != strE; )
+        while (begin != end)
         {
-            if (str + Rollout < strE)
+            if (begin + Rollout < end)
             {
                 key_type key[Rollout];
-                for (unsigned u = 0; u < Rollout; ++u)
-                    key[u] = get_char<key_type>(str[u], depth);
+                for (size_t u = 0; u < Rollout; ++u)
+                    key[u] = strset.get_uint64(begin[u], depth);
 
                 find_bkt_unroll(key, bktout);
 
-                str += Rollout;
+                begin += Rollout;
                 bktout += Rollout;
             }
             else
             {
-                key_type key = get_char<key_type>(*str++, depth);
-                *bktout++ = ClassifyTreeCalcSimple<TreeBits>::find_bkt(key);
+                key_type key = strset.get_uint64(*begin++, depth);
+                *bktout++ = this->find_bkt(key);
             }
         }
     }
+
+    //! classify all strings in area by walking tree and saving bucket id
+    void classify(string* strB, string* strE, uint16_t* bktout, size_t depth)
+    {
+        return classify(
+            parallel_string_sorting::UCharStringSet(strB, strE),
+            strB, strE, bktout, depth);
+    }
 };
+
+template <size_t TreeBits>
+using ClassifyTreeCalcUnrollInterleaveX =
+    ClassifyTreeCalcUnrollInterleave<TreeBits>;
 
 } // namespace bingmann_sample_sort
 

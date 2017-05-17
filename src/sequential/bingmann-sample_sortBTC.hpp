@@ -31,7 +31,7 @@
 
 namespace bingmann_sample_sort {
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyTreeSimple
 {
 public:
@@ -108,7 +108,7 @@ public:
     }
 };
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyTreeAssembler
 {
 public:
@@ -182,7 +182,7 @@ public:
     }
 };
 
-template <size_t TreeBits>
+template <size_t TreeBits = DefaultTreebits>
 class ClassifyTreeUnroll
 {
 public:
@@ -261,7 +261,7 @@ public:
     }
 };
 
-template <size_t TreeBits, size_t Rollout>
+template <size_t TreeBits = DefaultTreebits, size_t Rollout = 4>
 class ClassifyTreeUnrollInterleave : public ClassifyTreeSimple<TreeBits>
 {
 public:
@@ -394,8 +394,7 @@ public:
 };
 
 template <size_t TreeBits>
-using ClassifyTreeUnrollInterleaveX =
-          ClassifyTreeUnrollInterleave<TreeBits, 4>;
+using ClassifyTreeUnrollInterleaveX = ClassifyTreeUnrollInterleave<TreeBits>;
 
 } // namespace bingmann_sample_sort
 

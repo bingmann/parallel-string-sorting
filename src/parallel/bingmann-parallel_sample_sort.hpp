@@ -431,29 +431,18 @@ public:
     class SeqSampleSortStep
     {
     public:
-#if 0
-        static const size_t numsplitters2 = 2 * 16;
-#else
-        // bounding equations:
-        // a) K * key_type splitter_tree size (and maybe K * key_type equal-cmp splitters)
-        // b) 2 * K + 1 buckets (bktsize_type) when counting bkt occurances.
-        static const size_t numsplitters2
-            = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
-#endif
-
-        static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
-        static const size_t numsplitters = (1 << treebits) - 1;
-
-        static const size_t bktnum = 2 * numsplitters + 1;
-
         StringPtr strptr;
         size_t idx;
         size_t depth;
 
-        bktsize_type bkt[bktnum + 1];
+        Classify<bingmann_sample_sort::DefaultTreebits> classifier;
 
-        Classify<treebits> classifier;
+        static const size_t numsplitters =
+            Classify<bingmann_sample_sort::DefaultTreebits>::numsplitters;
+        static const size_t bktnum = 2 * numsplitters + 1;
+
         unsigned char splitter_lcp[numsplitters + 1];
+        bktsize_type bkt[bktnum + 1];
 
         SeqSampleSortStep(Context& ctx, const StringPtr& _strptr, size_t _depth,
                           uint16_t* bktcache)
@@ -1276,17 +1265,6 @@ template <typename Context, template <size_t> class Classify, typename StringPtr
 class SampleSortStep : public SortStep
 {
 public:
-#if 0
-    static const size_t numsplitters2 = 16;
-#else
-    // bounding equation: 2*K+1 buckets when counting bkt occurances.
-    static const size_t numsplitters2 = (l2cache - sizeof(size_t)) / (2 * sizeof(size_t));
-#endif
-    static const size_t treebits = tlx::Log2Floor<numsplitters2>::value;
-    static const size_t numsplitters = (1 << treebits) - 1;
-
-    static const size_t bktnum = 2 * numsplitters + 1;
-
     typedef typename StringPtr::StringSet StringSet;
     typedef typename StringSet::Iterator StrIterator;
 
@@ -1308,7 +1286,14 @@ public:
     std::atomic<size_t> pwork;
 
     //! classifier instance and variables (contains splitter tree
-    Classify<treebits> classifier;
+    Classify<bingmann_sample_sort::DefaultTreebits> classifier;
+
+    static const size_t treebits =
+        Classify<bingmann_sample_sort::DefaultTreebits>::treebits;
+    static const size_t numsplitters =
+        Classify<bingmann_sample_sort::DefaultTreebits>::numsplitters;
+    static const size_t bktnum = 2 * numsplitters + 1;
+
     //! LCPs of splitters, needed for recursive calls
     unsigned char splitter_lcp[numsplitters + 1];
 
@@ -1653,7 +1638,7 @@ void Enqueue(Context& ctx, SortStep* pstep,
 
 //! Main Parallel Sample Sort Function. See below for more convenient wrappers.
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
+              bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX,
           typename StringPtr>
 void parallel_sample_sort(const StringPtr& strptr, size_t depth)
 {
@@ -1698,7 +1683,7 @@ void parallel_sample_sort(const StringPtr& strptr, size_t depth)
 //! call Sample Sort on a generic StringSet, this allocates the shadow array for
 //! flipping.
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
+              bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_base(const StringSet& strset, size_t depth)
 {
@@ -1717,7 +1702,7 @@ void parallel_sample_sort_base(const StringSet& strset, size_t depth)
 //! call Sample Sort on a generic input StringSet, but write output to output
 //! StringSet, use output as shadow array for flipping.
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
+              bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_out_base(
     const StringSet& strset, const StringSet& output, size_t depth)
@@ -1729,7 +1714,7 @@ void parallel_sample_sort_out_base(
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
+              bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_out_test(const StringSet& strset, size_t depth)
 {
@@ -1763,7 +1748,7 @@ void parallel_sample_sort_lcp_base(
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
+              bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_lcp_base(const StringSet& strset, size_t depth)
 {
@@ -1772,7 +1757,7 @@ void parallel_sample_sort_lcp_base(const StringSet& strset, size_t depth)
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
+              bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_lcp_verify(const StringSet& strset, size_t depth)
 {
@@ -1784,7 +1769,7 @@ void parallel_sample_sort_lcp_verify(const StringSet& strset, size_t depth)
 }
 
 template <template <size_t> class Classify =
-              bingmann_sample_sort::ClassifyTreeUnrollInterleaveX,
+              bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX,
           typename StringSet>
 void parallel_sample_sort_out_lcp_verify(const StringSet& strset, size_t depth)
 {
@@ -1833,7 +1818,7 @@ void parallel_sample_sort_numa(string* strings, size_t n,
     StringShadowLcpCacheOutPtr<StringSet> strptr(
         strset, outputss, outputss, output.lcps, output.cachedChars);
 
-    Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
+    Enqueue<bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX>(
         ctx, NULL, strptr, 0);
     ctx.jobqueue.numaLoop(numaNode, numberOfThreads);
 
@@ -1874,7 +1859,7 @@ void parallel_sample_sort_numa2(const UCharStringShadowLcpCacheOutPtr* strptr,
         if (ctx[i]->threadnum == 0)
             ctx[i]->threadnum = 1;
 
-        Enqueue<bingmann_sample_sort::ClassifyTreeUnrollInterleaveX>(
+        Enqueue<bingmann_sample_sort::ClassifyTreeCalcUnrollInterleaveX>(
             *ctx[i], NULL, strptr[i], 0);
 
         group.add_jobqueue(&ctx[i]->jobqueue);
