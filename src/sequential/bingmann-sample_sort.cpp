@@ -231,7 +231,7 @@ PSS_CONTESTANT(bingmann_sample_sortBTCA, "bingmann/sample_sortBTCA",
 
 void bingmann_sample_sortBTCU(string* strings, size_t n)
 {
-    using Classify = ClassifyTreeUnrollInterleave<>;
+    using Classify = ClassifyTreeUnroll<>;
     sample_sort_pre();
     g_stats >> "numsplitters" << size_t(Classify::numsplitters)
         >> "splitter_treebits" << size_t(Classify::treebits);
@@ -241,6 +241,19 @@ void bingmann_sample_sortBTCU(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_sample_sortBTCU, "bingmann/sample_sortBTCU",
                "bingmann/sample_sortBTCU (binary tree, bkt cache)")
+
+void bingmann_sample_sortBTCUI(string* strings, size_t n)
+{
+    using Classify = ClassifyTreeUnrollInterleave<>;
+    sample_sort_pre();
+    g_stats >> "numsplitters" << size_t(Classify::numsplitters)
+        >> "splitter_treebits" << size_t(Classify::treebits);
+    sample_sort_generic<Classify>(strings, n, 0);
+    sample_sort_post();
+}
+
+PSS_CONTESTANT(bingmann_sample_sortBTCUI, "bingmann/sample_sortBTCUI",
+               "bingmann/sample_sortBTCUI (binary tree, bkt cache)")
 
 /*----------------------------------------------------------------------------*/
 
@@ -269,6 +282,19 @@ void bingmann_sample_sortBTCTU(string* strings, size_t n)
 
 PSS_CONTESTANT(bingmann_sample_sortBTCTU, "bingmann/sample_sortBTCTU",
                "bingmann/sample_sortBTCTU (binary tree, bkt cache, tree calc)")
+
+void bingmann_sample_sortBTCTUI(string* strings, size_t n)
+{
+    using Classify = ClassifyTreeCalcUnrollInterleave<>;
+    sample_sort_pre();
+    g_stats >> "numsplitters" << size_t(Classify::numsplitters)
+        >> "splitter_treebits" << size_t(Classify::treebits);
+    sample_sort_generic<Classify>(strings, n, 0);
+    sample_sort_post();
+}
+
+PSS_CONTESTANT(bingmann_sample_sortBTCTUI, "bingmann/sample_sortBTCTUI",
+               "bingmann/sample_sortBTCTUI (binary tree, bkt cache, tree calc)")
 
 /*----------------------------------------------------------------------------*/
 
