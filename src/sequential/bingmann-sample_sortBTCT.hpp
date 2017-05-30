@@ -364,7 +364,7 @@ public:
 
 template <size_t TreeBits>
 using ClassifyTreeCalcUnrollInterleaveX =
-    ClassifyTreeCalcUnrollInterleave<TreeBits>;
+          ClassifyTreeCalcUnrollInterleave<TreeBits>;
 
 } // namespace bingmann_sample_sort
 

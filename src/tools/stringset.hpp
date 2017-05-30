@@ -302,6 +302,67 @@ public:
     }
 };
 
+/*----------------------------------------------------------------------------*/
+
+template <typename Type>
+struct StringSetGetKeyHelper
+{
+    template <typename StringSet>
+    static Type get_key(const StringSet& ss,
+                        const typename StringSet::String& s, size_t depth);
+};
+
+template <>
+struct StringSetGetKeyHelper<uint8_t>
+{
+    template <typename StringSet>
+    static uint8_t get_key(const StringSet& ss,
+                           const typename StringSet::String& s, size_t depth)
+    {
+        return ss.get_uint8(s, depth);
+    }
+};
+
+template <>
+struct StringSetGetKeyHelper<uint16_t>
+{
+    template <typename StringSet>
+    static uint8_t get_key(const StringSet& ss,
+                           const typename StringSet::String& s, size_t depth)
+    {
+        return ss.get_uint16(s, depth);
+    }
+};
+
+template <>
+struct StringSetGetKeyHelper<uint32_t>
+{
+    template <typename StringSet>
+    static uint8_t get_key(const StringSet& ss,
+                           const typename StringSet::String& s, size_t depth)
+    {
+        return ss.get_uint36(s, depth);
+    }
+};
+
+template <>
+struct StringSetGetKeyHelper<uint64_t>
+{
+    template <typename StringSet>
+    static uint8_t get_key(const StringSet& ss,
+                           const typename StringSet::String& s, size_t depth)
+    {
+        return ss.get_uint64(s, depth);
+    }
+};
+
+template <typename Type, typename StringSet>
+Type get_key(const StringSet& ss,
+             const typename StringSet::String& s, size_t depth)
+{
+    return StringSetGetKeyHelper<Type>::get_key(ss, s, depth);
+}
+
 /******************************************************************************/
 
 /*!
