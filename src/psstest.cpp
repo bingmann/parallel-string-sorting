@@ -631,7 +631,8 @@ void Contestant_UCArray::prepare_run()
     //memprofile.finish();
 
     g_stats >> "heapuse" << (malloc_count_peak() - memuse)
-        >> "stackuse" << stack_count_usage(stack);
+        >> "stackuse" << stack_count_usage(stack)
+        >> "memleak" << (malloc_count_current() - memuse);
 
     if (memuse < malloc_count_current())
     {
