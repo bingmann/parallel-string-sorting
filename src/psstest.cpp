@@ -102,6 +102,7 @@ bool gopt_some_threads = false;      // argument --some-threads
 bool gopt_no_check = false;          // argument --no-check
 bool gopt_mlockall = false;          // argument --mlockall
 bool gopt_segment_threads = false;   // argument --segment-threads
+bool gopt_segment_one_thread = false; // argument --segment-1thread
 
 std::vector<size_t> gopt_threadlist; // argument --thread-list
 
@@ -387,7 +388,7 @@ void Contestant_UCArray::real_run(
     membuffer<uint8_t*>& stringptr,
     std::vector<uintptr_t>& lcp, std::vector<uint8_t>& charcache)
 {
-    if (!gopt_segment_threads)
+    if (!gopt_segment_threads && !gopt_segment_one_thread)
     {
         if (m_prepare_func)
             m_prepare_func(stringptr.data(), stringptr.size());
@@ -409,6 +410,9 @@ void Contestant_UCArray::real_run(
 
         std::vector<std::thread> threads(nthr);
         for (size_t i = 0; i < nthr; ++i) {
+            if (gopt_segment_one_thread && i != 0)
+                continue;
+
             threads[i] = std::thread(
                 [this, &stringptr, &lcp, &charcache, &ranges, i]() {
                 size_t begin, length;
@@ -429,8 +433,12 @@ void Contestant_UCArray::real_run(
             });
         }
 
-        for (size_t i = 0; i < nthr; ++i)
+        for (size_t i = 0; i < nthr; ++i) {
+            if (gopt_segment_one_thread && i != 0)
+                continue;
+
             threads[i].join();
+        }
     }
 }
 
@@ -811,6 +819,7 @@ void print_usage(const char* prog)
               << "  -s, --size <size>      Limit the input size to this number of characters." << std::endl
               << "  -S, --maxsize <size>   Run through powers of two for input size limit." << std::endl
               << "      --segment-threads  Run sequential algorithms in parallel on segments of input." << std::endl
+              << "      --segment-1thread  Run sequential algorithms in parallel on segments of input." << std::endl
               << "      --sequential       Run only sequential algorithms." << std::endl
               << "      --some-threads     Run specific selected thread counts from 1 to max_processors." << std::endl
               << "      --suffix           Suffix sort the input file." << std::endl
@@ -825,6 +834,7 @@ int main(int argc, char* argv[])
     enum {
         OPT_SUFFIX = 1,
         OPT_SEGMENT_THREADS,
+        OPT_SEGMENT_ONE_THREAD,
         OPT_SEQUENTIAL,
         OPT_PARALLEL,
         OPT_THREADS,
@@ -853,6 +863,7 @@ int main(int argc, char* argv[])
         { "timeout", required_argument, 0, 'T' },
         { "suffix", no_argument, 0, OPT_SUFFIX },
         { "segment-threads", no_argument, 0, OPT_SEGMENT_THREADS },
+        { "segment-1thread", no_argument, 0, OPT_SEGMENT_ONE_THREAD },
         { "sequential", no_argument, 0, OPT_SEQUENTIAL },
         { "parallel", no_argument, 0, OPT_PARALLEL },
         { "threads", no_argument, 0, OPT_THREADS },
@@ -1049,6 +1060,11 @@ int main(int argc, char* argv[])
         case OPT_SEGMENT_THREADS: // --segment-threads
             gopt_segment_threads = gopt_no_check = true;
             std::cout << "Option --segment-threads: running sequential algorithms in parallel on segments of the input. This implies skipping checking." << std::endl;
+            break;
+
+        case OPT_SEGMENT_ONE_THREAD: // --segment-1thread
+            gopt_segment_one_thread = gopt_no_check = true;
+            std::cout << "Option --segment-one_thread: running sequential algorithms in one thread on segments of the input. This implies skipping checking." << std::endl;
             break;
 
         default:
