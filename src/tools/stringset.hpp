@@ -327,7 +327,7 @@ template <>
 struct StringSetGetKeyHelper<uint16_t>
 {
     template <typename StringSet>
-    static uint8_t get_key(const StringSet& ss,
+    static uint16_t get_key(const StringSet& ss,
                            const typename StringSet::String& s, size_t depth)
     {
         return ss.get_uint16(s, depth);
@@ -338,10 +338,10 @@ template <>
 struct StringSetGetKeyHelper<uint32_t>
 {
     template <typename StringSet>
-    static uint8_t get_key(const StringSet& ss,
+    static uint32_t get_key(const StringSet& ss,
                            const typename StringSet::String& s, size_t depth)
     {
-        return ss.get_uint36(s, depth);
+        return ss.get_uint32(s, depth);
     }
 };
 
@@ -349,7 +349,7 @@ template <>
 struct StringSetGetKeyHelper<uint64_t>
 {
     template <typename StringSet>
-    static uint8_t get_key(const StringSet& ss,
+    static uint64_t get_key(const StringSet& ss,
                            const typename StringSet::String& s, size_t depth)
     {
         return ss.get_uint64(s, depth);

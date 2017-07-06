@@ -134,7 +134,7 @@ public:
 
     bool has_idle() const
     {
-        return (m_idle_count != 0);
+        return (m_idle_count.load(std::memory_order_relaxed) != 0);
     }
 
     void enqueue(job_type* job)

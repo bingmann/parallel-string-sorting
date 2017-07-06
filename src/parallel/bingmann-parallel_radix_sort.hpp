@@ -628,6 +628,9 @@ void RadixStepCE<key_type, StringPtr>::distribute_finished(JobQueue& job_queue)
         assert(bkt[0] == 0);
         bkt[numbkts] = strptr.size();
 
+        // maybe copy back finished pointers from shadow
+        strptr.flip(0, bkt[1] - bkt[0]).copy_back();
+
         for (size_t i = 1; i < numbkts; ++i)
         {
             if (bkt[i] == bkt[i + 1])
@@ -638,9 +641,6 @@ void RadixStepCE<key_type, StringPtr>::distribute_finished(JobQueue& job_queue)
                 Enqueue<key_type>(job_queue, strptr.flip(bkt[i], bkt[i + 1] - bkt[i]),
                                   depth + key_traits<key_type>::add_depth);
         }
-
-        // maybe copy back finished pointers from shadow
-        strptr.flip(0, bkt[1] - bkt[0]).copy_back();
     }
     else if (sizeof(key_type) == 2)
     {
@@ -648,10 +648,16 @@ void RadixStepCE<key_type, StringPtr>::distribute_finished(JobQueue& job_queue)
         assert(bkt[0] == 0);
         bkt[numbkts] = strptr.size();
 
+        // maybe copy back finished pointers from shadow
+        strptr.flip(0, bkt[0x0101] - bkt[0]).copy_back();
+
         for (size_t i = 0x0101; i < numbkts; ++i)
         {
             // skip over finished buckets 0x??00
-            if ((i & 0xFF) == 0) ++i;
+            if ((i & 0x00FF) == 0) {
+                strptr.flip(bkt[i], bkt[i + 1] - bkt[i]).copy_back();
+                continue;
+            }
 
             if (bkt[i] == bkt[i + 1])
                 continue;
@@ -661,18 +667,6 @@ void RadixStepCE<key_type, StringPtr>::distribute_finished(JobQueue& job_queue)
                 Enqueue<key_type>(job_queue, strptr.flip(bkt[i], bkt[i + 1] - bkt[i]),
                                   depth + key_traits<key_type>::add_depth);
         }
-
-        // maybe copy back finished pointers from shadow
-        if (!strptr.flipped()) // if sorted[] = shadow
-        {
-            strptr.flip(0, bkt[0x0100] - bkt[0]).copy_back();
-
-            for (size_t i = 0x0100; i < numbkts; i += 0x0100)
-            {
-                if (bkt[i] == bkt[i + 1]) continue;
-                strptr.flip(bkt[i], bkt[i + 1] - bkt[i]).copy_back();
-            }
-        }
     }
     else
         die("impossible");
@@ -681,16 +675,10 @@ void RadixStepCE<key_type, StringPtr>::distribute_finished(JobQueue& job_queue)
     delete this;
 }
 
-template <typename StringPtr>
-void EnqueueSmall(JobQueue& job_queue, const StringPtr& strptr, size_t depth)
-{
-    EnqueueSmallsortJob8(job_queue, strptr, depth);
-}
-
 template <typename bigsort_key_type, typename StringPtr>
 void Enqueue(JobQueue& job_queue, const StringPtr& strptr, size_t depth)
 {
-    if (strptr.size() > g_sequential_threshold && 0)
+    if (strptr.size() > g_sequential_threshold)
         new RadixStepCE<bigsort_key_type, StringPtr>(job_queue, strptr, depth);
     else
         EnqueueSmallsortJob8(job_queue, strptr, depth);
