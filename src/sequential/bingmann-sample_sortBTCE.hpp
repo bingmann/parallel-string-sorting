@@ -253,34 +253,48 @@ public:
             abort();
         case 15:
             TREE_STEP;
+            [[fallthrough]];
         case 14:
             TREE_STEP;
+            [[fallthrough]];
         case 13:
             TREE_STEP;
+            [[fallthrough]];
         case 12:
             TREE_STEP;
+            [[fallthrough]];
         case 11:
             TREE_STEP;
+            [[fallthrough]];
 
         case 10:
             TREE_STEP;
+            [[fallthrough]];
         case 9:
             TREE_STEP;
+            [[fallthrough]];
         case 8:
             TREE_STEP;
+            [[fallthrough]];
         case 7:
             TREE_STEP;
+            [[fallthrough]];
         case 6:
             TREE_STEP;
+            [[fallthrough]];
 
         case 5:
             TREE_STEP;
+            [[fallthrough]];
         case 4:
             TREE_STEP;
+            [[fallthrough]];
         case 3:
             TREE_STEP;
+            [[fallthrough]];
         case 2:
             TREE_STEP;
+            [[fallthrough]];
         case 1:
             TREE_STEP;
         }

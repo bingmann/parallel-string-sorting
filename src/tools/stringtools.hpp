@@ -25,6 +25,7 @@
 #define PSS_SRC_TOOLS_STRINGTOOLS_HEADER
 
 #include <cassert>
+#include <cstdint>
 #include <tlx/logger.hpp>
 
 namespace stringtools {

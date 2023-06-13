@@ -254,7 +254,7 @@ public:
     typedef LockingLogger<AvgLogger> LockingAvgLogger;
     typedef LockingLogger<AvgLogger> LockingAverageLogger;
 
-protected:
+public:
     //! Class to replace SizeLogger with no-ops
     class DummyLogger
     {

@@ -576,7 +576,7 @@ public:
 
     //! Allocate a new temporary string container with n empty Strings
     static Container allocate(size_t n)
-    { return std::move(Container(n)); }
+    { return Container(n); }
 
     //! Deallocate a temporary string container
     static void deallocate(Container& c)
@@ -670,7 +670,7 @@ public:
 
     //! Allocate a new temporary string container with n empty Strings
     static Container allocate(size_t n)
-    { return std::move(Container(n)); }
+    { return Container(n); }
 
     //! Deallocate a temporary string container
     static void deallocate(Container& c)

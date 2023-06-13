@@ -149,34 +149,48 @@ public:
 
         case 15:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 14:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 13:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 12:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 11:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
 
         case 10:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 9:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 8:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 7:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 6:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
 
         case 5:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 4:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 3:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 2:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 1:
             find_bkt_unroll_one(i, key);
         }
@@ -277,34 +291,48 @@ public:
 
         case 15:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 14:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 13:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 12:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 11:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
 
         case 10:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 9:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 8:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 7:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 6:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
 
         case 5:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 4:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 3:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 2:
             find_bkt_unroll_one(i, key);
+            [[fallthrough]];
         case 1:
             find_bkt_unroll_one(i, key);
         }
